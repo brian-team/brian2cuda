@@ -7,4 +7,4 @@ Usage:
 import brian2cuda
 set_device("cuda_standalone")```
 
-Currently the implementation requires a specific commit (```fd3afff2be7b506d8aa76e6fd2259f888fa40ba0``` of the master branch of brian-team/brian2 to allow comparisons with brian-team/brian2genn (```commit-hash```) employing genn-team/genn (```commit-hash```).
+Currently the implementation requires a specific commit (```d82e7a4419e61d262126a96dc1bed35e37bac761``` (check!) of the master branch of brian-team/brian2 to allow comparisons with brian-team/brian2genn (```commit-hash```) employing genn-team/genn (```commit-hash```).
