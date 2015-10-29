@@ -169,15 +169,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend([line])
             elif func=='set_by_single_value':
                 arrayname, item, value = args
+		pointer_arrayname = "dev{arrayname}".format(arrayname=arrayname)
+                if arrayname in self.dynamic_arrays.values():
+                    pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 code = '''
                 {arrayname}[{item}] = {value};
-                cudaMemcpy(&dev{arrayname}[{item}], &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
-                '''.format(arrayname=arrayname, item=item, value=value)
+                cudaMemcpy({pointer_arrayname}, &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
+                '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
                 main_lines.extend([code])
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
                 size = "_num_" + arrayname
-                if arrayname in self.dynamic_arrays.values():
+                if is_dynamic:
                     size = arrayname + ".size()"
                 code = '''
                 for(int i=0; i<_num_{staticarrayname}; i++)

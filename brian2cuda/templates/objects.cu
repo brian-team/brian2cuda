@@ -156,16 +156,29 @@ void _init_arrays()
 
     // Arrays initialized to 0
 	{% for var in zero_arrays | sort(attribute='name') %}
-	{% set varname = array_specs[var] %}
-	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
-	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
-	cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-	if(!dev{{varname}})
-	{
-		printf("ERROR while allocating {{varname}} on device with size %ld\n", sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-	}
-	cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice);
-
+		{% if not (var in dynamic_array_specs) %}
+			{% set varname = array_specs[var] %}
+			{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+			for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
+			cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
+			if(!dev{{varname}})
+			{
+				printf("ERROR while allocating {{varname}} on device with size %ld\n", sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
+			}
+			cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice);
+		
+		{% endif %}
+		{% if (var in dynamic_array_specs) %}
+			{% set varname = array_specs[var] %}
+			_dynamic{{varname}}.resize({{var.size}});
+			dev_dynamic{{varname}}.resize({{var.size}});
+		        for(int i=0; i<{{var.size}}; i++)
+			{
+				_dynamic{{varname}}[i] = 0;
+				dev_dynamic{{varname}}[i] = 0;
+			}
+		
+		{% endif %}
 	{% endfor %}
 
 	// Arrays initialized to an "arange"
