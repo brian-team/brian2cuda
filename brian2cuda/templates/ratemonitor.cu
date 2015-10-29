@@ -3,7 +3,7 @@
                     _num_source_neurons, _source_start, _source_stop } #}
 
 {% block extra_maincode %}
-int current_iteration = {{owner.clock.name}}.i;
+int current_iteration = {{owner.clock.name}}.timestep[0];
 static unsigned int start_offset = current_iteration;
 static bool first_run = true;
 if(first_run)
