@@ -9,4 +9,8 @@ import brian2cuda
 set_device("cuda_standalone")
 ```
 
-Currently the implementation requires a specific commit (```d82e7a4419e61d262126a96dc1bed35e37bac761``` (check!) of the master branch of brian-team/brian2 to allow comparisons with brian-team/brian2genn (```e1e0b790088fbd40cb713baba2dfa062c9ada903``` (check!)) employing genn-team/genn (```f9ea2fe4aa73799e4242b1e8713733d7c2570478``` (check!)).
+Currently the implementation requires the following specific commits:
+brian-team/brian2 (```d82e7a4419e61d262126a96dc1bed35e37bac761```) or the frozen branch of moritzaugustin/brian2
+brian-team/brian2genn (```e1e0b790088fbd40cb713baba2dfa062c9ada903```)
+genn-team/genn (```f9ea2fe4aa73799e4242b1e8713733d7c2570478```)
+to allow comparisons between brian2cuda and brian2genn
