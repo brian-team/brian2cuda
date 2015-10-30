@@ -1,0 +1,32 @@
+# Compiled Python files
+*.py[cod]
+
+# Backup files
+*~
+*.bak
+
+# C extensions
+*.so
+
+# generated directories
+dist
+build
+/docs
+docs_sphinx/reference
+
+# Unit test / coverage reports
+.coverage
+nosetests.xml
+
+# Eclipse project files and settings
+.project
+.cproject
+.pydevproject
+/.settings
+
+# pycharm project files
+.idea
+/Brian2.egg-info
+
+# IPython
+.ipynb_checkpoints
