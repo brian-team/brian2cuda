@@ -78,7 +78,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
 		if (report_func)
 		{
 		    current = std::clock();
-		    report_func((double)(current - start) * CLOCKS_PER_SEC, 1.0, duration);
+		    report_func((double)(current - start) / CLOCKS_PER_SEC, 1.0, duration);
 		}
 	}
 	t = t_end;
