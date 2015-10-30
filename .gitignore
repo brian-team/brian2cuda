@@ -20,6 +20,7 @@ nosetests.xml
 
 # Eclipse project files and settings
 .project
+.cproject
 .pydevproject
 /.settings
 
