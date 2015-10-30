@@ -72,6 +72,10 @@ __global__ void _run_{{codeobj_name}}_kernel(
 				count[_idx -_source_start]++;
 			}
 		}
+		else
+		{
+			break;
+		}
 	}
 }
 {% endblock %}
