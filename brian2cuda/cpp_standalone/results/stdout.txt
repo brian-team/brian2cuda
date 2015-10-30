@@ -1,6 +1,0 @@
-Starting simulation for duration 0.2 s
-0.2 s (100%) simulated in 0.0401998 s
-Number of synapses: 10000
-Number of spikes: 514
-Number of synapses: 10000
-Number of synapses: 100
