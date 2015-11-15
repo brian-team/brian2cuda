@@ -87,13 +87,6 @@ void _run_{{pathobj}}_initialise_queue()
 	}
 	max_delay++;	//we also need a current step
 
-	{% if no_or_const_delay_mode %}
-	free(_array_{{owner.name}}__spikespace);
-	_array_{{owner.name}}__spikespace = malloc(sizeof(int32_t)*_num_array_{{owner.name}}__spikespace * max_delay); 
-	cudaFree(dev_array_{{owner.name}}__spikespace);
-	cudaMalloc((void**)&dev_array_{{owner.name}}__spikespace, sizeof(int32_t)*_num__array_{{owner.name}}__spikespace);
-	{% endif %}
-
 	//create array for device pointers
 	unsigned int* temp_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
 	int32_t** temp_synapses_by_pre_id = new int32_t*[num_parallel_blocks*source_N];

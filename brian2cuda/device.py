@@ -90,7 +90,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if isinstance(owner, SynapticPathway):
             if owner.variables["delay"].constant or owner.variables["delay"].scalar or owner.variables["delay"].size == 1:
                 no_or_const_delay_mode = "True"
-        template_kwds["no_or_const_delay_mode"] = False #no_or_const_delay_mode
+        template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
             serializing_mode = "syn"    #no serializing
             for varname in variables.iterkeys():
