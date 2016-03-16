@@ -1,3 +1,3 @@
 [submodule "brian2_frozen"]
 	path = brian2_frozen
-	url = ./brian2_frozen/
+	url = git@github.com:brian-team/brian2.git
