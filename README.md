@@ -18,9 +18,9 @@ brian-team/brian2genn (```e1e0b790088fbd40cb713baba2dfa062c9ada903```)
 genn-team/genn (```f9ea2fe4aa73799e4242b1e8713733d7c2570478```)
 
 
-The correct brian2 commit is stored as a submodule of this repository. You can initialize it by executing:
+The correct brian2 commit is stored as a submodule `brian2_frozen`. You can initialize it by executing:
 ```
 git submodule update --init
 ```
 
-This way the correct brian2 version will be accesible from the brian2cuda directory. If you want to use your own brian2 installation, don't initialize the submodule.
+You can now either install the correct brian2 version, e.g. with `pip install ./brian2_frozen/` (careful if you have brian2 installed already!), or add brian2_frozen/brian2 to your PYTHONPATH.
