@@ -606,3 +606,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 cuda_standalone_device = CUDAStandaloneDevice()
 
 all_devices['cuda_standalone'] = cuda_standalone_device
+
+class CUDAStandaloneSimpleDevice(CUDAStandaloneDevice):
+    def network_run(self, net, duration, report=None, report_period=10*second,
+                    namespace=None, profile=True, level=0, **kwds):
+        super(CUDAStandaloneSimpleDevice, self).network_run(net, duration,
+                                                     report=report,
+                                                     report_period=report_period,
+                                                     namespace=namespace,
+                                                     profile=profile,
+                                                     level=level+1,
+                                                     **kwds)
+        tempdir = tempfile.mkdtemp()
+        self.build(directory=tempdir, compile=True, run=True, debug=False,
+                   with_output=False)
+
+cuda_standalone_simple_device = CUDAStandaloneSimpleDevice()
+
+all_devices['cuda_standalone_simple'] = cuda_standalone_simple_device
