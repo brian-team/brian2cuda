@@ -5,6 +5,7 @@ import os
 import shutil
 import inspect
 from collections import defaultdict
+import tempfile
 
 import numpy as np
 
