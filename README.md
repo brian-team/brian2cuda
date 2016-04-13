@@ -18,9 +18,22 @@ brian-team/brian2genn (```e1e0b790088fbd40cb713baba2dfa062c9ada903```)
 genn-team/genn (```f9ea2fe4aa73799e4242b1e8713733d7c2570478```)
 
 
-The correct brian2 version is stored as a submodule `brian2_frozen`. You can initialize it by executing:
+The correct commits are stored in submodules in the `frozen_repos` directory. You can initialize them all by executing:
 ```
 git submodule update --init
 ```
+or individually with
+```
+git submodule update --init frozen_repos/<name>
+```
+where `<name>` is one of the submodule names in the directory.
 
-You can now either install the correct brian2 version, e.g. with `pip install ./brian2_frozen/` (careful if you have brian2 installed already!), or add brian2_frozen to your PYTHONPATH.
+
+For `brian2` and `brian2genn` you cann now either install the correct package versions, e.g. with `pip install ./frozen_repos/<name>` (careful if you have another version installed already!), or add the package to your PYTHONPATH.
+
+Install genn:
+If you are using LINUX and your cuda is installed at `/usr/local/cuda/`, simply source `init_genn`:
+```
+source frozen_repos/init_genn
+```
+Otherwise follow the instructions at genn-team/genn
