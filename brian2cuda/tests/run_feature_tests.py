@@ -5,14 +5,20 @@ from brian2.tests.features.monitors import SpikeMonitorTest, StateMonitorTest
 from brian2.tests.features.input import SpikeGeneratorGroupTest
 
 import brian2cuda
+from brian2cuda.tests.cuda_configuration import CUDAStandaloneConfiguration
 
-from brian2cuda.test_configuration import CUDAStandaloneConfiguration
+import brian2genn
+from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationOptimized
 
-# Full testing
-print run_feature_tests().tables_and_exceptions
+# Test cuda, genn, cpp
+res = run_feature_tests([CPPStandaloneConfiguration,
+                         GeNNConfiguration,
+                         GeNNConfigurationOptimized,
+                         CUDAStandaloneConfiguration])
+print res.tables_and_exceptions
 
 # Quick testing
-# print run_feature_tests(configurations=[DefaultConfiguration,
+# print run_feature_tests(configurations=[Default...
 #                                         NumpyConfiguration,
 #                                         WeaveConfiguration],
 #                         feature_tests=[SpikeGeneratorGroupTest]).tables_and_exceptions

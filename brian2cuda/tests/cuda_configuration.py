@@ -2,7 +2,6 @@ import brian2
 import os
 import shutil
 import sys
-import brian2genn
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 
