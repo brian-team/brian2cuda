@@ -4,5 +4,5 @@
 # `source ./init_genn`
 
 export CUDA_PATH=/usr/local/cuda
-export GENN_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/genn_frozen" && pwd )"
+export GENN_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/genn" && pwd )"
 export PATH=$PATH:$GENN_PATH/lib/bin
