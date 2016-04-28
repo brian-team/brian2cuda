@@ -9,6 +9,9 @@ int mem_per_thread(){
 
 {% block maincode %}
 	{# USES_VARIABLES { t, _spikespace, N } #}
+
+	__shared__ int32_t spike_counter_block;
+
 	// not_refractory and lastspike are added as needed_variables in the
 	// Thresholder class, we cannot use the USES_VARIABLE mechanism
 	// conditionally
@@ -28,8 +31,8 @@ int mem_per_thread(){
 
 	{{vector_code|autoindent}}
 	if(_cond) {
-		int32_t spike_index = atomicAdd(&{{_spikespace}}[N], 1);
-		{{_spikespace}}[spike_index] = _idx;
+		int32_t spike_index = atomicAdd(&spike_counter_block, 1);
+		{{_spikespace}}[bid * THREADS_PER_BLOCK + spike_index] = _idx;
 		{% if _uses_refractory %}
 		// We have to use the pointer names directly here: The condition
 		// might contain references to not_refractory or lastspike and in
@@ -37,6 +40,11 @@ int mem_per_thread(){
 		{{not_refractory}}[_idx] = false;
 		{{lastspike}}[_idx] = {{t}};
 		{% endif %}
+	}
+	__syncthreads();
+
+	if (tid == 0) {
+		atomicAdd(&{{_spikespace}}[N], spike_counter_block);
 	}
 {% endblock %}
 
