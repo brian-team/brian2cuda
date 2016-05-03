@@ -22,10 +22,16 @@ int mem_per_thread(){
 
 	{{_spikespace}}[_idx] = -1;
 
-	if(tid == 0 && bid == 0)
+	if(tid == 0)
 	{
-		//init number of spikes with 0
-		{{_spikespace}}[N] = 0;
+		//init spike counter per block with 0
+		spike_counter_block = 0;
+
+		if(bid == 0)
+		{
+			//init global spike counter with 0
+			{{_spikespace}}[N] = 0;
+		}
 	}
 	__syncthreads();
 
