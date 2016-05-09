@@ -10,6 +10,8 @@ int mem_per_thread(){
 {% block maincode %}
 	{# USES_VARIABLES { t, _spikespace, N } #}
 
+	// use one shared spike counter per block --> parallel atomicAdd on shared memory
+	// and afterwards only one atomicAdd on global memory per block
 	__shared__ int32_t spike_counter_block;
 
 	// not_refractory and lastspike are added as needed_variables in the
