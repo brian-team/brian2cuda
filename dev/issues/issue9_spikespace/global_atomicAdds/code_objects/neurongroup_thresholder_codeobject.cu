@@ -90,14 +90,20 @@ __global__ void kernel_neurongroup_thresholder_codeobject(
  const int32_t i = _ptr_array_neurongroup_i[_idx];
  const double _cond = true;//(i / 2) == ((i + 1) / 2);
 
+	int32_t spike_index;
+
  	__syncthreads();
  	clock_t start = clock();
 	if(_cond) {
-		int32_t spike_index = atomicAdd(&_ptr_array_neurongroup__spikespace[10000], 1);
-		_ptr_array_neurongroup__spikespace[spike_index] = _idx;
+		spike_index = atomicAdd(&_ptr_array_neurongroup__spikespace[10000], 1);
 	}
  	clock_t end = clock();
 	glob_time[tid] = (int)(end - start);
+
+	__syncthreads();
+	if(_cond) {
+		_ptr_array_neurongroup__spikespace[spike_index] = _idx;
+	}
 
 }
 
@@ -137,10 +143,11 @@ kernel_neurongroup_thresholder_codeobject<<<num_blocks(10000), num_threads(10000
 		glob_sum += h_glob_time[i];
 	}
 
+	// clock cycles / clock rate(MHz) = time(us)
 	double glob_time = (double)(glob_sum)/980;
 	
-	std::cout << "Average time per global atomicAdd:\n" << glob_time/num_threads(10000) << "ms\n\n" << std::endl;
-	std::cout << "Total time in global atomicAdd:\n" << glob_time << "ms\n\n" << std::endl;
+	std::cout << "Average time per global atomicAdd:\n" << glob_time/num_threads(10000) << "us\n\n" << std::endl;
+	std::cout << "Total time in global atomicAdd:\n" << glob_time << "us\n\n" << std::endl;
 }
 
 
