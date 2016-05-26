@@ -32,3 +32,7 @@ nosetests.xml
 
 # IPython
 .ipynb_checkpoints
+
+# ignore compiled files in dev folder
+/dev/**/*.o
+/dev/**/main
