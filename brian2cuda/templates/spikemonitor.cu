@@ -4,7 +4,7 @@
                     
 {% block extra_device_helper %}
 	{% for varname, var in record_variables.items() %}
-		__device__ cudaVector<{{c_data_type(var.dtype)}}>** monitor_{{varname}};
+		__device__ cudaVector<{{c_data_type(var.dtype)}}>* monitor_{{varname}};
 	{% endfor %}
 {% endblock %}
 
@@ -12,35 +12,35 @@
 static bool first_run = true;
 if(first_run)
 {
-	_run_{{codeobj_name}}_init<<<1,1>>>(
-		num_blocks(_num_spikespace-1));
+	_run_{{codeobj_name}}_init<<<1,1>>>();
+		//num_blocks(_num_spikespace-1));
 	first_run = false;
 }
-_run_{{codeobj_name}}_kernel<<<num_blocks(_num_spikespace-1), 1>>>(
+_run_{{codeobj_name}}_kernel<<<1, 1>>>(
 		_num_spikespace-1,
-		num_blocks(_num_spikespace-1),
-		num_threads(_num_spikespace-1),
+//		num_blocks(_num_spikespace-1),
+//		num_threads(_num_spikespace-1),
 		dev_array_{{owner.name}}_count,
 		%HOST_PARAMETERS%);
 {% endblock %}
 
 {% block kernel %}
-__global__ void _run_{{codeobj_name}}_init(
-	unsigned int num_blocks)
+__global__ void _run_{{codeobj_name}}_init()
+	//unsigned int num_blocks)
 {
 	{% for varname, var in record_variables.items() %}
-		monitor_{{varname}} = new cudaVector<{{c_data_type(var.dtype)}}>*[num_blocks];
-		for(int i = 0; i < num_blocks; i++)
-		{
-			monitor_{{varname}}[i] = new cudaVector<{{c_data_type(var.dtype)}}>();
-		}
+		monitor_{{varname}} = new cudaVector<{{c_data_type(var.dtype)}}>();//*[num_blocks];
+//		for(int i = 0; i < num_blocks; i++)
+//		{
+//			monitor_{{varname}}[i] = new cudaVector<{{c_data_type(var.dtype)}}>();
+//		}
 	{% endfor %}
 }
 
 __global__ void _run_{{codeobj_name}}_kernel(
 	unsigned int neurongroup_N,
-	unsigned int num_blocks,
-	unsigned int block_size,
+//	unsigned int num_blocks,
+//	unsigned int block_size,
 	int32_t* count,
 	%DEVICE_PARAMETERS%
 	)
@@ -55,7 +55,8 @@ __global__ void _run_{{codeobj_name}}_kernel(
 	{{scalar_code|autoindent}}
 
 	//REMINDER: spikespace format: several blocks, each filled from the left with all spikes in this block, -1 ends list
-	for(int i = bid*block_size; i < neurongroup_N && i < (bid + 1)*block_size; i++)
+	//for(int i = bid*block_size; i < neurongroup_N && i < (bid + 1)*block_size; i++)
+	for(int i = 0; i < neurongroup_N; i++)
 	{
 		{% set _eventspace = get_array_name(eventspace_variable) %}
 		int32_t spiking_neuron = {{_eventspace}}[i];
@@ -67,7 +68,7 @@ __global__ void _run_{{codeobj_name}}_kernel(
 				int _vectorisation_idx = _idx;
 				{{vector_code|autoindent}}
 				{% for varname, var in record_variables.items() %}
-					monitor_{{varname}}[bid]->push(_to_record_{{varname}});
+					monitor_{{varname}}->push(_to_record_{{varname}});
 				{% endfor %}
 				count[_idx -_source_start]++;
 			}
@@ -82,24 +83,24 @@ __global__ void _run_{{codeobj_name}}_kernel(
 
 {% block extra_functions_cu %}
 __global__ void _run_debugmsg_{{codeobj_name}}_kernel(
-	unsigned int num_blocks
+	//unsigned int num_blocks
 )
 {
 	using namespace brian;
 	unsigned int total_number = 0;
 	{% for varname, var in record_variables.items() %}
-	total_number = 0;
-	for(int i = 0; i < num_blocks; i++)
-	{
-		total_number += monitor_{{varname}}[i]->size();
-	}
+	total_number = monitor_{{varname}}->size();
+//	for(int i = 0; i < num_blocks; i++)
+//	{
+//		total_number += monitor_{{varname}}[i]->size();
+//	}
 	{% endfor %}
 	printf("Number of spikes: %d\n", total_number);
 }
 
 __global__ void _count_{{codeobj_name}}_kernel(
 	%DEVICE_PARAMETERS%,
-	unsigned int num_blocks,
+	//unsigned int num_blocks,
 	unsigned int* total
 )
 {
@@ -108,11 +109,11 @@ __global__ void _count_{{codeobj_name}}_kernel(
 	
 	unsigned int total_number = 0;
 	{% for varname, var in record_variables.items() %}
-	total_number = 0;
-	for(int i = 0; i < num_blocks; i++)
-	{
-		total_number += monitor_{{varname}}[i]->size();
-	}
+	total_number = monitor_{{varname}}->size();
+//	for(int i = 0; i < num_blocks; i++)
+//	{
+//		total_number += monitor_{{varname}}[i]->size();
+//	}
 	{% endfor %}
 	*total = total_number;
 	{{N}} = total_number;
@@ -122,21 +123,22 @@ __global__ void _copy_{{codeobj_name}}_kernel(
 	{% for varname, var in record_variables.items() %}
 		{{c_data_type(var.dtype)}}* dev_monitor_{{varname}},
 	{% endfor %}
-	unsigned int num_blocks
+	bool d //TODO: fix, komma is the problem
+//	unsigned int num_blocks
 )
 {
 	using namespace brian;
 	unsigned int index = 0;
 	{% for varname, var in record_variables.items() %}
 	index = 0;
-	for(int i = 0; i < num_blocks; i++)
-	{
-		for(int j = 0; j < monitor_{{varname}}[i]->size(); j++)
+//	for(int i = 0; i < num_blocks; i++)
+//	{
+		for(int j = 0; j < monitor_{{varname}}->size(); j++)
 		{
-			dev_monitor_{{varname}}[index] = monitor_{{varname}}[i]->at(j);
+			dev_monitor_{{varname}}[index] = monitor_{{varname}}->at(j);
 			index++;
 		}
-	}
+//	}
 	{% endfor %}
 }
 
@@ -151,18 +153,26 @@ void _copyToHost_{{codeobj_name}}()
     cudaMalloc((void**)&dev_total, sizeof(unsigned int));
 	_count_{{codeobj_name}}_kernel<<<1,1>>>(
 		%HOST_PARAMETERS%,
-		num_blocks(_num{{eventspace_variable.name}}-1),
+		//num_blocks(_num{{eventspace_variable.name}}-1),
 		dev_total);
 	unsigned int total;
 	cudaMemcpy(&total, dev_total, sizeof(unsigned int), cudaMemcpyDeviceToHost);
 	{% for varname, var in record_variables.items() %}
 		dev_dynamic_array_{{owner.name}}_{{varname}}.resize(total);
 	{% endfor %}
+
+//	{% for varname, var in record_variables.items() %}
+//		//TODO: just use dev_dynamic_array everywhere in this file instead of monitor ?
+//		dev_dynamic_array_{{owner.name}}_{{varname}} = monitor_{{varname}} 
+//	{% endfor %}
+
 	_copy_{{codeobj_name}}_kernel<<<1,1>>>(
 		{% for varname, var in record_variables.items() %}
 			thrust::raw_pointer_cast(&dev_dynamic_array_{{owner.name}}_{{varname}}[0]),
 		{% endfor %}
-		num_blocks(_num{{eventspace_variable.name}}-1));
+		//num_blocks(_num{{eventspace_variable.name}}-1));
+		true
+		);
 }
 
 void _debugmsg_{{codeobj_name}}()
@@ -172,7 +182,8 @@ void _debugmsg_{{codeobj_name}}()
 	%CONSTANTS%
 
     {% set _eventspace = get_array_name(eventspace_variable) %}
-	_run_debugmsg_{{codeobj_name}}_kernel<<<1,1>>>(num_blocks(_num{{eventspace_variable.name}}-1));
+	//_run_debugmsg_{{codeobj_name}}_kernel<<<1,1>>>(num_blocks(_num{{eventspace_variable.name}}-1));
+	_run_debugmsg_{{codeobj_name}}_kernel<<<1,1>>>();
 }
 {% endblock %}
 
