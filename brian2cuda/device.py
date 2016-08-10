@@ -87,10 +87,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     override_conditional_write=None):
         if template_kwds == None:
             template_kwds = {}
-        no_or_const_delay_mode = "False"
+        no_or_const_delay_mode = False
         if isinstance(owner, SynapticPathway):
             if owner.variables["delay"].constant or owner.variables["delay"].scalar or owner.variables["delay"].size == 1:
-                no_or_const_delay_mode = "True"
+                # TODO: BUGFIX: this does not work at all: In standalone mode .constant, .scalar and .size are not updated
+                # according to delay parameter choice before simulation hasn't been run.
+                # And SynapticPathway.delay.constant means constant over the period of simulation, not constant over synapses.
+                no_or_const_delay_mode = True
+        no_or_const_delay_mode = False  # hard coded until no_or_const_delay_mode is set correctly
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
             serializing_mode = "syn"    #no serializing
