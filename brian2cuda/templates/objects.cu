@@ -68,6 +68,8 @@ int32_t {{S.name}}_source_stop_index;
 __device__ unsigned int* brian::{{path.name}}_size_by_pre;
 __device__ int32_t** brian::{{path.name}}_synapses_id_by_pre;
 __device__ unsigned int** brian::{{path.name}}_delay_by_pre;
+__device__ unsigned int** brian::{{path.name}}_delay_count_by_pre;
+__device__ unsigned int** brian::{{path.name}}_unique_delay_by_pre;
 __device__ SynapticPathway<double> brian::{{path.name}};
 {% endfor %}
 {% endfor %}
@@ -446,6 +448,8 @@ extern Synapses<double> {{S.name}};
 extern __device__ unsigned* {{path.name}}_size_by_pre;
 extern __device__ int32_t** {{path.name}}_synapses_id_by_pre;
 extern __device__ unsigned int** {{path.name}}_delay_by_pre;
+extern __device__ unsigned int** {{path.name}}_delay_count_by_pre;
+extern __device__ unsigned int** {{path.name}}_unique_delay_by_pre;
 extern __device__ SynapticPathway<double> {{path.name}};
 {% endfor %}
 {% endfor %}
