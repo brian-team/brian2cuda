@@ -1,3 +1,7 @@
+# run tests without X-server
+import matplotlib
+matplotlib.use('Agg')
+
 from brian2 import *
 from brian2.tests.features import *
 from brian2.tests.features.base import *
@@ -12,12 +16,13 @@ from brian2cuda.tests.speed import *
 # res.plot_all_tests()
 # show()
 
+
 # Quick testing
 res = run_speed_tests(configurations=[CUDAStandaloneConfiguration,
                                       #NumpyConfiguration,
                                       #WeaveConfiguration,
                                       #LocalConfiguration,
-                                      #CPPStandaloneConfiguration,
+                                      CPPStandaloneConfiguration,
                                       #CPPStandaloneConfigurationOpenMP,
                                       #GeNNConfiguration,
                                       ],
@@ -30,9 +35,9 @@ res = run_speed_tests(configurations=[CUDAStandaloneConfiguration,
                                    #SparseLowRateSynapsesOnly,
                                    #SparseHighRateSynapsesOnly,
 
-                                   AdaptationOscillation,
-                                   #BrunelHakimModel,
-                                   #BrunelHakimModelWithDelay,
+                                   #AdaptationOscillation,
+                                   BrunelHakimModel,
+                                   BrunelHakimModelWithDelay,
                                    #COBAHH,
                                    #STDPEventDriven,
                                    #STDPNotEventDriven,
@@ -41,12 +46,16 @@ res = run_speed_tests(configurations=[CUDAStandaloneConfiguration,
                                    ],
                       #n_slice=slice(None, None, 3),
                       #n_slice=slice(None, -1),
+                      n_slice=slice(None, None, 100),
                       run_twice=False,
                       maximum_run_time=1*second,
+                      verbose=True
                       )
 res.plot_all_tests()
 res.plot_all_tests(relative=True)
-show()
+for n in get_fignums():
+    savefig('speed_tests_fig{}.png'.format(n))
+#show()
 
 # Debug
 # from brian2.tests.features.base import results
