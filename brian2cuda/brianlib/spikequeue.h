@@ -110,7 +110,7 @@ public:
 
 		for(int i = tid; i < num_connected_synapses; i += num_threads)
 		{
-			if(!no_delay_mode)
+			if(!no_delay_mode)  // TODO: no_delay_mode==false is hard coded in synapses_pre_push_spikes.cu
 			{
 				int32_t syn_id = synapses_id_by_pre[right_offset][i];
 				shared_mem_synapses_id[tid] = syn_id;

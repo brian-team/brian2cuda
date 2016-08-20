@@ -67,6 +67,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	block_size = ((sourceN + _num_blocks - 1) / _num_blocks);
 	unsigned int start_index = {{owner.name}}.spikes_start - ({{owner.name}}.spikes_start % block_size);	//find start of last block
 	
+	// TODO: no delay mode is hard coded here!
 	char no_delay_mode = false;
 	for(int i = 0; i < {{owner.name}}.spikes_stop; i++)
 	{
