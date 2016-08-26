@@ -117,16 +117,12 @@ public:
 				unsigned int delay = delay_by_pre[right_offset][i];
 				shared_mem_synapses_delay[tid] = delay;
 
-				for(int delay_id = tid; delay_id < max_delay; delay_id += num_threads)
+				if(tid == 0)
 				{
 					for(int j = 0; j < num_threads && i + j < num_connected_synapses; j++)
 					{
 						int32_t queue_syn_id = shared_mem_synapses_id[j];
 						unsigned int queue_delay = shared_mem_synapses_delay[j];
-						if(queue_delay != delay_id)
-						{
-							continue;
-						}
 						unsigned int adjusted_delay = (current_offset + queue_delay)%max_delay;
 						unsigned int queue_id = bid;
 
