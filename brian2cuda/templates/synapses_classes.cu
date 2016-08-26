@@ -23,8 +23,12 @@ public:
 	scalar* dev_delay;
 	int32_t* dev_sources;
 	int32_t* dev_targets;
+	
+	// first and last index of source NeuronGroup in SynapticPathway
+	// important for Subgroups (syntax NeuronGroup(N=4000,...)[:3200])
 	unsigned int spikes_start;
 	unsigned int spikes_stop;
+
 	scalar dt;
 	CSpikeQueue<scalar>* queue;
 	bool no_or_const_delay_mode;
