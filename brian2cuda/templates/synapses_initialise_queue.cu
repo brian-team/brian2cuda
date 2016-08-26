@@ -103,7 +103,6 @@ void _run_{{pathobj}}_initialise_queue()
 	unsigned int** temp_delay_count_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 	unsigned int** temp_unique_delay_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 
-	printf("DEBUG: Before reduce loop");
 	//fill temp arrays with device pointers
 	for(int i = 0; i < num_parallel_blocks*source_N; i++)
 	{
@@ -115,7 +114,6 @@ void _run_{{pathobj}}_initialise_queue()
 				h_delay_by_pre_id[i].end(), 
 				h_synapses_by_pre_id[i].begin());
 
-		printf("DEBUG: After sort by key");
 		// reduce by key to find count (key==delay, value==count)
 		// (alternative: unique_by_key_copy with counting_iterator as values would give start idx of next delay)
 		// TODO: use device_vectors for key_output and value_output directly?
@@ -124,8 +122,6 @@ void _run_{{pathobj}}_initialise_queue()
 				thrust::constant_iterator<int>(1),		// values start (each delay has count 1 before reduction)
 				h_delay_count_by_pre_id[i].begin(),  		// key_output
 				h_unique_delay_by_pre_id[i].begin());  	// value_output
-
-		printf("DEBUG: After reduce by key");
 
 		int num_unique_elements = h_unique_delay_by_pre_id[i].size();
 
@@ -152,7 +148,6 @@ void _run_{{pathobj}}_initialise_queue()
 				sizeof(unsigned int)*num_unique_elements,
 				cudaMemcpyHostToDevice);
 		}
-		printf("DEBUG: After cudaMemcpy in loop");
 	}
 
 	//copy temp arrays to device
@@ -177,8 +172,6 @@ void _run_{{pathobj}}_initialise_queue()
 	cudaMalloc((void**)&temp5, sizeof(unsigned int*)*num_parallel_blocks*source_N);
 	cudaMemcpy(temp5, temp_unique_delay_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol({{pathobj}}_unique_delay_by_pre, &temp5, sizeof(unsigned int**));
-
-	printf("DEBUG: After cudaMemcpy after loop");
 	
 	unsigned int num_threads = max_delay;
 	if(num_threads >= max_threads_per_block)
