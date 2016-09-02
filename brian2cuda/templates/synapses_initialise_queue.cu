@@ -121,8 +121,6 @@ void _run_{{pathobj}}_initialise_queue()
 	unsigned int** temp_unique_delay_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 
 
-
-
 	//fill temp arrays with device pointers
 	for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix
 	{
@@ -162,8 +160,8 @@ void _run_{{pathobj}}_initialise_queue()
 				);
 
 		// erase unused vector entries
-		h_delay_count_by_pre_id[i].erase(unique_delay_end, h_delay_count_by_pre_id[i].end());
-		h_unique_delay_by_pre_id[i].erase(count_end, h_unique_delay_by_pre_id[i].end());
+		h_delay_count_by_pre_id[i].erase(count_end, h_delay_count_by_pre_id[i].end());
+		h_unique_delay_by_pre_id[i].erase(unique_delay_end, h_unique_delay_by_pre_id[i].end());
 		h_unique_delay_start_idx_by_pre_id[i].erase(idx_end, h_unique_delay_start_idx_by_pre_id[i].end());
 
 

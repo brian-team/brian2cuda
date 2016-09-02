@@ -4,6 +4,7 @@
 #include<inttypes.h>
 
 #include "cudaVector.h"
+#include <assert.h>
 
 #include <cstdio>
 
@@ -95,6 +96,9 @@ public:
 		char* _shared_mem,
 		char no_delay_mode)
 	{
+
+		assert(blockDim.x == num_threads);
+
 		unsigned int neuron_pre_id = _pre_id;
 		unsigned int right_offset = neuron_pre_id*num_blocks + bid;
 		unsigned int num_connected_synapses = size_by_pre[right_offset];

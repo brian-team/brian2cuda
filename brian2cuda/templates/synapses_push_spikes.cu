@@ -8,6 +8,7 @@
 #include<math.h>
 #include<stdint.h>
 #include "brianlib/common_math.h"
+#include <assert.h>
 
 namespace {
 	int _num_blocks(int num_objects)
@@ -36,7 +37,9 @@ namespace {
 	}
 }
 
-#define MEM_PER_THREAD (sizeof(int32_t) + sizeof(unsigned int))
+// TODO: when push is done, uncomment
+//#define MEM_PER_THREAD (sizeof(unsigned int))  // each thread copies one unique_delay_start_idx into shared memory
+#define MEM_PER_THREAD (sizeof(unsigned int) + sizeof(int32_t))
 
 __global__ void _run_{{codeobj_name}}_advance_kernel()
 {
@@ -57,8 +60,11 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	unsigned int block_size,
 	int32_t* {{_spikespace}})
 {
+	assert(blockDim.x == _num_threads);
+
 	using namespace brian;
 
+	// TODO: check if static shared memory is faster / makes any difference 
 	extern __shared__ char shared_mem[];
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
@@ -69,6 +75,9 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	
 	// TODO: no delay mode is hard coded here!
 	char no_delay_mode = false;
+
+	// TODO: shouldn't this loop start at {{owner.name}}.spikes_start?
+	// loop through spikespace until first -1 (end of spiking neurons)
 	for(int i = 0; i < {{owner.name}}.spikes_stop; i++)
 	{
 		int32_t spiking_neuron = {{_spikespace}}[i];
@@ -85,6 +94,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 		}
 		if(spiking_neuron == -1)
 		{
+			assert(i == _ptr_array_spikegeneratorgroup__spikespace[sourceN]);
 			return;
 		}
 	}
