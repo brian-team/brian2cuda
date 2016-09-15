@@ -97,6 +97,8 @@ public:
 		char no_delay_mode)
 	{
 
+		// apperently this is not always true and that is why _num_threads is passed as function argument
+		// if this assert never fails, we could remove the _num_threads form the argument list
 		assert(blockDim.x == num_threads);
 
 		unsigned int neuron_pre_id = _pre_id;

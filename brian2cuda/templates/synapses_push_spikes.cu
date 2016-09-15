@@ -60,6 +60,8 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	unsigned int block_size,
 	int32_t* {{_spikespace}})
 {
+	// apperently this is not always true and that is why _num_threads is passed as function argument
+	// if this assert never fails, we could remove the _num_threads form the argument list
 	assert(blockDim.x == _num_threads);
 
 	using namespace brian;
