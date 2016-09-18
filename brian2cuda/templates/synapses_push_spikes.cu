@@ -110,10 +110,17 @@ void _run_{{codeobj_name}}()
 	///// POINTERS ////////////
 
 	_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
+	// TODO: since we are only copying arays of size = number of unique delays, this needs to be adjusted
+	//		 here we are accepting MEM_PER_THREAD for each thread, but we only need it for max(num_unique_delays) threads
 	unsigned int num_threads = max_shared_mem_size / MEM_PER_THREAD;
-	num_threads = num_threads < max_threads_per_block? num_threads : max_threads_per_block; // get min of both
+
+	if (num_threads > max_threads_per_block)
+	{
+		num_threads = max_threads_per_block;
+	}
 	
 	{% if not no_or_const_delay_mode %}	
+		// TODO: check performance decrease when spawning many unused threads! Maybe call kernel with max(num_synapses) threads?
 		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, num_threads*MEM_PER_THREAD>>>(
 			_num_spikespace - 1,
 			num_parallel_blocks,

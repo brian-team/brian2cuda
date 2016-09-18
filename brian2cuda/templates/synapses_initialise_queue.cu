@@ -35,8 +35,12 @@ __global__ void _run_{{codeobj_name}}_kernel(
 		_syn_N,
 		max_delay,
 		{{pathobj}}_size_by_pre,
+		{{pathobj}}_unique_delay_size_by_pre,
 		{{pathobj}}_synapses_id_by_pre,
-		{{pathobj}}_delay_by_pre);
+		// TODO: delete _delay_by_pre
+		{{pathobj}}_delay_by_pre,
+		{{pathobj}}_unique_delay_start_idx_by_pre,
+		{{pathobj}}_unique_delay_by_pre);
 	{{pathobj}}.no_or_const_delay_mode = new_mode;
 }
 
@@ -114,6 +118,7 @@ void _run_{{pathobj}}_initialise_queue()
 
 	// TODO rename temp
 	unsigned int* temp_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
+	unsigned int* temp_unique_delay_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
 	int32_t** temp_synapses_by_pre_id = new int32_t*[num_parallel_blocks*source_N];
 	unsigned int** temp_delay_by_pre_id = new unsigned int*[num_parallel_blocks*source_N];
 	unsigned int** temp_delay_count_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
@@ -193,6 +198,8 @@ void _run_{{pathobj}}_initialise_queue()
 		
 
 		int num_unique_elements = h_unique_delay_by_pre_id[i].size();
+		temp_unique_delay_size_by_pre_id[i] = num_unique_elements;
+
 
 		if(num_elements > 0)
 		{
@@ -231,6 +238,10 @@ void _run_{{pathobj}}_initialise_queue()
 	cudaMalloc((void**)&temp, sizeof(unsigned int)*num_parallel_blocks*source_N);
 	cudaMemcpy(temp, temp_size_by_pre_id, sizeof(unsigned int)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol({{pathobj}}_size_by_pre, &temp, sizeof(unsigned int*));
+	unsigned int* temp7;
+	cudaMalloc((void**)&temp7, sizeof(unsigned int)*num_parallel_blocks*source_N);
+	cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*));
 	int32_t* temp2;
 	cudaMalloc((void**)&temp2, sizeof(int32_t*)*num_parallel_blocks*source_N);
 	cudaMemcpy(temp2, temp_synapses_by_pre_id, sizeof(int32_t*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
@@ -282,6 +293,7 @@ void _run_{{pathobj}}_initialise_queue()
 	delete [] h_unique_delay_start_idx_by_pre_id;
 	delete [] h_unique_delay_by_pre_id;
 	delete [] temp_size_by_pre_id;
+	delete [] temp_unique_delay_size_by_pre_id;
 	delete [] temp_synapses_by_pre_id;
 	delete [] temp_delay_by_pre_id;
 	delete [] temp_delay_count_by_pre_id;
