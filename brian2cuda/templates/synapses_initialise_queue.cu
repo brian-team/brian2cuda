@@ -39,8 +39,8 @@ __global__ void _run_{{codeobj_name}}_kernel(
 		{{pathobj}}_synapses_id_by_pre,
 		// TODO: delete _delay_by_pre
 		{{pathobj}}_delay_by_pre,
-		{{pathobj}}_unique_delay_start_idx_by_pre,
-		{{pathobj}}_unique_delay_by_pre);
+		{{pathobj}}_unique_delay_by_pre,
+		{{pathobj}}_unique_delay_start_idx_by_pre);
 	{{pathobj}}.no_or_const_delay_mode = new_mode;
 }
 
@@ -142,6 +142,7 @@ void _run_{{pathobj}}_initialise_queue()
 		// worst case: number of unique delays is num_elements
 		h_unique_delay_by_pre_id[i].resize(num_elements);
 		h_delay_count_by_pre_id[i].resize(num_elements);
+		// TODO resize h_unique_delay_start_idx_by_pre_id after reduce_by_key and erasing h_delay_count_by_pre_id to correct size
 		h_unique_delay_start_idx_by_pre_id[i].resize(num_elements);
 
 		// create arrays of unique delays (keys) and corresponding number of occurences (values)
