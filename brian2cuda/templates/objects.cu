@@ -35,6 +35,7 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endfor %}
 
 //////////////// dynamic arrays 1d /////////
+// TODO: check if using thrust::host_vector instead of std::vector has any (dis-)advantages
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 std::vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
