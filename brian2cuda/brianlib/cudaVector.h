@@ -2,6 +2,7 @@
 #define _CUDA_VECTOR_H_
 
 #include <cstdio>
+#include <assert.h>
 
 /*
  * current memory allocation strategy:
@@ -10,24 +11,27 @@
 
 #define INITIAL_SIZE 1
 
+typedef unsigned int size_type;
+
 template <class scalar>
 class cudaVector
 {
 private:
-	scalar* data;		//pointer to allocated memory
-	int size_allocated;	//how much memory is allocated, should ALWAYS >= size_used
-	int size_used;		//how many elements are stored in this vector
+	// TODO: consider using data of type char*, since it does not have a cunstructor
+	scalar* m_data;		//pointer to allocated memory
+	size_type m_capacity;	//how much memory is allocated, should ALWAYS >= size
+	size_type m_size;		//how many elements are stored in this vector
 
 public:
 	__device__ cudaVector()
 	{
-		size_used = 0;
+		m_size = 0;
 		if(INITIAL_SIZE > 0)
 		{
-			data = (scalar*)malloc(sizeof(scalar) * INITIAL_SIZE);
-			if(data)
+			m_data = (scalar*)malloc(sizeof(scalar) * INITIAL_SIZE);
+			if(m_data)
 			{
-				size_allocated = INITIAL_SIZE;
+				m_capacity = INITIAL_SIZE;
 			}
 			else
 			{
@@ -38,86 +42,106 @@ public:
 
 	__device__ ~cudaVector()
 	{
-		free(data);
+		free(m_data);
 	};
 
 	__device__ scalar* getDataPointer()
 	{
-		return data;
+		return m_data;
 	};
 
-	__device__ scalar at(int index)
+	__device__ scalar& at(size_type index)
 	{
-		if(index <= size_used && index >= 0)
+		if(index < m_size && index >= 0)
 		{
-			return data[index];
+			return m_data[index];
 		}
 		else
 		{
-			return 0;
+			// TODO: check for proper exception throwing in cuda kernels
+			printf("ERROR returning a reference to index %d in cudaVector::at()", index);
+			assert(0 <= index && index < m_size);
 		}
 	};
 
 	__device__ void push(scalar elem)
 	{
-		if(size_allocated == size_used)
+		if(m_capacity == m_size)
 		{
 			//resize larger
-			resize(size_allocated*2 + 1);
+			resize(m_capacity*2 + 1);
 		}
-		if(size_used < size_allocated)
+		if(m_size < m_capacity)
 		{
-			data[size_used] = elem;
-			size_used++;
+			m_data[m_size] = elem;
+			m_size++;
 		}
 	};
 
-	__device__ void update(unsigned int pos, scalar elem)
+	__device__ void update(size_type pos, scalar elem)
 	{
-		if(pos <= size_used)
+		if(pos <= m_size)
 		{
-			data[pos] = elem;
+			m_data[pos] = elem;
 		}
 		else
 		{
-			printf("ERROR invalid index %d, must be in range 0 - %d\n", pos, size_used);
+			printf("ERROR invalid index %d, must be in range 0 - %d\n", pos, m_size);
 		}
 	};
 
-	__device__ void resize(unsigned int new_capacity)
+	__device__ void resize(size_type new_size)
 	{
-		if(new_capacity > size_allocated)
+		reserve(new_size);
+		m_size = new_size;
+	}
+
+	__device__ void reserve(size_type new_capacity)
+	{
+		if(new_capacity > m_capacity)
 		{
 			//realloc larger memory (deviceside realloc doesn't exist, so we write our own)
 			scalar* new_data = (scalar*)malloc(sizeof(scalar) * new_capacity);
+			// TODO: use C++ version, is there a way to copy data in parallel here?
+			// 		 since only num_unique_delays threads resize, the other threads could help copy?
+			//scalar* new_data = new scalar[new_capacity];
+			//if (new_data)
+			//{
+			//	for (size_type i = 0; i < m_size; i++)
+			//		new_data[i] = m_data[i];
+			//
+			//	delete [] m_data;
+			//	m_data = new_data;
+			//	m_capacity = new_capacity;
+			//}
 			if (new_data)
 			{
-				memcpy(new_data, data, sizeof(scalar)*size());
-				free(data);
-				data = new_data;
-				size_allocated = new_capacity;
+				memcpy(new_data, m_data, sizeof(scalar) * size());
+				free(m_data);
+				m_data = new_data;
+				m_capacity = new_capacity;
 			}
 			else
 			{
-				printf("ERROR while resizing vector to size %d in cudaVector.h/resize()\n", sizeof(scalar)*new_capacity);
+				printf("ERROR while allocating %d bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
 			}
 		}
 		else
 		{
 			//kleiner reallocen?
-			size_used = new_capacity;
+			m_capacity = new_capacity;
 		};
 	};
 
 	//does not overwrite old data, just resets number of elements stored to 0
 	__device__ void reset()
 	{
-		size_used = 0;
+		m_size = 0;
 	};
 
-	__device__ int size()
+	__device__ size_type size()
 	{
-		return size_used;
+		return m_size;
 	};
 };
 
