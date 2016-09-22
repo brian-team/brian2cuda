@@ -68,8 +68,8 @@ public:
 	{
 		if(m_capacity == m_size)
 		{
-			//resize larger
-			resize(m_capacity*2 + 1);
+			// increase capacity
+			reserve(m_capacity*2 + 1);
 		}
 		if(m_size < m_capacity)
 		{
