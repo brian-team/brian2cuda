@@ -122,7 +122,6 @@ public:
 		//	unique_delays
 		//	delay_start_idx
 
-
 		assert(blockDim.x == num_threads);
 
 		// TODO: why not use _pre_id directly?
@@ -133,6 +132,10 @@ public:
 		unsigned int num_unique_delays = unique_delay_size_by_pre[right_offset];
 		// shared_mem is allocated in push_spikes
 		unsigned int* shared_mem_unique_delay_start_idx_by_pre = (unsigned int*)_shared_mem;
+
+		// TODO: remove when outer loop is implemented
+		assert(blockDim.x < num_synapses);
+
 
 		// previous code hat
 		// if (neuron_pre_id >= neuron_N) return;
