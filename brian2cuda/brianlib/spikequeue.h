@@ -111,16 +111,14 @@ public:
 		char no_delay_mode)
 	{
 
-		// call with max_num_threads
-
 		// following arrays are in global device memory:
 		//
-		//  with size == number of synapses:
 		// 	synapses_id_by_pre
+		//  (size == number of synapses)
 		//
-		//  with size == number of different delays:
 		//	unique_delays
 		//	delay_start_idx
+		//  (size == number of unique delays)
 
 		assert(blockDim.x == num_threads);
 
@@ -133,12 +131,8 @@ public:
 		// shared_mem is allocated in push_spikes
 		unsigned int* shared_mem_unique_delay_start_idx_by_pre = (unsigned int*)_shared_mem;
 
-		// TODO: remove when outer loop is implemented
-		assert(blockDim.x < num_synapses);
-
-
 		// previous code hat
-		// if (neuron_pre_id >= neuron_N) return;
+		// if (neuron_pre_id >= neuron_N) {return};
 		// but why should that ever happen? assert to find out
 		assert(neuron_pre_id < neuron_N);
 
@@ -147,154 +141,96 @@ public:
 		{
 			return;
 		}
+
 		// Copy to shared memory. If more entries then threads, loop.
 		// TODO: is it possible to know num_unique_delays beforehand to avoid allocation of unnecessary shared mem?
 		// since right now there is sizeof(unsigned int) allocated for each thread, not for num_unique_delays
-		if (tid < num_unique_delays)
+		for (unsigned int i = tid; i < num_unique_delays; i += num_threads)
 		{
-			shared_mem_unique_delay_start_idx_by_pre[tid] = unique_delay_start_idx_by_pre[right_offset][tid];
+			shared_mem_unique_delay_start_idx_by_pre[i] = unique_delay_start_idx_by_pre[right_offset][i];
 		}
-//		TODO:
-//		for (int i = tid; i < num_unique_delays; i += num_threads)
-//		{
-//			shared_mem_unique_delay_start_idx_by_pre[i] = unique_delay_start_idx_by_pre[right_offset][i];
-//		}
 		__syncthreads();
 
 
-		// ( tid <-> syn_ID ) correspondence
+		// ( thread <-> synapse ) correspondence 
 		// If num_threads < num_synapses, loop.
-// 		TODO: for (int i = tid; i < num_synapses; i += num_threads)
-
-		// find the starting index (current) in synapse_id_by_pre for the delay corresponding to the current thread
-		unsigned int next_delay_start_idx_in_synapses_id = 0;
-		unsigned int delay_start_idx_in_synapses_id, idx_in_unique_delays;
-		for (unsigned int j = 1; j < num_unique_delays; j++)
+		// syn is synapse number (not ID!)
+		for (unsigned int syn = tid; syn < num_synapses; syn += num_threads) 
 		{
-			delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
-			next_delay_start_idx_in_synapses_id = shared_mem_unique_delay_start_idx_by_pre[j];
-			if (next_delay_start_idx_in_synapses_id > tid)
+			// find the starting index in synapse_id_by_pre for the delay corresponding 
+			// to the current synapse and the starting index for the next delay
+			unsigned int next_delay_start_idx_in_synapses_id = 0;
+			unsigned int delay_start_idx_in_synapses_id, idx_in_unique_delays;
+			for (unsigned int j = 1; j < num_unique_delays; j++)
 			{
-				idx_in_unique_delays = j-1;
-				break;
-			}
-			if (j == num_unique_delays - 1) // end of loop
-			{
-				// this synapse (<-> tid) has highest delay for the current pre_neuron and post_block (<-> bid)
 				delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
-				idx_in_unique_delays = j;
-				// there is no next delay, for delay_occurence we need
-				next_delay_start_idx_in_synapses_id = num_synapses;
+				next_delay_start_idx_in_synapses_id = shared_mem_unique_delay_start_idx_by_pre[j];
+				if (next_delay_start_idx_in_synapses_id > syn)
+				{
+					idx_in_unique_delays = j-1;
+					break;
+				}
+				if (j == num_unique_delays - 1) // end of loop
+				{
+					// this synapse has the highest delay for the current pre_neuron and post_neuron_block
+					delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
+					idx_in_unique_delays = j;
+					// there is no next delay, for the calculation of delay_occurence we need
+					next_delay_start_idx_in_synapses_id = num_synapses;
+				}
 			}
-		}
 
-		// TODO: remove this if, once we have no_or_const_delay_mode implementation and add
-		// assert(num_unique_delays > 1)
-		// otherwise aboves loop is not entered and results in wrong delay_start_idx values
-		if (num_unique_delays == 1)
-		{
-			delay_start_idx_in_synapses_id = 0;
-			next_delay_start_idx_in_synapses_id = num_synapses;
-			idx_in_unique_delays = 0;
-		}
+			// TODO: remove this if statement once we have no_or_const_delay_mode implementation and add
+			// assert(num_unique_delays > 1)
+			// otherwise aboves loop is not entered and results in wrong delay_start_idx values
+			if (num_unique_delays == 1)
+			{
+				delay_start_idx_in_synapses_id = 0;
+				next_delay_start_idx_in_synapses_id = num_synapses;
+				idx_in_unique_delays = 0;
+			}
 
-		assert(delay_start_idx_in_synapses_id <= tid && tid < next_delay_start_idx_in_synapses_id);
+			assert(delay_start_idx_in_synapses_id <= syn && syn < next_delay_start_idx_in_synapses_id);
 
-		// get the delay and the number of synapses with that delay
-		// TODO: is it faster to once make a coalesced copy of unique_delay_by_pre to shared memory? try!
-		unsigned int delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
-		unsigned int delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
+			// get the delay of the current synapse and the number of synapses with that delay
+			// TODO: is it faster to once make a coalesced copy of unique_delay_by_pre to shared memory? try!
+			unsigned int delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
+			unsigned int delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
 
-		// find spike queue corresponding to delay
-		unsigned int delay_queue = (current_offset + delay) % max_delay;
+			// find the spike queue corresponding to this synapses delay
+			unsigned int delay_queue = (current_offset + delay) % max_delay;
 
-		// uncoalseced memory access, TODO: use pointer for cudaVector.size
-		// currently multiple consecutive threads read same global memory address,
-		// then next consecutive threads read next global memory address
-		//
-		// TODO check memory broadcasting mechanism
-		// 		maybe copy size_before_resize into shared memory when copying the unique delay start idx
-		unsigned int size_before_resize = synapses_queue[delay_queue][bid].size();
+			// uncoalseced memory access, TODO: use pointers to consecutive memory locations for cudaVector::m_size
+			// currently multiple consecutive threads read same global memory address,
+			// then next consecutive threads read next global memory address
+			// TODO check memory broadcasting mechanism
+			// 		maybe copy size_before_resize into shared memory when copying the unique delay start idx
+			unsigned int size_before_resize = synapses_queue[delay_queue][bid].size();
 
-		// RESIZE QUEUES
-		//if ( i < num_unique_delays )  // only one thread for each unique delay
-		if ( tid == delay_start_idx_in_synapses_id )  // only one thread for each unique delay
-		{
-			synapses_queue[delay_queue][bid].resize(size_before_resize + delay_occurrence);
-		}
+			// RESIZE QUEUES
+			// TODO: if we use pointers for cudaVector::m_size, consecutive threads should to the resize
+			// in order to get coalesced memory access, e.g. by letting the threads that copy the start_idx
+			// to shared memory then perform aboves code until resize and then let all threads do it again 
+			// for their respective syn number
+			// -> we get coalesced memory access but have to do more shared mem reads and numerics
+			if ( syn == delay_start_idx_in_synapses_id )  // only one thread for each unique delay
+			{
+				synapses_queue[delay_queue][bid].resize(size_before_resize + delay_occurrence);
+			}
 
-		// make sure all queues are resized before actually pushing
-		__syncthreads();
+			// make sure all queues are resized before actually pushing
+			__syncthreads();
 
-		// PUSH INTO QUEUES
+			// PUSH INTO QUEUES
+			unsigned int syn_id = synapses_id_by_pre[right_offset][syn];
+			// find position in queue for syn
+			unsigned int idx_in_queue = size_before_resize + (syn - delay_start_idx_in_synapses_id);
+			// each thread updates one value in queue
+			synapses_queue[delay_queue][bid].at(idx_in_queue) = syn_id;
 
-		// ( tid <-> synID ) correspondence.
-		// If num_threads < num_synapses, loop.
-//		TODO: for (int i = tid; i < num_unique_delays; i += num_threads)y
-		unsigned int syn_id = synapses_id_by_pre[right_offset][tid];
-
-		// find position in queue for tid
-		unsigned int idx_in_queue = size_before_resize + (tid - delay_start_idx_in_synapses_id);
-		// each thread updates one value in queue
-		synapses_queue[delay_queue][bid].at(idx_in_queue) = syn_id;
+		} // end for
 
 	} // end push()
-
-
-//		/////////////////////////////////////////////////////////////////////////////
-//		PREVIOUS VERSION FROM KONRAD
-//
-//		assert(blockDim.x == num_threads);
-//
-//		unsigned int neuron_pre_id = _pre_id;
-//		unsigned int right_offset = neuron_pre_id*num_blocks + bid;
-//		unsigned int num_connected_synapses = size_by_pre[right_offset];
-//		//shared_mem is allocated in push_spikes
-//		int32_t* shared_mem_synapses_id = (int32_t*)_shared_mem;
-//		unsigned int* shared_mem_synapses_delay = (unsigned int*)((int32_t*)shared_mem_synapses_id + num_threads);
-//
-//		//ignore invalid pre_ids
-//		if(neuron_pre_id >= neuron_N)
-//		{
-//			return;
-//		}
-//
-//		for(int i = tid; i < num_connected_synapses; i += num_threads)
-//		{
-//			if(!no_delay_mode)
-//			{
-//				int32_t syn_id = synapses_id_by_pre[right_offset][i];
-//				shared_mem_synapses_id[tid] = syn_id;
-//				unsigned int delay = delay_by_pre[right_offset][i];
-//				shared_mem_synapses_delay[tid] = delay;
-//
-//				for(int delay_id = tid; delay_id < max_delay; delay_id += num_threads)
-//				{
-//					for(int j = 0; j < num_threads && i + j < num_connected_synapses; j++)
-//					{
-//						int32_t queue_syn_id = shared_mem_synapses_id[j];
-//						unsigned int queue_delay = shared_mem_synapses_delay[j];
-//						if(queue_delay != delay_id)
-//						{
-//							continue;
-//						}
-//						unsigned int adjusted_delay = (current_offset + queue_delay)%max_delay;
-//						unsigned int queue_id = bid;
-//
-//						synapses_queue[adjusted_delay][queue_id].push(queue_syn_id);
-//					}
-//				}
-//				__syncthreads();
-//			}
-//			else
-//			{
-//				unsigned int queue_delay = max_delay - 1;
-//				unsigned int adjusted_delay = (current_offset + queue_delay)%max_delay;
-//				unsigned int queue_id = bid;
-//
-//				synapses_queue[adjusted_delay][queue_id].push(_pre_id);
-//			}
-//		}
 
 	__device__ void advance(
 		unsigned int tid)
