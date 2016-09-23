@@ -96,7 +96,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 		}
 		if(spiking_neuron == -1)
 		{
-			assert(i == _ptr_array_spikegeneratorgroup__spikespace[sourceN]);
+			assert(i == {{_spikespace}}[sourceN]);
 			return;
 		}
 	}
