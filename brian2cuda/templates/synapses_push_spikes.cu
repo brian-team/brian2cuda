@@ -71,6 +71,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
 	
+	// TODO: what is this for? it's not used, delete if not needed
 	//REMINDER: spikespace format: several blocks, each filled from the left with all spikes in this block, -1 ends list
 	block_size = ((sourceN + _num_blocks - 1) / _num_blocks);
 	unsigned int start_index = {{owner.name}}.spikes_start - ({{owner.name}}.spikes_start % block_size);	//find start of last block
@@ -111,7 +112,7 @@ void _run_{{codeobj_name}}()
 
 	_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 	// TODO: since we are only copying arays of size = number of unique delays, this needs to be adjusted
-	//		 here we are accepting MEM_PER_THREAD for each thread, but we only need it for max(num_unique_delays) threads
+	// here we are expecting MEM_PER_THREAD for each thread, but we only need it for max(num_unique_delays) threads
 	unsigned int num_threads = max_shared_mem_size / MEM_PER_THREAD;
 
 	if (num_threads > max_threads_per_block)
