@@ -102,7 +102,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         serializing_mode = "post"
                 if variable_indices[varname] == "_presynaptic_idx":
                     serializing_mode = "pre"
-            serializing_mode = 'syn' # HARD CODED! see issue 26
             template_kwds["serializing_mode"] = serializing_mode
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,

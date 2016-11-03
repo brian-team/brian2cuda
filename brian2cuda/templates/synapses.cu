@@ -27,15 +27,6 @@ __global__ void kernel_{{codeobj_name}}(
 	{% block additional_variables %}
 	{% endblock %}
 
-	{% if serializing_mode == "post" %}
-	if (! {{pathway.name}}.no_or_const_delay_mode)
-	{
-		//in normal mode for postsynaptic effects, only 1 thread is working
-		if (tid != 0)
-			return;
-	}
-	{% endif %}
-
 	cudaVector<int32_t>* synapses_queue;
 	
 	{{pathway.name}}.queue->peek(
@@ -89,9 +80,9 @@ __global__ void kernel_{{codeobj_name}}(
 	);
 	{% endif %}
 	{% if serializing_mode == "post" %}
-	kernel_{{codeobj_name}}<<<num_parallel_blocks,max_threads_per_block>>>(
+	kernel_{{codeobj_name}}<<<num_parallel_blocks,1>>>(
 		0,
-		max_threads_per_block,
+		1,
 		%HOST_PARAMETERS%
 	);
 	{% endif %}
