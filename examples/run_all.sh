@@ -2,13 +2,13 @@
 
 for CPP_MODEL in *cpp.py; do 
 	printf "Running $CPP_MODEL ...\n"
-	( PYTHONPATH=..:../../moritzaugustin_brian2 python $CPP_MODEL > /tmp/tmp_$CPP_MODEL 2>&1 && printf "\n... done with $CPP_MODEL\n\n" ) &
+	( PYTHONPATH=..:../frozen_repos/brian2 python $CPP_MODEL > /tmp/tmp_$CPP_MODEL 2>&1 && printf "\n... done with $CPP_MODEL\n\n" ) &
 done
 
 
 for CUDA_MODEL in *cuda.py; do 
 	printf "Running $CUDA_MODEL ...\n"
-	PYTHONPATH=..:../../moritzaugustin_brian2 python $CUDA_MODEL
+	PYTHONPATH=..:../frozen_repos/brian2 python $CUDA_MODEL
 	printf "\n... done with $CUDA_MODEL \n\n"
 done
 
