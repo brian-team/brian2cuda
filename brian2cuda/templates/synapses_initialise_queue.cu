@@ -14,7 +14,7 @@ namespace {
 }
 
 __global__ void _run_{{codeobj_name}}_kernel(
-	unsigned int _target_N,
+	unsigned int _source_N,
 	unsigned int _num_blocks,
 	unsigned int _num_threads_per_block,
 	double _dt,
@@ -31,7 +31,7 @@ __global__ void _run_{{codeobj_name}}_kernel(
 		_num_threads_per_block,
 		_num_blocks,
 		0,
-		_target_N,
+		_source_N,
 		_syn_N,
 		max_delay,
 		{{pathobj}}_size_by_pre,
@@ -98,6 +98,8 @@ void _run_{{pathobj}}_initialise_queue()
 	unsigned int max_delay = 0;
 	for(int syn_id = 0; syn_id < syn_N; syn_id++)  // loop through all synapses
 	{
+		// pre/post_neuron_id are integers from 0 to Nsource/Ntarget (from corresponding SynapticPathway)
+		// this is relevant only when using Subgroups where they might be NOT equal to the idx in their NeuronGroup
 		int32_t pre_neuron_id = h_synapses_synaptic_sources[syn_id] - {{owner.source.start}};
 		int32_t post_neuron_id = h_synapses_synaptic_targets[syn_id]  - {{owner.target.start}};
 		unsigned int delay = (int)(h_synapses_delay[syn_id] / dt + 0.5);

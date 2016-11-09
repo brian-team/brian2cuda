@@ -33,7 +33,7 @@ public:
 	unsigned int current_offset;
 	unsigned int max_delay;
 	unsigned int num_blocks;
-	unsigned int neuron_N;
+	unsigned int neuron_N; // number of neurons in source of SynapticPathway
 	unsigned int syn_N;
 
 	//Since we can't have a destructor, we need to call this function manually
@@ -123,7 +123,7 @@ public:
 		assert(blockDim.x == num_threads);
 
 		// TODO: why not use _pre_id directly?
-		unsigned int neuron_pre_id = _pre_id;
+		unsigned int neuron_pre_id = _pre_id; // index in sources SynapticPathway ([0, neuron_N])
 		unsigned int right_offset = neuron_pre_id * num_blocks + bid;
 		// TODO: use size_by_pre and unique_size if we keep it
 		unsigned int num_synapses = size_by_pre[right_offset];
@@ -131,9 +131,7 @@ public:
 		// shared_mem is allocated in push_spikes
 		unsigned int* shared_mem_unique_delay_start_idx_by_pre = (unsigned int*)_shared_mem;
 
-		// previous code hat
-		// if (neuron_pre_id >= neuron_N) {return};
-		// but why should that ever happen? assert to find out
+		// neuron_pre_id should be in range [0,neuron_N]
 		assert(neuron_pre_id < neuron_N);
 
 		// TODO: use global size_by_pre only in host memory and call push() with max num_synapses threads

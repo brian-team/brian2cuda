@@ -18,14 +18,16 @@ template <class scalar>
 class SynapticPathway
 {
 public:
+	// total number of neurons in source and target NeuronGroup / Subgroup
 	int Nsource;
 	int Ntarget;
+
 	scalar* dev_delay;
 	int32_t* dev_sources;
 	int32_t* dev_targets;
 	
-	// first and last index of source NeuronGroup in SynapticPathway
-	// important for Subgroups (syntax NeuronGroup(N=4000,...)[:3200])
+	// first and last index in source NeuronGroup corresponding to Subgroup in SynapticPathway
+	// important for Subgroups created with syntax: NeuronGroup(N=4000,...)[:3200]
 	unsigned int spikes_start;
 	unsigned int spikes_stop;
 

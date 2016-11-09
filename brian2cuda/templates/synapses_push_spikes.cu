@@ -54,10 +54,9 @@ __global__ void _run_{{codeobj_name}}_advance_kernel()
 }
 
 __global__ void _run_{{codeobj_name}}_push_kernel(
-	unsigned int sourceN,
+	unsigned int neurongroup_size,
 	unsigned int _num_blocks,
 	unsigned int _num_threads,
-	unsigned int block_size,
 	int32_t* {{_spikespace}})
 {
 	// apperently this is not always true and that is why _num_threads is passed as function argument
@@ -71,34 +70,31 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
 	
-	// TODO: what is this for? it's not used, delete if not needed
-	//REMINDER: spikespace format: several blocks, each filled from the left with all spikes in this block, -1 ends list
-	block_size = ((sourceN + _num_blocks - 1) / _num_blocks);
-	unsigned int start_index = {{owner.name}}.spikes_start - ({{owner.name}}.spikes_start % block_size);	//find start of last block
-	
 	// TODO: no delay mode is hard coded here!
 	char no_delay_mode = false;
 
-	// TODO: shouldn't this loop start at {{owner.name}}.spikes_start?
-	// loop through spikespace until first -1 (end of spiking neurons)
-	for(int i = 0; i < {{owner.name}}.spikes_stop; i++)
+	// loop through spiking neurons in spikespace (indices of spiking neurons, rest -1)
+	for(int i = 0; i < neurongroup_size; i++)
 	{
+		// spiking_neuron is index in NeuronGroup
 		int32_t spiking_neuron = {{_spikespace}}[i];
-		if(spiking_neuron != -1 && spiking_neuron >= {{owner.name}}.spikes_start && spiking_neuron < {{owner.name}}.spikes_stop)
+
+		if(spiking_neuron == -1) // end of spiking neurons
+		{
+			assert(i == {{_spikespace}}[neurongroup_size]);
+			return;
+		}
+		// push to spikequeue if spiking_neuron is in sources of current SynapticPathway
+		if({{owner.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{owner.name}}.spikes_stop)
 		{
 			__syncthreads();
 			{{owner.name}}.queue->push(
 				bid,
 				tid,
 				_num_threads,
-				spiking_neuron,
+				spiking_neuron - {{owner.name}}.spikes_start,
 				shared_mem,
 				no_delay_mode);
-		}
-		if(spiking_neuron == -1)
-		{
-			assert(i == {{_spikespace}}[sourceN]);
-			return;
 		}
 	}
 }
@@ -126,7 +122,6 @@ void _run_{{codeobj_name}}()
 			_num_spikespace - 1,
 			num_parallel_blocks,
 			num_threads,
-			_num_threads(_num_spikespace - 1),
 			{% set _spikespace = get_array_name(owner.variables['_spikespace'], access_data=False) %}
 			dev{{_spikespace}});
 	{% else %}
