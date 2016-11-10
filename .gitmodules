@@ -1,6 +1,6 @@
 [submodule "brian2_frozen"]
 	path = frozen_repos/brian2
-	url = https://github.com/moritzaugustin/brian2.git
+	url = https://github.com/brian-team/brian2.git
 [submodule "genn_frozen"]
 	path = frozen_repos/genn
 	url = https://github.com/genn-team/genn.git
