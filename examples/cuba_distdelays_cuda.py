@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 from brian2 import *
 
 import brian2cuda
-set_device('cuda_standalone')
+set_device('cuda_standalone', directory='CUBA_DISTDELAYS_CUDA', compile=True, run=True, debug=True)
 
 taum = 20*ms
 taue = 5*ms
@@ -40,7 +40,6 @@ Ce.delay = '2.5*ms + 0.5*rand()*ms'
 s_mon = SpikeMonitor(P)
 
 run(1 * second, report='text')
-device.build(directory='CUBA_DISTDELAYS_CUDA', compile=True, run=True, debug=True)
 
 plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
 title('CUBA_DISTDELAYS_CUDA')
