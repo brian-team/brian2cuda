@@ -23,7 +23,7 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     object with two macros defined, ``main`` (for the main loop code) and
     ``support_code`` for any support code (e.g. function definitions).
     '''
-    templater = Templater('brian2cuda',
+    templater = Templater('brian2cuda', '.cu',
                           env_globals={'c_data_type': c_data_type,
 				       'constant_or_scalar': constant_or_scalar})
     generator_class = CUDACodeGenerator
