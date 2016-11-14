@@ -16,7 +16,6 @@
 	                    N_incoming, N_outgoing, N } #}
 
 	srand(time(0));
-	{{scalar_code|autoindent}}
 
 	//these two vectors just cache everything on the CPU-side
 	//data is copied to GPU at the end
