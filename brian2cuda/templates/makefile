@@ -16,9 +16,7 @@ debug: CFLAGS += $(DEBUG)
 debug: LFLAGS += $(DEBUG)
 debug: executable
 
-.PHONY: all debug executable clean native
-
-native: executable
+.PHONY: all debug executable clean
 
 executable: $(OBJS_CPP) $(OBJS_CU)
 	$(CC) $(LFLAGS) -arch=sm_20 $(OBJS_CPP) $(OBJS_CU) -o $(PROGRAM)

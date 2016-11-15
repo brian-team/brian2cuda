@@ -442,21 +442,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         )
         writer.write('run.*', run_tmp)
         
-    def generate_makefile(self, writer, compiler, native, compiler_flags, nb_threads):
+    def generate_makefile(self, writer, compiler, compiler_flags, nb_threads):
         if compiler=='msvc':
-            if native:
-                arch_flag = ''
-                try:
-                    from cpuinfo import cpuinfo
-                    res = cpuinfo.get_cpu_info()
-                    if 'sse' in res['flags']:
-                        arch_flag = '/arch:SSE'
-                    if 'sse2' in res['flags']:
-                        arch_flag = '/arch:SSE2'
-                except ImportError:
-                    logger.warn('Native flag for MSVC compiler requires installation of the py-cpuinfo module')
-                compiler_flags += ' '+arch_flag
-            
             if nb_threads>1:
                 openmp_flag = '/openmp'
             else:
@@ -485,7 +472,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              with_output=True, native=True,
+              with_output=True,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
               run_args=None, direct_call=True, **kwds):
@@ -608,10 +595,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.source_files.extend(additional_source_files)
         writer.header_files.extend(additional_header_files)
         
-        self.generate_makefile(writer, compiler, native, compiler_flags, nb_threads=0)
+        self.generate_makefile(writer, compiler, compiler_flags, nb_threads=0)
         
         if compile:
-            self.compile_source(directory, compiler, debug, clean, native)
+            self.compile_source(directory, compiler, debug, clean)
             if run:
                 self.run(directory, with_output, run_args)
 
