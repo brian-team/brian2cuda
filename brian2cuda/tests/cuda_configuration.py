@@ -10,7 +10,7 @@ __all__ = ['CUDAStandaloneConfiguration']
 class CUDAStandaloneConfiguration(Configuration):
     name = 'cuda'
     def before_run(self):
-        brian2.set_device('cuda_standalone')
+        brian2.set_device('cuda_standalone', build_on_run=False)
         
     def after_run(self):
         if os.path.exists('cuda_standalone'):
