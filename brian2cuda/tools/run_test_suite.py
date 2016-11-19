@@ -2,8 +2,6 @@
 Run brian2 test suite on standalone architectures
 """
 
-from brian2 import test
-
 import argparse
 parser = argparse.ArgumentParser(description='Run the brian2 testsuite on GPU.')
 parser.add_argument('--targets', nargs='*', default='cuda_standalone', type=str, 
@@ -13,6 +11,8 @@ parser.add_argument('--targets', nargs='*', default='cuda_standalone', type=str,
 parser.add_argument('--no_long_tests', action='store_false', 
                     help="Set to not run long tests. By default they are run.")
 args = parser.parse_args()
+
+from brian2 import test
 
 if 'cuda_standalone' in args.targets:
     import brian2cuda

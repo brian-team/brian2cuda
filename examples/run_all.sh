@@ -33,6 +33,7 @@ elif [ $# -eq 1 ]; then
 	case "$1" in
 		cpp) # only run cpp scripts
 			run_all_cpp
+			wait
 			print_cpp_output
 			;;
 		cuda)
