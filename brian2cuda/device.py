@@ -252,6 +252,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
             if num_occurences_rand > 0:
+                # synapses_create_generator uses host side random number generation
                 if code_object.template_name != "synapses_create_generator":
                     #first one is alway the definition, so subtract 1
                     code_object.rand_calls = num_occurences_rand - 1
@@ -260,8 +261,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * " + str(code_object.owner.N) + ")", 1)
                         else:
                             code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * _N)", 1)
-                else:
-                    code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "(rand()/(float)RAND_MAX)")
             if num_occurences_randn > 0 and code_object.template_name != "synapses_create_generator":
                 #first one is alway the definition, so subtract 1
                 code_object.randn_calls = num_occurences_randn - 1

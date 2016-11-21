@@ -103,6 +103,7 @@ __global__ void {{path.name}}_init(
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
+curandGenerator_t brian::random_float_generator_host;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 float* brian::dev_{{co.name}}_random_uniform_floats;
 __device__ float* brian::_array_{{co.name}}_rand;
@@ -125,7 +126,11 @@ void _init_arrays()
 	max_shared_mem_size = props.sharedMemPerBlock;
 	
 	curandCreateGenerator(&random_float_generator, CURAND_RNG_PSEUDO_DEFAULT);
+	curandCreateGeneratorHost(&random_float_generator_host, CURAND_RNG_PSEUDO_DEFAULT);
+	// These random seeds might be overwritten in main.cu
+	// TODO: is setting sequential seeds for different generator producing random enough samples?
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
+	curandSetPseudoRandomGeneratorSeed(random_float_generator_host, time(0) + 1);
 
 	//since random number generation is at the end of each clock_tick, also generate numbers for t = 0
 	unsigned int needed_random_numbers;
@@ -461,6 +466,7 @@ extern __device__ SynapticPathway<double> {{path.name}};
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t random_float_generator;
+extern curandGenerator_t random_float_generator_host;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 extern float* dev_{{co.name}}_random_uniform_floats;

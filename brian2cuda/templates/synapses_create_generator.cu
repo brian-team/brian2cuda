@@ -3,6 +3,7 @@
 {% block extra_headers %}
 {{ super() }}
 #include<iostream>
+#include<curand.h>
 {% endblock %}
 
 {% block kernel %}
@@ -16,14 +17,11 @@
 	                    N_incoming, N_outgoing, N,
 	                    N_pre, N_post, _source_offset, _target_offset } #}
 
-
-	srand(time(0));
-
+	
 	//these two vectors just cache everything on the CPU-side
 	//data is copied to GPU at the end
 	thrust::host_vector<int32_t> temp_synaptic_post;
 	thrust::host_vector<int32_t> temp_synaptic_pre;
-		
 
 	{{pointers_lines|autoindent}}
 
@@ -32,17 +30,19 @@
 	const int _N_pre = {{constant_or_scalar('N_pre', variables['N_pre'])}};
 	const int _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
 
+	// TODO: This generates random numbers on CPU. For sufficient sample size, generation on GPU
+	// 	 and copying back to CPU memory might be faster. This needs profiling.
+	//	 This also generates unnecessaryly many random numbers, which could be avoided.
+	unsigned int max_needed_random_floats = N_pre * N_post;
+	float* _array_%CODEOBJ_NAME%_rand = new float [max_needed_random_floats];
+	curandGenerateUniform(random_float_generator_host, _array_%CODEOBJ_NAME%_rand, max_needed_random_floats);
+
     	int _raw_pre_idx, _raw_post_idx;
     	{{scalar_code['setup_iterator']|autoindent}}
     	{{scalar_code['create_j']|autoindent}}
     	{{scalar_code['create_cond']|autoindent}}
     	{{scalar_code['update_post']|autoindent}}
 	unsigned int syn_id = 0;
-	
-	// don't know what to do with this _vectorisation_idx
-	// its set to -1 in cpp_standalone and used for random number
-	// generation with randomkit
-	//const int _vectorisation_idx = _i*_num_all_post  + _j;
 
 	for(int _i = 0; _i < _N_pre; _i++)
 	{
@@ -102,6 +102,7 @@
 	        const double _pconst = 1.0/log(1-_uiter_p);
 	        for(int {{iteration_variable}}=_uiter_low; {{iteration_variable}}<_uiter_high; {{iteration_variable}}++)
 	        {
+		    unsigned int _vectorisation_idx = {{iteration_variable}} + _i * _N_pre;  // used for indexing random number array
 	            if(_jump_algo) {
 	                const double _r = _rand(_vectorisation_idx);
 	                if(_r==0.0) break;

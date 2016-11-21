@@ -169,6 +169,7 @@ for func, func_cuda in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan
                                                                name=func_cuda)
 
 # Functions that need to be implemented specifically
+# TODO: can we delete rand and randn here, since we implement them im codeobject.py ?
 randn_code = '''
     #define _randn(vectorisation_idx) (_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
         '''
