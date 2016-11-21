@@ -132,6 +132,8 @@ void _init_arrays()
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
 	curandSetPseudoRandomGeneratorSeed(random_float_generator_host, time(0) + 1);
 
+	// TODO: if a specific seed is used, these first random number don't use it
+	//	 solution: generate numbers at beginning of clock cycle or move this to end of main.cu
 	//since random number generation is at the end of each clock_tick, also generate numbers for t = 0
 	unsigned int needed_random_numbers;
 	{% for co in codeobj_with_rand | sort(attribute='name') %}

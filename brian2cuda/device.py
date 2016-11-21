@@ -229,6 +229,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 name, main_lines = procedures.pop(-1)
                 runfuncs[name] = main_lines
                 name, main_lines = procedures[-1]
+            elif func=='seed':
+                seed = args
+                if seed is not None:
+                    # TODO: is sequential seeding of different generators resulting in random enough samples in total?
+                    main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator, {seed!r}ULL);'.format(seed=seed))
+                    main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator_host, {seed!r}ULL + 1);'.format(seed=seed))
+                # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
@@ -297,10 +304,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         {
                             printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''');
                         }
-                        curandGenerator_t uniform_gen;
-                        curandCreateGenerator(&uniform_gen, CURAND_RNG_PSEUDO_DEFAULT);
-                        curandSetPseudoRandomGeneratorSeed(uniform_gen, time(0));
-                        curandGenerateNormal(uniform_gen, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
+                        curandGenerateNormal(random_float_generator, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
                     line = "float* _array_{name}_randn".format(name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_randn")
@@ -313,10 +317,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         {
                             printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
                         }
-                        curandGenerator_t normal_gen;
-                        curandCreateGenerator(&normal_gen, CURAND_RNG_PSEUDO_DEFAULT);
-                        curandSetPseudoRandomGeneratorSeed(normal_gen, time(0));
-                        curandGenerateUniform(normal_gen, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
+                        curandGenerateUniform(random_float_generator, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
                     line = "float* _array_{name}_rand".format(name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_rand")
