@@ -252,7 +252,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
             if num_occurences_rand > 0:
-                if code_object.template_name != "synapses_create":
+                if code_object.template_name != "synapses_create_generator":
                     #first one is alway the definition, so subtract 1
                     code_object.rand_calls = num_occurences_rand - 1
                     for i in range(0, code_object.rand_calls):
@@ -262,7 +262,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * _N)", 1)
                 else:
                     code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "(rand()/(float)RAND_MAX)")
-            if num_occurences_randn > 0 and code_object.template_name != "synapses_create":
+            if num_occurences_randn > 0 and code_object.template_name != "synapses_create_generator":
                 #first one is alway the definition, so subtract 1
                 code_object.randn_calls = num_occurences_randn - 1
                 for i in range(0, code_object.randn_calls):
@@ -289,7 +289,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 number_elements = "_N"
             for k, v in codeobj.variables.iteritems():
                 #code objects which only run once
-                if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create":
+                if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     additional_code.append('''
                         //genenerate an array of random numbers on the device
                         float* dev_array_randn;
@@ -305,7 +305,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     line = "float* _array_{name}_randn".format(name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_randn")
-                elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create":
+                elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     additional_code.append('''
                         //genenerate an array of random numbers on the device
                         float* dev_array_rand;

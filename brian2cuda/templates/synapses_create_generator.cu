@@ -13,7 +13,9 @@
 
 {% block extra_maincode %}
 	{# USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
-	                    N_incoming, N_outgoing, N } #}
+	                    N_incoming, N_outgoing, N,
+	                    N_pre, N_post, _source_offset, _target_offset } #}
+
 
 	srand(time(0));
 
@@ -24,6 +26,11 @@
 		
 
 	{{pointers_lines|autoindent}}
+
+	{# Get N_post and N_pre in the correct way, regardless of whether they are
+	constants or scalar arrays#}
+	const int _N_pre = {{constant_or_scalar('N_pre', variables['N_pre'])}};
+	const int _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
 
     	int _raw_pre_idx, _raw_post_idx;
     	{{scalar_code['setup_iterator']|autoindent}}
@@ -37,7 +44,7 @@
 	// generation with randomkit
 	//const int _vectorisation_idx = _i*_num_all_post  + _j;
 
-	for(int _i = 0; _i < _num_all_pre; _i++)
+	for(int _i = 0; _i < _N_pre; _i++)
 	{
 
 		{% block maincode_inner %}
@@ -145,7 +152,6 @@
 			    syn_id++;
 			}
 		    }
-		} // this } too much?
 		{% endblock %}
 	}
 
