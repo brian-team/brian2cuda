@@ -7,13 +7,13 @@ from brian2.tests.features.input import SpikeGeneratorGroupTest
 import brian2cuda
 from brian2cuda.tests.cuda_configuration import CUDAStandaloneConfiguration
 
-import brian2genn
-from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationOptimized
+#import brian2genn
+#from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationOptimized
 
 # Test cuda, genn, cpp
 res = run_feature_tests([CPPStandaloneConfiguration,
-                         GeNNConfiguration,
-                         GeNNConfigurationOptimized,
+                         #GeNNConfiguration,
+                         #GeNNConfigurationOptimized,
                          CUDAStandaloneConfiguration])
 print res.tables_and_exceptions
 
