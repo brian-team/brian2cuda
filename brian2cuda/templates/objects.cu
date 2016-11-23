@@ -314,6 +314,21 @@ void _write_arrays()
 			std::cout << "Error writing output file for {{varname}}." << endl;
 		}
 		{% endfor %}
+
+	// Write dummy profiling_info file for feature_tests to not fail
+	ofstream outfile_profiling_info;
+	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
+	if(outfile_profiling_info.is_open())
+	{
+	{% for codeobj in code_objects | sort(attribute='name') %}
+	outfile_profiling_info << "{{codeobj.name}}\t0" << std::endl;
+	{% endfor %}
+	outfile_profiling_info.close();
+	} else
+	{
+	    std::cout << "Error writing profiling info to file." << std::endl;
+	}
+
 }
 
 {% for S in synapses | sort(attribute='name') %}
