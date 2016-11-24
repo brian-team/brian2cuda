@@ -108,6 +108,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
         multiplier = prefs.devices.cuda_standalone.SM_multiplier
+        curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
+        curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -123,7 +125,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         get_array_filename=self.get_array_filename,
                         codeobj_with_rand=codeobj_with_rand,
                         codeobj_with_randn=codeobj_with_randn,
-                        multiplier=multiplier)
+                        multiplier=multiplier,
+                        curand_generator_type=curand_generator_type,
+                        curand_generator_ordering=curand_generator_ordering)
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):

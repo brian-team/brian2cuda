@@ -125,8 +125,12 @@ void _init_arrays()
 	max_threads_per_block = props.maxThreadsPerBlock;
 	max_shared_mem_size = props.sharedMemPerBlock;
 	
-	curandCreateGenerator(&random_float_generator, CURAND_RNG_PSEUDO_DEFAULT);
-	curandCreateGeneratorHost(&random_float_generator_host, CURAND_RNG_PSEUDO_DEFAULT);
+	curandCreateGenerator(&random_float_generator, {{curand_generator_type}});
+	curandCreateGeneratorHost(&random_float_generator_host, {{curand_generator_type}});
+	{% if curand_generator_ordering %}
+	curandSetGeneratorOrdering(random_float_generator, {{curand_generator_ordering}});
+	curandSetGeneratorOrdering(random_float_generator_host, {{curand_generator_ordering}});
+	{% endif %}
 	// These random seeds might be overwritten in main.cu
 	// TODO: is setting sequential seeds for different generator producing random enough samples?
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
