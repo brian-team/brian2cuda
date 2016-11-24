@@ -106,6 +106,8 @@ class CUDACodeGenerator(CPPCodeGenerator):
             if func_namespace is not None:
                 self.variables.update(func_namespace)
 
+        support_code += '\n' + deindent(self.universal_support_code)
+
         keywords = {'pointers_lines': stripped_deindented_lines(pointers),
                     'support_code_lines': stripped_deindented_lines(support_code),
                     'hashdefine_lines': stripped_deindented_lines(hash_defines),
