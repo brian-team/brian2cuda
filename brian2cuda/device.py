@@ -34,17 +34,6 @@ __all__ = []
 
 logger = get_logger(__name__)
 
-prefs.register_preferences(
-    'devices.cuda_standalone',
-    'CUDA standalone preferences ',
-    SM_multiplier = BrianPreference(
-        default=1,
-        docs='''
-        The number of blocks per SM. By default, this value is set to 1.
-        ''',
-        ),
-    )
-
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
         self.project_dir = project_dir

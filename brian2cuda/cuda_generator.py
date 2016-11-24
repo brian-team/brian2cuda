@@ -20,43 +20,6 @@ __all__ = ['CUDACodeGenerator',
            ]
 
 
-# Preferences
-prefs.register_preferences(
-    'codegen.generators.cuda',
-    'CUDA codegen preferences',
-    restrict_keyword = BrianPreference(
-        default='__restrict',
-        docs='''
-        The keyword used for the given compiler to declare pointers as restricted.
-
-        This keyword is different on different compilers, the default works for
-        gcc and MSVS.
-        ''',
-        ),
-    flush_denormals = BrianPreference(
-        default=False,
-        docs='''
-        Adds code to flush denormals to zero.
-
-        The code is gcc and architecture specific, so may not compile on all
-        platforms. The code, for reference is::
-
-            #define CSR_FLUSH_TO_ZERO         (1 << 15)
-            unsigned csr = __builtin_ia32_stmxcsr();
-            csr |= CSR_FLUSH_TO_ZERO;
-            __builtin_ia32_ldmxcsr(csr);
-
-        Found at `<http://stackoverflow.com/questions/2487653/avoiding-denormal-values-in-c>`_.
-        ''',
-        ),
-    )
-
-# -ffast-math, -fno-finite-math-only and -march are not compatible with nvcc
-# default = ['-w', '-O3', '-ffast-math', '-fno-finite-math-only', '-march=native']
-prefs.codegen.cpp.extra_compile_args_gcc = ['-w', '-O3']
-
-
-
 class CUDACodeGenerator(CPPCodeGenerator):
     '''
     C++ language with CUDA library
