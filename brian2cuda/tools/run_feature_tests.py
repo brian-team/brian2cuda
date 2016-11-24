@@ -11,7 +11,7 @@ from brian2cuda.tests.cuda_configuration import CUDAStandaloneConfiguration
 #from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationOptimized
 
 # Test cuda, genn, cpp
-res = run_feature_tests([CPPStandaloneConfiguration,
+res = run_feature_tests([#CPPStandaloneConfiguration,
                          #GeNNConfiguration,
                          #GeNNConfigurationOptimized,
                          CUDAStandaloneConfiguration])
