@@ -409,13 +409,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'),
                      os.path.join(directory, 'brianlib', 'stdint_compat.h'))
 
-    def generate_network_source(self, writer, compiler):
-        if compiler=='msvc':
-            std_move = 'std::move'
-        else:
-            std_move = ''
-        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
-                                                             std_move=std_move)
+    def generate_network_source(self, writer):
+        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None)
         writer.write('network.*', network_tmp)
         
     def generate_synapses_classes_source(self, writer):
@@ -431,8 +426,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         )
         writer.write('run.*', run_tmp)
         
-    def generate_makefile(self, writer, compiler, compiler_flags, nb_threads):
-        if compiler=='msvc':
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
+        nvcc_compiler_flags = prefs.devices.cuda_standalone.extra_compile_args_nvcc
+        gpu_arch_flags = ['']
+        for flag in nvcc_compiler_flags:
+            if flag.startswith(('--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code', '-gencode')):
+                gpu_arch_flags.append(flag)
+                nvcc_compiler_flags.remove(flag)
+        nvcc_compiler_flags = ' '.join(nvcc_compiler_flags)
+        gpu_arch_flags = ' '.join(gpu_arch_flags)
+        if cpp_compiler=='msvc':
             if nb_threads>1:
                 openmp_flag = '/openmp'
             else:
@@ -442,7 +445,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             win_makefile_tmp = CUDAStandaloneCodeObject.templater.win_makefile(
                 None, None,
                 source_bases=source_bases,
-                compiler_flags=compiler_flags,
+                cpp_compiler_flags=cpp_compiler_flags,
                 openmp_flag=openmp_flag,
                 )
             writer.write('win_makefile', win_makefile_tmp)
@@ -455,7 +458,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             makefile_tmp = CUDAStandaloneCodeObject.templater.makefile(None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
-                compiler_flags=compiler_flags,
+                cpp_compiler_flags=cpp_compiler_flags,
+                nvcc_compiler_flags=nvcc_compiler_flags,
+                gpu_arch_flags = gpu_arch_flags,
                 rm_cmd=rm_cmd)
             writer.write('makefile', makefile_tmp)
 
@@ -547,8 +552,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if directory is None:
             directory = tempfile.mkdtemp()
     
-        compiler, extra_compile_args = get_compiler_and_args()
-        compiler_flags = ' '.join(extra_compile_args)
+        cpp_compiler, cpp_extra_compile_args = get_compiler_and_args()
+        cpp_compiler_flags = ' '.join(cpp_extra_compile_args)
         self.project_dir = directory
         ensure_directory(directory)
         
@@ -575,7 +580,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.generate_main_source(writer, main_includes)
         self.generate_codeobj_source(writer)        
         self.generate_objects_source(writer, arange_arrays, self.net_synapses, self.static_array_specs, self.networks)
-        self.generate_network_source(writer, compiler)
+        self.generate_network_source(writer)
         self.generate_synapses_classes_source(writer)
         self.generate_run_source(writer, run_includes)
         self.generate_rand_source(writer)
@@ -584,10 +589,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.source_files.extend(additional_source_files)
         writer.header_files.extend(additional_header_files)
         
-        self.generate_makefile(writer, compiler, compiler_flags, nb_threads=0)
+        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0)
         
         if compile:
-            self.compile_source(directory, compiler, debug, clean)
+            self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
                 self.run(directory, with_output, run_args)
 
