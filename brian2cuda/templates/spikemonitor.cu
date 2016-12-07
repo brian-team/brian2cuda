@@ -16,16 +16,13 @@ if(first_run)
 	first_run = false;
 }
 _run_{{codeobj_name}}_kernel<<<1, 1>>>(
-		_num_spikespace-1,
-//		num_blocks(_num_spikespace-1),
-//		num_threads(_num_spikespace-1),
+		_num{{eventspace_variable.name}}-1,
 		dev_array_{{owner.name}}_count,
 		%HOST_PARAMETERS%);
 {% endblock %}
 
 {% block kernel %}
 __global__ void _run_{{codeobj_name}}_init()
-	//unsigned int num_blocks)
 {
 	{% for varname, var in record_variables.items() %}
 		monitor_{{varname}} = new cudaVector<{{c_data_type(var.dtype)}}>();

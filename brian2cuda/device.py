@@ -605,7 +605,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         CPPStandaloneDevice.network_run(self, net, duration, report, report_period, namespace, profile, level+1)
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
-                self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables['_spikespace'], False), -1, False)))
+                for key in codeobj.variables.iterkeys():
+                    if key.endswith('space'):  # get the correct eventspace name
+                        self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
         for func, args in self.main_queue:
             if func=='run_network':
                 net, netcode = args
