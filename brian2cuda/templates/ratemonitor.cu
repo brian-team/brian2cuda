@@ -18,7 +18,6 @@ if(first_run)
 
 {% block kernel_call %}
 _run_{{codeobj_name}}_kernel<<<1,1>>>(
-	{{owner.source.N}},
 	current_iteration - start_offset,
 	thrust::raw_pointer_cast(&(dev{{_dynamic_rate}}[0])),
 	thrust::raw_pointer_cast(&(dev{{_dynamic_t}}[0])),
@@ -28,7 +27,6 @@ _run_{{codeobj_name}}_kernel<<<1,1>>>(
 
 {% block kernel %}
 __global__ void _run_{{codeobj_name}}_kernel(
-	unsigned int N,  // size of (Sub-)Neurongroup TODO: use _num_source_neurons instead
 	int32_t current_iteration,
 	double* ratemonitor_rate,
 	double* ratemonitor_t,
@@ -43,7 +41,7 @@ __global__ void _run_{{codeobj_name}}_kernel(
 
 	unsigned int num_spikes = 0;
 
-	if (_num_spikespace-1 != N)  // we have a subgroup
+	if (_num_spikespace-1 != _num_source_neurons)  // we have a subgroup
 	{
 		for (unsigned int i=0; i < _num_spikespace; i++)
 		{
@@ -62,10 +60,13 @@ __global__ void _run_{{codeobj_name}}_kernel(
 	}
 	else  // we don't have a subgroup
 	{
-	num_spikes = {{_spikespace}}[N];
+	num_spikes = {{_spikespace}}[_num_source_neurons];
 	}
 
-	ratemonitor_rate[current_iteration] = 1.0*num_spikes/{{_clock_dt}}/N;
+	// TODO: we should be able to use {{rate}} and {{t}} here instead of passing these
+	//		 additional pointers. But this results in thrust::system_error illegal memory access.
+	//       Don't know why... {{rate}} and ratemonitor_rate should be the same...
+	ratemonitor_rate[current_iteration] = 1.0*num_spikes/{{_clock_dt}}/_num_source_neurons;
 	ratemonitor_t[current_iteration] = {{_clock_t}};
 }
 {% endblock %}
