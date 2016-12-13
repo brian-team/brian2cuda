@@ -226,8 +226,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 seed = args
                 if seed is not None:
                     # TODO: is sequential seeding of different generators resulting in random enough samples in total?
+                    # generator offset needs to be reset to its default (=0)
                     main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator, {seed!r}ULL);'.format(seed=seed))
+                    main_lines.append('curandSetGeneratorOffset(random_float_generator, 0ULL);')
                     main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator_host, {seed!r}ULL + 1);'.format(seed=seed))
+                    main_lines.append('curandSetGeneratorOffset(random_float_generator_host, 0ULL);')
                 # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
