@@ -55,5 +55,5 @@ randn_code = '''
         '''
 randn_impls = DEFAULT_FUNCTIONS['randn'].implementations
 randn_impls.add_implementation(CUDAStandaloneCodeObject,
-                              code=rand_code,
+                              code=randn_code,
                               name='_randn')
