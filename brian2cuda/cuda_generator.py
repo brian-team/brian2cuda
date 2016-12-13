@@ -9,7 +9,7 @@ from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.preferences import prefs
 from brian2.core.variables import ArrayVariable
-from brian2.codegen.generators.cpp_generator import c_data_type, _universal_support_code
+from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 
 logger = get_logger(__name__)
@@ -18,6 +18,37 @@ __all__ = ['CUDACodeGenerator',
            'c_data_type'
            ]
 
+# CUDA does not support modulo arithmetics for long double. Since we can't give a warning, we let the
+# compilation fail, which gives an error message of type
+# error: more than one instance of overloaded function "_brian_mod" matches the argument list: ...
+# TODO: can we produce a more informative error message?
+mod_support_code = ''
+typestrs = ['unsigned char', 'char', 'unsigned short', 'short', 'unsigned int', 'int', 'unsigned long', 'long',
+            'unsigned long long', 'long long', 'float', 'double']#, 'long double']
+floattypestrs = ['float', 'double']#, 'long double']
+for ix, xtype in enumerate(typestrs):
+    for iy, ytype in enumerate(typestrs):
+        hightype = typestrs[max(ix, iy)]
+        if xtype in floattypestrs or ytype in floattypestrs:
+            expr = 'fmod(fmod(x, y)+y, y)'
+        else:
+            expr = '((x%y)+y)%y'
+        mod_support_code += '''
+        __device__ {hightype} _brian_mod({xtype} ux, {ytype} uy)
+        {{
+            const {hightype} x = ({hightype})ux;
+            const {hightype} y = ({hightype})uy;
+            return {expr};
+        }}
+        '''.format(hightype=hightype, xtype=xtype, ytype=ytype, expr=expr)
+
+_universal_support_code = deindent(mod_support_code)+'''
+#ifdef _MSC_VER
+#define _brian_pow(x, y) (pow((double)(x), (y)))
+#else
+#define _brian_pow(x, y) (pow((x), (y)))
+#endif
+'''
 
 class CUDACodeGenerator(CodeGenerator):
     '''
