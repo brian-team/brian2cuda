@@ -34,7 +34,7 @@ for ix, xtype in enumerate(typestrs):
         else:
             expr = '((x%y)+y)%y'
         mod_support_code += '''
-        __device__ {hightype} _brian_mod({xtype} ux, {ytype} uy)
+        inline __host__ __device__ {hightype} _brian_mod({xtype} ux, {ytype} uy)
         {{
             const {hightype} x = ({hightype})ux;
             const {hightype} y = ({hightype})uy;
