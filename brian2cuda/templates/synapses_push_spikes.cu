@@ -9,6 +9,7 @@
 #include<math.h>
 #include<stdint.h>
 #include "brianlib/common_math.h"
+#include "brianlib/stdint_compat.h"
 #include <assert.h>
 
 namespace {

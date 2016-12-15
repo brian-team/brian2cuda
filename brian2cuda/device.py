@@ -413,8 +413,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 writer.source_files.append('brianlib/'+file)
             elif file.lower().endswith('.h'):
                 writer.header_files.append('brianlib/'+file)
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'),
-                     os.path.join(directory, 'brianlib', 'stdint_compat.h'))
 
     def generate_network_source(self, writer):
         network_tmp = CUDAStandaloneCodeObject.templater.network(None, None)

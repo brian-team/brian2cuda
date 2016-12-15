@@ -2,6 +2,7 @@
 #include "code_objects/{{codeobj_name}}.h"
 #include<cmath>
 #include "brianlib/common_math.h"
+#include "brianlib/stdint_compat.h"
 #include<stdint.h>
 #include<iostream>
 #include<fstream>

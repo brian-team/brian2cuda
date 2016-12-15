@@ -426,7 +426,7 @@ for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
 
 # Functions that need a name translation
 for func, func_cuda in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan'),
-                       ('abs', 'fabs')]:
+                       ('abs', 'fabs'), ('int', 'int_')]: # in stdint_compat.h
     DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
                                                                code=None,
                                                                name=func_cuda)
@@ -460,13 +460,3 @@ clip_code = '''
 DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=clip_code,
                                                              name='_clip')
-
-int_code = '''
-    __device__ int int_(const bool value)
-    {
-        return value ? 1 : 0;
-    }
-    '''
-DEFAULT_FUNCTIONS['int'].implementations.add_implementation(CUDACodeGenerator,
-                                                            code=int_code,
-                                                            name='int_')
