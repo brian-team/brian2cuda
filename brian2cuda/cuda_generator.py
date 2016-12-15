@@ -284,77 +284,13 @@ class CUDACodeGenerator(CodeGenerator):
     def determine_keywords(self):
         # set up the restricted pointers, these are used so that the compiler
         # knows there is no aliasing in the pointers, for optimisation
-        pointers = []
-        # It is possible that several different variable names refer to the
-        # same array. E.g. in gapjunction code, v_pre and v_post refer to the
-        # same array if a group is connected to itself
-        handled_pointers = set()
-        template_kwds = {}
-        # Again, do the import here to avoid a circular dependency.
-        from brian2.devices.device import get_device
-        device = get_device()
-        for varname, var in self.variables.iteritems():
-            if isinstance(var, ArrayVariable):
-                # This is the "true" array name, not the restricted pointer.
-                array_name = device.get_array_name(var)
-                pointer_name = self.get_array_name(var)
-                if pointer_name in handled_pointers:
-                    continue
-                if getattr(var, 'dimensions', 1) > 1:
-                    continue  # multidimensional (dynamic) arrays have to be treated differently
-                restrict = self.restrict
-                # turn off restricted pointers for scalars for safety
-                if var.scalar:
-                    restrict = ' '
-                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
-                                                    restrict,
-                                                    pointer_name,
-                                                    array_name)
-                pointers.append(line)
-                handled_pointers.add(pointer_name)
-
-        # set up the functions
-        user_functions = []
-        support_code = []
-        hash_defines = []
-        for varname, variable in self.variables.items():
-            if isinstance(variable, Function):
-                hd, ps, sc, uf = self._add_user_function(varname, variable)
-                user_functions.extend(uf)
-                support_code.extend(sc)
-                pointers.extend(ps)
-                hash_defines.extend(hd)
-
-
-        # delete the user-defined functions from the namespace and add the
-        # function namespaces (if any)
-        for funcname, func in user_functions:
-            del self.variables[funcname]
-            func_namespace = func.implementations[self.codeobj_class].get_namespace(self.owner)
-            if func_namespace is not None:
-                self.variables.update(func_namespace)
-
-        support_code.append(self.universal_support_code)
-
-
-        keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
-                    'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
-                    'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
-                    'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
-                    }
-        keywords.update(template_kwds)
-        return keywords
-
-    def determine_keywords(self):
-        # set up the restricted pointers, these are used so that the compiler
-        # knows there is no aliasing in the pointers, for optimisation
         lines = []
-        # It is possible that several different variable names refer to the
+        # it is possible that several different variable names refer to the
         # same array. E.g. in gapjunction code, v_pre and v_post refer to the
         # same array if a group is connected to itself
         handled_pointers = set()
         template_kwds = {}
-        # Again, do the import here to avoid a circular dependency.
+        # again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
         for varname, var in self.variables.iteritems():
