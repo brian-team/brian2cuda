@@ -13,16 +13,21 @@
 {% endblock %}
 
 {% block extra_maincode %}
+	// TODO: get rid of the variables we don't actually use
 	{# USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
 	                    N_incoming, N_outgoing, N,
 	                    N_pre, N_post, _source_offset, _target_offset } #}
 
+	{# WRITES_TO_READ_ONLY_VARIABLES { _synaptic_pre, _synaptic_post,
+	                                   N_incoming, N_outgoing, N}
+	#}
 	
 	//these two vectors just cache everything on the CPU-side
 	//data is copied to GPU at the end
 	thrust::host_vector<int32_t> temp_synaptic_post;
 	thrust::host_vector<int32_t> temp_synaptic_pre;
 
+	///// pointers_lines /////
 	{{pointers_lines|autoindent}}
 
 	{# Get N_post and N_pre in the correct way, regardless of whether they are
@@ -33,14 +38,19 @@
 	// TODO: This generates random numbers on CPU. For sufficient sample size, generation on GPU
 	// 	 and copying back to CPU memory might be faster. This needs profiling.
 	//	 This also generates unnecessaryly many random numbers, which could be avoided.
+	//	 And random numbers are even created when none are needed at all...
 	unsigned int max_needed_random_floats = N_pre * N_post;
 	float* _array_%CODEOBJ_NAME%_rand = new float [max_needed_random_floats];
 	curandGenerateUniform(random_float_generator_host, _array_%CODEOBJ_NAME%_rand, max_needed_random_floats);
 
     	int _raw_pre_idx, _raw_post_idx;
+	///// scalar_code['setup_iterator'] /////
     	{{scalar_code['setup_iterator']|autoindent}}
+	///// scalar_code['create_j'] /////
     	{{scalar_code['create_j']|autoindent}}
+	///// scalar_code['create_cond'] /////
     	{{scalar_code['create_cond']|autoindent}}
+	///// scalar_code['update_post'] /////
     	{{scalar_code['update_post']|autoindent}}
 	unsigned int syn_id = 0;
 
@@ -53,6 +63,7 @@
 	        _raw_pre_idx = _i + _source_offset;
 	        {% if not postsynaptic_condition %}
 	        {
+				///// vector_code['create_cond'] /////
 	            {{vector_code['create_cond']|autoindent}}
 	            __cond = _cond;
 	        }
@@ -80,6 +91,7 @@
 	        double _uiter_p;
 	        {% endif %}
 	        {
+				///// vector_code['setup_oterator'] /////
 	            {{vector_code['setup_iterator']|autoindent}}
 	            _uiter_low = _iter_low;
 	            _uiter_high = _iter_high;
@@ -115,6 +127,7 @@
 	        {% endif %}
 	            long __j, _j, _pre_idx, __pre_idx;
 	            {
+		    	///// vector_code['create_j'] /////
 	                {{vector_code['create_j']|autoindent}}
 	                __j = _j; // pick up the locally scoped _j and store in __j
 	                __pre_idx = _pre_idx;
@@ -134,6 +147,7 @@
 	            }
 	            {% if postsynaptic_condition %}
 	            {
+	                ///// vector_code['create_cond'] /////
 	                {{vector_code['create_cond']|autoindent}}
 	                __cond = _cond;
 	            }
@@ -144,6 +158,7 @@
 	            if(!_cond) continue;
 	            {% endif %}
 	
+	            ///// vector_code['update_post'] /////
 	            {{vector_code['update_post']|autoindent}}
 
 			for (int _repetition = 0; _repetition < _n; _repetition++)
@@ -168,6 +183,9 @@
 	{% endfor %}
 	// Also update the total number of synapses
         {{N}} = newsize;
+	cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
+			{{get_array_name(variables['N'], access_data=False)}},
+			sizeof(int32_t), cudaMemcpyHostToDevice);
 
 // TODO: test multisynaptic index occurence and potentially implement correctly
 //
