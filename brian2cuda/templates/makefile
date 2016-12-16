@@ -3,14 +3,16 @@ SRCS_CU  = $(wildcard *.cu */*.cu)
 OBJS_CU  = ${SRCS_CU:.cu=.o}
 CC = @nvcc
 DEBUG = -g -G -DTHRUST_DEBUG
-OPTIMISATIONS = {{ nvcc_compiler_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
-NVCCFLAGS = $(OPTIMISATIONS) -I.
+OPTIMISATIONFLAGS = {{ nvcc_optimization_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
+NVCCFLAGS = {% if disable_warnings %}-w{% endif %} -I.
 GPU_ARCH_FLAGS = {{ gpu_arch_flags }}
 LFLAGS = -lcurand
 
+# Add optimisation flags
+all: NVCCFLAGS += $(OPTIMISATIONFLAGS)
 all: executable
 
-# Adds debug flags
+# Add debug flags
 debug: GPU_ARCH_FLAGS += $(DEBUG)
 debug: executable
 

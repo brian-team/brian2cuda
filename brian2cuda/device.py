@@ -434,11 +434,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
         nvcc_compiler_flags = prefs.devices.cuda_standalone.extra_compile_args_nvcc
         gpu_arch_flags = ['']
+        disable_warnings = False
         for flag in nvcc_compiler_flags:
             if flag.startswith(('--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code', '-gencode')):
                 gpu_arch_flags.append(flag)
                 nvcc_compiler_flags.remove(flag)
-        nvcc_compiler_flags = ' '.join(nvcc_compiler_flags)
+            elif flag.startswith(('-w', '--disable-warnings')):
+                disable_warnings = True
+                nvcc_compiler_flags.remove(flag)
+        nvcc_optimization_flags = ' '.join(nvcc_compiler_flags)
         gpu_arch_flags = ' '.join(gpu_arch_flags)
         if cpp_compiler=='msvc':
             if nb_threads>1:
@@ -464,8 +468,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
                 cpp_compiler_flags=cpp_compiler_flags,
-                nvcc_compiler_flags=nvcc_compiler_flags,
-                gpu_arch_flags = gpu_arch_flags,
+                nvcc_optimization_flags=nvcc_optimization_flags,
+                gpu_arch_flags=gpu_arch_flags,
+                disable_warnings=disable_warnings,
                 rm_cmd=rm_cmd)
             writer.write('makefile', makefile_tmp)
 
