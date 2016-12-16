@@ -34,6 +34,8 @@
 	constants or scalar arrays#}
 	const int _N_pre = {{constant_or_scalar('N_pre', variables['N_pre'])}};
 	const int _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
+	{{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
+	{{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
 
 	// TODO: This generates random numbers on CPU. For sufficient sample size, generation on GPU
 	// 	 and copying back to CPU memory might be faster. This needs profiling.
@@ -163,6 +165,8 @@
 
 			for (int _repetition = 0; _repetition < _n; _repetition++)
 			{
+				{{_dynamic_N_outgoing}}[_pre_idx] += 1;
+				{{_dynamic_N_incoming}}[_post_idx] += 1;
 			    temp_synaptic_pre.push_back(_pre_idx);
 			    temp_synaptic_post.push_back(_post_idx);
 			    syn_id++;
@@ -181,11 +185,15 @@
 	dev{{varname}}.resize(newsize);
 	{{varname}}.resize(newsize);
 	{% endfor %}
-	// Also update the total number of synapses
-        {{N}} = newsize;
+	// update the total number of synapses
+		{{N}} = newsize;
+	// copy host data to device
 	cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
 			{{get_array_name(variables['N'], access_data=False)}},
 			sizeof(int32_t), cudaMemcpyHostToDevice);
+	dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
+	dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
+
 
 // TODO: test multisynaptic index occurence and potentially implement correctly
 //
