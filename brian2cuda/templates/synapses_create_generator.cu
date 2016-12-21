@@ -32,13 +32,24 @@
 	{{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
 	{{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
 
+	{% if iterator_func=='sample' %}
 	// TODO: This generates random numbers on CPU. For sufficient sample size, generation on GPU
 	// 	 and copying back to CPU memory might be faster. This needs profiling.
 	//	 This also generates unnecessaryly many random numbers, which could be avoided.
-	//	 And random numbers are even created when none are needed at all...
-	unsigned int max_needed_random_floats = N_pre * N_post;
+	int max_{{iteration_variable}};
+	{
+		// little hacky... get _iter_high before looping
+    	int _raw_pre_idx = 0, _raw_post_idx = 0, _i = 0;  // dummy for vector_code
+		///// vector_code['setup_iterator'] /////
+		{{vector_code['setup_iterator']|autoindent}}
+
+		max_{{iteration_variable}} = _iter_high;
+	}
+	// get the highest possible (_vectorisation_idx = {{iteration_variable}} + _i * _N_pre) with max(_i) = _N_pre - 1
+	unsigned int max_needed_random_floats = max_{{iteration_variable}} + _N_pre * (_N_pre - 1);
 	float* _array_%CODEOBJ_NAME%_rand = new float [max_needed_random_floats];
 	curandGenerateUniform(random_float_generator_host, _array_%CODEOBJ_NAME%_rand, max_needed_random_floats);
+	{% endif %}
 
     	int _raw_pre_idx, _raw_post_idx;
 	///// scalar_code['setup_iterator'] /////
@@ -112,6 +123,12 @@
 	        for(int {{iteration_variable}}=_uiter_low; {{iteration_variable}}<_uiter_high; {{iteration_variable}}++)
 	        {
 		    unsigned int _vectorisation_idx = {{iteration_variable}} + _i * _N_pre;  // used for indexing random number array
+			if (_vectorisation_idx >= max_needed_random_floats)
+			{
+	            cout << "Error: trying to access index " << _vectorisation_idx << " in random number array of size " <<
+						max_needed_random_floats << ". Generate more random numbers!" << endl;
+	            exit(1);
+			}
 	            if(_jump_algo) {
 	                const double _r = _rand(_vectorisation_idx);
 	                if(_r==0.0) break;
