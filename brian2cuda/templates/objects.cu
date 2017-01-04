@@ -102,7 +102,6 @@ __global__ void {{path.name}}_init(
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
-curandGenerator_t brian::random_float_generator_host;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 float* brian::dev_{{co.name}}_random_uniform_floats;
 __device__ float* brian::_array_{{co.name}}_rand;
@@ -125,15 +124,11 @@ void _init_arrays()
 	max_shared_mem_size = props.sharedMemPerBlock;
 	
 	curandCreateGenerator(&random_float_generator, {{curand_generator_type}});
-	curandCreateGeneratorHost(&random_float_generator_host, {{curand_generator_type}});
 	{% if curand_generator_ordering %}
 	curandSetGeneratorOrdering(random_float_generator, {{curand_generator_ordering}});
-	curandSetGeneratorOrdering(random_float_generator_host, {{curand_generator_ordering}});
 	{% endif %}
 	// These random seeds might be overwritten in main.cu
-	// TODO: is setting sequential seeds for different generator producing random enough samples?
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
-	curandSetPseudoRandomGeneratorSeed(random_float_generator_host, time(0) + 1);
 
 	// TODO: if a specific seed is used, these first random number don't use it
 	//	 solution: generate numbers at beginning of clock cycle or move this to end of main.cu
@@ -486,7 +481,6 @@ extern __device__ SynapticPathway<double> {{path.name}};
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t random_float_generator;
-extern curandGenerator_t random_float_generator_host;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 extern float* dev_{{co.name}}_random_uniform_floats;

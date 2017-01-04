@@ -4,6 +4,7 @@
 {{ super() }}
 #include<iostream>
 #include<curand.h>
+#include<brianlib/curand_buffer.h>
 {% endblock %}
 
 {% block kernel %}
@@ -13,8 +14,8 @@
 {% endblock %}
 
 {% block extra_maincode %}
-	// TODO: get rid of the variables we don't actually use
-	{# USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
+	{# // TODO: get rid of the variables we don't actually use
+	   USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
 	                    N_incoming, N_outgoing, N,
 	                    N_pre, N_post, _source_offset, _target_offset } #}
 
@@ -32,54 +33,14 @@
 	{{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
 	{{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
 
-	// iterator_func == {{iterator_func}}
-	// if_expression == {{if_expression}}
-	// iterator_kwds == {{iterator_kwds}}
-	// original_expression == {{original_expression}}
-	// element == {{element}}
+	// NOTE: _array_%CODEOBJ_NAME%_rand is NOT an array
+	// but an instance of CurandBuffer, which overloads the operator[], which then just
+	// returns the next random number in the buffer, ignoring the argument passed to operator[]
+	CurandBuffer _array_%CODEOBJ_NAME%_rand(&random_float_generator, RAND);
+	CurandBuffer _array_%CODEOBJ_NAME%_randn(&random_float_generator, RANDN);
 
-	// TODO: This generates random numbers on CPU. For sufficient sample size, generation on GPU
-	// 	 and copying back to CPU memory might be faster. This needs profiling.
-	//	 This also generates unnecessaryly many random numbers, which could be avoided.
-
-	unsigned int num_{{iteration_variable}} = ({{iterator_kwds['high']}} - {{iterator_kwds['low']}}) / {{iterator_kwds['step']}};
-
-	// the highest possible _vectorisation_idx = {{iteration_variable}} + _i * _N_pre
-	// with max(_i) = _N_pre - 1 and max({{iteration_variable}}) = num_{{iteration_variable}} - 1
-	unsigned int max_vectorisation_idx = num_{{iteration_variable}} + (_N_pre - 1) * _N_pre;
-	unsigned int max_needed_rand = 0;
-	unsigned int max_needed_randn = 0;
-
-	// TODO: these rand and randn checks will fail for multiple rand() calls in if_expression 
-	// and for user defined functions ending with rand(), eg brand()...
-
-	{% if 'randn()' in if_expression %}
-	// randn can only occur in vector_code['create_cond']
-	// assuming there is only one occurence of randn() in vector_code['create_cond'] (~ if_expression)
-	max_needed_randn = max_vectorisation_idx;
-	{% endif %}
-
-	{% if 'rand()' in if_expression %}
-	// assuming there is exactly one rand() call in vector_code['create_cond'] (~ if_expression)
-	max_needed_rand += max_vectorisation_idx;
-	{% endif %}
-	{% if iterator_func=='sample' %}
-	// iterator_func == 'sample' -> one rand() call per loop
-	max_needed_rand += max_vectorisation_idx;
-	{% endif %}
-
-	float* _array_%CODEOBJ_NAME%_rand = new float [max_needed_rand];
-	float* _array_%CODEOBJ_NAME%_randn = new float [max_needed_randn];
-	if (max_needed_rand != 0)
-	{
-		curandGenerateUniform(random_float_generator_host, _array_%CODEOBJ_NAME%_rand, max_needed_rand);
-	}
-	if (max_needed_randn != 0)
-	{
-		curandGenerateNormal(random_float_generator_host, _array_%CODEOBJ_NAME%_randn, max_needed_randn, 0, 1);
-	}
-
-    	int _raw_pre_idx, _raw_post_idx;
+	int _raw_pre_idx, _raw_post_idx;
+	const int _vectorisation_idx = -1;
 	///// scalar_code['setup_iterator'] /////
     	{{scalar_code['setup_iterator']|autoindent}}
 	///// scalar_code['create_j'] /////
@@ -150,13 +111,6 @@
 	        const double _pconst = 1.0/log(1-_uiter_p);
 	        for(int {{iteration_variable}}=_uiter_low; {{iteration_variable}}<_uiter_high; {{iteration_variable}}++)
 	        {
-		    unsigned int _vectorisation_idx = {{iteration_variable}} + _i * _N_pre;  // used for indexing random number array
-			if (_vectorisation_idx >= max_needed_rand)
-			{
-	            cout << "Error: trying to access index " << _vectorisation_idx << " in random number array of size " <<
-						max_needed_rand << ". Generate more random numbers!" << endl;
-	            exit(1);
-			}
 	            if(_jump_algo) {
 	                const double _r = _rand(_vectorisation_idx);
 	                if(_r==0.0) break;
@@ -189,17 +143,6 @@
 	            }
 	            {% if postsynaptic_condition %}
 	            {
-					{% if 'rand()' in if_expression and iterator_func=='sample' %}
-					_vectorisation_idx += max_vectorisation_idx;
-					{% elif 'rand()' in if_expression and iterator_func=='range' %}
-		    		unsigned int _vectorisation_idx = {{iteration_variable}} + _i * _N_pre;  // used for indexing random number array
-					if (_vectorisation_idx >= max_needed_rand)
-					{
-	        		    cout << "Error: trying to access index " << _vectorisation_idx << " in random number array of size " <<
-								max_needed_rand << ". Generate more random numbers!" << endl;
-	        		    exit(1);
-					}
-					{% endif %}
 	                ///// vector_code['create_cond'] /////
 	                {{vector_code['create_cond']|autoindent}}
 	                __cond = _cond;
@@ -249,8 +192,6 @@
 			sizeof({{c_data_type(variables['N'].dtype)}}),
 			cudaMemcpyHostToDevice);
 	
-
-
 // TODO: test multisynaptic index occurence and potentially implement correctly
 //
 //    	{% if multisynaptic_index %}
