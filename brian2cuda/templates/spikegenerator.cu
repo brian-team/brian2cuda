@@ -63,6 +63,7 @@ __device__ unsigned int _last_element_checked = 0;
 
 {% block kernel_call %}
 kernel_{{codeobj_name}}<<<1,1>>>(
+		N,
 		1,
 		%HOST_PARAMETERS%
 	);

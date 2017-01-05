@@ -68,7 +68,12 @@ void _run_{{codeobj_name}}()
     {# USES_VARIABLES { N } #}
     {# ALLOWS_SCALAR_WRITE #}
 	using namespace brian;
+
+	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
+	   synapses, we therefore have to take care to get its value in the right
+	   way. #}
 	const int _N = {{constant_or_scalar('N', variables['N'])}};
+
 	///// CONSTANTS /////
 	%CONSTANTS%
 

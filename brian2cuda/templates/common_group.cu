@@ -44,7 +44,9 @@ namespace {
 
 {% block kernel %}
 __global__ void kernel_{{codeobj_name}}(
+	unsigned int _N,
 	unsigned int THREADS_PER_BLOCK,
+	///// DEVICE_PARAMETERS /////
 	%DEVICE_PARAMETERS%
 	)
 {
@@ -55,12 +57,14 @@ __global__ void kernel_{{codeobj_name}}(
 	unsigned int bid = blockIdx.x;
 	unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
 	unsigned int _vectorisation_idx = _idx;
+	///// KERNEL_VARIABLES /////
 	%KERNEL_VARIABLES%
+
 	{% block additional_variables %}
 	{% endblock %}
 
 	{% block num_thread_check %}
-	if(_idx >= N)
+	if(_idx >= _N)
 	{
 		return;
 	}
@@ -69,15 +73,17 @@ __global__ void kernel_{{codeobj_name}}(
 	{% block maincode %}
 	{% block maincode_inner %}
 	
+	///// scalar_code /////
 	{{scalar_code|autoindent}}
 	
 	{
+		///// vector_code /////
 		{{vector_code|autoindent}}
 	}
-	{% endblock %}
-	{% endblock %}
+	{% endblock maincode_inner %}
+	{% endblock maincode %}
 }
-{% endblock %}
+{% endblock kernel %}
 
 void _run_{{codeobj_name}}()
 {	
@@ -91,11 +97,18 @@ void _run_{{codeobj_name}}()
 	{% endblock %}
 
 	{% block kernel_call %}
-	kernel_{{codeobj_name}}<<<num_blocks(N),num_threads(N)>>>(
-			num_threads(N),
+	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
+           synapses, we therefore have to take care to get its value in the right
+           way. #}
+	const int _N = {{constant_or_scalar('N', variables['N'])}};
+
+	kernel_{{codeobj_name}}<<<num_blocks(_N),num_threads(_N)>>>(
+			_N,
+			num_threads(_N),
+			///// HOST_PARAMETERS /////
 			%HOST_PARAMETERS%
 		);
-	{% endblock %}
+	{% endblock kernel_call %}
 }
 
 {% block extra_functions_cu %}

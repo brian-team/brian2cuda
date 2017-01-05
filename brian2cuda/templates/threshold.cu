@@ -47,10 +47,3 @@ int mem_per_thread(){
 		{% endif %}
 	}
 {% endblock %}
-
-{% block kernel_call %}
-kernel_{{codeobj_name}}<<<num_blocks(N), num_threads(N)>>>(
-		num_threads(N),
-		%HOST_PARAMETERS%
-	);
-{% endblock %}
