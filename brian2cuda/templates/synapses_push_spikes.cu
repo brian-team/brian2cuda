@@ -121,11 +121,9 @@ void _run_{{codeobj_name}}()
 	{% if not no_or_const_delay_mode %}	
 		// TODO: check performance decrease when spawning many unused threads! Maybe call kernel with max(num_synapses) threads?
 		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, num_threads*MEM_PER_THREAD>>>(
-			//TODO: does this have to be _num{{eventspace_variable.name}}-1
-			_num_spikespace - 1,
+			_num{{eventspace_variable.name}}-1,
 			num_parallel_blocks,
 			num_threads,
-			//TODO: does this have to be eventspace_variable instead of owner.variables['_eventspace'] ?
     			{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 			dev{{_eventspace}});
 	{% else %}

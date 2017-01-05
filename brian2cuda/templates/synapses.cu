@@ -16,7 +16,7 @@ __global__ void kernel_{{codeobj_name}}(
 	%DEVICE_PARAMETERS%
 	)
 {
-	{# USES_VARIABLES { N, _synaptic_pre, _spikespace} #}
+	{# USES_VARIABLES { N, _synaptic_pre} #}
 	using namespace brian;
 
 	unsigned int tid = threadIdx.x;
@@ -47,24 +47,25 @@ __global__ void kernel_{{codeobj_name}}(
 	}
 	else
 	{
-		if(bid != 0)
-			return;
-		//no or const delay mode
-		for(int j = 0; j < _num_spikespace; j++)
-		{
-			int32_t spiking_neuron = {{_spikespace}}[j];
-			if(spiking_neuron == -1)
-			{
-				break;
-			}
-			for(int i = tid; i < {{pathway.name}}_size_by_pre[spiking_neuron]; i+= THREADS_PER_BLOCK)
-			{
-				int32_t _idx = {{pathway.name}}_synapses_id_by_pre[spiking_neuron][i];
-			
-				{{vector_code|autoindent}}
-			}
-			__syncthreads();
-		}
+// OLD IMPLEMENTATION OF NO_OR_CONST_DELAY_MODE
+//		if(bid != 0)
+//			return;
+//		//no or const delay mode
+//		for(int j = 0; j < _num_spikespace; j++)
+//		{
+//			int32_t spiking_neuron = _spikespace[j];  // this had two {} around _spikespace
+//			if(spiking_neuron == -1)
+//			{
+//				break;
+//			}
+//			for(int i = tid; i < {{pathway.name}}_size_by_pre[spiking_neuron]; i+= THREADS_PER_BLOCK)
+//			{
+//				int32_t _idx = {{pathway.name}}_synapses_id_by_pre[spiking_neuron][i];
+//			
+//				{{vector_code|autoindent}}
+//			}
+//			__syncthreads();
+//		}
 	}
 	}
 }
