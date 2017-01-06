@@ -10,7 +10,9 @@ parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=st
                           "Only standalone targets. (default='cuda_standalone')"))
 parser.add_argument('--no-long-tests', action='store_false',
                     help="Set to not run long tests. By default they are run.")
-parser.add_argument('--reset-prefs', action='store_true',
+parser.add_argument('--no-reset-prefs', action='store_false',
+                    help="Weather to reset prefs between tests or not.")
+parser.add_argument('--fail-not-implemented', action='store_true',
                     help="Weather to reset prefs between tests or not.")
 parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                     help="Weather to use multiple cores for testing. Optionally the"
@@ -18,10 +20,13 @@ parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                          "arguments. If none are passes, all are run in parallel.")
 args = parser.parse_args()
 
-from brian2 import test
+import os
 
-if 'cuda_standalone' in args.targets:
-    import brian2cuda
+from brian2 import test
+import brian2cuda
+
+extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
+
 if 'genn' in args.targets:
     import brian2genn
 
@@ -38,9 +43,8 @@ for target in args.targets:
          long_tests=args.no_long_tests,
          test_codegen_independent=False,
          test_standalone=target,
-         reset_preferences=args.reset_prefs,
-         fail_for_not_implemented=False,
-         test_in_parallel=test_in_parallel
+         reset_preferences=args.no_reset_prefs,
+         fail_for_not_implemented=args.fail_not_implemented,
+         test_in_parallel=test_in_parallel,
+         extra_test_dirs=extra_test_dirs
         )
-  
-
