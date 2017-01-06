@@ -5,7 +5,7 @@ from brian2.tests.features.monitors import SpikeMonitorTest, StateMonitorTest
 from brian2.tests.features.input import SpikeGeneratorGroupTest
 
 import brian2cuda
-from brian2cuda.tests.cuda_configuration import CUDAStandaloneConfiguration
+from brian2cuda.tests.features.cuda_configuration import CUDAStandaloneConfiguration
 
 #import brian2genn
 #from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationOptimized

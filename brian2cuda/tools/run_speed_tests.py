@@ -7,8 +7,8 @@ from brian2.tests.features import *
 from brian2.tests.features.base import *
 
 import brian2cuda
-from brian2cuda.tests.cuda_configuration import CUDAStandaloneConfiguration
-from brian2cuda.tests.speed import *
+from brian2cuda.tests.features.cuda_configuration import CUDAStandaloneConfiguration
+from brian2cuda.tests.features.speed import *
 #from brian2genn.correctness_testing import GeNNConfiguration
 
 # Full testing
