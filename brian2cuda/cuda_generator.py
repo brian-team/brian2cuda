@@ -354,21 +354,101 @@ class CUDACodeGenerator(CodeGenerator):
 # Implement functions
 ################################################################################
 
+# The CUDA Math library suports all C99 standard float and double math functions.
+# To have support for integral types in device code, we need to wrap these functions
+# and promote integral types to float. In host code, we can just use the standard
+# math functions directly.
+
+### Functions available in the C99 standard
+func_translations = []
 # Functions that exist under the same name in C++
 for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
              'log10', 'sqrt', 'ceil', 'floor']:
-    DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
-                                                               code=None)
+    func_translations.append((func, func))
 
-# Functions that need a name translation
-for func, func_cuda in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan'),
-                       ('abs', 'fabs'), ('int', 'int_')]: # in stdint_compat.h
-    DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
-                                                               code=None,
-                                                               name=func_cuda)
+# Functions that exist under a different name in C++
+for func, func_cuda in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan')]:
+    func_translations.append((func, func_cuda))
 
-# Functions that need to be implemented specifically
-# TODO: can we delete rand and randn here, since we implement them im codeobject.py ?
+for func, func_cuda in func_translations:
+    cuda_code = '''
+        template <typename T>
+        __host__ __device__
+        float _brian_{func}(T value)
+        {{
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+            return {func}f((float)value);
+        #else
+            return {func}(value);
+        #endif
+        }}
+        inline __host__ __device__
+        double _brian_{func}(double value)
+        {{
+            return {func}(value);
+        }}
+        '''
+    DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
+                                                               code=cuda_code.format(func=func_cuda),
+                                                               name='_brian_{}'.format(func_cuda)
+                                                               )
+
+# std::abs is available and already overloaded for integral types in device code
+abs_code = '''
+#define _brian_abs std::abs
+'''
+DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(CUDACodeGenerator,
+                                                            code=abs_code,
+                                                            name='_brian_abs')
+
+### Functions that need to be implemented specifically
+int_code = '''
+    template <typename T>
+    __host__ __device__
+    int _brian_int(T value)
+    {
+        return (int)value;
+    }
+    template <>
+    inline __host__ __device__
+    int _brian_int(bool value)
+    {
+        return value ? 1 : 0;
+    }
+    '''
+
+DEFAULT_FUNCTIONS['int'].implementations.add_implementation(CUDACodeGenerator,
+                                                            code=int_code,
+                                                            name='_brian_int')
+
+clip_code = '''
+    template <typename T1, typename T2>
+    inline __host__ __device__
+    T1 _brian_clip(const T1 value, const T2 a_min, const T2 a_max)
+    {
+        if (value < a_min)
+            return a_min;
+        if (value > a_max)
+            return a_max;
+        return value;
+    }
+    '''
+DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(CUDACodeGenerator,
+                                                             code=clip_code,
+                                                             name='_brian_clip')
+
+sign_code = '''
+        template <typename T>
+        __host__ __device__
+        int _brian_sign(T val)
+        {
+            return (T(0) < val) - (val < T(0));
+        }
+        '''
+DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(CUDACodeGenerator,
+                                                             code=sign_code,
+                                                             name='_brian_sign')
+
 randn_code = '''
     #define _randn(vectorisation_idx) (_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
         '''
@@ -382,17 +462,3 @@ rand_code = '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=rand_code,
                                                              name='_rand')
-
-clip_code = '''
-    __device__ double _clip(const float value, const float a_min, const float a_max)
-    {
-        if (value < a_min)
-            return a_min;
-        if (value > a_max)
-            return a_max;
-        return value;
-    }
-    '''
-DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(CUDACodeGenerator,
-                                                             code=clip_code,
-                                                             name='_clip')
