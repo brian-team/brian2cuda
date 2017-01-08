@@ -2,16 +2,25 @@
 
 {% block maincode %}
 	{# USES_VARIABLES { _group_idx } #}
-	//// MAIN CODE ////////////	
-	// scalar code
-    const int _vectorisation_idx = -1;
+	///// block maincode /////
+
+	///// scalar code /////
     {{scalar_code|autoindent}}
 
-	for(int _idx_group_idx=0; _idx_group_idx<_num_group_idx; _idx_group_idx++)
-	{
-	    // vector code
-		const int _idx = _group_idx[_idx_group_idx];
-		const int _vectorisation_idx = _idx;
-        {{vector_code|autoindent}}
-	}
+	_idx = {{_group_idx}}[_vectorisation_idx];
+	_vectorisation_idx = _idx;
+
+	///// vector code /////
+    {{vector_code|autoindent}}
+
+	///// endblock maincode /////
 {% endblock %}
+
+{% block kernel_call %}
+kernel_{{codeobj_name}}<<<num_blocks(_num_group_idx),num_threads(_num_group_idx)>>>(
+		_num_group_idx,
+		num_threads(_num_group_idx),
+		///// HOST_PARAMETERS /////
+		%HOST_PARAMETERS%
+	);
+{% endblock kernel_call %}
