@@ -339,5 +339,31 @@ def test_default_function_implementations():
     assert_allclose([G.v[0], G1.v[0]], [0, 0])
     assert_allclose([S.N[:], S1.N[:]], [1, 1]) 
 
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=restore_initial_state)
+def test_default_function_convertion_preference():
+
+    unrepresentable_int = 2**24 + 1  # can't be represented as 32bit float
+
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'single_precision'
+    G = NeuronGroup(1, 'v: 1')
+    G.variables.add_array('myarr', unit=Unit(1), dtype=np.int32, size=1)
+    G.variables['myarr'].set_value(unrepresentable_int)
+    G.v = 'floor(myarr)'.format(unrepresentable_int)
+
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'double_precision'
+    G2 = NeuronGroup(1, 'v: 1')
+    G2.variables.add_array('myarr', unit=Unit(1), dtype=np.int32, size=1)
+    G2.variables['myarr'].set_value(unrepresentable_int)
+    G2.v = 'floor(myarr)'.format(unrepresentable_int)
+
+    run(0*ms)
+
+    assert G.v[0] != unrepresentable_int, G.v[0]
+    assert G2.v[0] == unrepresentable_int, G.v2[0]
+
+
 if __name__ == '__main__':
     test_default_function_implementations()
+    test_default_function_convertion_preference()
