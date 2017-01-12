@@ -1,10 +1,12 @@
 import itertools
 
 import numpy
+import re
 
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
+from brian2.utils.stringtools import get_identifiers
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.preferences import prefs, BrianPreference
@@ -12,7 +14,7 @@ from brian2.core.variables import ArrayVariable
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 
-logger = get_logger(__name__)
+logger = get_logger('brian2.codegen.generators.cuda_generator')
 
 __all__ = ['CUDACodeGenerator',
            'c_data_type'
@@ -97,6 +99,8 @@ class CUDACodeGenerator(CodeGenerator):
     def __init__(self, *args, **kwds):
         super(CUDACodeGenerator, self).__init__(*args, **kwds)
         self.c_data_type = c_data_type
+        self.warned_integral_convertion = False
+        self.previous_convertion_pref = None
         
     @property
     def restrict(self):
@@ -236,10 +240,46 @@ class CUDACodeGenerator(CodeGenerator):
         # simply declare variables that will be written but not read
         lines += self.translate_to_declarations(statements)
         # the actual code
-        lines += self.translate_to_statements(statements)
+        statement_lines = self.translate_to_statements(statements)
+        lines += statement_lines
         # write arrays
         lines += self.translate_to_write_arrays(statements)
         code = '\n'.join(lines)                
+        # Check if 64bit integer types occur in the same line as a default function.
+        # We can't get the arguments of the function call directly with regex due to
+        # possibly nested paranthesis inside function paranthesis.
+        convertion_pref = prefs.codegen.generators.cuda.default_functions_integral_convertion
+        # only check if there was no warning yet or if convertion preference has changed
+        if not self.warned_integral_convertion or self.previous_convertion_pref != convertion_pref:
+            for line in statement_lines:
+                brian_funcs = re.search('_brian_(' + '|'.join(functions_C99) + ')', line)
+                if brian_funcs is not None:
+                    for identifier in get_identifiers(line):
+                        if convertion_pref == 'double_precision':
+                            # 64bit integer to floating-point conversions are not type safe
+                            int64_type = re.search(r'\bu?int64_t\s*{}\b'.format(identifier), code)
+                            if int64_type is not None:
+                                logger.warn("Detected code statement with default function and 64bit integer type in the same line. "
+                                            "Using 64bit integer types as default function arguments is not type safe due to convertion of "
+                                            "integer to 64bit floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
+                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            once=True)
+                                self.warned_integral_convertion = True
+                                self.previous_convertion_pref = 'double_precision'
+                        else:  # convertion_pref = 'single_precision'
+                            # 32bit and 64bit integer to floating-point conversions are not type safe
+                            int32_64_type = re.search(r'\bu?int(32|64)_t\s*{}\b'.format(identifier), code)
+                            if int32_64_type is not None:
+                                logger.warn("Detected code statement with default function and 32bit or 64bit integer type in the same line and the "
+                                            "preference for default_functions_integral_convertion is 'single_precision'. "
+                                            "Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of "
+                                            "integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
+                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            once=True)
+                                self.warned_integral_convertion = True
+                                self.previous_convertion_pref = 'single_precision'
         return stripped_deindented_lines(code)
 
     def denormals_to_zero_code(self):
