@@ -7,7 +7,7 @@ from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
 from brian2.utils.logger import get_logger
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
-from brian2.core.preferences import prefs
+from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
@@ -17,6 +17,24 @@ logger = get_logger(__name__)
 __all__ = ['CUDACodeGenerator',
            'c_data_type'
            ]
+
+
+# Preferences
+prefs.register_preferences(
+    'codegen.generators.cuda',
+    'CUDA codegen preferences',
+    default_functions_integral_convertion=BrianPreference(
+            docs='''The floating point precision to which integral types will be converted when
+                passed as arguments to default functions that have no integral type overload in device
+                code (sin, cos, tan, sinh, cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)."
+                NOTE: Convertion from 32bit and 64bit integral types to single precision (32bit) floating-point
+                types is not type safe. And convertion from 64bit integral types to double precision (64bit)
+                floating-point types neither. In those cases the closest higher or lower (implementation
+                defined) representable value will be selected.''',
+            validator=lambda v: v in ['single_precision', 'double_precision'],
+            default='double_precision')
+)
+
 
 # CUDA does not support modulo arithmetics for long double. Since we can't give a warning, we let the
 # compilation fail, which gives an error message of type
@@ -312,10 +330,19 @@ class CUDACodeGenerator(CodeGenerator):
         user_functions = []
         support_code = ''
         hash_defines = ''
+        # set convertion types for standard C99 functions in device code
+        if prefs.codegen.generators.cuda.default_functions_integral_convertion == 'double_precision':
+            default_func_type = 'double'
+            other_func_type = 'float'
+        else:  # 'single_precision'
+            default_func_type = 'float'
+            other_func_type = 'double'
         for varname, variable in self.variables.items():
             if isinstance(variable, Function):
                 user_functions.append((varname, variable))
                 funccode = variable.implementations[self.codeobj_class].get_code(self.owner)
+                if varname in functions_C99:
+                    funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
                 if isinstance(funccode, basestring):
                     funccode = {'support_code': funccode}
                 if funccode is not None:
@@ -356,10 +383,11 @@ class CUDACodeGenerator(CodeGenerator):
 
 # The CUDA Math library suports all C99 standard float and double math functions.
 # To have support for integral types in device code, we need to wrap these functions
-# and promote integral types to float. In host code, we can just use the standard
-# math functions directly.
+# and convert integral types to floating-point types. In host code, we can just use
+# the standard math functions directly.
 
 ### Functions available in the C99 standard
+functions_C99 = []
 func_translations = []
 # Functions that exist under the same name in C++
 for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
@@ -371,25 +399,28 @@ for func, func_cuda in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan
     func_translations.append((func, func_cuda))
 
 for func, func_cuda in func_translations:
+    functions_C99.append(func)
     cuda_code = '''
         template <typename T>
         __host__ __device__
-        float _brian_{func}(T value)
-        {{
+        {{default_type}} _brian_{func}(T value)
+        {{{{
         #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
-            return {func}f((float)value);
+            return {func}(({{default_type}})value);
         #else
             return {func}(value);
         #endif
-        }}
+        }}}}
         inline __host__ __device__
-        double _brian_{func}(double value)
-        {{
+        {{other_type}} _brian_{func}({{other_type}} value)
+        {{{{
             return {func}(value);
-        }}
-        '''
+        }}}}
+        '''.format(func=func_cuda)
+        # {default_type} and {other_type} will be formatted in CUDACodeGenerator.determine_keywords()
+        # depending on user prefs (which are not yet set when this code snippet is created)
     DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
-                                                               code=cuda_code.format(func=func_cuda),
+                                                               code=cuda_code,
                                                                name='_brian_{}'.format(func_cuda)
                                                                )
 
