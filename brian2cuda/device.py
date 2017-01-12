@@ -34,6 +34,49 @@ __all__ = []
 
 logger = get_logger(__name__)
 
+
+# Preferences
+prefs.register_preferences(
+    'devices.cuda_standalone',
+    'CUDA standalone preferences',
+
+    SM_multiplier = BrianPreference(
+        default=1,
+        docs='''
+        The number of blocks per SM. By default, this value is set to 1.
+        ''',
+        ),
+
+    random_number_generator_type=BrianPreference(
+        docs='''Generator type (str) that cuRAND uses for random number generation.
+            Setting the generator type automatically resets the generator ordering
+            (prefs.devices.cuda_standalone.random_number_generator_ordering) to its default value.
+            See cuRAND documentation for more details on generator types and orderings.''',
+        validator=lambda v: v in ['CURAND_RNG_PSEUDO_DEFAULT',
+                                  'CURAND_RNG_PSEUDO_XORWOW',
+                                  'CURAND_RNG_PSEUDO_MRG32K3A',
+                                  'CURAND_RNG_PSEUDO_MTGP32',
+                                  'CURAND_RNG_PSEUDO_PHILOX4_32_10',
+                                  'CURAND_RNG_PSEUDO_MT19937',
+                                  'CURAND_RNG_QUASI_DEFAULT',
+                                  'CURAND_RNG_QUASI_SOBOL32',
+                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL32',
+                                  'CURAND_RNG_QUASI_SOBOL64',
+                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL64'],
+        default='CURAND_RNG_PSEUDO_DEFAULT'),
+
+    random_number_generator_ordering=BrianPreference(
+        docs='''The ordering parameter (str) used to choose how the results of cuRAND
+            random number generation are ordered in global memory.
+            See cuRAND documentation for more details on generator types and orderings.''',
+        validator=lambda v: not v or v in ['CURAND_ORDERING_PSEUDO_DEFAULT',
+                                           'CURAND_ORDERING_PSEUDO_BEST',
+                                           'CURAND_ORDERING_PSEUDO_SEEDED',
+                                           'CURAND_ORDERING_QUASI_DEFAULT'],
+        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+)
+
+
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
         self.project_dir = project_dir
@@ -429,7 +472,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('run.*', run_tmp)
         
     def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
-        nvcc_compiler_flags = prefs.devices.cuda_standalone.extra_compile_args_nvcc
+        nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
         gpu_arch_flags = ['']
         disable_warnings = False
         for flag in nvcc_compiler_flags:
