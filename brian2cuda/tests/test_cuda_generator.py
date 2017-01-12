@@ -1,6 +1,7 @@
 from nose import with_setup
 from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_allclose
+from numpy.testing.utils import assert_allclose, assert_raises
+from brian2.utils.logger import catch_logs
 
 from brian2 import *
 import brian2cuda
@@ -364,6 +365,94 @@ def test_default_function_convertion_preference():
     assert G2.v[0] == unrepresentable_int, G.v2[0]
 
 
+@attr('cuda_standalone', 'standalone_only')
+@with_setup(teardown=restore_initial_state)
+def test_default_function_convertion_warnings():
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs1:
+        # warning
+        G1 = NeuronGroup(1, 'v: 1')
+        G1.variables.add_array('myarr', unit=Unit(1), dtype=np.int64, size=1)
+        G1.v = 'sin(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs2:
+        # warning
+        G2 = NeuronGroup(1, 'v: 1')
+        G2.variables.add_array('myarr', unit=Unit(1), dtype=np.uint64, size=1)
+        G2.v = 'cos(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs3:
+        # no warning
+        G3 = NeuronGroup(1, 'v: 1')
+        G3.variables.add_array('myarr', unit=Unit(1), dtype=np.int32, size=1)
+        G3.v = 'tan(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs4:
+        # no warning
+        G4 = NeuronGroup(1, 'v: 1')
+        G4.variables.add_array('myarr', unit=Unit(1), dtype=np.uint32, size=1)
+        G4.v = 'arcsin(i*myarr)'
+
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'single_precision'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs5:
+        # warning
+        G5 = NeuronGroup(1, 'v: 1')
+        G5.variables.add_array('myarr', unit=Unit(1), dtype=np.int32, size=1)
+        G5.v = 'log(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs6:
+        # warning
+        G6 = NeuronGroup(1, 'v: 1')
+        G6.variables.add_array('myarr', unit=Unit(1), dtype=np.uint32, size=1)
+        G6.v = 'log10(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs7:
+        # warning
+        G7 = NeuronGroup(1, 'v: 1')
+        G7.variables.add_array('myarr', unit=Unit(1), dtype=np.int64, size=1)
+        G7.v = 'floor(i*myarr)'
+
+    BrianLogger._log_messages.clear()
+    with catch_logs() as logs8:
+        # warning
+        G8 = NeuronGroup(1, 'v: 1')
+        G8.variables.add_array('myarr', unit=Unit(1), dtype=np.uint64, size=1)
+        G8.v = 'ceil(i*myarr)'
+
+
+    run(0*ms)
+
+    assert len(logs1) == 1, len(logs1)
+    assert logs1[0][0] == 'WARNING'
+    assert logs1[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert len(logs2) == 1, len(logs2)
+    assert logs2[0][0] == 'WARNING'
+    assert logs2[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert len(logs3) == 0, len(logs3)
+    assert len(logs4) == 0, len(logs4)
+    assert len(logs5) == 1, len(logs5)
+    assert logs5[0][0] == 'WARNING'
+    assert logs5[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert len(logs6) == 1, len(logs6)
+    assert logs6[0][0] == 'WARNING'
+    assert logs6[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert len(logs7) == 1, len(logs7)
+    assert logs7[0][0] == 'WARNING'
+    assert logs7[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert len(logs8) == 1, len(logs8)
+    assert logs8[0][0] == 'WARNING'
+    assert logs8[0][1] == 'brian2.codegen.generators.cuda_generator'
+
+
 if __name__ == '__main__':
     test_default_function_implementations()
     test_default_function_convertion_preference()
+    test_default_function_convertion_warning()
