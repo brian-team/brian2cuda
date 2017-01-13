@@ -15,7 +15,7 @@
 
 //////////////// clocks ///////////////////
 {% for clock in clocks | sort(attribute='name') %}
-Clock brian::{{clock.name}}({{clock.dt_}});
+Clock brian::{{clock.name}};
 {% endfor %}
 
 //////////////// networks /////////////////
