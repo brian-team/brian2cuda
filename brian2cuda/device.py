@@ -213,7 +213,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 code = '''
                 {arrayname}[{item}] = {value};
-                cudaMemcpy({pointer_arrayname}, &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
+                cudaMemcpy(&{pointer_arrayname}[{item}], &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
                 '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
                 main_lines.extend([code])
             elif func=='set_by_array':
