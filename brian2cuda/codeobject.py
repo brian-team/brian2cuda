@@ -5,6 +5,7 @@ from brian2.codegen.codeobject import CodeObject, constant_or_scalar
 from brian2.codegen.targets import codegen_targets
 from brian2.codegen.templates import Templater
 from brian2.devices.cpp_standalone import CPPStandaloneCodeObject
+from brian2.core.functions import DEFAULT_FUNCTIONS
 #from brian2.devices.cpp_standalone.codeobject import constant_or_scalar
 from brian2.devices.device import get_device
 from brian2.core.preferences import prefs
@@ -23,7 +24,7 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     object with two macros defined, ``main`` (for the main loop code) and
     ``support_code`` for any support code (e.g. function definitions).
     '''
-    templater = Templater('brian2cuda',
+    templater = Templater('brian2cuda', '.cu',
                           env_globals={'c_data_type': c_data_type,
 				       'constant_or_scalar': constant_or_scalar})
     generator_class = CUDACodeGenerator
@@ -40,3 +41,19 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
         get_device().main_queue.append(('run_code_object', (self,)))
 
 codegen_targets.add(CUDAStandaloneCodeObject)
+
+rand_code = '''
+    #define _rand(vectorisation_idx) (_array_%CODEOBJ_NAME%_rand[vectorisation_idx])
+    '''
+rand_impls = DEFAULT_FUNCTIONS['rand'].implementations
+rand_impls.add_implementation(CUDAStandaloneCodeObject,
+                              code=rand_code,
+                              name='_rand')
+
+randn_code = '''
+    #define _randn(vectorisation_idx) (_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
+        '''
+randn_impls = DEFAULT_FUNCTIONS['randn'].implementations
+randn_impls.add_implementation(CUDAStandaloneCodeObject,
+                              code=randn_code,
+                              name='_randn')

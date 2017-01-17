@@ -2,12 +2,14 @@
 //// MAIN CODE /////////////////////////////////////////////////////////////
 
 {% macro cu_file() %}
-{# USES_VARIABLES { _spikespace } #}
+{#  Get the name of the array that stores these events (e.g. the spikespace array) #}
+    {% set _eventspace = get_array_name(eventspace_variable) %}
 
 #include "code_objects/{{codeobj_name}}.h"
 #include<math.h>
 #include<stdint.h>
 #include "brianlib/common_math.h"
+#include "brianlib/stdint_compat.h"
 #include <assert.h>
 
 namespace {
@@ -57,7 +59,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	unsigned int neurongroup_size,
 	unsigned int _num_blocks,
 	unsigned int _num_threads,
-	int32_t* {{_spikespace}})
+	int32_t* {{_eventspace}})
 {
 	// apperently this is not always true and that is why _num_threads is passed as function argument
 	// if this assert never fails, we could remove the _num_threads form the argument list
@@ -77,11 +79,11 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	for(int i = 0; i < neurongroup_size; i++)
 	{
 		// spiking_neuron is index in NeuronGroup
-		int32_t spiking_neuron = {{_spikespace}}[i];
+		int32_t spiking_neuron = {{_eventspace}}[i];
 
 		if(spiking_neuron == -1) // end of spiking neurons
 		{
-			assert(i == {{_spikespace}}[neurongroup_size]);
+			assert(i == {{_eventspace}}[neurongroup_size]);
 			return;
 		}
 		// push to spikequeue if spiking_neuron is in sources of current SynapticPathway
@@ -119,11 +121,11 @@ void _run_{{codeobj_name}}()
 	{% if not no_or_const_delay_mode %}	
 		// TODO: check performance decrease when spawning many unused threads! Maybe call kernel with max(num_synapses) threads?
 		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, num_threads*MEM_PER_THREAD>>>(
-			_num_spikespace - 1,
+			_num{{eventspace_variable.name}}-1,
 			num_parallel_blocks,
 			num_threads,
-			{% set _spikespace = get_array_name(owner.variables['_spikespace'], access_data=False) %}
-			dev{{_spikespace}});
+    			{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+			dev{{_eventspace}});
 	{% else %}
 	//No pushing in no_or_const_delay_mode
 	{% endif %}

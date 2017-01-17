@@ -17,7 +17,7 @@ from brian2.core.network import Network
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import *
 from brian2.parsing.rendering import CPPNodeRenderer
-from brian2.devices.device import all_devices, get_device, set_device
+from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.utils.filetools import copy_directory, ensure_directory
 from brian2.codegen.generators.cpp_generator import c_data_type
@@ -34,16 +34,48 @@ __all__ = []
 
 logger = get_logger(__name__)
 
+
+# Preferences
 prefs.register_preferences(
     'devices.cuda_standalone',
-    'CUDA standalone preferences ',
+    'CUDA standalone preferences',
+
     SM_multiplier = BrianPreference(
         default=1,
         docs='''
         The number of blocks per SM. By default, this value is set to 1.
         ''',
         ),
-    )
+
+    random_number_generator_type=BrianPreference(
+        docs='''Generator type (str) that cuRAND uses for random number generation.
+            Setting the generator type automatically resets the generator ordering
+            (prefs.devices.cuda_standalone.random_number_generator_ordering) to its default value.
+            See cuRAND documentation for more details on generator types and orderings.''',
+        validator=lambda v: v in ['CURAND_RNG_PSEUDO_DEFAULT',
+                                  'CURAND_RNG_PSEUDO_XORWOW',
+                                  'CURAND_RNG_PSEUDO_MRG32K3A',
+                                  'CURAND_RNG_PSEUDO_MTGP32',
+                                  'CURAND_RNG_PSEUDO_PHILOX4_32_10',
+                                  'CURAND_RNG_PSEUDO_MT19937',
+                                  'CURAND_RNG_QUASI_DEFAULT',
+                                  'CURAND_RNG_QUASI_SOBOL32',
+                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL32',
+                                  'CURAND_RNG_QUASI_SOBOL64',
+                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL64'],
+        default='CURAND_RNG_PSEUDO_DEFAULT'),
+
+    random_number_generator_ordering=BrianPreference(
+        docs='''The ordering parameter (str) used to choose how the results of cuRAND
+            random number generation are ordered in global memory.
+            See cuRAND documentation for more details on generator types and orderings.''',
+        validator=lambda v: not v or v in ['CURAND_ORDERING_PSEUDO_DEFAULT',
+                                           'CURAND_ORDERING_PSEUDO_BEST',
+                                           'CURAND_ORDERING_PSEUDO_SEEDED',
+                                           'CURAND_ORDERING_QUASI_DEFAULT'],
+        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+)
+
 
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
@@ -119,6 +151,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
         multiplier = prefs.devices.cuda_standalone.SM_multiplier
+        curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
+        curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -134,7 +168,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         get_array_filename=self.get_array_filename,
                         codeobj_with_rand=codeobj_with_rand,
                         codeobj_with_randn=codeobj_with_randn,
-                        multiplier=multiplier)
+                        multiplier=multiplier,
+                        curand_generator_type=curand_generator_type,
+                        curand_generator_ordering=curand_generator_ordering)
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):
@@ -177,7 +213,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 code = '''
                 {arrayname}[{item}] = {value};
-                cudaMemcpy({pointer_arrayname}, &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
+                cudaMemcpy(&{pointer_arrayname}[{item}], &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
                 '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
                 main_lines.extend([code])
             elif func=='set_by_array':
@@ -229,6 +265,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 name, main_lines = procedures.pop(-1)
                 runfuncs[name] = main_lines
                 name, main_lines = procedures[-1]
+            elif func=='seed':
+                seed = args
+                if seed is not None:
+                    main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator, {seed!r}ULL);'.format(seed=seed))
+                    # generator offset needs to be reset to its default (=0)
+                    main_lines.append('curandSetGeneratorOffset(random_float_generator, 0ULL);')
+                # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
@@ -252,7 +295,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
             if num_occurences_rand > 0:
-                if code_object.template_name != "synapses_create":
+                # synapses_create_generator uses host side random number generation
+                if code_object.template_name != "synapses_create_generator":
                     #first one is alway the definition, so subtract 1
                     code_object.rand_calls = num_occurences_rand - 1
                     for i in range(0, code_object.rand_calls):
@@ -260,9 +304,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * " + str(code_object.owner.N) + ")", 1)
                         else:
                             code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * _N)", 1)
-                else:
-                    code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "(rand()/(float)RAND_MAX)")
-            if num_occurences_randn > 0 and code_object.template_name != "synapses_create":
+            if num_occurences_randn > 0 and code_object.template_name != "synapses_create_generator":
                 #first one is alway the definition, so subtract 1
                 code_object.randn_calls = num_occurences_randn - 1
                 for i in range(0, code_object.randn_calls):
@@ -289,7 +331,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 number_elements = "_N"
             for k, v in codeobj.variables.iteritems():
                 #code objects which only run once
-                if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create":
+                if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     additional_code.append('''
                         //genenerate an array of random numbers on the device
                         float* dev_array_randn;
@@ -298,14 +340,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         {
                             printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''');
                         }
-                        curandGenerator_t uniform_gen;
-                        curandCreateGenerator(&uniform_gen, CURAND_RNG_PSEUDO_DEFAULT);
-                        curandSetPseudoRandomGeneratorSeed(uniform_gen, time(0));
-                        curandGenerateNormal(uniform_gen, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
+                        curandGenerateNormal(random_float_generator, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
                     line = "float* _array_{name}_randn".format(name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_randn")
-                elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create":
+                elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     additional_code.append('''
                         //genenerate an array of random numbers on the device
                         float* dev_array_rand;
@@ -314,10 +353,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         {
                             printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
                         }
-                        curandGenerator_t normal_gen;
-                        curandCreateGenerator(&normal_gen, CURAND_RNG_PSEUDO_DEFAULT);
-                        curandSetPseudoRandomGeneratorSeed(normal_gen, time(0));
-                        curandGenerateUniform(normal_gen, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
+                        curandGenerateUniform(random_float_generator, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
                     line = "float* _array_{name}_rand".format(name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_rand")
@@ -417,16 +453,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 writer.source_files.append('brianlib/'+file)
             elif file.lower().endswith('.h'):
                 writer.header_files.append('brianlib/'+file)
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'),
-                     os.path.join(directory, 'brianlib', 'stdint_compat.h'))
 
-    def generate_network_source(self, writer, compiler):
-        if compiler=='msvc':
-            std_move = 'std::move'
-        else:
-            std_move = ''
-        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
-                                                             std_move=std_move)
+    def generate_network_source(self, writer):
+        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None)
         writer.write('network.*', network_tmp)
         
     def generate_synapses_classes_source(self, writer):
@@ -442,21 +471,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         )
         writer.write('run.*', run_tmp)
         
-    def generate_makefile(self, writer, compiler, native, compiler_flags, nb_threads):
-        if compiler=='msvc':
-            if native:
-                arch_flag = ''
-                try:
-                    from cpuinfo import cpuinfo
-                    res = cpuinfo.get_cpu_info()
-                    if 'sse' in res['flags']:
-                        arch_flag = '/arch:SSE'
-                    if 'sse2' in res['flags']:
-                        arch_flag = '/arch:SSE2'
-                except ImportError:
-                    logger.warn('Native flag for MSVC compiler requires installation of the py-cpuinfo module')
-                compiler_flags += ' '+arch_flag
-            
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
+        nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
+        gpu_arch_flags = ['']
+        disable_warnings = False
+        for flag in nvcc_compiler_flags:
+            if flag.startswith(('--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code', '-gencode')):
+                gpu_arch_flags.append(flag)
+                nvcc_compiler_flags.remove(flag)
+            elif flag.startswith(('-w', '--disable-warnings')):
+                disable_warnings = True
+                nvcc_compiler_flags.remove(flag)
+        nvcc_optimization_flags = ' '.join(nvcc_compiler_flags)
+        gpu_arch_flags = ' '.join(gpu_arch_flags)
+        if cpp_compiler=='msvc':
             if nb_threads>1:
                 openmp_flag = '/openmp'
             else:
@@ -466,7 +494,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             win_makefile_tmp = CUDAStandaloneCodeObject.templater.win_makefile(
                 None, None,
                 source_bases=source_bases,
-                compiler_flags=compiler_flags,
+                cpp_compiler_flags=cpp_compiler_flags,
                 openmp_flag=openmp_flag,
                 )
             writer.write('win_makefile', win_makefile_tmp)
@@ -479,17 +507,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             makefile_tmp = CUDAStandaloneCodeObject.templater.makefile(None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
-                compiler_flags=compiler_flags,
+                cpp_compiler_flags=cpp_compiler_flags,
+                nvcc_optimization_flags=nvcc_optimization_flags,
+                gpu_arch_flags=gpu_arch_flags,
+                disable_warnings=disable_warnings,
                 rm_cmd=rm_cmd)
             writer.write('makefile', makefile_tmp)
 
-
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              with_output=True, native=True,
+              with_output=True,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
-              run_args=None, **kwds):
+              run_args=None, direct_call=True, **kwds):
         '''
         Build the project
         
@@ -497,29 +527,55 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         
         Parameters
         ----------
-        directory : str
-            The output directory to write the project to, any existing files will be overwritten.
-        compile : bool
-            Whether or not to attempt to compile the project
-        run : bool
-            Whether or not to attempt to run the built project if it successfully builds.
-        debug : bool
-            Whether to compile in debug mode.
-        with_output : bool
+        directory : str, optional
+            The output directory to write the project to, any existing files
+            will be overwritten. If the given directory name is ``None``, then
+            a temporary directory will be used (used in the test suite to avoid
+            problems when running several tests in parallel). Defaults to
+            ``'output'``.
+        compile : bool, optional
+            Whether or not to attempt to compile the project. Defaults to
+            ``True``.
+        run : bool, optional
+            Whether or not to attempt to run the built project if it
+            successfully builds. Defaults to ``True``.
+        debug : bool, optional
+            Whether to compile in debug mode. Defaults to ``False``.
+        with_output : bool, optional
             Whether or not to show the ``stdout`` of the built program when run.
-        native : bool
-            Whether or not to compile for the current machine's architecture (best for speed, but not portable)
-        clean : bool
-            Whether or not to clean the project before building
-        additional_source_files : list of str
-            A list of additional ``.cpp`` files to include in the build.
+            Output will be shown in case of compilation or runtime error.
+            Defaults to ``True``.
+        clean : bool, optional
+            Whether or not to clean the project before building. Defaults to
+            ``True``.
+        additional_source_files : list of str, optional
+            A list of additional ``.cu`` files to include in the build.
         additional_header_files : list of str
             A list of additional ``.h`` files to include in the build.
         main_includes : list of str
-            A list of additional header files to include in ``main.cpp``.
+            A list of additional header files to include in ``main.cu``.
         run_includes : list of str
-            A list of additional header files to include in ``run.cpp``.
+            A list of additional header files to include in ``run.cu``.
+        direct_call : bool, optional
+            Whether this function was called directly. Is used internally to
+            distinguish an automatic build due to the ``build_on_run`` option
+            from a manual ``device.build`` call.
         '''
+        if self.build_on_run and direct_call:
+            raise RuntimeError('You used set_device with build_on_run=True '
+                               '(the default option), which will automatically '
+                               'build the simulation at the first encountered '
+                               'run call - do not call device.build manually '
+                               'in this case. If you want to call it manually, '
+                               'e.g. because you have multiple run calls, use '
+                               'set_device with build_on_run=False.')
+        if self.has_been_run:
+            raise RuntimeError('The network has already been built and run '
+                               'before. To build several simulations in '
+                               'the same script, call "device.reinit()" '
+                               'and "device.activate()". Note that you '
+                               'will have to set build options (e.g. the '
+                               'directory) and defaultclock.dt again.')
         renames = {'project_dir': 'directory',
                    'compile_project': 'compile',
                    'run_project': 'run'}
@@ -532,7 +588,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 else:
                     msg += "Unknown keyword argument '%s'. " % kwd
             raise TypeError(msg)
-
+    
         if additional_source_files is None:
             additional_source_files = []
         if additional_header_files is None:
@@ -543,9 +599,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             run_includes = []
         if run_args is None:
             run_args = []
-
-        compiler, extra_compile_args = get_compiler_and_args()
-        compiler_flags = ' '.join(extra_compile_args)
+        if directory is None:
+            directory = tempfile.mkdtemp()
+    
+        cpp_compiler, cpp_extra_compile_args = get_compiler_and_args()
+        cpp_compiler_flags = ' '.join(cpp_extra_compile_args)
         self.project_dir = directory
         ensure_directory(directory)
         
@@ -558,10 +616,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         arange_arrays = sorted([(var, start)
                                 for var, start in self.arange_arrays.iteritems()],
                                key=lambda (var, start): var.name)
-
+    
         self.write_static_arrays(directory)
         self.find_synapses()
-
+    
         # Not sure what the best place is to call Network.after_run -- at the
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
@@ -572,7 +630,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.generate_main_source(writer, main_includes)
         self.generate_codeobj_source(writer)        
         self.generate_objects_source(writer, arange_arrays, self.net_synapses, self.static_array_specs, self.networks)
-        self.generate_network_source(writer, compiler)
+        self.generate_network_source(writer)
         self.generate_synapses_classes_source(writer)
         self.generate_run_source(writer, run_includes)
         self.generate_rand_source(writer)
@@ -581,19 +639,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.source_files.extend(additional_source_files)
         writer.header_files.extend(additional_header_files)
         
-        self.generate_makefile(writer, compiler, native, compiler_flags, nb_threads=0)
+        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0)
         
         if compile:
-            self.compile_source(directory, compiler, debug, clean, native)
+            self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
                 self.run(directory, with_output, run_args)
-                
+
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=True, level=0, **kwds):
         CPPStandaloneDevice.network_run(self, net, duration, report, report_period, namespace, profile, level+1)
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
-                self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables['_spikespace'], False), -1, False)))
+                for key in codeobj.variables.iterkeys():
+                    if key.endswith('space'):  # get the correct eventspace name
+                        self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
         for func, args in self.main_queue:
             if func=='run_network':
                 net, netcode = args
@@ -609,21 +669,3 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 cuda_standalone_device = CUDAStandaloneDevice()
 
 all_devices['cuda_standalone'] = cuda_standalone_device
-
-class CUDAStandaloneSimpleDevice(CUDAStandaloneDevice):
-    def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=True, level=0, **kwds):
-        super(CUDAStandaloneSimpleDevice, self).network_run(net, duration,
-                                                     report=report,
-                                                     report_period=report_period,
-                                                     namespace=namespace,
-                                                     profile=profile,
-                                                     level=level+1,
-                                                     **kwds)
-        tempdir = tempfile.mkdtemp()
-        self.build(directory=tempdir, compile=True, run=True, debug=False,
-                   with_output=False)
-
-cuda_standalone_simple_device = CUDAStandaloneSimpleDevice()
-
-all_devices['cuda_standalone_simple'] = cuda_standalone_simple_device

@@ -15,7 +15,7 @@
 
 //////////////// clocks ///////////////////
 {% for clock in clocks | sort(attribute='name') %}
-Clock brian::{{clock.name}}({{clock.dt_}});
+Clock brian::{{clock.name}};
 {% endfor %}
 
 //////////////// networks /////////////////
@@ -35,9 +35,8 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endfor %}
 
 //////////////// dynamic arrays 1d /////////
-// TODO: check if using thrust::host_vector instead of std::vector has any (dis-)advantages
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-std::vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
+thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {% endfor %}
 
@@ -124,9 +123,15 @@ void _init_arrays()
 	max_threads_per_block = props.maxThreadsPerBlock;
 	max_shared_mem_size = props.sharedMemPerBlock;
 	
-	curandCreateGenerator(&random_float_generator, CURAND_RNG_PSEUDO_DEFAULT);
+	curandCreateGenerator(&random_float_generator, {{curand_generator_type}});
+	{% if curand_generator_ordering %}
+	curandSetGeneratorOrdering(random_float_generator, {{curand_generator_ordering}});
+	{% endif %}
+	// These random seeds might be overwritten in main.cu
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
 
+	// TODO: if a specific seed is used, these first random number don't use it
+	//	 solution: generate numbers at beginning of clock cycle or move this to end of main.cu
 	//since random number generation is at the end of each clock_tick, also generate numbers for t = 0
 	unsigned int needed_random_numbers;
 	{% for co in codeobj_with_rand | sort(attribute='name') %}
@@ -137,7 +142,7 @@ void _init_arrays()
 	curandGenerateUniform(random_float_generator, dev_{{co.name}}_random_uniform_floats, needed_random_numbers * {{co.rand_calls}});
 	{% endfor %}
 	{% for co in codeobj_with_randn | sort(attribute='name') %}
-		//curand calls always need a even number for some reason
+	//curand calls always need a even number for some reason
 	needed_random_numbers = {{co.owner._N}} % 2 == 0?{{co.owner._N}}:{{co.owner._N}}+1;
 	cudaMalloc((void**)&dev_{{co.name}}_random_normal_floats, sizeof(float)*needed_random_numbers * {{co.randn_calls}});
 	cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_random_normal_floats, sizeof(float*));
@@ -271,12 +276,12 @@ void _write_arrays()
 	{% endfor %}
 
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-	thrust::host_vector<{{c_data_type(var.dtype)}}> temp{{varname}} = dev{{varname}};
+	{{varname}} = dev{{varname}};
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
-		outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&temp{{varname}}[0])), dev{{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
+		outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
 		outfile_{{varname}}.close();
 	} else
 	{
@@ -307,6 +312,21 @@ void _write_arrays()
 			std::cout << "Error writing output file for {{varname}}." << endl;
 		}
 		{% endfor %}
+
+	// Write dummy profiling_info file for feature_tests to not fail
+	ofstream outfile_profiling_info;
+	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
+	if(outfile_profiling_info.is_open())
+	{
+	{% for codeobj in code_objects | sort(attribute='name') %}
+	outfile_profiling_info << "{{codeobj.name}}\t0" << std::endl;
+	{% endfor %}
+	outfile_profiling_info.close();
+	} else
+	{
+	    std::cout << "Error writing profiling info to file." << std::endl;
+	}
+
 }
 
 {% for S in synapses | sort(attribute='name') %}
@@ -412,7 +432,7 @@ extern Network {{net.name}};
 
 //////////////// dynamic arrays ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-extern std::vector<{{c_data_type(var.dtype)}}> {{varname}};
+extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
 {% endfor %}
 

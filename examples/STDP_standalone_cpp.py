@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from brian2 import *
-set_device('cpp_standalone')
+set_device('cpp_standalone', directory='STDP_standalone_cpp', compile=True, run=True, debug=True)
 
 N = 1000
 taum = 10*ms
@@ -44,16 +44,14 @@ S = Synapses(input, neurons,
                     w = clip(w + Apost, 0, gmax)''',
              post='''Apost += dApost
                      w = clip(w + Apre, 0, gmax)''',
-             connect=True,
              )
+S.connect()
 S.w = 'rand() * gmax'
 mon = StateMonitor(S, 'w', record=[0, 1])
 s_mon = SpikeMonitor(input)
 r_mon = PopulationRateMonitor(input)
 
 run(100*second, report='text')
-device.build(directory='STDP_standalone_cpp', compile=True,
-             run=True, debug=True)
 
 subplot(311)
 suptitle('STDP_standalone_cpp')

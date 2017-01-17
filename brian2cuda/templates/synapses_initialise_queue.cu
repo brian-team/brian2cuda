@@ -1,4 +1,5 @@
 {% macro cu_file() %}
+{# USES_VARIABLES { N } #}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include "code_objects/{{codeobj_name}}.h"
@@ -55,12 +56,11 @@ void _run_{{pathobj}}_initialise_queue()
 	unsigned int save_num_blocks = num_parallel_blocks;
 	num_parallel_blocks = 1;
 	{% endif %}
-	
-	//{{owner.source}}
-	//{{owner.source.name}}
+
+	{{pointers_lines|autoindent}}
 
 	double dt = {{owner.clock.name}}.dt[0];
-	unsigned int syn_N = dev_dynamic_array_{{pathobj}}_delay.size();
+	unsigned int syn_N = {{N}};
 	unsigned int source_N = {{owner.source.N}};
 	unsigned int target_N = {{owner.target.N}};
 
@@ -92,7 +92,7 @@ void _run_{{pathobj}}_initialise_queue()
 	// get neuron IDs and delays from device
 	cudaMemcpy(h_synapses_synaptic_sources, thrust::raw_pointer_cast(&dev_dynamic_array_{{owner.synapses.name}}_{{owner.synapse_sources.name}}[0]), sizeof(int32_t) * syn_N, cudaMemcpyDeviceToHost);
 	cudaMemcpy(h_synapses_synaptic_targets, thrust::raw_pointer_cast(&dev_dynamic_array_{{owner.synapses.name}}_{{owner.synapse_targets.name}}[0]), sizeof(int32_t) * syn_N, cudaMemcpyDeviceToHost);
-	cudaMemcpy(h_synapses_delay, thrust::raw_pointer_cast(&dev_dynamic_array_{{pathobj}}_delay[0]), sizeof(double) * syn_N, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_synapses_delay, thrust::raw_pointer_cast(&dev_dynamic_array_{{owner.synapses.name}}_delay[0]), sizeof(double) * syn_N, cudaMemcpyDeviceToHost);
 
 	//fill vectors of connectivity matrix with synapse IDs and delay IDs (in units of simulation time step)
 	unsigned int max_delay = 0;

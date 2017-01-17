@@ -7,7 +7,7 @@ matplotlib.use('Agg')
 
 from brian2 import *
 
-set_device('cpp_standalone')
+set_device('cpp_standalone', directory='CUBA_cpp',compile=True, run=True, debug=True)
 
 taum = 20*ms
 taue = 5*ms
@@ -37,7 +37,6 @@ Ci.connect('i>=3200', p=0.02)
 s_mon = SpikeMonitor(P)
 
 run(1 * second, report='text')
-device.build(directory='CUBA_cpp', compile=True, run=True, debug=True)
 
 plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
 title('CUBA_cpp')

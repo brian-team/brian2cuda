@@ -1,34 +1,29 @@
 PROGRAM = main
-SRCS_CPP = $(wildcard *.cpp */*.cpp)
 SRCS_CU  = $(wildcard *.cu */*.cu)
-OBJS_CPP = ${SRCS_CPP:.cpp=.o}
 OBJS_CU  = ${SRCS_CU:.cu=.o}
 CC = @nvcc
 DEBUG = -g -G -DTHRUST_DEBUG
-OPTIMISATIONS = --use_fast_math -arch=sm_20 {{ compiler_flags }}
-CFLAGS = -c $(OPTIMISATIONS) -I.
+OPTIMISATIONFLAGS = {{ nvcc_optimization_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
+NVCCFLAGS = {% if disable_warnings %}-w{% endif %} -I.
+GPU_ARCH_FLAGS = {{ gpu_arch_flags }}
 LFLAGS = -lcurand
 
+# Add optimisation flags
+all: NVCCFLAGS += $(OPTIMISATIONFLAGS)
 all: executable
 
-# Adds debug flags
-debug: CFLAGS += $(DEBUG)
-debug: LFLAGS += $(DEBUG)
+# Add debug flags
+debug: GPU_ARCH_FLAGS += $(DEBUG)
 debug: executable
 
-.PHONY: all debug executable clean native
-
-native: executable
+.PHONY: all debug executable clean
 
 executable: $(OBJS_CPP) $(OBJS_CU)
-	$(CC) $(LFLAGS) -arch=sm_20 $(OBJS_CPP) $(OBJS_CU) -o $(PROGRAM)
+	$(CC) $(GPU_ARCH_FLAGS) $(LFLAGS) $(OBJS_CU) -o $(PROGRAM)
 
 clean:
 	rm -f $(OBJS_CPP) $(OBJS_CU) $(PROGRAM) results/*
 
 %.o : %.cu
-	$(CC) $(CFLAGS) -dc $< -o $@
-
-%.o : %.cpp
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(GPU_ARCH_FLAGS) $(NVCCFLAGS) -dc $< -o $@
 

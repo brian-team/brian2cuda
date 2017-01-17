@@ -21,13 +21,13 @@ void Network::clear()
 void Network::add(Clock* clock, codeobj_func func)
 {
 #if defined(_MSC_VER) && (_MSC_VER>=1700)
-	objects.push_back(std::make_pair<Clock*, codeobj_func>(std::move(clock), std::move(func)));
+	objects.push_back(std::make_pair(std::move(clock), std::move(func)));
 #else
-	objects.push_back(std::make_pair<Clock*, codeobj_func>(clock, func));
+	objects.push_back(std::make_pair(clock, func));
 #endif
 }
 
-void Network::run(const double duration, void (*report_func)(const double, const double, const double), const double report_period)
+void Network::run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period)
 {
 	std::clock_t start, current;
     const double t_start = t;
@@ -43,31 +43,32 @@ void Network::run(const double duration, void (*report_func)(const double, const
 	start = std::clock();
 	if (report_func)
 	{
-	    report_func(0.0, 0.0, duration);
+	    report_func(0.0, 0.0, t_start, duration);
 	}
 
 	Clock* clock = next_clocks();
 
-	while(clock->running())
+	while(clock && clock->running())
 	{
 		for(int i=0; i<objects.size(); i++)
 		{
 			if (report_func)
-            {
-                current = std::clock();
-                const double elapsed = (double)((current - start) / CLOCKS_PER_SEC);
-                if (elapsed > next_report_time)
-                {
-                    report_func(elapsed, (clock->t[0]-t_start)/duration, duration);
-                    next_report_time += report_period;
-                }
-            }
+            		{
+            		    current = std::clock();
+            		    const double elapsed = (double)((current - start) / CLOCKS_PER_SEC);
+            		    if (elapsed > next_report_time)
+            		    {
+            		        report_func(elapsed, (clock->t[0]-t_start)/duration, t_start, duration);
+            		        next_report_time += report_period;
+            		    }
+            		}
 			Clock *obj_clock = objects[i].first;
 			// Only execute the object if it uses the right clock for this step
 			if (curclocks.find(obj_clock) != curclocks.end())
 			{
-                codeobj_func func = objects[i].second;
-                func();
+                		codeobj_func func = objects[i].second;
+				if (func)  // code objects can be NULL in case where we store just the clock
+                    			func();
 			}
 		}
 		for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)
@@ -78,7 +79,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
 		if (report_func)
 		{
 		    current = std::clock();
-		    report_func((double)(current - start) / CLOCKS_PER_SEC, 1.0, duration);
+		    report_func((double)(current - start) / CLOCKS_PER_SEC, 1.0, t_start, duration);
 		}
 	}
 	t = t_end;
@@ -98,6 +99,9 @@ Clock* Network::next_clocks()
 {
 	// find minclock, clock with smallest t value
 	Clock *minclock = *clocks.begin();
+	if (not minclock) // mepty list of clocks
+		return NULL;
+
 	for(std::set<Clock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
 	{
 		Clock *clock = *i;
@@ -144,7 +148,7 @@ public:
 	Network();
 	void clear();
 	void add(Clock *clock, codeobj_func func);
-	void run(const double duration, void (*report_func)(const double, const double, const double), const double report_period);
+	void run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period);
 };
 
 #endif
