@@ -492,10 +492,10 @@ DEFAULT_FUNCTIONS['int'].implementations.add_implementation(CUDACodeGenerator,
                                                             code=int_code,
                                                             name='_brian_int')
 
+# TODO: find a way to use fast single-precision arithemics on GPU
 clip_code = '''
-    template <typename T1, typename T2>
     inline __host__ __device__
-    T1 _brian_clip(const T1 value, const T2 a_min, const T2 a_max)
+    double _brian_clip(const double value, const double a_min, const double a_max)
     {
         if (value < a_min)
             return a_min;
