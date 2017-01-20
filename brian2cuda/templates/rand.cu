@@ -4,15 +4,14 @@
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "network.h"
-#include<iostream>
-#include<fstream>
 #include <curand.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
+#include <ctime>
 
 void _run_random_number_generation()
 {
 	using namespace brian;
+
+	const std::clock_t _start_time = std::clock();
 
 	// Get the number of needed random numbers.
 	// curandGenerateNormal requires an even number for pseudorandom generators
@@ -46,6 +45,12 @@ void _run_random_number_generation()
 	{% for co in codeobj_with_randn %}
 	curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn, num_randn_{{co.name}} * {{co.randn_calls}}, 0, 1);
 	{% endfor %}
+
+
+	// Profiling
+	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+	random_number_generation_pofiling_info += _run_time;
+
 }
 {% endmacro %}
 

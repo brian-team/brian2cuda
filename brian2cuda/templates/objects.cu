@@ -1,13 +1,12 @@
 {% macro cu_file() %}
 
-#include<stdint.h>
-#include<vector>
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "network.h"
-#include<iostream>
-#include<fstream>
+#include <stdint.h>
+#include <iostream>
+#include <fstream>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -99,6 +98,12 @@ __global__ void {{path.name}}_init(
 }
 {% endfor %}
 {% endfor %}
+
+// Profiling information for each code object
+{% for codeobj in code_objects | sort(attribute='name') %}
+double brian::{{codeobj.name}}_profiling_info = 0.0;
+{% endfor %}
+double brian::random_number_generation_pofiling_info = 0.0;
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
@@ -294,14 +299,15 @@ void _write_arrays()
 		}
 		{% endfor %}
 
-	// Write dummy profiling_info file for feature_tests to not fail
+	// Write profiling info to disk
 	ofstream outfile_profiling_info;
 	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
 	if(outfile_profiling_info.is_open())
 	{
 	{% for codeobj in code_objects | sort(attribute='name') %}
-	outfile_profiling_info << "{{codeobj.name}}\t0" << std::endl;
+	outfile_profiling_info << "{{codeobj.name}}\t" << {{codeobj.name}}_profiling_info << std::endl;
 	{% endfor %}
+	outfile_profiling_info << "random_number_generation\t" << random_number_generation_pofiling_info << std::endl;
 	outfile_profiling_info.close();
 	} else
 	{
@@ -460,6 +466,12 @@ extern __device__ unsigned int** {{path.name}}_unique_delay_by_pre;
 extern __device__ SynapticPathway<double> {{path.name}};
 {% endfor %}
 {% endfor %}
+
+// Profiling information for each code object
+{% for codeobj in code_objects | sort(attribute='name') %}
+extern double {{codeobj.name}}_profiling_info;
+{% endfor %}
+extern double random_number_generation_pofiling_info;
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t random_float_generator;

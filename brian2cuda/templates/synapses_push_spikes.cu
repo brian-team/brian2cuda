@@ -6,11 +6,12 @@
     {% set _eventspace = get_array_name(eventspace_variable) %}
 
 #include "code_objects/{{codeobj_name}}.h"
-#include<math.h>
-#include<stdint.h>
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
 #include <assert.h>
+#include <math.h>
+#include <stdint.h>
+#include <ctime>
 
 namespace {
 	int _num_blocks(int num_objects)
@@ -104,6 +105,9 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 void _run_{{codeobj_name}}()
 {
 	using namespace brian;
+
+	const std::clock_t _start_time = std::clock();
+
     ///// CONSTANTS ///////////
 	%CONSTANTS%
 	///// POINTERS ////////////
@@ -129,6 +133,10 @@ void _run_{{codeobj_name}}()
 	{% else %}
 	//No pushing in no_or_const_delay_mode
 	{% endif %}
+
+	// Profiling
+	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+	{{codeobj_name}}_profiling_info += _run_time;
 }
 {% endmacro %}
 
