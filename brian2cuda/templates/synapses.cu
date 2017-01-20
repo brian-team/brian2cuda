@@ -62,7 +62,7 @@ __global__ void kernel_{{codeobj_name}}(
 //			{
 //				int32_t _idx = {{pathway.name}}_synapses_id_by_pre[spiking_neuron][i];
 //			
-//				{{vector_code|autoindent}}
+//				{#{{vector_code|autoindent}}#}
 //			}
 //			__syncthreads();
 //		}

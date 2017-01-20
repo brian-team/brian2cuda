@@ -124,7 +124,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if owner.variables["delay"].scalar:
                 # TODO: this only catches the case, where Synapses(..., delay=1*ms) syntax is used.
                 # if no delay is specified at all, we get scalar==False, which should still be caught here.
-                no_or_const_delay_mode = True
+                # TODO hard coded to False here! Switch to True when implemented
+                no_or_const_delay_mode = False
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
             serializing_mode = "syn"    #no serializing

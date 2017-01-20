@@ -63,12 +63,12 @@ class AdaptationOscillation(SpeedTest):
         neurons.v = 'rand()*v_t' 
         neurons.w = 'rand()*10*dw'
         
-        synapses = Synapses(neurons, neurons, 'c: volt', pre='v += c')
+        synapses = Synapses(neurons, neurons, 'c: volt', on_pre='v += c')
         synapses.connect('i!=j', p=sparsity)
         synapses.c[:] = 'syn_weight' 
         synapses.delay[:] = 'syn_delay' 
         
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
 
 class BrunelHakimModel(SpeedTest):
     
@@ -102,16 +102,15 @@ class BrunelHakimModel(SpeedTest):
         group = NeuronGroup(N, eqs, threshold='V>theta',
                             reset='V=Vr', refractory=taurefr)
         group.V = Vr
-        conn = Synapses(group, group, pre='V += -J',
-                        connect='rand()<sparseness')
-        conn.delay = delta
+        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
+        conn.connect('rand()<sparseness')
         
-        run(duration, report="text")
+        self.timed_run(duration)
         
 class BrunelHakimModelWithDelay(SpeedTest):
     
     category = "Full examples"
-    name = "Brunel Hakim "
+    name = "Brunel Hakim with delay"
     tags = ["Neurons", "Synapses"]
     n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
     n_label = 'Num neurons'
@@ -140,11 +139,11 @@ class BrunelHakimModelWithDelay(SpeedTest):
         group = NeuronGroup(N, eqs, threshold='V>theta',
                             reset='V=Vr', refractory=taurefr)
         group.V = Vr
-        conn = Synapses(group, group, pre='V += -J',
-                        connect='rand()<sparseness')
+        conn = Synapses(group, group, on_pre='V += -J')
+        conn.connect('rand()<sparseness')
         conn.delay = "delta * 2 * rand()"
         
-        run(duration, report="text")
+        self.timed_run(duration)
 
 class COBAHH(SpeedTest):
     
@@ -204,15 +203,17 @@ class COBAHH(SpeedTest):
         N_Pi = int(0.8*N)
         Pe = P[:N_Pi]
         Pi = P[N_Pi:]
-        Ce = Synapses(Pe, P, pre='ge+=we', connect='rand()<0.02')
-        Ci = Synapses(Pi, P, pre='gi+=wi', connect='rand()<0.02')
+        Ce = Synapses(Pe, P, on_pre='ge+=we')
+        Ce.connect('rand()<0.02')
+        Ci = Synapses(Pi, P, on_pre='gi+=wi')
+        Ci.connect('rand()<0.02')
         
         # Initialization
         P.v = 'El + (randn() * 5 - 5)*mV'
         P.ge = '(randn() * 1.5 + 4) * 10.*nS'
         P.gi = '(randn() * 12 + 20) * 10.*nS'
         
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
 
 class STDPEventDriven(SpeedTest):
     
@@ -253,15 +254,15 @@ class STDPEventDriven(SpeedTest):
                      '''w : 1
                         dApre/dt = -Apre / taupre : 1 (event-driven)
                         dApost/dt = -Apost / taupost : 1 (event-driven)''',
-                        pre='''ge += w
+                     on_pre='''ge += w
                         Apre += dApre
                         w = clip(w + Apost, 0, gmax)''',
-                    post='''Apost += dApost
-                         w = clip(w + Apre, 0, gmax)''',
-                    connect=True
+                     on_post='''Apost += dApost
+                         w = clip(w + Apre, 0, gmax)'''
                     )
+        S.connect()
         S.w = 'rand() * gmax'
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
         
 class STDPNotEventDriven(SpeedTest):
     
@@ -302,16 +303,16 @@ class STDPNotEventDriven(SpeedTest):
                      '''w : 1
                         dApre/dt = -Apre / taupre : 1
                         dApost/dt = -Apost / taupost : 1''',
-                        pre='''ge += w
+                     on_pre='''ge += w
                         Apre += dApre
                         w = clip(w + Apost, 0, gmax)''',
-                    post='''Apost += dApost
+                     on_post='''Apost += dApost
                          w = clip(w + Apre, 0, gmax)''',
-                    connect=True,
-                    method=euler
+                     method=euler
                     )
+        S.connect()
         S.w = 'rand() * gmax'
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
         
 class Vogels(SpeedTest):
     
@@ -351,8 +352,10 @@ class Vogels(SpeedTest):
         Pe = neurons[:NE]
         Pi = neurons[NE:]
         
-        con_e = Synapses(Pe, neurons, pre='g_ampa += 0.3*nS', connect='rand()<epsilon')
-        con_ii = Synapses(Pi, Pi, pre='g_gaba += 3*nS', connect='rand()<epsilon')
+        con_e = Synapses(Pe, neurons, on_pre='g_ampa += 0.3*nS')
+        con_e.connect('rand()<epsilon')
+        con_ii = Synapses(Pi, Pi, on_pre='g_gaba += 3*nS')
+        con_ii.connect('rand()<epsilon')
         
         eqs_stdp_inhib = '''
         w : 1
@@ -363,15 +366,16 @@ class Vogels(SpeedTest):
         gmax = 100               # Maximum inhibitory weight
         
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
-                          pre='''A_pre += 1.
+                          on_pre='''A_pre += 1.
                                  w = clip(w+(A_post-alpha)*eta, 0, gmax)
                                  g_gaba += w*nS''',
-                          post='''A_post += 1.
+                          on_post='''A_post += 1.
                                   w = clip(w+A_pre*eta, 0, gmax)
-                               ''',
-                          connect='rand()<epsilon')
+                               '''
+                         )
+        con_ie.connect('rand()<epsilon')
         con_ie.w = 1e-10
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
         
 class VogelsWithSynapticDynamic(SpeedTest):
     
@@ -411,8 +415,10 @@ class VogelsWithSynapticDynamic(SpeedTest):
         Pe = neurons[:NE]
         Pi = neurons[NE:]
         
-        con_e = Synapses(Pe, neurons, pre='g_ampa += 0.3*nS', connect='rand()<epsilon')
-        con_ii = Synapses(Pi, Pi, pre='g_gaba += 3*nS', connect='rand()<epsilon')
+        con_e = Synapses(Pe, neurons, on_pre='g_ampa += 0.3*nS')
+        con_e.connect('rand()<epsilon')
+        con_ii = Synapses(Pi, Pi, on_pre='g_gaba += 3*nS')
+        con_ii.connect('rand()<epsilon')
         
         eqs_stdp_inhib = '''
         w : 1
@@ -423,15 +429,16 @@ class VogelsWithSynapticDynamic(SpeedTest):
         gmax = 100               # Maximum inhibitory weight
         
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
-                          pre='''A_pre += 1.
+                          on_pre='''A_pre += 1.
                                  w = clip(w+(A_post-alpha)*eta, 0, gmax)
                                  g_gaba += w*nS''',
-                          post='''A_post += 1.
+                          on_post='''A_post += 1.
                                   w = clip(w+A_pre*eta, 0, gmax)
-                               ''',
-                          connect='rand()<epsilon')
+                               '''
+                         )
+        con_ie.connect('rand()<epsilon')
         con_ie.w = 1e-10
-        run(self.duration, report="text")
+        self.timed_run(self.duration)
         
         
 

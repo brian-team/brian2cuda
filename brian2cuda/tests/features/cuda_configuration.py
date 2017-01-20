@@ -8,7 +8,7 @@ from brian2.tests.features import (Configuration, DefaultConfiguration,
 __all__ = ['CUDAStandaloneConfiguration']
 
 class CUDAStandaloneConfiguration(Configuration):
-    name = 'cuda'
+    name = 'CUDA standalone'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
         
