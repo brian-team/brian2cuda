@@ -140,7 +140,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                codeobj_class=codeobj_class,
                                                                template_kwds=template_kwds,
                                                                override_conditional_write=override_conditional_write
-                                                                )
+                                                               )
         return codeobj
     
     def check_openmp_compatible(self, nb_threads):
@@ -185,8 +185,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='run_network':
                 net, netcode = args
 		for clock in net._clocks:
-			line = "{net.name}.add(&{clock.name}, _sync_clocks);".format(clock=clock, net=net)
-			netcode.insert(1, line)
+                    line = "{net.name}.add(&{clock.name}, _sync_clocks);".format(clock=clock, net=net)
+                    netcode.insert(1, line)
                 main_lines.extend(netcode)
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
@@ -648,7 +648,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=True, level=0, **kwds):
-        CPPStandaloneDevice.network_run(self, net, duration, report, report_period, namespace, profile, level+1)
+        build_on_run = self.build_on_run
+        self.build_on_run = False
+        super(CUDAStandaloneDevice, self).network_run(net, duration, report, report_period, namespace, profile, level+1)
+        self.build_on_run = build_on_run
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.iterkeys():
@@ -663,6 +666,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     if lines not in netcode:
                         netcode.append(lines);
                     netcode.append(run_action)
+        if self.build_on_run:
+            if self.has_been_run:
+                raise RuntimeError('The network has already been built and run '
+                                   'before. Use set_device with '
+                                   'build_on_run=False and an explicit '
+                                   'device.build call to use multiple run '
+                                   'statements with this device.')
+            self.build(direct_call=False, **self.build_options)
+
 
 
                         
