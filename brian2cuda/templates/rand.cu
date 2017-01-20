@@ -14,20 +14,37 @@ void _run_random_number_generation()
 {
 	using namespace brian;
 
-	float mean = 0.0;
-	float std_deviation = 1.0;
-	
-	unsigned int needed_random_numbers;
-
+	// Get the number of needed random numbers.
+	// curandGenerateNormal requires an even number for pseudorandom generators
 	{% for co in codeobj_with_rand %}
-	//curand calls always need a even number for some reason
-	needed_random_numbers = {{co.owner._N}} % 2 == 0?{{co.owner._N}}:{{co.owner._N}}+1;
-	curandGenerateUniform(random_float_generator, dev_{{co.name}}_random_uniform_floats, needed_random_numbers * {{co.rand_calls}});
+	static unsigned int num_rand_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
 	{% endfor %}
 	{% for co in codeobj_with_randn %}
-	//curand calls always need a even number for some reason
-	needed_random_numbers = {{co.owner._N}} % 2 == 0?{{co.owner._N}}:{{co.owner._N}}+1;
-	curandGenerateNormal(random_float_generator, dev_{{co.name}}_random_normal_floats, needed_random_numbers * {{co.randn_calls}}, mean, std_deviation);
+	static unsigned int num_randn_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
+	{% endfor %}
+
+	// Allocate device memory
+	static bool first_run = true;
+	if (first_run)
+	{
+		{% for co in codeobj_with_rand | sort(attribute='name') %}
+		cudaMalloc((void**)&dev_{{co.name}}_rand, sizeof(float)*num_rand_{{co.name}} * {{co.rand_calls}});
+		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		{% endfor %}
+		{% for co in codeobj_with_randn | sort(attribute='name') %}
+		cudaMalloc((void**)&dev_{{co.name}}_randn, sizeof(float)*num_randn_{{co.name}} * {{co.randn_calls}});
+		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
+		{% endfor %}
+		first_run = false;
+
+	}
+
+	// Generate random numbers
+	{% for co in codeobj_with_rand %}
+	curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand, num_rand_{{co.name}} * {{co.rand_calls}});
+	{% endfor %}
+	{% for co in codeobj_with_randn %}
+	curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn, num_randn_{{co.name}} * {{co.randn_calls}}, 0, 1);
 	{% endfor %}
 }
 {% endmacro %}

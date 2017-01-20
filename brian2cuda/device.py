@@ -300,18 +300,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     #first one is alway the definition, so subtract 1
                     code_object.rand_calls = num_occurences_rand - 1
                     for i in range(0, code_object.rand_calls):
-                        if code_object.owner.N != 0:
-                            code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * " + str(code_object.owner.N) + ")", 1)
-                        else:
-                            code_object.code.cu_file = code_object.code.cu_file.replace("_rand(_vectorisation_idx)", "_rand(_vectorisation_idx + " + str(i) + " * _N)", 1)
+                        code_object.code.cu_file = code_object.code.cu_file.replace(
+                            "_rand(_vectorisation_idx)",
+                            "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                            1)
             if num_occurences_randn > 0 and code_object.template_name != "synapses_create_generator":
                 #first one is alway the definition, so subtract 1
                 code_object.randn_calls = num_occurences_randn - 1
                 for i in range(0, code_object.randn_calls):
-                    if code_object.owner.N != 0:
-                        code_object.code.cu_file = code_object.code.cu_file.replace("_randn(_vectorisation_idx)", "_randn(_vectorisation_idx + " + str(i) + " * " + str(code_object.owner.N) + ")", 1)
-                    else:
-                        code_object.code.cu_file = code_object.code.cu_file.replace("_randn(_vectorisation_idx)", "_randn(_vectorisation_idx + " + str(i) + " * _N)", 1)
+                    code_object.code.cu_file = code_object.code.cu_file.replace(
+                        "_randn(_vectorisation_idx)",
+                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                        1)
 
         code_object_defs = defaultdict(list)
         host_parameters = defaultdict(list)
@@ -662,10 +662,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 net, netcode = args
                 for clock in net._clocks:
                     lines = '''{net.name}.add(&{clock.name}, _run_random_number_generation);'''.format(clock=clock, net=net)
-                    run_action = netcode.pop()
                     if lines not in netcode:
-                        netcode.append(lines);
-                    netcode.append(run_action)
+                        netcode.insert(1, lines)
+
         if self.build_on_run:
             if self.has_been_run:
                 raise RuntimeError('The network has already been built and run '

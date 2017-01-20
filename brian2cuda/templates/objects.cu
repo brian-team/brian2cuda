@@ -103,11 +103,11 @@ __global__ void {{path.name}}_init(
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-float* brian::dev_{{co.name}}_random_uniform_floats;
+float* brian::dev_{{co.name}}_rand;
 __device__ float* brian::_array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-float* brian::dev_{{co.name}}_random_normal_floats;
+float* brian::dev_{{co.name}}_randn;
 __device__ float* brian::_array_{{co.name}}_randn;
 {% endfor %}
 
@@ -129,25 +129,6 @@ void _init_arrays()
 	{% endif %}
 	// These random seeds might be overwritten in main.cu
 	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
-
-	// TODO: if a specific seed is used, these first random number don't use it
-	//	 solution: generate numbers at beginning of clock cycle or move this to end of main.cu
-	//since random number generation is at the end of each clock_tick, also generate numbers for t = 0
-	unsigned int needed_random_numbers;
-	{% for co in codeobj_with_rand | sort(attribute='name') %}
-	//curand calls always need a even number for some reason
-	needed_random_numbers = {{co.owner._N}} % 2 == 0?{{co.owner._N}}:{{co.owner._N}}+1;
-	cudaMalloc((void**)&dev_{{co.name}}_random_uniform_floats, sizeof(float)*needed_random_numbers * {{co.rand_calls}});
-	cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_random_uniform_floats, sizeof(float*));
-	curandGenerateUniform(random_float_generator, dev_{{co.name}}_random_uniform_floats, needed_random_numbers * {{co.rand_calls}});
-	{% endfor %}
-	{% for co in codeobj_with_randn | sort(attribute='name') %}
-	//curand calls always need a even number for some reason
-	needed_random_numbers = {{co.owner._N}} % 2 == 0?{{co.owner._N}}:{{co.owner._N}}+1;
-	cudaMalloc((void**)&dev_{{co.name}}_random_normal_floats, sizeof(float)*needed_random_numbers * {{co.randn_calls}});
-	cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_random_normal_floats, sizeof(float*));
-	curandGenerateNormal(random_float_generator, dev_{{co.name}}_random_normal_floats, needed_random_numbers * {{co.randn_calls}}, 0.0, 1.0);
-	{% endfor %}
 
 	{% for S in synapses | sort(attribute='name') %}
 	{% for path in S._pathways | sort(attribute='name') %}
@@ -345,10 +326,10 @@ void _dealloc_arrays()
 	using namespace brian;
 
 	{% for co in codeobj_with_rand | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_random_uniform_floats);
+	cudaFree(dev_{{co.name}}_rand);
 	{% endfor %}
 	{% for co in codeobj_with_randn | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_random_normal_floats);
+	cudaFree(dev_{{co.name}}_randn);
 	{% endfor %}
 
 	{% for S in synapses | sort(attribute='name') %}
@@ -397,6 +378,7 @@ void _dealloc_arrays()
 	}
 	{% endif %}
 	{% endfor %}
+
 }
 
 {% endmacro %}
@@ -483,11 +465,11 @@ extern __device__ SynapticPathway<double> {{path.name}};
 extern curandGenerator_t random_float_generator;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-extern float* dev_{{co.name}}_random_uniform_floats;
+extern float* dev_{{co.name}}_rand;
 extern __device__ float* _array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-extern float* dev_{{co.name}}_random_normal_floats;
+extern float* dev_{{co.name}}_randn;
 extern __device__ float* _array_{{co.name}}_randn;
 {% endfor %}
 
