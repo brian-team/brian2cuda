@@ -1,39 +1,51 @@
-# THIS README AND THE CODE IS NOT YET USABLE AND UNDER HEAVY DEVELOPMENT. PLEASE COME BACK LATER :-)
-# brian2cuda
-CUDA implementation for the spiking network simulator BRIAN2 to generate GPU code. The device parameters (no of shared multiprocessors, shared and global memory sizes etc.) are automatically set during runtime according to the specific CUDA capable device properties.
 
-Usage: 
+brian2cuda
+==========
+
+Please note that this package is still under developement and some features are not yet usable.
+
+Brian2cuda is an extention of the spiking neural network simulator [Brian2](https://github.com/brian-team/brian2), implementing a [Brian2 standalone device](http://brian2.readthedocs.io/en/stable/developer/devices.html) to generate C++/CUDA code to run simluations on NVIDIA general purpose graphics processing units (GPGPUs).
+
+### Usage: 
+Use your Brian2 code (see [Brian2 documentation](http://brian2.readthedocs.io/en/stable/index.html)) and modify the imports to:
 ```
-import brian2
+from brian2 import *
 import brian2cuda
 set_device("cuda_standalone")
 ```
 
-Currently the implementation requires the following specific commits to allow comparisons between brian2cuda and brian2genn.
+### Installation
+The Brian2 version with which this implementation is working is stored in a submodule in `frozen_repos/brian` (currently Brian2 commit [fadc6a0aeb90d1b4d343470628457d8561536f67
+](https://github.com/brian-team/brian2/tree/fadc6a0aeb90d1b4d343470628457d8561536f67)).
 
-The `frozen` branch from moritzaugustin/brian2 (```1d435d16d6ce73a96acba4245827c17dddebcc0e```).
+After cloning you can initialise the submodule by running this command from inside this repository:
 
-brian-team/brian2genn (```e1e0b790088fbd40cb713baba2dfa062c9ada903```)
-
-genn-team/genn (```f9ea2fe4aa73799e4242b1e8713733d7c2570478```)
-
-
-The correct commits are stored in submodules in the `frozen_repos` directory. You can initialize them all by executing:
 ```
-git submodule update --init
+git submodule update --init frozen_repos/brian2
 ```
-or individually with
+
+Now you can install the correct Brian2 and brian2cuda versions using pip (Be careful if you already have a Brian2 version installed in your current Python environment!):
 ```
-git submodule update --init frozen_repos/<name>
+pip install .
+pip install ./frozen_repos/brian2
 ```
-where `<name>` is one of the submodule names in the directory.
+Or just add them to your `PYTHONPATH` (in which case you need to install their dependencies manually).
 
+### Comparison with brian2genn
 
-For `brian2` and `brian2genn` you cann now either install the correct package versions, e.g. with `pip install ./frozen_repos/<name>` (careful if you have another version installed already!), or add the package to your PYTHONPATH.
-
-Install genn:
-If you are using LINUX and your cuda is installed at `/usr/local/cuda/`, simply source `init_genn`:
+The [brian2genn](https://github.com/brian-team/brian2genn) and [GeNN](https://github.com/genn-team/genn) versions that can be used for comparison are stored in submodules in `frozen_repos/brian2genn` and `frozen_repos/genn`. You can initialise them with:
+```
+git submodule update --init frozen_repos/brian2genn
+git submodule update --init frozen_repos/genn
+```
+If you are using LINUX and your CUDA is installed in `/usr/local/cuda/`, you can now just source `init_genn` to set the enironmental variables needed for GeNN to work:
 ```
 source frozen_repos/init_genn
 ```
-Otherwise follow the instructions at genn-team/genn
+Otherwise follow the instructions from the [GeNN repository](https://github.com/genn-team/genn)
+
+Now you can install `brian2genn` either with pip:
+```
+pip install ./frozen_repos/brian2genn
+```
+or just add it to your `PYTHONPATH`.
