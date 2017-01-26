@@ -8,7 +8,7 @@ Brian2cuda is an extention of the spiking neural network simulator [Brian2](http
 
 ### Usage: 
 Use your Brian2 code (see [Brian2 documentation](http://brian2.readthedocs.io/en/stable/index.html)) and modify the imports to:
-```
+```python
 from brian2 import *
 import brian2cuda
 set_device("cuda_standalone")
