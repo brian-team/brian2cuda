@@ -654,7 +654,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     namespace=None, profile=True, level=0, **kwds):
         build_on_run = self.build_on_run
         self.build_on_run = False
-        super(CUDAStandaloneDevice, self).network_run(net, duration, report, report_period, namespace, profile, level+1)
+        try:  # for testing we need to reset build_on_run in case of errors
+            super(CUDAStandaloneDevice, self).network_run(net, duration, report, report_period, namespace, profile, level+1, **kwds)
+        finally:
+            self.build_on_run = build_on_run
         self.build_on_run = build_on_run
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
