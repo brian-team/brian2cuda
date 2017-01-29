@@ -48,8 +48,6 @@ __global__ void _run_{{codeobj_name}}_kernel(
 	unsigned int num_events = 0;
 	{% endif %}
 
-	__syncthreads();
-	
 	// KERNEL_VARIABLES
 	%KERNEL_VARIABLES%
 
