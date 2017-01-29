@@ -52,16 +52,14 @@ public:
 
 	__device__ scalar& at(size_type index)
 	{
-		if(index < m_size && index >= 0)
-		{
-			return m_data[index];
-		}
-		else
+		//TODO: if size_type changes to be signed integer type, check for (index >= 0)
+		if(!index < m_size)
 		{
 			// TODO: check for proper exception throwing in cuda kernels
-			printf("ERROR returning a reference to index %d in cudaVector::at()", index);
-			assert(0 <= index && index < m_size);
+			printf("ERROR returning a reference to index %d in cudaVector::at()\n", index);
+			assert(index < m_size);
 		}
+		return m_data[index];
 	};
 
 	__device__ void push(scalar elem)
