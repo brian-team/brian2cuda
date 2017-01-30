@@ -20,10 +20,7 @@ from brian2cuda.tests.features.speed import *
 
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
-prefs.devices.cpp_standalone.extra_make_args_unix = ['-j6']
-
-time_stemp = time.time()
-date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y_%m_%d')
+#prefs.devices.cpp_standalone.extra_make_args_unix = ['-j6']
 
 configurations = [
                   CUDAStandaloneConfiguration,
@@ -44,23 +41,26 @@ speed_tests = [# feature_test                     name                          
                (BrunelHakimModel,                'BrunelHakimModel',                    slice(None)         ),
                (BrunelHakimModelWithDelay,       'BrunelHakimModelWithDelay',           slice(None)         ),
 
-#               (CUBAFixedConnectivity,           'CUBAFixedConnectivity',               slice(None)         ),
-#               (VerySparseMediumRateSynapsesOnly,'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
-#               (SparseMediumRateSynapsesOnly,    'SparseMediumRateSynapsesOnly',        slice(None)         ),
-#               (DenseMediumRateSynapsesOnly,     'DenseMediumRateSynapsesOnly',         slice(None)         ),
-#               (SparseLowRateSynapsesOnly,       'SparseLowRateSynapsesOnly',           slice(None)         ),
-#               (SparseHighRateSynapsesOnly,      'SparseHighRateSynapsesOnly',          slice(None)         ),
-#
-#               (AdaptationOscillation,           'AdaptationOscillation',               slice(None)         ),
-#               (COBAHH,                          'COBAHH',                              slice(None)         ),
-#               (STDPEventDriven,                 'STDPEventDriven',                     slice(None)         ),
-#               (STDPNotEventDriven,              'STDPNotEventDriven',                  slice(None)         ),
-#               (Vogels,                          'Vogels',                              slice(None)         ),
-#               (VogelsWithSynapticDynamic,       'VogelsWithSynapticDynamic',           slice(None)         ),
-#
-#               (COBAHHFixedConnectivity,         'COBAHHFixedConnectivity',             slice(None, -1)     ),
-#               (STDP,                            'STDP',                                slice(None)         ),
+               (CUBAFixedConnectivity,           'CUBAFixedConnectivity',               slice(None)         ),
+               (VerySparseMediumRateSynapsesOnly,'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
+               (SparseMediumRateSynapsesOnly,    'SparseMediumRateSynapsesOnly',        slice(None)         ),
+               (DenseMediumRateSynapsesOnly,     'DenseMediumRateSynapsesOnly',         slice(None)         ),
+               (SparseLowRateSynapsesOnly,       'SparseLowRateSynapsesOnly',           slice(None)         ),
+               (SparseHighRateSynapsesOnly,      'SparseHighRateSynapsesOnly',          slice(None)         ),
+
+               (AdaptationOscillation,           'AdaptationOscillation',               slice(None)         ),
+               (COBAHH,                          'COBAHH',                              slice(None)         ),
+               (STDPEventDriven,                 'STDPEventDriven',                     slice(None)         ),
+               (STDPNotEventDriven,              'STDPNotEventDriven',                  slice(None)         ),
+               (Vogels,                          'Vogels',                              slice(None)         ),
+               (VogelsWithSynapticDynamic,       'VogelsWithSynapticDynamic',           slice(None)         ),
+
+               (COBAHHFixedConnectivity,         'COBAHHFixedConnectivity',             slice(None, -1)     ),
+               (STDP,                            'STDP',                                slice(None)         ),
 ]
+
+time_stemp = time.time()
+date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y_%m_%d')
 
 directory = 'results_{}'.format(date_str)
 if os.path.exists(directory):
@@ -70,14 +70,20 @@ if os.path.exists(directory):
 os.makedirs(directory)
 print("Saving result plots in {}.".format(directory))
 
+time_format = '%d.%m.%Y at %H:%M:%S'
+script_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
 for n, (st, name, sl) in enumerate(speed_tests):
-    print("Starting speed test on", datetime.datetime.fromtimestamp(time.time()).strftime('%d.%m.%Y at %H:%M:%S'))
+    start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+    print("Starting {} on {}.".format(name, start))
     res = run_speed_tests(configurations=configurations,
                           speed_tests=[st],
                           n_slice=sl,
                           #n_slice=slice(None,None,100),
-                          run_twice=False,
+                          #run_twice=False,
                           verbose=True)
+    end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+    diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
+    print("Running {} took {}.".format(name, diff))
     res.plot_all_tests()
     savefig(directory + '/speed_test_{}.png'.format(speed_tests[n][1]))
     res.plot_all_tests(relative=True)
@@ -87,7 +93,10 @@ for n, (st, name, sl) in enumerate(speed_tests):
     if (3*(n+1) != len(get_fignums())):
         print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
 
-print("Finished all speed test on", datetime.datetime.fromtimestamp(time.time()).strftime('%d.%m.%Y at %H:%M:%S'))
+script_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+diff = datetime.datetime.strptime(script_end, time_format) - datetime.datetime.strptime(script_start, time_format)
+print("Finished all speed test on {}. Total time = {}.".format(
+    datetime.datetime.fromtimestamp(time.time()).strftime(time_format), diff))
 
 
 ##res.plot_all_tests(relative=True)

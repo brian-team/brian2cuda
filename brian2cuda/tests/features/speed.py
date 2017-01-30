@@ -22,7 +22,7 @@ class AdaptationOscillation(SpeedTest):
     category = "Full examples"
     name = "Adaptation oscillation"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -75,7 +75,7 @@ class BrunelHakimModel(SpeedTest):
     category = "Full examples"
     name = "Brunel Hakim "
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -112,7 +112,7 @@ class BrunelHakimModelWithDelay(SpeedTest):
     category = "Full examples"
     name = "Brunel Hakim with delay"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -150,7 +150,7 @@ class COBAHH(SpeedTest):
     category = "Full examples"
     name = "COBAHH"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -220,7 +220,7 @@ class STDPEventDriven(SpeedTest):
     category = "Full examples"
     name = "STDP (event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -269,7 +269,7 @@ class STDPNotEventDriven(SpeedTest):
     category = "Full examples"
     name = "STDP (not event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -319,7 +319,7 @@ class Vogels(SpeedTest):
     category = "Full examples"
     name = "Vogels et al 2011 (event-driven synapses)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
@@ -382,7 +382,7 @@ class VogelsWithSynapticDynamic(SpeedTest):
     category = "Full examples"
     name = "Vogels et al 2011 (not event-driven synapses)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
 
     # configuration options
