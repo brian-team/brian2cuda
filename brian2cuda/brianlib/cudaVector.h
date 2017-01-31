@@ -53,10 +53,10 @@ public:
 	__device__ scalar& at(size_type index)
 	{
 		//TODO: if size_type changes to be signed integer type, check for (index >= 0)
-		if(!index < m_size)
+		if (index >= m_size)
 		{
 			// TODO: check for proper exception throwing in cuda kernels
-			printf("ERROR returning a reference to index %d in cudaVector::at()\n", index);
+			printf("ERROR returning a reference to index %d in cudaVector::at() (size = %u)\n", index, m_size);
 			assert(index < m_size);
 		}
 		return m_data[index];
