@@ -39,7 +39,7 @@ __global__ void _kernel_{{codeobj_name}}(
 	///// KERNEL_VARIABLES /////
 	%KERNEL_VARIABLES%
 
-	if(_idx < 0 || _idx >= _N)
+	if(_idx >= _N)
 	{
 		return;
 	}
