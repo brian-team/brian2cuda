@@ -21,9 +21,19 @@ parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
 args = parser.parse_args()
 
 import os
+from StringIO import StringIO
 
-from brian2 import test
+from brian2 import test, prefs
 import brian2cuda
+
+if args.no_reset_prefs:
+    # reset to default preferences
+    prefs.read_preference_file(StringIO(prefs.defaults_as_file))
+# Switch off cpp compiler code optimization to get faster compilation times
+prefs['codegen.cpp.extra_compile_args_gcc'].extend(['-w', '-O0'])
+prefs['codegen.cpp.extra_compile_args_msvc'].extend(['/Od'])
+# Surpress some warnings from nvcc compiler
+prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-Xcudafe "--diag_suppress=declared_but_not_referenced"'])
 
 extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
 
@@ -43,7 +53,7 @@ for target in args.targets:
          long_tests=args.no_long_tests,
          test_codegen_independent=False,
          test_standalone=target,
-         reset_preferences=args.no_reset_prefs,
+         reset_preferences=False,
          fail_for_not_implemented=args.fail_not_implemented,
          test_in_parallel=test_in_parallel,
          extra_test_dirs=extra_test_dirs
