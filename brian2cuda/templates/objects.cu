@@ -358,6 +358,8 @@ void _dealloc_arrays()
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 	dev{{varname}}.clear();
 	thrust::device_vector<{{c_data_type(var.dtype)}}>().swap(dev{{varname}});
+	{{varname}}.clear();
+	thrust::host_vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
 	{% endfor %}
 
 	{% for var, varname in array_specs | dictsort(by='value') %}
