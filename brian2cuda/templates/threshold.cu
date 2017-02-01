@@ -20,6 +20,16 @@ int mem_per_thread(){
 	{#  Get the name of the array that stores these events (e.g. the spikespace array) #}
 	{% set _eventspace = get_array_name(eventspace_variable) %}
 
+	// TODO this is a little hacky and results in unnecessary instructions, maybe find a better way?
+	// we can't return before __syncthreads()
+	// and after __syncthreads() we need access to declarations in scalar_code
+	// so we just make sure _idx is not too high
+	bool return_thread = false;
+	if (_idx >= _N)
+	{
+		_idx = _N-1;
+		return_thread = true;
+	}
 
 	//// MAIN CODE ////////////
 	// scalar code
@@ -32,10 +42,18 @@ int mem_per_thread(){
 		//init number of spikes with 0
 		{{_eventspace}}[N] = 0;
 	}
+
 	__syncthreads();
 
+	// after __syncthreads() we can return
+	if (return_thread)
+	{
+		return;
+	}
+
 	{{vector_code|autoindent}}
-	if(_cond) {
+	if (_cond)
+	{
 		int32_t spike_index = atomicAdd(&{{_eventspace}}[N], 1);
 		{{_eventspace}}[spike_index] = _idx;
 		{% if _uses_refractory %}
@@ -46,4 +64,8 @@ int mem_per_thread(){
 		{{lastspike}}[_idx] = {{t}};
 		{% endif %}
 	}
+{% endblock %}
+
+{# we can't return threads when using __syncthreads() #}
+{% block num_thread_check %}
 {% endblock %}
