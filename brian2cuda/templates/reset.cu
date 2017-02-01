@@ -13,9 +13,12 @@
 	{{scalar_code|autoindent}}
     
 	//get events (e.g. spiking) neuron_id
-	_idx = _events[_idx];
-	if(_idx != -1)
+	int neuron_id = _events[_idx];
+	if (neuron_id != -1)
 	{
+		assert(neuron_id >= 0);
+		_idx = (unsigned int)neuron_id;
+
 		{{vector_code|autoindent}}
 	}
 {% endblock %}
