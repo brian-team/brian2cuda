@@ -158,6 +158,8 @@ void _copyToHost_{{codeobj_name}}()
 {
 	using namespace brian;
 
+	const std::clock_t _start_time = std::clock();
+
 	// TODO: Use the correct dev_eventmonitor_N instead of dev_num_events
 	//	 and the correct _array_eventmonitor_N instead of host_num_events.
 	//       use: dev_array_{{owner.name}}_N and _array_{{owner.name}}_N
@@ -195,6 +197,10 @@ void _copyToHost_{{codeobj_name}}()
 		{% endfor %}
 		0  {# dummy, becaus loop ends with comma #}
 		);
+
+	// Profiling
+    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+	_copyToHost_profiling_info += _run_time;
 }
 
 void _debugmsg_{{codeobj_name}}()

@@ -24,6 +24,8 @@ void _sync_clocks()
 
 void brian_start()
 {
+	const std::clock_t _start_time = std::clock();
+
 	_init_arrays();
 	_load_arrays();
 	srand((unsigned int)time(NULL));
@@ -34,12 +36,22 @@ void brian_start()
     	brian::{{clock.name}}.dt = brian::{{array_specs[clock.variables['dt']]}};
     	brian::{{clock.name}}.t = brian::{{array_specs[clock.variables['t']]}};
     	{% endfor %}
+
+	// Profiling
+	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+	brian::brian_start_profiling_info += _run_time;
 }
 
 void brian_end()
 {
+	const std::clock_t _start_time = std::clock();
+
 	_write_arrays();
 	_dealloc_arrays();
+
+	// Profiling
+	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+	brian::brian_end_profiling_info += _run_time;
 }
 
 {% for name, lines in run_funcs.items() | sort(attribute='name') %}

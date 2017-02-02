@@ -103,7 +103,10 @@ __global__ void {{path.name}}_init(
 {% for codeobj in code_objects | sort(attribute='name') %}
 double brian::{{codeobj.name}}_profiling_info = 0.0;
 {% endfor %}
-double brian::random_number_generation_pofiling_info = 0.0;
+double brian::random_number_generation_profiling_info = 0.0;
+double brian::brian_start_profiling_info = 0.0;
+double brian::brian_end_profiling_info = 0.0;
+double brian::_copyToHost_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
@@ -307,7 +310,10 @@ void _write_arrays()
 	{% for codeobj in code_objects | sort(attribute='name') %}
 	outfile_profiling_info << "{{codeobj.name}}\t" << {{codeobj.name}}_profiling_info << std::endl;
 	{% endfor %}
-	outfile_profiling_info << "random_number_generation\t" << random_number_generation_pofiling_info << std::endl;
+	outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
+	outfile_profiling_info << "brian_start\t" << brian_start_profiling_info << std::endl;
+	outfile_profiling_info << "brian_end\t" << brian_end_profiling_info << std::endl;
+	outfile_profiling_info << "_copyToHost\t" << _copyToHost_profiling_info << std::endl;
 	outfile_profiling_info.close();
 	} else
 	{
@@ -484,7 +490,10 @@ extern __device__ SynapticPathway<double> {{path.name}};
 {% for codeobj in code_objects | sort(attribute='name') %}
 extern double {{codeobj.name}}_profiling_info;
 {% endfor %}
-extern double random_number_generation_pofiling_info;
+extern double random_number_generation_profiling_info;
+extern double brian_start_profiling_info;
+extern double brian_end_profiling_info;
+extern double _copyToHost_profiling_info;
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t random_float_generator;

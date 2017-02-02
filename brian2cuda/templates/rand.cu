@@ -49,7 +49,7 @@ void _run_random_number_generation()
 
 	// Profiling
 	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-	random_number_generation_pofiling_info += _run_time;
+	random_number_generation_profiling_info += _run_time;
 
 }
 {% endmacro %}
