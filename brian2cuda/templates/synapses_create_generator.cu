@@ -173,10 +173,16 @@
 	// now we need to resize all registered variables
 	const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
 	{% for variable in owner._registered_variables | sort(attribute='name') %}
-	{% set varname = get_array_name(variable, access_data=False) %}
-	dev{{varname}}.resize(newsize);
-	{# //TODO: do we actually need to resize varname? #}
-	{{varname}}.resize(newsize);
+		{% set varname = get_array_name(variable, access_data=False) %}
+		{% if variable.name == 'delay' and no_or_const_delay_mode %}
+			dev{{varname}}.resize(1);
+			{# //TODO: do we actually need to resize varname? #}
+			{{varname}}.resize(1);
+		{% else %}
+			dev{{varname}}.resize(newsize);
+			{# //TODO: do we actually need to resize varname? #}
+			{{varname}}.resize(newsize);
+		{% endif %}
 	{% endfor %}
 
 	// update the total number of synapses
