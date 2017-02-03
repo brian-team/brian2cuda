@@ -243,16 +243,11 @@ public:
 	__device__ void advance(
 		unsigned int tid)
 	{
-		if(tid >= num_blocks || current_offset >= max_delay)
-		{
-			return;
-		}
+		assert(tid < num_blocks && current_offset < max_delay);
 		synapses_queue[current_offset][tid].reset();
 		__syncthreads();
 		if(tid == 0)
-		{
 			current_offset = (current_offset + 1)%max_delay;
-		}
 	}
 
 	__device__  void peek(
