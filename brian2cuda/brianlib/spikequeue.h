@@ -226,8 +226,6 @@ public:
 
 			if (syn < num_synapses)
 			{
-				unsigned int size_before_push = synapses_queue[delay_queue][bid].size();
-
 				// PUSH INTO QUEUES
 				unsigned int syn_id = synapses_id_by_pre[right_offset][syn];
 				// find position in queue for syn
