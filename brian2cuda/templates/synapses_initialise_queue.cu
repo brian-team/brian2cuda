@@ -133,6 +133,8 @@ void _run_{{pathobj}}_initialise_queue()
 	{
 		int num_elements = h_synapses_by_pre_id[i].size();
 		temp_size_by_pre_id[i] = num_elements;
+		if (num_elements > {{pathobj}}_max_size)
+			{{pathobj}}_max_size = num_elements;
 
 		// sort synapses (values) and delays (keys) by delay
 		thrust::sort_by_key(
@@ -202,7 +204,8 @@ void _run_{{pathobj}}_initialise_queue()
 
 		int num_unique_elements = h_unique_delay_by_pre_id[i].size();
 		temp_unique_delay_size_by_pre_id[i] = num_unique_elements;
-
+		if (num_unique_elements > {{pathobj}}_max_unique_delay_size)
+			{{pathobj}}_max_unique_delay_size = num_unique_elements;
 
 		if(num_elements > 0)
 		{

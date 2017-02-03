@@ -40,10 +40,6 @@ namespace {
 	}
 }
 
-// TODO: when push is done, uncomment
-//#define MEM_PER_THREAD (sizeof(unsigned int))  // each thread copies one unique_delay_start_idx into shared memory
-#define MEM_PER_THREAD (sizeof(unsigned int) + sizeof(int32_t))
-
 __global__ void _run_{{codeobj_name}}_advance_kernel()
 {
 	using namespace brian;
@@ -113,23 +109,27 @@ void _run_{{codeobj_name}}()
 	///// POINTERS ////////////
 
 	_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
-	// TODO: since we are only copying arays of size = number of unique delays, this needs to be adjusted
-	// here we are expecting MEM_PER_THREAD for each thread, but we only need it for max(num_unique_delays) threads
-	unsigned int num_threads = max_shared_mem_size / MEM_PER_THREAD;
 
+	{% if not no_or_const_delay_mode %}
+	// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
+	// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).
+	// And +1 per block for copying size_before_resize into shared memory when we need to use the outer loop.
+	unsigned int needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
+	assert (needed_shared_memory <= max_shared_mem_size);
+
+	// We don't need more then max(num_synapses) threads per block.
+	unsigned int num_threads = {{owner.name}}_max_size;
 	if (num_threads > max_threads_per_block)
 	{
 		num_threads = max_threads_per_block;
 	}
 	
-	{% if not no_or_const_delay_mode %}	
-		// TODO: check performance decrease when spawning many unused threads! Maybe call kernel with max(num_synapses) threads?
-		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, num_threads*MEM_PER_THREAD>>>(
-			_num{{eventspace_variable.name}}-1,
-			num_parallel_blocks,
-			num_threads,
-    			{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-			dev{{_eventspace}});
+	_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, needed_shared_memory>>>(
+		_num{{eventspace_variable.name}}-1,
+		num_parallel_blocks,
+		num_threads,
+		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+		dev{{_eventspace}});
 	{% else %}
 	//No pushing in no_or_const_delay_mode
 	{% endif %}

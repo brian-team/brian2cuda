@@ -130,6 +130,7 @@ public:
 		unsigned int num_unique_delays = unique_delay_size_by_pre[right_offset];
 		// shared_mem is allocated in push_spikes
 		unsigned int* shared_mem_unique_delay_start_idx_by_pre = (unsigned int*)_shared_mem;
+		unsigned int* shared_mem_size_before_resize = &shared_mem_unique_delay_start_idx_by_pre[num_unique_delays];
 
 		// neuron_pre_id should be in range [0,neuron_N]
 		assert(neuron_pre_id < neuron_N);
@@ -147,15 +148,33 @@ public:
 		// ( thread <-> synapse ) correspondence 
 		// If num_threads < num_synapses, loop.
 		// syn is synapse number (not ID!)
+		unsigned int delay_previous_loop_cycle, size_before_resize;
 		for (unsigned int i = 0; i < num_synapses; i += num_threads)
 		{
+			///////////////////////////////////////////////////////////////////////////////////////
+			// Example values and code paths for each thread for given delays, num_threads=3, num_synapses=12:
+			// syn                                  0  1  2 | 3  4  5 | 6  7  8 | 9 10 11
+			// delay                                0  0  0 | 0  0  0 | 0  1  1 | 1  2  2
+			//
+			// tid                                  0  1  2 | 0  1  2 | 0  1  2 | 0  1  2
+			// i                                    0  0  0 | 3  3  3 | 6  6  6 | 9  9  9
+			// loop cycle (i/num_threads)           0  0  0 | 1  1  1 | 2  2  2 | 3  3  3
+			// delay_start_idx_in_synapses_id       0  0  0 | 0  0  0 | 0  7  7 | 7 10 10
+			// next_delay_start_idx_in_synapses_id  7  7  7 | 7  7  7 | 7 10 10 |10 12 12
+			// delay_occurrence                     7  7  7 | 7  7  7 | 7  3  3 | 3  2  2
+			//
+			// Different code paths (see below):
+			//                                      ^  ^  ^                ^  ^   ^  ^  ^
+			//                                                                    a
+			//                                      *                      *         *
+			//                                                             b
+			///////////////////////////////////////////////////////////////////////////////////////
+
 			// start loop at 0 to make sure all threads are executing the same number of loops (for __syncthread())
 			unsigned int syn = i + tid;
 			// declare variables which we will need after __syncthread() call
-			unsigned int delay_queue, size_before_resize, delay_start_idx_in_synapses_id;
+			unsigned int delay_queue, delay_start_idx_in_synapses_id;
 
-
-			// TODO: use global size_by_pre only in host memory and call push() with max num_synapses threads
 			if (syn < num_synapses)
 			{
 				// find the starting index in synapse_id_by_pre for the delay corresponding
@@ -196,7 +215,7 @@ public:
 
 				// get the delay of the current synapse and the number of synapses with that delay
 				// TODO: is it faster to once make a coalesced copy of unique_delay_by_pre to shared memory? try!
-				unsigned int delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
+				delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
 				unsigned int delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
 
 				// find the spike queue corresponding to this synapses delay
@@ -207,7 +226,26 @@ public:
 				// then next consecutive threads read next global memory address
 				// TODO check memory broadcasting mechanism
 				// 		maybe copy size_before_resize into shared memory when copying the unique delay start idx
-				size_before_resize = synapses_queue[delay_queue][bid].size();
+				if ((i/num_threads) == 0 || delay != delay_previous_loop_cycle)
+				{
+					// only update size_before_resize if we are pushing into a new delay_queue (for the same tid)
+					// or if we are in the 1. loop cycle (i/num_threads==0)
+					// in example marked as (^)
+					if (delay_start_idx_in_synapses_id < i)
+					{
+						// if in the previous loop cycle we were not done with that delay, then the delay_queue is
+						// already resized and we need to take the size_before_resize we saved to shared memory
+						// in example marked as (a)
+						size_before_resize = shared_mem_size_before_resize[0];
+					}
+					else
+					{
+						// the delay_queue for this delay has not been resized yet
+						// in example marked all (^), except of (a)
+						size_before_resize = synapses_queue[delay_queue][bid].size();
+					}
+				}
+				delay_previous_loop_cycle = delay;
 
 				// RESIZE QUEUES
 				// TODO: if we use pointers for cudaVector::m_size, consecutive threads should to the resize
@@ -217,7 +255,17 @@ public:
 				// -> we get coalesced memory access but have to do more shared mem reads and numerics
 				if (syn == delay_start_idx_in_synapses_id)  // only one thread for each unique delay
 				{
+					// only the first thread for each delay does the resizing, in example marked as (*)
 					synapses_queue[delay_queue][bid].resize(size_before_resize + delay_occurrence);
+					if ((num_threads - tid) < delay_occurrence && tid != 0)
+					{
+						// If pushing into this delay queue will not be done within this loop cycle,
+						// then in the next loop cycle the queue will already be resized and we won't
+						// have access to size_before_resize --> save it to shared memory
+						// only if tid==0, the size_before_resize will be unchanged next loop cycle
+						// in example marked as (b)
+						shared_mem_size_before_resize[0] = size_before_resize;
+					}
 				}
 			} // end if
 
