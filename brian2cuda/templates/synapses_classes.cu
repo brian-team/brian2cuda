@@ -32,7 +32,7 @@ public:
 	unsigned int spikes_stop;
 
 	scalar dt;
-	CSpikeQueue<scalar>* queue;
+	CudaSpikeQueue<scalar>* queue;
 	bool no_or_const_delay_mode;
 	unsigned int which_spikespace;
 
@@ -48,7 +48,7 @@ public:
 		dt = _dt;
 		spikes_start = _spikes_start;
 		spikes_stop = _spikes_stop;
-		queue = new CSpikeQueue<scalar>;
+		queue = new CudaSpikeQueue<scalar>;
 		which_spikespace = 0;
     	};
 

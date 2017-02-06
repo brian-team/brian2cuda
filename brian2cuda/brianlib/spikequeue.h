@@ -15,7 +15,7 @@ using namespace std;
 typedef int32_t DTYPE_int;
 
 template <class scalar>
-class CSpikeQueue
+class CudaSpikeQueue
 {
 public:
 	//these vectors should ALWAYS be the same size, since each index refers to a triple of (pre_id, syn_id, post_id)
