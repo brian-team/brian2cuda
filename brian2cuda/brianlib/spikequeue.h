@@ -153,7 +153,8 @@ public:
 		{
 			///////////////////////////////////////////////////////////////////////////////////////
 			// Example values and code paths for each thread for given delays, num_threads=3, num_synapses=12:
-			// syn                                  0  1  2 | 3  4  5 | 6  7  8 | 9 10 11
+			//
+			// syn (range(0,num_synapses), not ID!) 0  1  2 | 3  4  5 | 6  7  8 | 9 10 11
 			// delay                                0  0  0 | 0  0  0 | 0  1  1 | 1  2  2
 			//
 			// tid                                  0  1  2 | 0  1  2 | 0  1  2 | 0  1  2
@@ -259,10 +260,11 @@ public:
 					synapses_queue[delay_queue][bid].resize(size_before_resize + delay_occurrence);
 					if ((num_threads - tid) < delay_occurrence && tid != 0)
 					{
-						// If pushing into this delay queue will not be done within this loop cycle,
+						// If pushing into this delay queue will not be finished within this loop cycle,
 						// then in the next loop cycle the queue will already be resized and we won't
-						// have access to size_before_resize --> save it to shared memory
-						// only if tid==0, the size_before_resize will be unchanged next loop cycle
+						// have access to size_before_resize. --> save it to shared memory
+						// If tid==0, all threads in this loop cycle will push into the same delay queue
+						// and the size_before_resize will be unchanged next loop cycle if the delay didn't change.
 						// in example marked as (b)
 						shared_mem_size_before_resize[0] = size_before_resize;
 					}

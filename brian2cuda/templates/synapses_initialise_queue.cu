@@ -211,9 +211,9 @@ void _run_{{pathobj}}_initialise_queue()
 		{
 			cudaMalloc((void**)&temp_synapses_by_pre_id[i], sizeof(int32_t)*num_elements);
 			cudaMalloc((void**)&temp_delay_by_pre_id[i], sizeof(unsigned int)*num_elements);
-			cudaMalloc((void**)&temp_delay_count_by_pre_id[i], sizeof(unsigned int)*num_elements);
-			cudaMalloc((void**)&temp_unique_delay_start_idx_by_pre_id[i], sizeof(unsigned int)*num_elements);
-			cudaMalloc((void**)&temp_unique_delay_by_pre_id[i], sizeof(unsigned int)*num_elements);
+			cudaMalloc((void**)&temp_delay_count_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
+			cudaMalloc((void**)&temp_unique_delay_start_idx_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
+			cudaMalloc((void**)&temp_unique_delay_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
 			cudaMemcpy(temp_synapses_by_pre_id[i],
 				thrust::raw_pointer_cast(&(h_synapses_by_pre_id[i][0])),
 				sizeof(int32_t)*num_elements,
