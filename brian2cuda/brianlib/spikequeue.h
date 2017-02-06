@@ -216,7 +216,7 @@ public:
 
 				// get the delay of the current synapse and the number of synapses with that delay
 				// TODO: is it faster to once make a coalesced copy of unique_delay_by_pre to shared memory? try!
-				delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
+				unsigned int delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
 				unsigned int delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
 
 				// find the spike queue corresponding to this synapses delay
