@@ -174,7 +174,7 @@ public:
 			// start loop at 0 to make sure all threads are executing the same number of loops (for __syncthread())
 			unsigned int syn = i + tid;
 			// declare variables which we will need after __syncthread() call
-			unsigned int delay_queue, delay_start_idx_in_synapses_id;
+			unsigned int delay_queue, delay_start_idx_in_synapses_id, delay_occurrence;
 
 			if (syn < num_synapses)
 			{
@@ -197,7 +197,7 @@ public:
 						// this synapse has the highest delay for the current pre_neuron and post_neuron_block
 						delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
 						idx_in_unique_delays = j;
-						// there is no next delay, for the calculation of delay_occurence we need
+						// there is no next delay, for the calculation of delay_occurrence we need
 						next_delay_start_idx_in_synapses_id = num_synapses;
 					}
 				}
@@ -217,7 +217,7 @@ public:
 				// get the delay of the current synapse and the number of synapses with that delay
 				// TODO: is it faster to once make a coalesced copy of unique_delay_by_pre to shared memory? try!
 				unsigned int delay = unique_delay_by_pre[right_offset][idx_in_unique_delays];
-				unsigned int delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
+				delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
 
 				// find the spike queue corresponding to this synapses delay
 				delay_queue = (current_offset + delay) % max_delay;
@@ -227,7 +227,7 @@ public:
 				// then next consecutive threads read next global memory address
 				// TODO check memory broadcasting mechanism
 				// 		maybe copy size_before_resize into shared memory when copying the unique delay start idx
-				if ((i/num_threads) == 0 || delay != delay_previous_loop_cycle)
+				if (i == 0 || delay != delay_previous_loop_cycle)
 				{
 					// only update size_before_resize if we are pushing into a new delay_queue (for the same tid)
 					// or if we are in the 1. loop cycle (i/num_threads==0)
@@ -247,7 +247,13 @@ public:
 					}
 				}
 				delay_previous_loop_cycle = delay;
+			}
 
+			// make sure all threads read size_before_resize before resizing
+			__syncthreads();
+
+			if (syn < num_synapses)
+			{
 				// RESIZE QUEUES
 				// TODO: if we use pointers for cudaVector::m_size, consecutive threads should to the resize
 				// in order to get coalesced memory access, e.g. by letting the threads that copy the start_idx
