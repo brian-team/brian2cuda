@@ -152,6 +152,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         multiplier = prefs.devices.cuda_standalone.SM_multiplier
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
+        eventspace_arrays = {}
+        for var, varname in self.arrays.iteritems():
+            if varname.endswith('space'):  # get all eventspace variables
+                eventspace_arrays[var] = varname
+        for var in eventspace_arrays.iterkeys():
+            del self.arrays[var]
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -169,7 +175,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         codeobj_with_randn=codeobj_with_randn,
                         multiplier=multiplier,
                         curand_generator_type=curand_generator_type,
-                        curand_generator_ordering=curand_generator_ordering)
+                        curand_generator_ordering=curand_generator_ordering,
+                        eventspace_arrays=eventspace_arrays)
+        # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
+        self.arrays.update(eventspace_arrays)
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):
@@ -199,6 +208,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                            value=CPPNodeRenderer().render_expr(repr(value)))
                 main_lines.extend(code.split('\n'))
                 pointer_arrayname = "dev{arrayname}".format(arrayname=arrayname)
+                if arrayname.endswith('space'):  # eventspace
+                    pointer_arrayname += '[0]'
                 if is_dynamic:
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 line = "cudaMemcpy({pointer_arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice);".format(
@@ -389,6 +400,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
                             code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
                             kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
+                            if k.endswith('space'):
+                                host_parameters_lines[-1] += '[0]'
                     except TypeError:
                         pass
                     
@@ -661,6 +674,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.iterkeys():
                     if key.endswith('space'):  # get the correct eventspace name
+                        # In case of custom scheduling, the thresholder might come after synapses or monitors
+                        # and needs to be initialized in the beginning of the simulation
                         self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
         for func, args in self.main_queue:
             if func=='run_network':

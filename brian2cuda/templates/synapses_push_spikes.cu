@@ -129,7 +129,7 @@ void _run_{{codeobj_name}}()
 		num_parallel_blocks,
 		num_threads,
 		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-		dev{{_eventspace}});
+		dev{{_eventspace}}[0]);
 	{% else %}
 	//No pushing in no_or_const_delay_mode
 	{% endif %}

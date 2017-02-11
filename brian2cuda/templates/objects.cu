@@ -33,6 +33,15 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endif %}
 {% endfor %}
 
+//////////////// eventspaces ///////////////
+// We dynamically create multiple eventspaces in no_or_const_delay_mode
+// For initiating the first spikespace, we need host pointer
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+{{c_data_type(var.dtype)}} * brian::{{varname}};
+thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
+const int brian::_num_{{varname}} = {{var.size}};
+{% endfor %}
+
 //////////////// dynamic arrays 1d /////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
@@ -157,7 +166,7 @@ void _init_arrays()
 
     // Arrays initialized to 0
 	{% for var in zero_arrays | sort(attribute='name') %}
-		{% if not (var in dynamic_array_specs) %}
+		{% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
 			{% set varname = array_specs[var] %}
 			{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 			for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
@@ -214,6 +223,12 @@ void _init_arrays()
 
 	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 	{{varname}} = new thrust::device_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
+	{% endfor %}
+
+	// eventspace_arrays
+	{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+	cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
+	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 	{% endfor %}
 }
 
@@ -453,6 +468,13 @@ extern {{c_data_type(var.dtype)}} * dev{{varname}};
 extern __device__ {{c_data_type(var.dtype)}} *d{{varname}};
 extern const int _num_{{varname}};
 {% endif %}
+{% endfor %}
+
+//////////////// eventspaces ///////////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+extern {{c_data_type(var.dtype)}} * {{varname}};
+extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
+extern const int _num_{{varname}};
 {% endfor %}
 
 //////////////// dynamic arrays 2d /////////
