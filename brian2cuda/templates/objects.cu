@@ -34,12 +34,14 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endfor %}
 
 //////////////// eventspaces ///////////////
-// We dynamically create multiple eventspaces in no_or_const_delay_mode
-// For initiating the first spikespace, we need host pointer
+// we dynamically create multiple eventspaces in no_or_const_delay_mode
+// for initiating the first spikespace, we need a host pointer
+// for choosing the right spikespace, we need a global index variable
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 {{c_data_type(var.dtype)}} * brian::{{varname}};
-thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
 const int brian::_num_{{varname}} = {{var.size}};
+thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
+int brian::current_idx{{varname}} = 0;
 {% endfor %}
 
 //////////////// dynamic arrays 1d /////////
@@ -475,6 +477,7 @@ extern const int _num_{{varname}};
 extern {{c_data_type(var.dtype)}} * {{varname}};
 extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 extern const int _num_{{varname}};
+extern int current_idx{{varname}};
 {% endfor %}
 
 //////////////// dynamic arrays 2d /////////

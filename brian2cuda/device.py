@@ -209,7 +209,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(code.split('\n'))
                 pointer_arrayname = "dev{arrayname}".format(arrayname=arrayname)
                 if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += '[0]'
+                    pointer_arrayname += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                 if is_dynamic:
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 line = "cudaMemcpy({pointer_arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice);".format(
@@ -394,14 +394,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 line = "const int _num{array_name} = par_num_{array_name};"
                                 kernel_variables_lines.append(line.format(array_name=k))
                         else:
-                            host_parameters_lines.append("dev"+self.get_array_name(v))
-                            device_parameters_lines.append("%s* par_%s" % (c_data_type(v.dtype), self.get_array_name(v)))
-                            kernel_variables_lines.append("%s* _ptr%s = par_%s;" % (c_data_type(v.dtype),  self.get_array_name(v), self.get_array_name(v)))
+                            arrayname = self.get_array_name(v)
+                            host_parameters_lines.append("dev"+arrayname)
+                            device_parameters_lines.append("%s* par_%s" % (c_data_type(v.dtype), arrayname))
+                            kernel_variables_lines.append("%s* _ptr%s = par_%s;" % (c_data_type(v.dtype),  arrayname, arrayname))
 
                             code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
                             kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
                             if k.endswith('space'):
-                                host_parameters_lines[-1] += '[0]'
+                                host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                     except TypeError:
                         pass
                     
