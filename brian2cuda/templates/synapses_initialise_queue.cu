@@ -74,6 +74,7 @@ void _run_{{pathobj}}_initialise_queue()
 	///////////////////////////////////
 
 	// pre neuron IDs, post neuron IDs and delays for all synapses (sorted by synapse IDs)
+	//TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
 	{% if no_or_const_delay_mode %}
 	// delay (on host) was potentially set in main and needs to be copied to device for later use
 	dev{{_dynamic_delay}} = {{_dynamic_delay}};
@@ -320,6 +321,30 @@ void _run_{{pathobj}}_initialise_queue()
 	}
 	{% endif %}
 
+	// Create circular eventspaces in no_or_const_delay_mode
+	{% if not no_or_const_delay_mode %}
+	if (scalar_delay)
+	{% endif %}
+	{
+		{% set eventspace_variable = owner.variables[owner.eventspace_name] %}
+		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+		unsigned int num_spikespaces = dev{{_eventspace}}.size();
+		if (num_delays > num_spikespaces)
+		{
+			for (int i = num_spikespaces; i < num_delays; i++)
+			{
+				{{c_data_type(eventspace_variable.dtype)}}* new_eventspace;
+				cudaError_t status = cudaMalloc((void**)&new_eventspace,
+						sizeof({{c_data_type(eventspace_variable.dtype)}})*_num_{{_eventspace}});
+				if (status != cudaSuccess)
+				{
+					printf("ERROR while allocating momory for dev{{_eventspace}}[%i] on device: %s %s %d\n",
+							i, cudaGetErrorString(status), __FILE__, __LINE__);
+					exit(status);
+				}
+				dev{{_eventspace}}.push_back(new_eventspace);
+			}
+		}
 	
 	unsigned int num_threads = num_delays;
 	if(num_threads >= max_threads_per_block)
