@@ -101,6 +101,10 @@ unsigned int bid_offset = 0;
 unsigned int num_blocks = num_parallel_blocks;
 unsigned int num_threads = max_threads_per_block;
 unsigned int bid_offset = 0;
+if ({{owner.name}}_multiple_pre_post)
+{
+	num_threads = 1;
+}
 {% elif serializing_mode == "pre" %}
 // serializing_mode == "pre"
 unsigned int num_blocks = 1;

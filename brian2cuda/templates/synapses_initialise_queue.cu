@@ -349,6 +349,17 @@ void _run_{{pathobj}}_initialise_queue()
 				dev{{_eventspace}}.push_back(new_eventspace);
 			}
 		}
+		// Check if we have multiple synapses per source-target pair in no_or_const_delay_mode
+		if ({{owner.synapses.name}}_multiple_pre_post)
+		{
+			printf("WARNING Multiple synapses per source-target pair and scalar delays detected in Synapses object "
+					"with name ``{{owner.synapses.name}}``. Application of synaptic effects will be "
+					"serialized to avoid race conditions. Consider reformulating your "
+					"model to avoid multiple synapses per source-target pair in a single Synapses object by using multiple "
+					"Synapses objects instead. For scalar delays this is very likely to increase simulation "
+					"performance significantly due to parallelisation of synaptic effect applications.\n");
+		}
+	}
 	
 	unsigned int num_threads = num_delays;
 	if(num_threads >= max_threads_per_block)

@@ -134,6 +134,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if variable_indices[varname] == "_presynaptic_idx":
                     serializing_mode = "pre"
             template_kwds["serializing_mode"] = serializing_mode
+        if template_name in ["synapses_create_generator", "synapses_create_array"]:
+            if owner.multisynaptic_index is not None:
+                template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,
@@ -158,6 +161,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.eventspace_arrays[var] = varname
         for var in self.eventspace_arrays.iterkeys():
             del self.arrays[var]
+        multisyn_vars = []
+        for syn in synapses:
+            if syn.multisynaptic_index is not None:
+                multisyn_vars.append(syn.variables[syn.multisynaptic_index])
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -176,7 +183,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         multiplier=multiplier,
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
-                        eventspace_arrays=eventspace_arrays)
+                        eventspace_arrays=self.eventspace_arrays,
+                        multisynaptic_idx_vars=multisyn_vars)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)

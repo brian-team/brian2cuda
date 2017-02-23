@@ -5,6 +5,7 @@
 #include<iostream>
 #include<curand.h>
 #include<brianlib/curand_buffer.h>
+#include<map>
 {% endblock %}
 
 {% block kernel %}
@@ -179,7 +180,9 @@
 			{# //TODO: do we actually need to resize varname? #}
 			{{varname}}.resize(1);
 		{% else %}
+			{% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
 			dev{{varname}}.resize(newsize);
+			{% endif %}
 			{# //TODO: do we actually need to resize varname? #}
 			{{varname}}.resize(newsize);
 		{% endif %}
@@ -187,6 +190,28 @@
 
 	// update the total number of synapses
 	{{N}} = newsize;
+
+	// Check for occurrence of multiple source-target pairs in synapses ("synapse number")
+	std::map<std::pair<int32_t, int32_t>, int32_t> source_target_count;
+	for (int _i=0; _i<newsize; _i++)
+	{
+		// Note that source_target_count will create a new entry initialized
+		// with 0 when the key does not exist yet
+		const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
+		{% if multisynaptic_index %}
+		// Save the "synapse number"
+		{{get_array_name(variables[multisynaptic_index], access_data=False)}}[_i] = source_target_count[source_target];
+		{% endif %}
+		source_target_count[source_target]++;
+		//printf("source target count = %i\n", source_target_count[source_target]);
+		if (source_target_count[source_target] > 1)
+		{
+			{{owner.name}}_multiple_pre_post = true;
+			{% if not multisynaptic_index %}
+			break;
+			{% endif %}
+		}
+	}
 
 	// copy changed host data to device
 	dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
@@ -197,21 +222,4 @@
 			{{get_array_name(variables['N'], access_data=False)}},
 			sizeof({{c_data_type(variables['N'].dtype)}}),
 			cudaMemcpyHostToDevice);
-	
-// TODO: test multisynaptic index occurence and potentially implement correctly
-//
-//    	{% if multisynaptic_index %}
-//    	// Update the "synapse number" (number of synapses for the same
-//    	// source-target pair)
-//    	std::map<std::pair<int32_t, int32_t>, int32_t> source_target_count;
-//    	for (int _i=0; _i<newsize; _i++)
-//    	{
-//    	    // Note that source_target_count will create a new entry initialized
-//    	    // with 0 when the key does not exist yet
-//    	    const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
-//    	    {{get_array_name(variables[multisynaptic_index], access_data=False)}}[_i] = source_target_count[source_target];
-//    	    source_target_count[source_target]++;
-//    	}
-//    	{% endif %}
-
 {% endblock %}

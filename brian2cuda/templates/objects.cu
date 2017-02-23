@@ -73,6 +73,7 @@ const int brian::_num_{{name}} = {{N}};
 Synapses<double> brian::{{S.name}}({{S.source|length}}, {{S.target|length}});
 int32_t {{S.name}}_source_start_index;
 int32_t {{S.name}}_source_stop_index;
+bool brian::{{S.name}}_multiple_pre_post = false;
 {% for path in S._pathways | sort(attribute='name') %}
 // {{path.name}}
 __device__ unsigned int* brian::{{path.name}}_size_by_pre;
@@ -287,7 +288,9 @@ void _write_arrays()
 	{% endfor %}
 
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+	{% if not var in multisynaptic_idx_vars %}
 	{{varname}} = dev{{varname}};
+	{% endif %}
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
@@ -504,6 +507,7 @@ extern const int _num_{{name}};
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
 extern Synapses<double> {{S.name}};
+extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
 extern __device__ unsigned int* {{path.name}}_size_by_pre;
 extern unsigned int {{path.name}}_max_size;
