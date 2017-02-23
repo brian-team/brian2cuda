@@ -12,7 +12,10 @@
 
 __global__ void kernel_{{codeobj_name}}(
 	unsigned int bid_offset,
+	unsigned int timestep,
 	unsigned int THREADS_PER_BLOCK,
+	int32_t* eventspace,
+	unsigned int neurongroup_size,
 	%DEVICE_PARAMETERS%
 	)
 {
@@ -21,22 +24,56 @@ __global__ void kernel_{{codeobj_name}}(
 
 	unsigned int tid = threadIdx.x;
 	unsigned int bid = blockIdx.x + bid_offset;
+	//TODO: do we need _idx here? if now, get also rid of scoping after scalar code
 	unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
 	unsigned int _vectorisation_idx = _idx;
 	%KERNEL_VARIABLES%
 	{% block additional_variables %}
 	{% endblock %}
 
-	cudaVector<int32_t>* synapses_queue;
-	
-	{{pathway.name}}.queue->peek(
-		&synapses_queue);
-
 	{{scalar_code|autoindent}}
 
 	{
-	if (! ({{pathway.name}}.no_or_const_delay_mode))
+	if ({{pathway.name}}.no_or_const_delay_mode)
 	{
+	        // for the first max_delay timesteps the eventspace is not yet filled
+	        if (timestep >= {{pathway.name}}.queue->max_delay)
+	        {
+	                // loop through neurons in eventspace (indices of event neurons, rest -1)
+	                for(int i = 0; i < neurongroup_size; i++)
+	                {
+	                        // spiking_neuron is index in NeuronGroup
+	                        int32_t spiking_neuron = eventspace[i];
+
+	                        if(spiking_neuron == -1) // end of spiking neurons
+	                        {
+	                                assert(i == eventspace[neurongroup_size]);
+	                                return;
+	                        }
+	                        // apply effects if event neuron is in sources of current SynapticPathway
+	                        if({{pathway.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{pathway.name}}.spikes_stop)
+	                        {
+	                                unsigned int right_offset = spiking_neuron * {{pathway.name}}.queue->num_blocks + bid;
+	                                int size = {{pathway.name}}_size_by_pre[right_offset];
+	                                int32_t* synapses_id_by_pre = {{pathway.name}}_synapses_id_by_pre[right_offset];
+	                                for(int j = tid; j < size; j+=THREADS_PER_BLOCK)
+	                                {
+	                                        int32_t _idx = synapses_id_by_pre[j];
+
+	                                        {{vector_code|autoindent}}
+	                                }
+	                        }
+
+	                        __syncthreads();
+	                }
+	        }
+	}
+	else  // heterogeneous delay mode
+	{
+	        cudaVector<int32_t>* synapses_queue;
+	        {{pathway.name}}.queue->peek(
+	                &synapses_queue);
+
 		int size = synapses_queue[bid].size();
 		for(int j = tid; j < size; j+=THREADS_PER_BLOCK)
 		{
@@ -45,58 +82,41 @@ __global__ void kernel_{{codeobj_name}}(
 			{{vector_code|autoindent}}
 		}
 	}
-	else
-	{
-// OLD IMPLEMENTATION OF NO_OR_CONST_DELAY_MODE
-//		if(bid != 0)
-//			return;
-//		//no or const delay mode
-//		for(int j = 0; j < _num_spikespace; j++)
-//		{
-//			int32_t spiking_neuron = _spikespace[j];  // this had two {} around _spikespace
-//			if(spiking_neuron == -1)
-//			{
-//				break;
-//			}
-//			for(int i = tid; i < {{pathway.name}}_size_by_pre[spiking_neuron]; i+= THREADS_PER_BLOCK)
-//			{
-//				int32_t _idx = {{pathway.name}}_synapses_id_by_pre[spiking_neuron][i];
-//			
-//				{#{{vector_code|autoindent}}#}
-//			}
-//			__syncthreads();
-//		}
-	}
 	}
 }
 
 {% endblock %}
 
 {% block kernel_call %}
-	{% if serializing_mode == "syn" %}
-	kernel_{{codeobj_name}}<<<num_parallel_blocks,max_threads_per_block>>>(
-		0,
-		max_threads_per_block,
+{% set eventspace_variable = pathway.variables[pathway.eventspace_name] %}
+{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+
+{% if serializing_mode == "syn" %}
+// serializing_mode == "syn"
+unsigned int num_blocks = num_parallel_blocks;
+unsigned int num_threads = max_threads_per_block;
+unsigned int bid_offset = 0;
+{% elif serializing_mode == "post" %}
+// serializing_mode == "post"
+unsigned int num_blocks = num_parallel_blocks;
+unsigned int num_threads = max_threads_per_block;
+unsigned int bid_offset = 0;
+{% elif serializing_mode == "pre" %}
+// serializing_mode == "pre"
+unsigned int num_blocks = 1;
+unsigned int num_threads = 1;
+for(int bid_offset = 0; bid_offset < num_parallel_blocks; bid_offset++)
+{% endif %}
+{
+	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+		bid_offset,
+		{{owner.clock.name}}.timestep[0],
+		num_threads,
+		dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
+		_num_{{_eventspace}}-1,
 		%HOST_PARAMETERS%
 	);
-	{% endif %}
-	{% if serializing_mode == "post" %}
-	kernel_{{codeobj_name}}<<<num_parallel_blocks,1>>>(
-		0,
-		1,
-		%HOST_PARAMETERS%
-	);
-	{% endif %}
-	{% if serializing_mode == "pre" %}
-	for(int i = 0; i < num_parallel_blocks; i++)
-	{
-		kernel_{{codeobj_name}}<<<1,1>>>(
-			i,
-			1,
-			%HOST_PARAMETERS%
-		);
-	}
-	{% endif %}
+}
 {% endblock %}
 
 {% block extra_maincode %}
