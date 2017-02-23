@@ -123,8 +123,12 @@ void _run_{{pathobj}}_initialise_queue()
 	}
 	unsigned int num_delays = max_delay + 1;  // we also need a current step
 
-	{% if not no_or_const_delay_mode %}
+	{% if no_or_const_delay_mode %}
+	{{owner.name}}_delay = max_delay;
+	{% else %}
 	bool scalar_delay = (max_delay == min_delay);
+	if (scalar_delay)
+		{{owner.name}}_delay = max_delay;
 	{% endif %}
 
 	///////////////////////////////////////
@@ -386,8 +390,11 @@ void _run_{{pathobj}}_initialise_queue()
 	{% endif %}
 
 	{% if no_or_const_delay_mode %}
-	num_parallel_blocks = save_num_blocks;
+	{{pathobj}}_scalar_delay = true;
+	{% else %}
+	{{pathobj}}_scalar_delay = scalar_delay;
 	{% endif %}
+
 	printf("Done with initialise_queue\n");
 }
 

@@ -44,12 +44,8 @@ __global__ void _run_{{codeobj_name}}_advance_kernel()
 {
 	using namespace brian;
 	unsigned int tid = threadIdx.x;
-	{% if no_or_const_delay_mode %}
-	{{owner.name}}.which_spikespace = ({{owner.name}}.which_spikespace + 1) % {{owner.name}}.queue->max_delay;
-	{% else %}
 	{{owner.name}}.queue->advance(
 		tid);
-	{% endif %}
 }
 
 __global__ void _run_{{codeobj_name}}_push_kernel(
@@ -104,35 +100,43 @@ void _run_{{codeobj_name}}()
 
 	const std::clock_t _start_time = std::clock();
 
-    ///// CONSTANTS ///////////
+	///// CONSTANTS /////
 	%CONSTANTS%
-	///// POINTERS ////////////
 
-	_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
-
-	{% if not no_or_const_delay_mode %}
-	// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
-	// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).
-	// And +1 per block for copying size_before_resize into shared memory when we need to use the outer loop.
-	unsigned int needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
-	assert (needed_shared_memory <= max_shared_mem_size);
-
-	// We don't need more then max(num_synapses) threads per block.
-	unsigned int num_threads = {{owner.name}}_max_size;
-	if (num_threads > max_threads_per_block)
+	{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+	if ({{owner.name}}_scalar_delay)
 	{
-		num_threads = max_threads_per_block;
+		//TODO: check int / unsigned int of all vars here and in objects pathway
+		unsigned int num_eventspaces = dev{{_eventspace}}.size();
+		{{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
+
+		//////////////////////////////////////////////
+		//// No pushing in no_or_const_delay_mode ////
+		//////////////////////////////////////////////
 	}
-	
-	_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, needed_shared_memory>>>(
-		_num{{eventspace_variable.name}}-1,
-		num_parallel_blocks,
-		num_threads,
-		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-		dev{{_eventspace}}[0]);
-	{% else %}
-	//No pushing in no_or_const_delay_mode
-	{% endif %}
+	else
+	{
+		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
+
+		// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
+		// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).
+		// And +1 per block for copying size_before_resize into shared memory when we need to use the outer loop.
+		unsigned int needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
+		assert (needed_shared_memory <= max_shared_mem_size);
+
+		// We don't need more then max(num_synapses) threads per block.
+		unsigned int num_threads = {{owner.name}}_max_size;
+		if (num_threads > max_threads_per_block)
+		{
+			num_threads = max_threads_per_block;
+		}
+
+		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, needed_shared_memory>>>(
+			_num{{eventspace_variable.name}}-1,
+			num_parallel_blocks,
+			num_threads,
+			dev{{_eventspace}}[current_idx{{_eventspace}}]);
+	}
 
 	// Profiling
 	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;

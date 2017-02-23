@@ -152,11 +152,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         multiplier = prefs.devices.cuda_standalone.SM_multiplier
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
-        eventspace_arrays = {}
+        self.eventspace_arrays = {}
         for var, varname in self.arrays.iteritems():
             if varname.endswith('space'):  # get all eventspace variables
-                eventspace_arrays[var] = varname
-        for var in eventspace_arrays.iterkeys():
+                self.eventspace_arrays[var] = varname
+        for var in self.eventspace_arrays.iterkeys():
             del self.arrays[var]
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
@@ -178,7 +178,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_generator_ordering=curand_generator_ordering,
                         eventspace_arrays=eventspace_arrays)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
-        self.arrays.update(eventspace_arrays)
+        self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):
@@ -471,7 +471,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
-        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None, maximum_run_time=maximum_run_time)
+        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
+                                                                 maximum_run_time=maximum_run_time,
+                                                                 eventspace_arrays=self.eventspace_arrays)
         writer.write('network.*', network_tmp)
         
     def generate_synapses_classes_source(self, writer):

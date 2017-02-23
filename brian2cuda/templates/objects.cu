@@ -86,6 +86,8 @@ __device__ unsigned int** brian::{{path.name}}_unique_delay_start_idx_by_pre;
 __device__ unsigned int** brian::{{path.name}}_unique_delay_by_pre;
 __device__ SynapticPathway<double> brian::{{path.name}};
 int brian::{{path.name}}_eventspace_idx = 0;
+unsigned int brian::{{path.name}}_delay;
+bool brian::{{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 
@@ -514,6 +516,8 @@ extern __device__ unsigned int** {{path.name}}_unique_delay_start_idx_by_pre;
 extern __device__ unsigned int** {{path.name}}_unique_delay_by_pre;
 extern __device__ SynapticPathway<double> {{path.name}};
 extern int {{path.name}}_eventspace_idx;
+extern unsigned int {{path.name}}_delay;
+extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 

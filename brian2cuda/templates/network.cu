@@ -1,5 +1,6 @@
 {% macro cu_file() %}
 
+#include "objects.h"
 #include "network.h"
 #include<stdlib.h>
 #include<iostream>
@@ -56,6 +57,11 @@ void Network::run(const double duration, void (*report_func)(const double, const
     while(clock && clock->running())
     {
         t = clock->t[0];
+
+		// Fill up next spikespace each time step (for no_or_const_delay_mode)
+		{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+		brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::dev{{varname}}.size();
+		{% endfor %}
 
         for(int i=0; i<objects.size(); i++)
         {
