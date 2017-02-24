@@ -54,12 +54,13 @@ __global__ void kernel_{{codeobj_name}}(
 	                        // apply effects if event neuron is in sources of current SynapticPathway
 	                        if({{pathway.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{pathway.name}}.spikes_stop)
 	                        {
-	                                unsigned int right_offset = spiking_neuron * {{pathway.name}}.queue->num_blocks + bid;
+	                                unsigned int right_offset = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
 	                                int size = {{pathway.name}}_size_by_pre[right_offset];
-	                                int32_t* synapses_id_by_pre = {{pathway.name}}_synapses_id_by_pre[right_offset];
+	                                int32_t* propagating_synapses = {{pathway.name}}_synapses_id_by_pre[right_offset];
 	                                for(int j = tid; j < size; j+=THREADS_PER_BLOCK)
 	                                {
-	                                        int32_t _idx = synapses_id_by_pre[j];
+						// _idx is the synapse id
+	                                        int32_t _idx = propagating_synapses[j];
 
 	                                        {{vector_code|autoindent}}
 	                                }
