@@ -100,11 +100,13 @@ unsigned int bid_offset = 0;
 {% elif serializing_mode == "post" %}
 // serializing_mode == "post"
 unsigned int num_blocks = num_parallel_blocks;
-unsigned int num_threads = max_threads_per_block;
+unsigned int num_threads = 1;
 unsigned int bid_offset = 0;
-if ({{owner.name}}_multiple_pre_post)
+if ({{pathway.name}}_scalar_delay && !{{owner.name}}_multiple_pre_post)
 {
-	num_threads = 1;
+	num_threads = max_threads_per_block;
+}
+{
 }
 {% elif serializing_mode == "pre" %}
 // serializing_mode == "pre"
