@@ -36,8 +36,9 @@ __global__ void kernel_{{codeobj_name}}(
 	{
 	if ({{pathway.name}}.no_or_const_delay_mode)
 	{
-	        // for the first max_delay timesteps the eventspace is not yet filled
-	        if (timestep >= {{pathway.name}}.queue->max_delay)
+	        // for the first delay timesteps the eventspace is not yet filled
+		// note that max_delay is the number of eventspaces, max_delay-1 the delay in timesteps
+	        if (timestep >= {{pathway.name}}.queue->max_delay - 1)
 	        {
 	                // loop through neurons in eventspace (indices of event neurons, rest -1)
 	                for(int i = 0; i < neurongroup_size; i++)
