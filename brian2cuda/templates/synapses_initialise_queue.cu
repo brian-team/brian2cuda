@@ -63,6 +63,9 @@ void _run_{{pathobj}}_initialise_queue()
 
 	double dt = {{owner.clock.name}}.dt[0];
 	unsigned int syn_N = {{N}};
+	// if there are no synapses, we don't neet to initialise anything
+	if (syn_N == 0)
+		return;
 	unsigned int source_N = {{owner.source.N}};
 	unsigned int target_N = {{owner.target.N}};
 
