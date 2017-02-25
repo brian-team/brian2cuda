@@ -35,7 +35,10 @@ int mem_per_thread(){
 	// scalar code
 	{{scalar_code|autoindent}}
 
-	{{_eventspace}}[_idx] = -1;
+	if (!return_thread)
+	{
+		{{_eventspace}}[_idx] = -1;
+	}
 
 	if(tid == 0 && bid == 0)
 	{
