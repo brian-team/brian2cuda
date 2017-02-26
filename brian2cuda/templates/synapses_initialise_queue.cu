@@ -1,5 +1,5 @@
 {% macro cu_file() %}
-{# USES_VARIABLES { N, delay } #}
+{# USES_VARIABLES { delay } #}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include "code_objects/{{codeobj_name}}.h"
@@ -52,20 +52,12 @@ void _run_{{pathobj}}_initialise_queue()
 {
 	using namespace brian;
 
-	{% if no_or_const_delay_mode %}
-	unsigned int save_num_blocks = num_parallel_blocks;
-	num_parallel_blocks = 1;
-	{% endif %}
-
-	// since we don't call a kernel, we need this dummy variable for pointer_lines
-	double * _array_synapses_delay;
-	{{pointers_lines|autoindent}}
-
-	double dt = {{owner.clock.name}}.dt[0];
-	unsigned int syn_N = {{N}};
-	// if there are no synapses, we don't neet to initialise anything
+	{# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %DEVICE_PARAMETERS% #}
+	unsigned int syn_N = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
 	if (syn_N == 0)
 		return;
+
+	double dt = {{owner.clock.name}}.dt[0];
 	unsigned int source_N = {{owner.source.N}};
 	unsigned int target_N = {{owner.target.N}};
 
