@@ -35,6 +35,8 @@ prefs['codegen.cpp.extra_compile_args_msvc'].extend(['/Od'])
 # Surpress some warnings from nvcc compiler
 prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-Xcudafe "--diag_suppress=declared_but_not_referenced"'])
 
+prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+
 extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
 
 if 'genn' in args.targets:

@@ -20,7 +20,7 @@ from brian2cuda.tests.features.speed import *
 
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
-#prefs.devices.cpp_standalone.extra_make_args_unix = ['-j6']
+prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
 
 configurations = [
                   CUDAStandaloneConfiguration,
@@ -80,7 +80,8 @@ for n, (st, name, sl) in enumerate(speed_tests):
                           n_slice=sl,
                           #n_slice=slice(None,None,100),
                           #run_twice=False,
-                          verbose=True)
+                          verbose=True,
+                          maximum_run_time=1*60*60*second)
     end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
     diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
     print("Running {} took {}.".format(name, diff))
