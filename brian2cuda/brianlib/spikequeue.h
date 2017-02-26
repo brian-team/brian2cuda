@@ -111,8 +111,7 @@ public:
 		unsigned int tid,
 		unsigned int num_threads,
 		unsigned int _pre_id,
-		char* _shared_mem,
-		char no_delay_mode)
+		char* _shared_mem)
 	{
 
 		// following arrays are in global device memory:

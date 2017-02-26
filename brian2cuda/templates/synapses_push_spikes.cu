@@ -64,9 +64,6 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 	extern __shared__ char shared_mem[];
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
-	
-	// TODO: no delay mode is hard coded here!
-	char no_delay_mode = false;
 
 	// loop through spiking neurons in spikespace (indices of spiking neurons, rest -1)
 	for(int i = 0; i < neurongroup_size; i++)
@@ -88,8 +85,7 @@ __global__ void _run_{{codeobj_name}}_push_kernel(
 				tid,
 				_num_threads,
 				spiking_neuron - {{owner.name}}.spikes_start,
-				shared_mem,
-				no_delay_mode);
+				shared_mem);
 		}
 	}
 }
