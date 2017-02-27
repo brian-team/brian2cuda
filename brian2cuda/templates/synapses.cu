@@ -99,13 +99,13 @@ static unsigned int num_blocks, num_threads, num_loops;
 static bool first_run = true;
 if (first_run)
 {
-	{% if serializing_mode == "syn" %}
-	// serializing_mode == "syn"
+	{% if synaptic_effects == "synapse" %}
+	// Synaptic effects modify only synapse variables.
 	num_blocks = num_parallel_blocks;
 	num_threads = max_threads_per_block;
 	num_loops = 1;
-	{% elif serializing_mode == "post" %}
-	// serializing_mode == "post"
+	{% elif synaptic_effects == "target" %}
+	// Synaptic effects modify target group variables but NO source group variables.
 	num_blocks = num_parallel_blocks;
 	num_threads = 1;
 	num_loops = 1;
@@ -113,8 +113,8 @@ if (first_run)
 	{
 		num_threads = max_threads_per_block;
 	}
-	{% elif serializing_mode == "pre" %}
-	// serializing_mode == "pre"
+	{% elif synaptic_effects == "source" %}
+	// Synaptic effects modify source group variables.
 	num_blocks = 1;
 	num_threads = 1;
 	num_loops = num_parallel_blocks;

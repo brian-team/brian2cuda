@@ -125,14 +125,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
-            serializing_mode = "syn"    #no serializing
+            prepost = template_kwds['pathway'].prepost
+            synaptic_effects = "synapse"
             for varname in variables.iterkeys():
-                if variable_indices[varname] == "_postsynaptic_idx":
-                    if serializing_mode == "syn":
-                        serializing_mode = "post"
-                if variable_indices[varname] == "_presynaptic_idx":
-                    serializing_mode = "pre"
-            template_kwds["serializing_mode"] = serializing_mode
+                idx = variable_indices[varname]
+                if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
+                    # The SynapticPathways 'target' group variables are modified
+                    if synaptic_effects == "synapse":
+                        synaptic_effects = "target"
+                if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
+                    # The SynapticPathways 'source' group variables are modified
+                    synaptic_effects = "source"
+            #synaptic_effects = "source"
+            template_kwds["synaptic_effects"] = synaptic_effects
+            print('debug syn effect mdoe ', synaptic_effects)
+            logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
