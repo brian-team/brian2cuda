@@ -91,8 +91,12 @@ for n, (st, name, sl) in enumerate(speed_tests):
     savefig(directory + '/speed_test_{}_relative.png'.format(name))
     res.plot_all_tests(profiling_minimum=0.05)
     savefig(directory + '/speed_test_{}_profiling.png'.format(name))
-    if (3*(n+1) != len(get_fignums())):
+    if 3 != len(get_fignums()):
         print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+    for n in get_fignums():
+        close(n)
+
+
 
 script_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
 diff = datetime.datetime.strptime(script_end, time_format) - datetime.datetime.strptime(script_start, time_format)
