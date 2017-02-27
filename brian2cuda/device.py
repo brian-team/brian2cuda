@@ -32,7 +32,7 @@ from brian2.groups.neurongroup import Thresholder
 
 __all__ = []
 
-logger = get_logger(__name__)
+logger = get_logger('brian2.devices.cuda_standalone')
 
 
 # Preferences
@@ -84,7 +84,7 @@ class CUDAWriter(CPPWriter):
         self.header_files = []
         
     def write(self, filename, contents):
-        logger.debug('Writing file %s:\n%s' % (filename, contents))
+        logger.diagnostic('Writing file %s:\n%s' % (filename, contents))
         if filename.lower().endswith('.cu'):
             self.source_files.append(filename)
         if filename.lower().endswith('.cpp'):
@@ -638,7 +638,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             
         writer = CUDAWriter(directory)
         
-        logger.debug("Writing CUDA standalone project to directory "+os.path.normpath(directory))
+        logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
         arange_arrays = sorted([(var, start)
                                 for var, start in self.arange_arrays.iteritems()],
                                key=lambda (var, start): var.name)
