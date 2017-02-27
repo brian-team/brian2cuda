@@ -84,6 +84,15 @@ void _run_{{codeobj_name}}()
 		%HOST_PARAMETERS%
 	);
 
+	cudaError_t status = cudaGetLastError();
+	if (status != cudaSuccess)
+	{
+		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+				__FILE__, __LINE__, cudaGetErrorString(status));
+		_dealloc_arrays();
+		exit(status);
+	}
+
 	{% for var in variables.itervalues() %}
 	{# We want to copy only those variables that were potentially modified in aboves kernel call. #}
 	{% if var is not callable and var.array and not var.constant and not var.dynamic %}
