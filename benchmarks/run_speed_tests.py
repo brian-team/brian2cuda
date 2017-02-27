@@ -20,7 +20,7 @@ from brian2cuda.tests.features.speed import *
 
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
-#prefs.devices.cpp_standalone.extra_make_args_unix = ['-j6']
+prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
 
 configurations = [
                   CUDAStandaloneConfiguration,
@@ -35,13 +35,16 @@ configurations = [
                   ]
 
 speed_tests = [# feature_test                     name                                  n_slice
-               (LinearNeuronsOnly,               'LinearNeuronsOnly',                   slice(None)         ),
-               (HHNeuronsOnly,                   'HHNeuronsOnly',                       slice(None)         ),
+#               (LinearNeuronsOnly,               'LinearNeuronsOnly',                   slice(None)         ),
+#               (HHNeuronsOnly,                   'HHNeuronsOnly',                       slice(None)         ),
+#
+#               (BrunelHakimModel,                'BrunelHakimModel',                    slice(None)         ),
+#               (BrunelHakimModelWithDelay,       'BrunelHakimModelWithDelay',           slice(None)         ),
 
-               (BrunelHakimModel,                'BrunelHakimModel',                    slice(None)         ),
-               (BrunelHakimModelWithDelay,       'BrunelHakimModelWithDelay',           slice(None)         ),
-
-               (CUBAFixedConnectivity,           'CUBAFixedConnectivity',               slice(None)         ),
+#               (CUBAFixedConnectivity,           'CUBAFixedConnectivity',               slice(None)         ),
+               (STDP,                            'STDP',                                slice(None)         ),
+               (STDPEventDriven,                 'STDPEventDriven',                     slice(None)         ),
+               (STDPNotEventDriven,              'STDPNotEventDriven',                  slice(None)         ),
                (VerySparseMediumRateSynapsesOnly,'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
                (SparseMediumRateSynapsesOnly,    'SparseMediumRateSynapsesOnly',        slice(None)         ),
                (DenseMediumRateSynapsesOnly,     'DenseMediumRateSynapsesOnly',         slice(None)         ),
@@ -50,13 +53,10 @@ speed_tests = [# feature_test                     name                          
 
                (AdaptationOscillation,           'AdaptationOscillation',               slice(None)         ),
                (COBAHH,                          'COBAHH',                              slice(None)         ),
-               (STDPEventDriven,                 'STDPEventDriven',                     slice(None)         ),
-               (STDPNotEventDriven,              'STDPNotEventDriven',                  slice(None)         ),
                (Vogels,                          'Vogels',                              slice(None)         ),
                (VogelsWithSynapticDynamic,       'VogelsWithSynapticDynamic',           slice(None)         ),
 
                (COBAHHFixedConnectivity,         'COBAHHFixedConnectivity',             slice(None, -1)     ),
-               (STDP,                            'STDP',                                slice(None)         ),
 ]
 
 time_stemp = time.time()
@@ -80,7 +80,8 @@ for n, (st, name, sl) in enumerate(speed_tests):
                           n_slice=sl,
                           #n_slice=slice(None,None,100),
                           #run_twice=False,
-                          verbose=True)
+                          verbose=True,
+                          maximum_run_time=1*60*60*second)
     end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
     diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
     print("Running {} took {}.".format(name, diff))

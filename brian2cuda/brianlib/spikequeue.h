@@ -36,6 +36,10 @@ public:
 	unsigned int neuron_N; // number of neurons in source of SynapticPathway
 	unsigned int syn_N;
 
+	// When we have 0 synapses, prepare() is not called in synapses_initialise_queue.cu
+	// and for destroy() to still work, synapses_queue needs to be a null pointer
+	__device__ CudaSpikeQueue(): synapses_queue(0) {};
+
 	//Since we can't have a destructor, we need to call this function manually
 	__device__ void destroy()
 	{
@@ -107,8 +111,7 @@ public:
 		unsigned int tid,
 		unsigned int num_threads,
 		unsigned int _pre_id,
-		char* _shared_mem,
-		char no_delay_mode)
+		char* _shared_mem)
 	{
 
 		// following arrays are in global device memory:

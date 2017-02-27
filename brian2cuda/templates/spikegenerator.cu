@@ -67,4 +67,13 @@ kernel_{{codeobj_name}}<<<1,1>>>(
 		1,
 		%HOST_PARAMETERS%
 	);
+
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
 {% endblock %}

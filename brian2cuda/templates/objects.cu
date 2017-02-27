@@ -33,6 +33,17 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endif %}
 {% endfor %}
 
+//////////////// eventspaces ///////////////
+// we dynamically create multiple eventspaces in no_or_const_delay_mode
+// for initiating the first spikespace, we need a host pointer
+// for choosing the right spikespace, we need a global index variable
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+{{c_data_type(var.dtype)}} * brian::{{varname}};
+const int brian::_num_{{varname}} = {{var.size}};
+thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
+int brian::current_idx{{varname}} = 0;
+{% endfor %}
+
 //////////////// dynamic arrays 1d /////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
@@ -62,6 +73,7 @@ const int brian::_num_{{name}} = {{N}};
 Synapses<double> brian::{{S.name}}({{S.source|length}}, {{S.target|length}});
 int32_t {{S.name}}_source_start_index;
 int32_t {{S.name}}_source_stop_index;
+bool brian::{{S.name}}_multiple_pre_post = false;
 {% for path in S._pathways | sort(attribute='name') %}
 // {{path.name}}
 __device__ unsigned int* brian::{{path.name}}_size_by_pre;
@@ -74,6 +86,9 @@ __device__ unsigned int** brian::{{path.name}}_delay_count_by_pre;
 __device__ unsigned int** brian::{{path.name}}_unique_delay_start_idx_by_pre;
 __device__ unsigned int** brian::{{path.name}}_unique_delay_by_pre;
 __device__ SynapticPathway<double> brian::{{path.name}};
+int brian::{{path.name}}_eventspace_idx = 0;
+unsigned int brian::{{path.name}}_delay;
+bool brian::{{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 
@@ -157,7 +172,7 @@ void _init_arrays()
 
     // Arrays initialized to 0
 	{% for var in zero_arrays | sort(attribute='name') %}
-		{% if not (var in dynamic_array_specs) %}
+		{% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
 			{% set varname = array_specs[var] %}
 			{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 			for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
@@ -215,6 +230,12 @@ void _init_arrays()
 	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 	{{varname}} = new thrust::device_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
 	{% endfor %}
+
+	// eventspace_arrays
+	{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+	cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
+	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+	{% endfor %}
 }
 
 void _load_arrays()
@@ -267,7 +288,9 @@ void _write_arrays()
 	{% endfor %}
 
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+	{% if not var in multisynaptic_idx_vars %}
 	{{varname}} = dev{{varname}};
+	{% endif %}
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
@@ -455,6 +478,14 @@ extern const int _num_{{varname}};
 {% endif %}
 {% endfor %}
 
+//////////////// eventspaces ///////////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+extern {{c_data_type(var.dtype)}} * {{varname}};
+extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
+extern const int _num_{{varname}};
+extern int current_idx{{varname}};
+{% endfor %}
+
 //////////////// dynamic arrays 2d /////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
@@ -476,6 +507,7 @@ extern const int _num_{{name}};
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
 extern Synapses<double> {{S.name}};
+extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
 extern __device__ unsigned int* {{path.name}}_size_by_pre;
 extern unsigned int {{path.name}}_max_size;
@@ -487,6 +519,9 @@ extern __device__ unsigned int** {{path.name}}_delay_count_by_pre;
 extern __device__ unsigned int** {{path.name}}_unique_delay_start_idx_by_pre;
 extern __device__ unsigned int** {{path.name}}_unique_delay_by_pre;
 extern __device__ SynapticPathway<double> {{path.name}};
+extern int {{path.name}}_eventspace_idx;
+extern unsigned int {{path.name}}_delay;
+extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 

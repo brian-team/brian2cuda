@@ -32,7 +32,7 @@ from brian2.groups.neurongroup import Thresholder
 
 __all__ = []
 
-logger = get_logger(__name__)
+logger = get_logger('brian2.devices.cuda_standalone')
 
 
 # Preferences
@@ -84,7 +84,7 @@ class CUDAWriter(CPPWriter):
         self.header_files = []
         
     def write(self, filename, contents):
-        logger.debug('Writing file %s:\n%s' % (filename, contents))
+        logger.diagnostic('Writing file %s:\n%s' % (filename, contents))
         if filename.lower().endswith('.cu'):
             self.source_files.append(filename)
         if filename.lower().endswith('.cpp'):
@@ -120,22 +120,29 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_kwds == None:
             template_kwds = {}
         no_or_const_delay_mode = False
-        if isinstance(owner, SynapticPathway):
-            if owner.variables["delay"].scalar:
-                # TODO: this only catches the case, where Synapses(..., delay=1*ms) syntax is used.
-                # if no delay is specified at all, we get scalar==False, which should still be caught here.
-                # TODO hard coded to False here! Switch to True when implemented
-                no_or_const_delay_mode = False
+        if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
+            # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
+                no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
-            serializing_mode = "syn"    #no serializing
+            prepost = template_kwds['pathway'].prepost
+            synaptic_effects = "synapse"
             for varname in variables.iterkeys():
-                if variable_indices[varname] == "_postsynaptic_idx":
-                    if serializing_mode == "syn":
-                        serializing_mode = "post"
-                if variable_indices[varname] == "_presynaptic_idx":
-                    serializing_mode = "pre"
-            template_kwds["serializing_mode"] = serializing_mode
+                idx = variable_indices[varname]
+                if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
+                    # The SynapticPathways 'target' group variables are modified
+                    if synaptic_effects == "synapse":
+                        synaptic_effects = "target"
+                if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
+                    # The SynapticPathways 'source' group variables are modified
+                    synaptic_effects = "source"
+            #synaptic_effects = "source"
+            template_kwds["synaptic_effects"] = synaptic_effects
+            print('debug syn effect mdoe ', synaptic_effects)
+            logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
+        if template_name in ["synapses_create_generator", "synapses_create_array"]:
+            if owner.multisynaptic_index is not None:
+                template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,
@@ -154,6 +161,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         multiplier = prefs.devices.cuda_standalone.SM_multiplier
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
+        self.eventspace_arrays = {}
+        for var, varname in self.arrays.iteritems():
+            if varname.endswith('space'):  # get all eventspace variables
+                self.eventspace_arrays[var] = varname
+        for var in self.eventspace_arrays.iterkeys():
+            del self.arrays[var]
+        multisyn_vars = []
+        for syn in synapses:
+            if syn.multisynaptic_index is not None:
+                multisyn_vars.append(syn.variables[syn.multisynaptic_index])
         arr_tmp = CUDAStandaloneCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -171,7 +188,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         codeobj_with_randn=codeobj_with_randn,
                         multiplier=multiplier,
                         curand_generator_type=curand_generator_type,
-                        curand_generator_ordering=curand_generator_ordering)
+                        curand_generator_ordering=curand_generator_ordering,
+                        eventspace_arrays=self.eventspace_arrays,
+                        multisynaptic_idx_vars=multisyn_vars)
+        # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
+        self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):
@@ -201,6 +222,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                            value=CPPNodeRenderer().render_expr(repr(value)))
                 main_lines.extend(code.split('\n'))
                 pointer_arrayname = "dev{arrayname}".format(arrayname=arrayname)
+                if arrayname.endswith('space'):  # eventspace
+                    pointer_arrayname += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                 if is_dynamic:
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 line = "cudaMemcpy({pointer_arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice);".format(
@@ -385,12 +408,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 line = "const int _num{array_name} = par_num_{array_name};"
                                 kernel_variables_lines.append(line.format(array_name=k))
                         else:
-                            host_parameters_lines.append("dev"+self.get_array_name(v))
-                            device_parameters_lines.append("%s* par_%s" % (c_data_type(v.dtype), self.get_array_name(v)))
-                            kernel_variables_lines.append("%s* _ptr%s = par_%s;" % (c_data_type(v.dtype),  self.get_array_name(v), self.get_array_name(v)))
+                            arrayname = self.get_array_name(v)
+                            host_parameters_lines.append("dev"+arrayname)
+                            device_parameters_lines.append("%s* par_%s" % (c_data_type(v.dtype), arrayname))
+                            kernel_variables_lines.append("%s* _ptr%s = par_%s;" % (c_data_type(v.dtype),  arrayname, arrayname))
 
                             code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
                             kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
+                            if k.endswith('space'):
+                                host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                     except TypeError:
                         pass
                     
@@ -459,7 +485,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
-        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None, maximum_run_time=maximum_run_time)
+        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
+                                                                 maximum_run_time=maximum_run_time,
+                                                                 eventspace_arrays=self.eventspace_arrays)
         writer.write('network.*', network_tmp)
         
     def generate_synapses_classes_source(self, writer):
@@ -616,7 +644,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             
         writer = CUDAWriter(directory)
         
-        logger.debug("Writing CUDA standalone project to directory "+os.path.normpath(directory))
+        logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
         arange_arrays = sorted([(var, start)
                                 for var, start in self.arange_arrays.iteritems()],
                                key=lambda (var, start): var.name)
@@ -663,6 +691,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.iterkeys():
                     if key.endswith('space'):  # get the correct eventspace name
+                        # In case of custom scheduling, the thresholder might come after synapses or monitors
+                        # and needs to be initialized in the beginning of the simulation
                         self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
         for func, args in self.main_queue:
             if func=='run_network':

@@ -1,10 +1,12 @@
 {% macro cu_file() %}
 
+#include "objects.h"
 #include "network.h"
 #include<stdlib.h>
 #include<iostream>
 #include <ctime>
 #include<utility>
+#include<stdio.h>
 
 #define Clock_epsilon 1e-14
 
@@ -84,6 +86,11 @@ void Network::run(const double duration, void (*report_func)(const double, const
 
         current = std::clock();
         elapsed_realtime = (double)(current - start)/CLOCKS_PER_SEC;
+
+	// Advance index for circular eventspace vector (for no_or_const_delay_mode)
+	{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+	brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::dev{{varname}}.size();
+	{% endfor %}
 
         {% if maximum_run_time is not none %}
         if(elapsed_realtime>{{maximum_run_time}})

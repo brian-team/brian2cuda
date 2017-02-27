@@ -1,63 +1,29 @@
 {% extends 'common_group.cu' %}
 
-{% block extra_device_helper %}
-int mem_per_thread(){
-	return sizeof(bool);
-}
-{% endblock %}
-
+{# USES_VARIABLES { N } #}
+{# not_refractory and lastspike are added as needed_variables in the
+   Thresholder class, we cannot use the USES_VARIABLE mechanism
+   conditionally
+   Same goes for "eventspace" (e.g. spikespace) which depends on the type of
+   event.
+#}
 
 {% block maincode %}
-	{# USES_VARIABLES { N } #}
-
-	{# not_refractory and lastspike are added as needed_variables in the
-	   Thresholder class, we cannot use the USES_VARIABLE mechanism
-	   conditionally
-	   Same goes for "eventspace" (e.g. spikespace) which depends on the type of
-	   event.
-	#}
-
 	{#  Get the name of the array that stores these events (e.g. the spikespace array) #}
 	{% set _eventspace = get_array_name(eventspace_variable) %}
 
-	// TODO this is a little hacky and results in unnecessary instructions, maybe find a better way?
-	// we can't return before __syncthreads()
-	// and after __syncthreads() we need access to declarations in scalar_code
-	// so we just make sure _idx is not too high
-	bool return_thread = false;
-	if (_idx >= _N)
-	{
-		_idx = _N-1;
-		return_thread = true;
-	}
-
-	//// MAIN CODE ////////////
-	// scalar code
+	///// scalar_code /////
 	{{scalar_code|autoindent}}
 
-	if (!return_thread)
-	{
-		{{_eventspace}}[_idx] = -1;
-	}
+	// reset eventspace
+	{{_eventspace}}[_idx] = -1;
 
-	if(tid == 0 && bid == 0)
-	{
-		//init number of spikes with 0
-		{{_eventspace}}[N] = 0;
-	}
-
-	__syncthreads();
-
-	// after __syncthreads() we can return
-	if (return_thread)
-	{
-		return;
-	}
-
+	///// vector_code /////
 	{{vector_code|autoindent}}
+
 	if (_cond)
 	{
-		int32_t spike_index = atomicAdd(&{{_eventspace}}[N], 1);
+		int32_t spike_index = atomicAdd(&{{_eventspace}}[_N], 1);
 		{{_eventspace}}[spike_index] = _idx;
 		{% if _uses_refractory %}
 		// We have to use the pointer names directly here: The condition
@@ -69,6 +35,46 @@ int mem_per_thread(){
 	}
 {% endblock %}
 
-{# we can't return threads when using __syncthreads() #}
-{% block num_thread_check %}
-{% endblock %}
+
+{% block kernel_call %}
+{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
+       synapses, we therefore have to take care to get its value in the right
+       way. #}
+const int _N = {{constant_or_scalar('N', variables['N'])}};
+
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR BEFORE resetting eventspace counter in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
+{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
+
+status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR while resetting eventspace counter in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
+
+kernel_{{codeobj_name}}<<<num_blocks(_N),num_threads(_N)>>>(
+		_N,
+		num_threads(_N),
+		///// HOST_PARAMETERS /////
+		%HOST_PARAMETERS%
+	);
+
+status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
+{% endblock kernel_call %}

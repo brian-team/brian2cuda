@@ -21,6 +21,14 @@ _run_{{codeobj_name}}_kernel<<<1, 1>>>(
 		dev_array_{{owner.name}}_count,
 		// HOST_PARAMETERS
 		%HOST_PARAMETERS%);
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
 {% endblock %}
 
 {% block kernel %}
@@ -184,6 +192,17 @@ void _copyToHost_{{codeobj_name}}()
 		%HOST_PARAMETERS%
 		);
 
+	{
+	cudaError_t status = cudaGetLastError();
+	if (status != cudaSuccess)
+	{
+		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+				__FILE__, __LINE__, cudaGetErrorString(status));
+		_dealloc_arrays();
+		exit(status);
+	}
+	}
+
 	cudaMemcpy(&host_num_events, dev_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost);
 
 	// resize monitor device vectors
@@ -198,6 +217,16 @@ void _copyToHost_{{codeobj_name}}()
 		0  {# dummy, becaus loop ends with comma #}
 		);
 
+	{
+	cudaError_t status = cudaGetLastError();
+	if (status != cudaSuccess)
+	{
+		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+				__FILE__, __LINE__, cudaGetErrorString(status));
+		_dealloc_arrays();
+		exit(status);
+	}
+	}
 	// Profiling
     const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
 	_copyToHost_profiling_info += _run_time;
@@ -217,6 +246,16 @@ void _debugmsg_{{codeobj_name}}()
 			// HOST_PARAMETERS
 			%HOST_PARAMETERS%
 			);
+	{
+	cudaError_t status = cudaGetLastError();
+	if (status != cudaSuccess)
+	{
+		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+				__FILE__, __LINE__, cudaGetErrorString(status));
+		_dealloc_arrays();
+		exit(status);
+	}
+	}
 }
 {% endblock %}
 
