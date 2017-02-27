@@ -81,3 +81,31 @@ def test_circular_eventspaces()
     assert_allclose(mon.t[mon.i[:] == 2], 6*default_dt)
     assert_allclose(mon.t[mon.i[:] == 3], 4*default_dt)
     assert_allclose(mon.t[mon.i[:] == 4], 5*default_dt)
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_device)
+def test_synaptic_effect_modes()
+    # make sure on_pre pathway changing pre variables has the same mode as
+    # on_post pathway changing post variables
+
+    num_blocks = 15
+    num_threads = 1024
+    N = num_blocks * num_threads
+    # all neurons spike every timestep
+    neuron = NeuronGroup(1, 'v:1', threshold='True')
+    group = NeuronGroup(N, 'v:1', threshold='True')
+    # the on_pre pathway does not serialize in syanptic_effects == 'target' mode
+    # with no_or_const_delay_mode
+    S0 = Synapses(group, neuron, on_pre='v_post+=1', delay=0*ms)
+    S0.connect()
+    # the on_post pathway serializes entirely in synaptic_effects == 'source' mode
+    S1 = Synapses(group, neuron, on_post='v_post-=1')
+    S1.post.delay = 0*ms
+    S1.connect()
+    mon = SpikeMonitor(neuron, variables=['v'])
+
+    run(2*defaultclock.dt)
+
+    # each timestep there are the same number of + and - to neuron.v
+    assert_allclose(mon.v[:], 0)
