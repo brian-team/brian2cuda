@@ -4,13 +4,13 @@ from numpy.testing.utils import assert_allclose, assert_equal, assert_raises
 
 from brian2 import *
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_device
+from brian2.devices.device import reinit_devices
 
 import brian2cuda
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_device)
+@with_setup(teardown=reinit_devices)
 def test_CudaSpikeQueue_push_outer_loop():
 
     # This test only works, if the CudaSpikeQueue::push() kernel is called with
@@ -52,8 +52,8 @@ def test_CudaSpikeQueue_push_outer_loop():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_device)
-def test_circular_eventspaces()
+@with_setup(teardown=reinit_devices)
+def test_circular_eventspaces():
     # test postsynaptic effects in no_or_const_delay_mode are applied correctly
 
     default_dt = defaultclock.dt
@@ -84,8 +84,8 @@ def test_circular_eventspaces()
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_device)
-def test_synaptic_effect_modes()
+@with_setup(teardown=reinit_devices)
+def test_synaptic_effect_modes():
     # make sure on_pre pathway changing pre variables has the same mode as
     # on_post pathway changing post variables
 

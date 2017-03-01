@@ -4,13 +4,13 @@ from numpy.testing.utils import assert_allclose, assert_raises
 
 from brian2 import *
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_devices
+from brian2.devices.device import reinit_devices, set_device
 
 import brian2cuda
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=restore_initial_state)
+@with_setup(teardown=reinit_devices)
 def test_default_function_implementations():
     ''' Test that all default functions work as expected '''
     # NeuronGroup variables are set in device code
@@ -344,8 +344,10 @@ def test_default_function_implementations():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=restore_initial_state)
+@with_setup(teardown=reinit_devices)
 def test_default_function_convertion_preference():
+
+    set_device('cuda_standalone')
 
     unrepresentable_int = 2**24 + 1  # can't be represented as 32bit float
 
@@ -362,14 +364,17 @@ def test_default_function_convertion_preference():
     G2.v = 'floor(myarr)'.format(unrepresentable_int)
 
     run(0*ms)
+    device.build(directory=None)
 
     assert G.v[0] != unrepresentable_int, G.v[0]
     assert G2.v[0] == unrepresentable_int, G.v2[0]
 
 
-@attr('cuda_standalone', 'standalone_only')
-@with_setup(teardown=restore_initial_state)
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
 def test_default_function_convertion_warnings():
+
+    set_device('cuda_standalone')
 
     BrianLogger._log_messages.clear()
     with catch_logs() as logs1:
@@ -431,6 +436,7 @@ def test_default_function_convertion_warnings():
 
 
     run(0*ms)
+    device.build(directory=None)
 
     assert len(logs1) == 1, len(logs1)
     assert logs1[0][0] == 'WARNING'
