@@ -13,32 +13,6 @@
 #include <stdint.h>
 #include <ctime>
 
-namespace {
-	int _num_blocks(int num_objects)
-    {
-		static int needed_num_block = -1;
-	    if(needed_num_block == -1)
-		{
-			needed_num_block = brian::num_parallel_blocks;
-			while(needed_num_block * brian::max_threads_per_block < num_objects)
-			{
-				needed_num_block *= 2;
-			}
-		}
-		return needed_num_block;
-    }
-
-	int _num_threads(int num_objects)
-    {
-		static int needed_num_threads = -1;
-		if(needed_num_threads == -1)
-		{
-			int needed_num_block = _num_blocks(num_objects);
-			needed_num_threads = min(brian::max_threads_per_block, (int)ceil(num_objects/(double)needed_num_block));
-		}
-		return needed_num_threads;
-	}
-}
 
 __global__ void _run_{{codeobj_name}}_advance_kernel()
 {

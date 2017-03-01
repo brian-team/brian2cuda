@@ -12,16 +12,10 @@
 
 ////// SUPPORT CODE ///////
 namespace {
-	int num_blocks(int objects){
-		return ceil(objects / (double)brian::max_threads_per_block);
-	}
-	int num_threads(int objects){
-		return brian::max_threads_per_block;
-	}
 	{{support_code_lines|autoindent}}
 }
 
-__global__ void _kernel_{{codeobj_name}}(
+__global__ void kernel_{{codeobj_name}}(
 	unsigned int _N,
 	unsigned int THREADS_PER_BLOCK,
 	///// DEVICE_PARAMETERS /////
@@ -69,17 +63,45 @@ void _run_{{codeobj_name}}()
     {# ALLOWS_SCALAR_WRITE #}
 	using namespace brian;
 
-	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
-	   synapses, we therefore have to take care to get its value in the right
-	   way. #}
-	const int _N = {{constant_or_scalar('N', variables['N'])}};
-
-	///// CONSTANTS /////
+	///// CONSTANTS ///////////
 	%CONSTANTS%
 
-	_kernel_{{codeobj_name}}<<<num_blocks(_N),num_threads(_N)>>>(
+	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
+           synapses, we therefore have to take care to get its value in the right
+           way. #}
+	const int _N = {{constant_or_scalar('N', variables['N'])}};
+
+	static unsigned int num_threads, num_blocks;
+	static bool first_run = true;
+	if (first_run)
+	{
+		// get number of blocks and threads
+		// TODO: use CUDA occupancy API to get optimal num threads/blocks
+		// https://devblogs.nvidia.com/parallelforall/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/
+		num_blocks = ceil(_N / (double)max_threads_per_block);
+		num_threads = max_threads_per_block;
+
+		// check if we have enough ressources to call kernel with given number of blocks and threads
+		struct cudaFuncAttributes funcAttrib;
+		cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
+		if (num_threads > funcAttrib.maxThreadsPerBlock)
+		{
+			// use the max num_threads before launch failure
+			num_threads = funcAttrib.maxThreadsPerBlock;
+			printf("WARNING Not enough ressources available to call kernel_{{codeobj_name}} with "
+					"maximum possible threads per block (%u). Reducing num_threads to "
+					"%u. (Kernel needs %i registers per block, %i bytes of statically-allocated "
+					"shared memory per block, %i bytes of local memory per thread and "
+					"a total of %i bytes of user-allocated constant memory)\n",
+					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
+					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
+		}
+		first_run = false;
+	}
+
+	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 		_N,
-		num_threads(_N),
+		num_threads,
 		///// HOST_PARAMETERS /////
 		%HOST_PARAMETERS%
 	);

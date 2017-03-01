@@ -14,6 +14,9 @@
 {% block kernel_call %}
 {% endblock %}
 
+{% block prepare_kernel %}
+{% endblock %}
+
 {% block extra_maincode %}
 	{# // TODO: get rid of the variables we don't actually use
 	   USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,

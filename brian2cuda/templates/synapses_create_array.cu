@@ -11,6 +11,9 @@
 {% block kernel_call %}
 {% endblock %}
 
+{% block prepare_kernel %}
+{% endblock %}
+
 {% block extra_maincode %}
 
 {# USES_VARIABLES { _synaptic_pre, _synaptic_post, sources, targets

@@ -9,14 +9,20 @@
 	{% endfor %}
 {% endblock %}
 
-{% block kernel_call %}
-static bool first_run = true;
-if(first_run)
+{% block prepare_kernel_inner %}
+_run_{{codeobj_name}}_init<<<1,1>>>();
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
 {
-	_run_{{codeobj_name}}_init<<<1,1>>>();
-	first_run = false;
+	printf("ERROR launching _run_{{codeobj_name}}_init in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
 }
-_run_{{codeobj_name}}_kernel<<<1, 1>>>(
+{% endblock %}
+
+{% block kernel_call %}
+kernel_{{codeobj_name}}<<<1, 1>>>(
 		_num{{eventspace_variable.name}}-1,
 		dev_array_{{owner.name}}_count,
 		// HOST_PARAMETERS
@@ -39,7 +45,7 @@ __global__ void _run_{{codeobj_name}}_init()
 	{% endfor %}
 }
 
-__global__ void _run_{{codeobj_name}}_kernel(
+__global__ void kernel_{{codeobj_name}}(
 	unsigned int neurongroup_N,
 	int32_t* count,
 	// DEVICE_PARAMETERS
@@ -192,15 +198,13 @@ void _copyToHost_{{codeobj_name}}()
 		%HOST_PARAMETERS%
 		);
 
-	{
 	cudaError_t status = cudaGetLastError();
 	if (status != cudaSuccess)
 	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+		printf("ERROR launching _count_{{codeobj_name}}_kernel in %s:%d %s\n",
 				__FILE__, __LINE__, cudaGetErrorString(status));
 		_dealloc_arrays();
 		exit(status);
-	}
 	}
 
 	cudaMemcpy(&host_num_events, dev_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost);
@@ -217,16 +221,15 @@ void _copyToHost_{{codeobj_name}}()
 		0  {# dummy, becaus loop ends with comma #}
 		);
 
-	{
-	cudaError_t status = cudaGetLastError();
+	status = cudaGetLastError();
 	if (status != cudaSuccess)
 	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+		printf("ERROR launching _copy_{{codeobj_name}}_kernel in %s:%d %s\n",
 				__FILE__, __LINE__, cudaGetErrorString(status));
 		_dealloc_arrays();
 		exit(status);
 	}
-	}
+
 	// Profiling
     const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
 	_copyToHost_profiling_info += _run_time;
@@ -250,7 +253,7 @@ void _debugmsg_{{codeobj_name}}()
 	cudaError_t status = cudaGetLastError();
 	if (status != cudaSuccess)
 	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+		printf("ERROR launching _debugmsg_{{codeobj_name}} in %s:%d %s\n",
 				__FILE__, __LINE__, cudaGetErrorString(status));
 		_dealloc_arrays();
 		exit(status);

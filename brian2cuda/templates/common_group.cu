@@ -11,30 +11,6 @@
 
 ////// SUPPORT CODE ///////
 namespace {
-	int num_blocks(int num_objects)
-    {
-		static int needed_num_block = -1;
-	    if(needed_num_block == -1)
-		{
-			needed_num_block = brian::num_parallel_blocks;
-			while(needed_num_block * brian::max_threads_per_block < num_objects)
-			{
-				needed_num_block *= 2;
-			}
-		}
-		return needed_num_block;
-    }
-
-	int num_threads(int num_objects)
-    {
-		static int needed_num_threads = -1;
-		if(needed_num_threads == -1)
-		{
-			int needed_num_block = num_blocks(num_objects);
-			needed_num_threads = min(brian::max_threads_per_block, (int)ceil(num_objects/(double)needed_num_block));
-		}
-		return needed_num_threads;
-	}
 	{% block extra_device_helper %}
 	{% endblock %}
 	{{support_code_lines|autoindent}}
@@ -96,17 +72,50 @@ void _run_{{codeobj_name}}()
 	%CONSTANTS%
 
 	{% block extra_maincode %}
-	{% endblock %}
-
-	{% block kernel_call %}
 	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
            synapses, we therefore have to take care to get its value in the right
            way. #}
 	const int _N = {{constant_or_scalar('N', variables['N'])}};
+	{% endblock %}
 
-	kernel_{{codeobj_name}}<<<num_blocks(_N),num_threads(_N)>>>(
+	{% block prepare_kernel %}
+	static unsigned int num_threads, num_blocks;
+	static bool first_run = true;
+	if (first_run)
+	{
+		{% block prepare_kernel_inner %}
+		// get number of blocks and threads
+		num_blocks = num_parallel_blocks;
+		while(num_blocks * max_threads_per_block < _N)
+		{
+			num_blocks *= 2;
+		}
+		num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
+		{% endblock prepare_kernel_inner %}
+
+		// check if we have enough ressources to call kernel with given number of blocks and threads
+		struct cudaFuncAttributes funcAttrib;
+		cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
+		if (num_threads > funcAttrib.maxThreadsPerBlock)
+		{
+			// use the max num_threads before launch failure
+			num_threads = funcAttrib.maxThreadsPerBlock;
+			printf("WARNING Not enough ressources available to call kernel_{{codeobj_name}} with "
+					"maximum possible threads per block (%u). Reducing num_threads to "
+					"%u. (Kernel needs %i registers per block, %i bytes of statically-allocated "
+					"shared memory per block, %i bytes of local memory per thread and "
+					"a total of %i bytes of user-allocated constant memory)\n",
+					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
+					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
+		}
+		first_run = false;
+	}
+	{% endblock prepare_kernel %}
+
+	{% block kernel_call %}
+	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 			_N,
-			num_threads(_N),
+			num_threads,
 			///// HOST_PARAMETERS /////
 			%HOST_PARAMETERS%
 		);

@@ -91,47 +91,36 @@ __global__ void kernel_{{codeobj_name}}(
 
 {% endblock %}
 
+{% block extra_maincode %}
+static unsigned int num_loops;
+{% endblock %}
+
+{% block prepare_kernel_inner %}
+{% if synaptic_effects == "synapse" %}
+// Synaptic effects modify only synapse variables.
+num_blocks = num_parallel_blocks;
+num_threads = max_threads_per_block;
+num_loops = 1;
+{% elif synaptic_effects == "target" %}
+// Synaptic effects modify target group variables but NO source group variables.
+num_blocks = num_parallel_blocks;
+num_threads = 1;
+num_loops = 1;
+if ({{pathway.name}}_scalar_delay && !{{owner.name}}_multiple_pre_post)
+{
+	num_threads = max_threads_per_block;
+}
+{% elif synaptic_effects == "source" %}
+// Synaptic effects modify source group variables.
+num_blocks = 1;
+num_threads = 1;
+num_loops = num_parallel_blocks;
+{% endif %}
+{% endblock prepare_kernel_inner %}
+
 {% block kernel_call %}
 {% set eventspace_variable = pathway.variables[pathway.eventspace_name] %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-
-static unsigned int num_blocks, num_threads, num_loops;
-static bool first_run = true;
-if (first_run)
-{
-	{% if synaptic_effects == "synapse" %}
-	// Synaptic effects modify only synapse variables.
-	num_blocks = num_parallel_blocks;
-	num_threads = max_threads_per_block;
-	num_loops = 1;
-	{% elif synaptic_effects == "target" %}
-	// Synaptic effects modify target group variables but NO source group variables.
-	num_blocks = num_parallel_blocks;
-	num_threads = 1;
-	num_loops = 1;
-	if ({{pathway.name}}_scalar_delay && !{{owner.name}}_multiple_pre_post)
-	{
-		num_threads = max_threads_per_block;
-	}
-	{% elif synaptic_effects == "source" %}
-	// Synaptic effects modify source group variables.
-	num_blocks = 1;
-	num_threads = 1;
-	num_loops = num_parallel_blocks;
-	{% endif %}
-	
-	struct cudaFuncAttributes funcAttrib;
-	cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
-	if (num_threads > funcAttrib.maxThreadsPerBlock)
-	{
-		// use the max num_threads before launch failure
-		num_threads = funcAttrib.maxThreadsPerBlock;
-		printf("INFO Not enough ressources available to call kernel_{{codeobj_name}} with "
-				"maximum possible threads per block (%u). Reducing num_threads to "
-				"%u.\n", max_threads_per_block, num_threads);
-	}
-}
-
 for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
 {
 	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
@@ -144,23 +133,15 @@ for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
 	);
 }
 
-if (first_run)
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
 {
-	// TODO: profile if error checking after each kernel call creates too much overhead
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
-	first_run = false;
+	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
 }
-{% endblock %}
-
-{% block extra_maincode %}
-{% endblock %}
+{% endblock kernel_call %}
 
 {% block extra_functions_cu %}
 void _debugmsg_{{codeobj_name}}()
