@@ -18,6 +18,9 @@ parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                     help="Weather to use multiple cores for testing. Optionally the"
                          "targets for which mpi should be used, can be passes as"
                          "arguments. If none are passes, all are run in parallel.")
+parser.add_argument('--jobs', '-j', nargs=1, type=int, default=[12],
+                    help="Number of cores to use for compilations, passed as -j option "
+                         "to the make commands.")
 args = parser.parse_args()
 
 import os
@@ -35,7 +38,7 @@ prefs['codegen.cpp.extra_compile_args_msvc'].extend(['/Od'])
 # Surpress some warnings from nvcc compiler
 prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-Xcudafe "--diag_suppress=declared_but_not_referenced"'])
 
-prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j' + str(args.jobs[0])]
 
 extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
 
