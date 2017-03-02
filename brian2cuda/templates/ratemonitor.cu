@@ -5,19 +5,17 @@
 {% block extra_maincode %}
 int current_iteration = {{owner.clock.name}}.timestep[0];
 static unsigned int start_offset = current_iteration;
-static bool first_run = true;
-if(first_run)
-{
-	int num_iterations = {{owner.clock.name}}.i_end;
-	unsigned int size_till_now = dev{{_dynamic_t}}.size();
-	dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
-	dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
-	first_run = false;
-}
+{% endblock %}
+
+{% block prepare_kernel_inner %}
+int num_iterations = {{owner.clock.name}}.i_end;
+unsigned int size_till_now = dev{{_dynamic_t}}.size();
+dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
+dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
 {% endblock %}
 
 {% block kernel_call %}
-_run_{{codeobj_name}}_kernel<<<1,1>>>(
+kernel_{{codeobj_name}}<<<1,1>>>(
 	current_iteration - start_offset,
 	thrust::raw_pointer_cast(&(dev{{_dynamic_rate}}[0])),
 	thrust::raw_pointer_cast(&(dev{{_dynamic_t}}[0])),
@@ -26,7 +24,7 @@ _run_{{codeobj_name}}_kernel<<<1,1>>>(
 {% endblock %}
 
 {% block kernel %}
-__global__ void _run_{{codeobj_name}}_kernel(
+__global__ void kernel_{{codeobj_name}}(
 	int32_t current_iteration,
 	double* ratemonitor_rate,
 	double* ratemonitor_t,
