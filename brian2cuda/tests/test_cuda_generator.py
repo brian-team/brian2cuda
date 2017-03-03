@@ -347,7 +347,7 @@ def test_default_function_implementations():
 @with_setup(teardown=reinit_devices)
 def test_default_function_convertion_preference():
 
-    set_device('cuda_standalone')
+    set_device('cuda_standalone', directory=None)
 
     unrepresentable_int = 2**24 + 1  # can't be represented as 32bit float
 
@@ -364,7 +364,6 @@ def test_default_function_convertion_preference():
     G2.v = 'floor(myarr)'.format(unrepresentable_int)
 
     run(0*ms)
-    device.build(directory=None)
 
     assert G.v[0] != unrepresentable_int, G.v[0]
     assert G2.v[0] == unrepresentable_int, G.v2[0]
@@ -374,7 +373,7 @@ def test_default_function_convertion_preference():
 @with_setup(teardown=reinit_devices)
 def test_default_function_convertion_warnings():
 
-    set_device('cuda_standalone')
+    set_device('cuda_standalone', directory=None)
 
     BrianLogger._log_messages.clear()
     with catch_logs() as logs1:
@@ -436,7 +435,6 @@ def test_default_function_convertion_warnings():
 
 
     run(0*ms)
-    device.build(directory=None)
 
     assert len(logs1) == 1, len(logs1)
     assert logs1[0][0] == 'WARNING'
