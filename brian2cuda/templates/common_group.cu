@@ -68,14 +68,17 @@ void _run_{{codeobj_name}}()
 	
 	const std::clock_t _start_time = std::clock();
 
-	///// CONSTANTS ///////////
-	%CONSTANTS%
-
-	{% block extra_maincode %}
+	{% block define_N %}
 	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
            synapses, we therefore have to take care to get its value in the right
            way. #}
 	const int _N = {{constant_or_scalar('N', variables['N'])}};
+	{% endblock %}
+
+	///// CONSTANTS ///////////
+	%CONSTANTS%
+
+	{% block extra_maincode %}
 	{% endblock %}
 
 	{% block prepare_kernel %}

@@ -2,6 +2,9 @@
 {# USES_VARIABLES { rate, t, _spikespace, _clock_t, _clock_dt,
                     _num_source_neurons, _source_start, _source_stop } #}
 
+{% block define_N %}
+{% endblock %}
+
 {% block extra_maincode %}
 int current_iteration = {{owner.clock.name}}.timestep[0];
 static unsigned int start_offset = current_iteration;
@@ -41,6 +44,7 @@ __global__ void kernel_{{codeobj_name}}(
 
 	if (_num_spikespace-1 != _num_source_neurons)  // we have a subgroup
 	{
+		// TODO shouldn't this be 'i < _num_spikespace -1'?
 		for (unsigned int i=0; i < _num_spikespace; i++)
 		{
 			const int spiking_neuron = {{_spikespace}}[i];

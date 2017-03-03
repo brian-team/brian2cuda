@@ -17,6 +17,9 @@
 {% block prepare_kernel %}
 {% endblock %}
 
+{% block define_N %}
+{% endblock %}
+
 {% block extra_maincode %}
 	{# // TODO: get rid of the variables we don't actually use
 	   USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,

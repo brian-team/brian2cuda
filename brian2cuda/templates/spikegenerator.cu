@@ -61,19 +61,7 @@ __device__ unsigned int _last_element_checked = 0;
 	}
 {% endblock %}
 
-{% block kernel_call %}
-kernel_{{codeobj_name}}<<<1,1>>>(
-		N,
-		1,
-		%HOST_PARAMETERS%
-	);
-
-cudaError_t status = cudaGetLastError();
-if (status != cudaSuccess)
-{
-	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-			__FILE__, __LINE__, cudaGetErrorString(status));
-	_dealloc_arrays();
-	exit(status);
-}
+{% block prepare_kernel_inner %}
+num_threads = 1;
+num_blocks = 1;
 {% endblock %}

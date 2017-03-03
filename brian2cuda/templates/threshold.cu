@@ -35,15 +35,9 @@
 	}
 {% endblock %}
 
-
 {% block extra_maincode %}
-{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
-   synapses, we therefore have to take care to get its value in the right
-   way. #}
-const int _N = {{constant_or_scalar('N', variables['N'])}};
-
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 // reset eventspace counter to 0
 cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
-{% endblock %}
+{% endblock extra_maincode %}
 

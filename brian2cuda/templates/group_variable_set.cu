@@ -16,6 +16,10 @@
 	///// endblock maincode /////
 {% endblock %}
 
+{# _num_group_idx is defined in CONSTANTS, so we can't set _N before #}
+{% block define_N %}
+{% endblock %}
+
 {% block extra_maincode %}
 const int _N = _num_group_idx;
 {% endblock %}

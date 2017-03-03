@@ -14,8 +14,10 @@
 {% block prepare_kernel %}
 {% endblock %}
 
-{% block extra_maincode %}
+{% block define_N %}
+{% endblock %}
 
+{% block extra_maincode %}
 {# USES_VARIABLES { _synaptic_pre, _synaptic_post, sources, targets
 	            N_incoming, N_outgoing, N,
 	            N_pre, N_post, _source_offset, _target_offset } #}
