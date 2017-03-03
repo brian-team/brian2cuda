@@ -5,6 +5,9 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
 
 This example is modified from ``synapses_STDP.py`` and writes a standalone
 C++ project in the directory ``STDP_standalone``.
+
+This version includes a further modification: 
+multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
 '''
 import matplotlib
 matplotlib.use('Agg')
@@ -15,7 +18,8 @@ example_name = os.path.splitext(os.path.basename(__file__))[0]
 from brian2 import *
 set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=True)
 
-N = 1000
+N = 1000000 # no of synapses
+N_neuron = int(sqrt(N))
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -36,8 +40,8 @@ dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
 dge/dt = -ge / taue : 1
 '''
 
-input = PoissonGroup(N, rates=F)
-neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
+input = PoissonGroup(N_neuron, rates=F)
+neurons = NeuronGroup(N_neuron, eqs_neurons, threshold='v>vt', reset='v = vr')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)

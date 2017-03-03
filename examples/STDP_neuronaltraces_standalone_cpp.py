@@ -5,6 +5,8 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
 
 This example is modified from ``synapses_STDP.py`` and writes a standalone
 C++ project in the directory ``STDP_standalone``.
+
+This version includes a further modification: traces in neurons.
 '''
 import matplotlib
 matplotlib.use('Agg')
@@ -31,28 +33,35 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
-eqs_neurons = '''
-dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
-dge/dt = -ge / taue : 1
-'''
+input_poisson = PoissonGroup(N, rates=F)
+# auxiliary input neurongroup to allow for (presynaptic) neuronal traces (state variable A here)
+input_neurons = NeuronGroup(N, '''dA/dt = -A / taupre : 1
+                                  v : volt''', 
+                            threshold='v > vt', reset = 'v = vr; A += dApre')
+input_neurons.v = vr
+# auxiliary input synapse where each poisson cell connects to exactly one neuron
+S_input = Synapses(input_poisson, input_neurons, on_pre='v = vt+1*volt')
+S_input.connect('i==j')
 
-input = PoissonGroup(N, rates=F)
-neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
-S = Synapses(input, neurons,
-             '''w : 1
-                dApre/dt = -Apre / taupre : 1 (event-driven)
-                dApost/dt = -Apost / taupost : 1 (event-driven)''',
+output_neuron = NeuronGroup(1, '''dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+                                  dge/dt = -ge / taue : 1
+                                  dA/dt = -A / taupost : 1''', 
+                            threshold='v > vt', reset='v = vr; A += dApost')
+
+S = Synapses(input_neurons, output_neuron,
+             '''w : 1''',
              on_pre='''ge += w
-                    Apre += dApre
-                    w = clip(w + Apost, 0, gmax)''',
-             on_post='''Apost += dApost
-                     w = clip(w + Apre, 0, gmax)''',
+                    w = clip(w + A_post, 0, gmax)''',
+             on_post='''w = clip(w + A_pre, 0, gmax)''',
              )
 S.connect()
 S.w = 'rand() * gmax'
+
 mon = StateMonitor(S, 'w', record=[0, 1])
-s_mon = SpikeMonitor(input)
-r_mon = PopulationRateMonitor(input)
+
+s_mon = SpikeMonitor(input_poisson)
+r_mon = PopulationRateMonitor(input_poisson)
+
 
 run(100*second, report='text')
 
