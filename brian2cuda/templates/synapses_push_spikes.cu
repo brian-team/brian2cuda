@@ -88,6 +88,15 @@ void _run_{{codeobj_name}}()
 	{
 		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 
+		cudaError_t status = cudaGetLastError();
+		if (status != cudaSuccess)
+		{
+			printf("ERROR launching _run_{{codeobj_name}}_advance_kernel in %s:%d %s\n",
+					__FILE__, __LINE__, cudaGetErrorString(status));
+			_dealloc_arrays();
+			exit(status);
+		}
+
 		// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
 		// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).
 		// And +1 per block for copying size_before_resize into shared memory when we need to use the outer loop.
@@ -106,6 +115,15 @@ void _run_{{codeobj_name}}()
 			num_parallel_blocks,
 			num_threads,
 			dev{{_eventspace}}[current_idx{{_eventspace}}]);
+
+		status = cudaGetLastError();
+		if (status != cudaSuccess)
+		{
+			printf("ERROR launching _run_{{codeobj_name}}_push_kernel in %s:%d %s\n",
+					__FILE__, __LINE__, cudaGetErrorString(status));
+			_dealloc_arrays();
+			exit(status);
+		}
 	}
 
 	// Profiling
