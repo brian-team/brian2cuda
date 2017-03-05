@@ -17,6 +17,12 @@ for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 	addresses_monitor_{{_recorded}}.push_back(thrust::raw_pointer_cast(&{{_recorded}}[i][0]));
 	{% endfor %}
 }
+// Print a warning when the monitor is not going to work (#50)
+if (_num__array_{{owner.name}}__indices > 1024)
+{
+	printf("ERROR in {{owner.name}}: Too many neurons recorded. Due to a bug (brian-team/brian2cuda#50), "
+			"currently only as many neurons can be recorded as threads can be called from a single block!\n");
+}
 {% endblock prepare_kernel_inner %}
 
 {% block extra_maincode %}
@@ -42,25 +48,29 @@ if(current_iteration >= num_iterations)
 	}
 }
 
-kernel_{{codeobj_name}}<<<1, _num__array_{{owner.name}}__indices>>>(
-	_num__array_{{owner.name}}__indices,
-	dev_array_{{owner.name}}__indices,
-	current_iteration - start_offset,
-	{% for varname, var in _recorded_variables | dictsort %}
-	{% set _recorded =  get_array_name(var, access_data=False) %}
-	thrust::raw_pointer_cast(&addresses_monitor_{{_recorded}}[0]),
-	{% endfor %}
-	///// HOST_PARAMETERS /////
-	%HOST_PARAMETERS%
-	);
-
-cudaError_t status = cudaGetLastError();
-if (status != cudaSuccess)
+if (_num__array_{{owner.name}}__indices > 0)
+// TODO we get invalid launch configuration if this is 0, which happens e.g. for StateMonitor(..., variables=[])
 {
-	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-			__FILE__, __LINE__, cudaGetErrorString(status));
-	_dealloc_arrays();
-	exit(status);
+	kernel_{{codeobj_name}}<<<1, _num__array_{{owner.name}}__indices>>>(
+		_num__array_{{owner.name}}__indices,
+		dev_array_{{owner.name}}__indices,
+		current_iteration - start_offset,
+		{% for varname, var in _recorded_variables | dictsort %}
+		{% set _recorded =  get_array_name(var, access_data=False) %}
+		thrust::raw_pointer_cast(&addresses_monitor_{{_recorded}}[0]),
+		{% endfor %}
+		///// HOST_PARAMETERS /////
+		%HOST_PARAMETERS%
+		);
+
+		cudaError_t status = cudaGetLastError();
+		if (status != cudaSuccess)
+		{
+			printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+					__FILE__, __LINE__, cudaGetErrorString(status));
+			_dealloc_arrays();
+			exit(status);
+		}
 }
 {% endblock %}
 
