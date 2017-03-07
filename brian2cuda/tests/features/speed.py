@@ -7,11 +7,14 @@ from brian2.tests.features.speed import *
 
 from brian2.tests.features.speed import __all__
 __all__.extend(['AdaptationOscillation',
-                'BrunelHakimModel',
-                'BrunelHakimModelWithDelay',
+                'BrunelHakimModelScalarDelay',
+                'BrunelHakimModelHeterogeneousDelay',
                 'COBAHH',
                 'STDPEventDriven',
                 'STDPNotEventDriven',
+                'STDPMultiPost',
+                'STDPNeuronalTraces',
+                'STDPMultiPostNeuronalTraces',
                 'Vogels',
                 'VogelsWithSynapticDynamic'
                ])
@@ -70,10 +73,10 @@ class AdaptationOscillation(SpeedTest):
         
         self.timed_run(self.duration)
 
-class BrunelHakimModel(SpeedTest):
+class BrunelHakimModelScalarDelay(SpeedTest):
     
     category = "Full examples"
-    name = "Brunel Hakim "
+    name = "Brunel Hakim with scalar delay"
     tags = ["Neurons", "Synapses"]
     n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
@@ -107,10 +110,10 @@ class BrunelHakimModel(SpeedTest):
         
         self.timed_run(duration)
         
-class BrunelHakimModelWithDelay(SpeedTest):
+class BrunelHakimModelHeterogeneousDelay(SpeedTest):
     
     category = "Full examples"
-    name = "Brunel Hakim with delay"
+    name = "Brunel Hakim with heterogenous delays"
     tags = ["Neurons", "Synapses"]
     n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
@@ -248,9 +251,9 @@ class STDPEventDriven(SpeedTest):
         dge/dt = -ge / taue : 1
         '''
         
-        input = PoissonGroup(N, rates=F)
+        input_poisson = PoissonGroup(N, rates=F)
         neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
-        S = Synapses(input, neurons,
+        S = Synapses(input_poisson, neurons,
                      '''w : 1
                         dApre/dt = -Apre / taupre : 1 (event-driven)
                         dApost/dt = -Apost / taupost : 1 (event-driven)''',
@@ -297,9 +300,9 @@ class STDPNotEventDriven(SpeedTest):
         dge/dt = -ge / taue : 1
         '''
         
-        input = PoissonGroup(N, rates=F)
+        input_poisson = PoissonGroup(N, rates=F)
         neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
-        S = Synapses(input, neurons,
+        S = Synapses(input_poisson, neurons,
                      '''w : 1
                         dApre/dt = -Apre / taupre : 1
                         dApost/dt = -Apost / taupost : 1''',
@@ -314,6 +317,187 @@ class STDPNotEventDriven(SpeedTest):
         S.w = 'rand() * gmax'
         self.timed_run(self.duration)
         
+
+class STDPMultiPost(SpeedTest):
+    '''
+    Spike-timing dependent plasticity.
+    Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+
+    This example is modified from ``synapses_STDP.py``.
+
+    This version includes a further modification:
+    multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+    '''
+
+    category = "Full examples"
+    name = "STDP with multiple pre- and postsynaptic neurons"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000]#, 10000000]
+    n_label = 'Num synapses'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n # no of synapses
+        N_neuron = int(sqrt(N))
+        taum = 10*ms
+        taupre = 20*ms
+        taupost = taupre
+        Ee = 0*mV
+        vt = -54*mV
+        vr = -60*mV
+        El = -74*mV
+        taue = 5*ms
+        F = 15*Hz
+        gmax = .01
+        dApre = .01
+        dApost = -dApre * taupre / taupost * 1.05
+        dApost *= gmax
+        dApre *= gmax
+
+        eqs_neurons = '''
+        dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+        dge/dt = -ge / taue : 1
+        '''
+
+        input_poisson = PoissonGroup(N_neuron, rates=F)
+        neurons = NeuronGroup(N_neuron, eqs_neurons, threshold='v>vt', reset='v = vr')
+        S = Synapses(input_poisson, neurons,
+                     '''w : 1
+                        dApre/dt = -Apre / taupre : 1 (event-driven)
+                        dApost/dt = -Apost / taupost : 1 (event-driven)''',
+                     on_pre='''ge += w
+                            Apre += dApre
+                            w = clip(w + Apost, 0, gmax)''',
+                     on_post='''Apost += dApost
+                             w = clip(w + Apre, 0, gmax)''',
+                     )
+        S.connect()
+        S.w = 'rand() * gmax'
+
+        self.timed_run(self.duration)
+
+
+class STDPNeuronalTraces(SpeedTest):
+    '''
+    Spike-timing dependent plasticity.
+    Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+
+    This example is modified from ``synapses_STDP.py``.
+
+    This version includes a further modification: traces in neurons.
+    '''
+
+    category = "Full examples"
+    name = "STDP with traces in neurons"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000]
+    n_label = 'Num neurons (= num synapses)'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+
+        N = self.n
+        taum = 10*ms
+        taupre = 20*ms
+        taupost = taupre
+        Ee = 0*mV
+        vt = -54*mV
+        vr = -60*mV
+        El = -74*mV
+        taue = 5*ms
+        F = 15*Hz
+        gmax = .01
+        dApre = .01
+        dApost = -dApre * taupre / taupost * 1.05
+        dApost *= gmax
+        dApre *= gmax
+
+        input_poisson = NeuronGroup(N, '''rates : Hz
+                                          dA/dt = -A / taupre : 1''',
+                                    threshold='rand() < rates*dt')
+        input_poisson.rates = F
+
+        output_neuron = NeuronGroup(1, '''dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+                                          dge/dt = -ge / taue : 1
+                                          dA/dt = -A / taupost : 1''',
+                                    threshold='v > vt', reset='v = vr; A += dApost')
+
+        S = Synapses(input_poisson, output_neuron,
+                     '''w : 1''',
+                     on_pre='''ge += w
+                            w = clip(w + A_post, 0, gmax)''',
+                     on_post='''w = clip(w + A_pre, 0, gmax)''',
+                     )
+        S.connect()
+        S.w = 'rand() * gmax'
+
+        self.timed_run(self.duration)
+
+
+class STDPMultiPostNeuronalTraces(SpeedTest):
+    '''
+    Spike-timing dependent plasticity.
+    Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+
+    This example is modified from ``synapses_STDP.py``.
+
+    This version includes two further modifications:
+    traces in neurons and multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+    '''
+
+    category = "Full examples"
+    name = "STDP with multiple postsynaptic neurons and traces in neurons"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000]
+    n_label = 'Num synapses'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        N_neuron = int(sqrt(N))
+        taum = 10*ms
+        taupre = 20*ms
+        taupost = taupre
+        Ee = 0*mV
+        vt = -54*mV
+        vr = -60*mV
+        El = -74*mV
+        taue = 5*ms
+        F = 15*Hz
+        gmax = .01
+        dApre = .01
+        dApost = -dApre * taupre / taupost * 1.05
+        dApost *= gmax
+        dApre *= gmax
+
+        input_poissong = NeuronGroup(N_neuron, '''rates : Hz
+                                                  dA/dt = -A / taupre : 1''',
+                                     threshold='rand() < rates*dt')
+        input_poissong.rates = F
+
+        output_neuron = NeuronGroup(N_neuron, '''dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+                                          dge/dt = -ge / taue : 1
+                                          dA/dt = -A / taupost : 1''',
+                                    threshold='v > vt', reset='v = vr; A += dApost')
+
+        S = Synapses(input_poissong, output_neuron,
+                     '''w : 1''',
+                     on_pre='''ge += w
+                            w = clip(w + A_post, 0, gmax)''',
+                     on_post='''w = clip(w + A_pre, 0, gmax)''',
+                     )
+        S.connect()
+        S.w = 'rand() * gmax'
+
+        self.timed_run(self.duration)
+
+
 class Vogels(SpeedTest):
     
     category = "Full examples"
