@@ -13,6 +13,7 @@ import brian2
 
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.core.clocks import defaultclock
+from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import *
@@ -73,7 +74,15 @@ prefs.register_preferences(
                                            'CURAND_ORDERING_PSEUDO_BEST',
                                            'CURAND_ORDERING_PSEUDO_SEEDED',
                                            'CURAND_ORDERING_QUASI_DEFAULT'],
-        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+        default=False),  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+
+    profile=BrianPreference(
+        docs='''Preference for collecting profiling information. This preference overwrites the `profile` argument in
+            `run()` and `network_run()`. If True, GPU time is collected per codeobject using cudaEvents.
+            If 'blocking', CPU times - including kernel execution - are collected per codeobject, using `std::clock()` and
+            `cudaDeviceSynchronize()` after each codeobject. If False, no profiling info is collected.''',
+        validator=lambda v: v is None or isinstance(v, bool) or (isinstance(v, basestring) and v=='blocking'),
+        default=None)
 )
 
 
@@ -109,6 +118,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     
     def __init__(self):
         super(CUDAStandaloneDevice, self).__init__()
+        self.active_objects = set()
         
     def code_object_class(self, codeobj_class=None):
         # Ignore the requested codeobj_class
@@ -119,6 +129,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     override_conditional_write=None):
         if template_kwds == None:
             template_kwds = {}
+        if hasattr(self, 'profile'):
+            template_kwds['profile'] = self.profile
         no_or_const_delay_mode = False
         if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
@@ -190,7 +202,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
                         eventspace_arrays=self.eventspace_arrays,
-                        multisynaptic_idx_vars=multisyn_vars)
+                        multisynaptic_idx_vars=multisyn_vars,
+                        active_objects=self.active_objects,
+                        profile=self.profile)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -206,9 +220,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.append('_run_%s();' % codeobj.name)
             elif func=='run_network':
                 net, netcode = args
-		for clock in net._clocks:
-                    line = "{net.name}.add(&{clock.name}, _sync_clocks);".format(clock=clock, net=net)
-                    netcode.insert(1, line)
                 main_lines.extend(netcode)
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
@@ -465,7 +476,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         rand_tmp = CUDAStandaloneCodeObject.templater.rand(None, None,
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
-                                                           codeobj_with_randn=codeobj_with_randn)
+                                                           codeobj_with_randn=codeobj_with_randn,
+                                                           profile=self.profile)
         writer.write('rand.*', rand_tmp)
     
     def copy_source_files(self, writer, directory):
@@ -487,7 +499,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             maximum_run_time = float(maximum_run_time)
         network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
-                                                                 eventspace_arrays=self.eventspace_arrays)
+                                                                 eventspace_arrays=self.eventspace_arrays,
+                                                                 profile=self.profile)
         writer.write('network.*', network_tmp)
         
     def generate_synapses_classes_source(self, writer):
@@ -499,7 +512,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         code_objects=self.code_objects.values(),
                                                         additional_headers=run_includes,
                                                         array_specs=self.arrays,
-                                                        clocks=self.clocks
+                                                        clocks=self.clocks,
+                                                        profile=self.profile
                                                         )
         writer.write('run.*', run_tmp)
         
@@ -660,7 +674,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             net.after_run()
             
         self.generate_main_source(writer, main_includes)
-        self.generate_codeobj_source(writer)        
+        self.generate_codeobj_source(writer)
         self.generate_objects_source(writer, arange_arrays, self.net_synapses, self.static_array_specs, self.networks)
         self.generate_network_source(writer)
         self.generate_synapses_classes_source(writer)
@@ -679,14 +693,159 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.run(directory, with_output, run_args)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=True, level=0, **kwds):
-        build_on_run = self.build_on_run
-        self.build_on_run = False
-        try:  # for testing we need to reset build_on_run in case of errors
-            super(CUDAStandaloneDevice, self).network_run(net, duration, report, report_period, namespace, profile, level+1, **kwds)
-        finally:
-            self.build_on_run = build_on_run
-        self.build_on_run = build_on_run
+                    namespace=None, profile=None, level=0, **kwds):
+
+        if not prefs.devices.cuda_standalone.profile is None:
+            self.profile = prefs.devices.cuda_standalone.profile
+            if not profile is None:
+                logger.warn("Got `profile` argumtent in `network_run` and `prefs.devices.cuda_standalone.profile` set. "
+                            "Ignoring the `network_run` argument.")
+        elif not profile is None:
+            if not isinstance(profile, (bool, basestring)) or (isinstance(profile, basestring) and profile != 'blocking'):
+                raise ValueError("network_run got an unexpected value for `profile`. It must be a bool or "
+                                 "'blocking'. Got {} ({}) instead.".format(profile, type(profile)))
+            self.profile = profile
+        else:
+            self.profile = False  # the default
+
+        ###################################################
+        ### This part is copied from CPPStandaoneDevice ###
+        ###################################################
+        if kwds:
+            logger.warn(('Unsupported keyword argument(s) provided for run: '
+                         '%s') % ', '.join(kwds.keys()))
+        net._clocks = {obj.clock for obj in net.objects}
+        t_end = net.t+duration
+        for clock in net._clocks:
+            clock.set_interval(net.t, t_end)
+
+        # Get the local namespace
+        if namespace is None:
+            namespace = get_local_namespace(level=level+2)
+
+        net.before_run(namespace)
+
+        self.clocks.update(net._clocks)
+        net.t_ = float(t_end)
+
+        # TODO: remove this horrible hack
+        for clock in self.clocks:
+            if clock.name=='clock':
+                clock._name = '_clock'
+
+        # Extract all the CodeObjects
+        # Note that since we ran the Network object, these CodeObjects will be sorted into the right
+        # running order, assuming that there is only one clock
+        code_objects = []
+        for obj in net.objects:
+            if obj.active:
+                for codeobj in obj._code_objects:
+                    code_objects.append((obj.clock, codeobj))
+
+        # Code for a progress reporting function
+        standard_code = '''
+        void report_progress(const double elapsed, const double completed, const double start, const double duration)
+        {
+            if (completed == 0.0)
+            {
+                %STREAMNAME% << "Starting simulation at t=" << start << " s for duration " << duration << " s";
+            } else
+            {
+                %STREAMNAME% << completed*duration << " s (" << (int)(completed*100.) << "%) simulated in " << elapsed << " s";
+                if (completed < 1.0)
+                {
+                    const int remaining = (int)((1-completed)/completed*elapsed+0.5);
+                    %STREAMNAME% << ", estimated " << remaining << " s remaining.";
+                }
+            }
+
+            %STREAMNAME% << std::endl << std::flush;
+        }
+        '''
+        if report is None:
+            report_func = ''
+        elif report == 'text' or report == 'stdout':
+            report_func = standard_code.replace('%STREAMNAME%', 'std::cout')
+        elif report == 'stderr':
+            report_func = standard_code.replace('%STREAMNAME%', 'std::cerr')
+        elif isinstance(report, basestring):
+            report_func = '''
+            void report_progress(const double elapsed, const double completed, const double start, const double duration)
+            {
+            %REPORT%
+            }
+            '''.replace('%REPORT%', report)
+        else:
+            raise TypeError(('report argument has to be either "text", '
+                             '"stdout", "stderr", or the code for a report '
+                             'function'))
+
+        if report_func != '':
+            if self.report_func != '' and report_func != self.report_func:
+                raise NotImplementedError('The C++ standalone device does not '
+                                          'support multiple report functions, '
+                                          'each run has to use the same (or '
+                                          'none).')
+            self.report_func = report_func
+
+        if report is not None:
+            report_call = 'report_progress'
+        else:
+            report_call = 'NULL'
+
+        ##############################################################
+        ### From here on the code differs from CPPStandaloneDevice ###
+        ##############################################################
+
+        # For profiling variables we need a unique set of all active objects in the simulation over possibly multiple runs
+        self.active_objects.update([obj[1].name for obj in code_objects])
+
+        # Generate the updaters
+        run_lines = ['{net.name}.clear();'.format(net=net)]
+
+        # synchronize clocks btwn host and device at beginning of clock cycle
+        # TODO this synchronizes all clocks every time, but we need only to synchronize the current clock (#67)
+	for clock in net._clocks:
+            run_lines.append("{net.name}.add(&{clock.name}, _sync_clocks, &_sync_clocks_timer_start, "
+                   "&_sync_clocks_timer_stop, &_sync_clocks_profiling_info);".format(clock=clock, net=net))
+
+        # create all random numbers needed for the next clock cycle
+	for clock in net._clocks:
+            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_generation, &random_number_generation_timer_start, '
+                    '&random_number_generation_timer_stop, &random_number_generation_profiling_info);'.format(clock=clock, net=net))
+
+        all_clocks = set()
+        for clock, codeobj in code_objects:
+            run_lines.append('{net.name}.add(&{clock.name}, _run_{codeobj.name}, &{codeobj.name}_timer_start, '
+                             '&{codeobj.name}_timer_stop, &{codeobj.name}_profiling_info);'.format(clock=clock,
+                                                                                               net=net, codeobj=codeobj))
+            all_clocks.add(clock)
+
+        # Under some rare circumstances (e.g. a NeuronGroup only defining a
+        # subexpression that is used by other groups (via linking, or recorded
+        # by a StateMonitor) *and* not calculating anything itself *and* using a
+        # different clock than all other objects) a clock that is not used by
+        # any code object should nevertheless advance during the run. We include
+        # such clocks without a code function in the network.
+        for clock in net._clocks:
+            if clock not in all_clocks:
+                run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
+
+        run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
+                                                                                              duration=float(duration),
+                                                                                              report_call=report_call,
+                                                                                              report_period=float(report_period)))
+        self.main_queue.append(('run_network', (net, run_lines)))
+
+        # Manually set the cache for the clocks, simulation scripts might
+        # want to access the time (which has been set in code and is therefore
+        # not accessible by the normal means until the code has been built and
+        # run)
+        for clock in net._clocks:
+            self.array_cache[clock.variables['timestep']] = np.array([clock._i_end])
+            self.array_cache[clock.variables['t']] = np.array([clock._i_end * clock.dt_])
+
+        # Initialize eventspaces with -1 before the network runs
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.iterkeys():
@@ -694,13 +853,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # In case of custom scheduling, the thresholder might come after synapses or monitors
                         # and needs to be initialized in the beginning of the simulation
                         self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
-        for func, args in self.main_queue:
-            if func=='run_network':
-                net, netcode = args
-                for clock in net._clocks:
-                    lines = '''{net.name}.add(&{clock.name}, _run_random_number_generation);'''.format(clock=clock, net=net)
-                    if lines not in netcode:
-                        netcode.insert(1, lines)
 
         if self.build_on_run:
             if self.has_been_run:

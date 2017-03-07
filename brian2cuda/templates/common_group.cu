@@ -66,7 +66,13 @@ void _run_{{codeobj_name}}()
 	{# USES_VARIABLES { N } #}
 	using namespace brian;
 	
-	const std::clock_t _start_time = std::clock();
+	{% block profiling_start %}
+	{% if profile and profile == 'blocking'%}
+	{{codeobj_name}}_timer_start = std::clock();
+	{% elif profile %}
+	cudaEventRecord({{codeobj_name}}_timer_start);
+	{% endif %}
+	{% endblock %}
 
 	{% block define_N %}
 	{# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
@@ -133,9 +139,14 @@ void _run_{{codeobj_name}}()
 	}
 	{% endblock kernel_call %}
 
-	// Profiling
-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-    {{codeobj_name}}_profiling_info += _run_time;
+	{% block profiling_stop %}
+	{% if profile and profile == 'blocking'%}
+	cudaDeviceSynchronize();
+	{{codeobj_name}}_timer_stop = std::clock();
+	{% elif profile %}
+	cudaEventRecord({{codeobj_name}}_timer_stop);
+	{% endif %}
+	{% endblock %}
 }
 
 {% block extra_functions_cu %}

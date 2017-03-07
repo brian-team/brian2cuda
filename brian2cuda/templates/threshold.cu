@@ -40,4 +40,3 @@
 // reset eventspace counter to 0
 cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
 {% endblock extra_maincode %}
-

@@ -122,7 +122,6 @@ void _run_{{codeobj_name}}()
 	cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost);
 	{% endif %}
 	{% endfor %}
-
 }
 
 {% block extra_functions_cu %}

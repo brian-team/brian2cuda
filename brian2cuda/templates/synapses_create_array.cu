@@ -17,6 +17,12 @@
 {% block define_N %}
 {% endblock %}
 
+{% block profiling_start %}
+{% endblock %}
+
+{% block profiling_stop %}
+{% endblock %}
+
 {% block extra_maincode %}
 {# USES_VARIABLES { _synaptic_pre, _synaptic_post, sources, targets
 	            N_incoming, N_outgoing, N,

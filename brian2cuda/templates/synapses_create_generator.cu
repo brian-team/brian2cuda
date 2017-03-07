@@ -20,6 +20,12 @@
 {% block define_N %}
 {% endblock %}
 
+{% block profiling_start %}
+{% endblock %}
+
+{% block profiling_stop %}
+{% endblock %}
+
 {% block extra_maincode %}
 	{# // TODO: get rid of the variables we don't actually use
 	   USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
@@ -228,4 +234,4 @@
 			{{get_array_name(variables['N'], access_data=False)}},
 			sizeof({{c_data_type(variables['N'].dtype)}}),
 			cudaMemcpyHostToDevice);
-{% endblock %}
+{% endblock extra_maincode %}

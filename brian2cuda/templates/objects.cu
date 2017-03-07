@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
+#include <ctime>
+#include <utility>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -116,14 +118,22 @@ __global__ void {{path.name}}_init(
 {% endfor %}
 {% endfor %}
 
-// Profiling information for each code object
-{% for codeobj in code_objects | sort(attribute='name') %}
-double brian::{{codeobj.name}}_profiling_info = 0.0;
+// timers for profiling
+{% for codeobj in active_objects %}
+timer_type brian::{{codeobj}}_timer_start;
+timer_type brian::{{codeobj}}_timer_stop;
 {% endfor %}
+timer_type brian::_sync_clocks_timer_start;
+timer_type brian::_sync_clocks_timer_stop;
+timer_type brian::random_number_generation_timer_start;
+timer_type brian::random_number_generation_timer_stop;
+
+// profiling infos
+{% for codeobj in active_objects %}
+double brian::{{codeobj}}_profiling_info = 0.0;
+{% endfor %}
+double brian::_sync_clocks_profiling_info = 0.0;
 double brian::random_number_generation_profiling_info = 0.0;
-double brian::brian_start_profiling_info = 0.0;
-double brian::brian_end_profiling_info = 0.0;
-double brian::_copyToHost_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::random_float_generator;
@@ -169,6 +179,18 @@ void _init_arrays()
 			);
 	{% endfor %}
 	{% endfor %}
+
+	{% if profile and profile != 'blocking' %}
+	// Create cudaEvents for profiling
+	{% for codeobj in active_objects %}
+	cudaEventCreate(&{{codeobj}}_timer_start);
+	cudaEventCreate(&{{codeobj}}_timer_stop);
+	{% endfor %}
+	cudaEventCreate(&_sync_clocks_timer_start);
+	cudaEventCreate(&_sync_clocks_timer_stop);
+	cudaEventCreate(&random_number_generation_timer_start);
+	cudaEventCreate(&random_number_generation_timer_stop);
+	{% endif %}
 
     // Arrays initialized to 0
 	{% for var in zero_arrays | sort(attribute='name') %}
@@ -332,13 +354,11 @@ void _write_arrays()
 	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
 	if(outfile_profiling_info.is_open())
 	{
-	{% for codeobj in code_objects | sort(attribute='name') %}
-	outfile_profiling_info << "{{codeobj.name}}\t" << {{codeobj.name}}_profiling_info << std::endl;
+	{% for obj in active_objects %}
+	outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
 	{% endfor %}
+	outfile_profiling_info << "_sync_clocks\t" << _sync_clocks_profiling_info << std::endl;
 	outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
-	outfile_profiling_info << "brian_start\t" << brian_start_profiling_info << std::endl;
-	outfile_profiling_info << "brian_end\t" << brian_end_profiling_info << std::endl;
-	outfile_profiling_info << "_copyToHost\t" << _copyToHost_profiling_info << std::endl;
 	outfile_profiling_info.close();
 	} else
 	{
@@ -372,6 +392,18 @@ __global__ void {{path.name}}_destroy()
 void _dealloc_arrays()
 {
 	using namespace brian;
+
+	{% if profile and profile != 'blocking' %}
+	// Destroy cudaEvents for profiling
+	{% for codeobj in active_objects %}
+	cudaEventDestroy({{codeobj}}_timer_start);
+	cudaEventDestroy({{codeobj}}_timer_stop);
+	{% endfor %}
+	cudaEventDestroy(_sync_clocks_timer_start);
+	cudaEventDestroy(_sync_clocks_timer_stop);
+	cudaEventDestroy(random_number_generation_timer_start);
+	cudaEventDestroy(random_number_generation_timer_stop);
+	{% endif %}
 
 	{% for co in codeobj_with_rand | sort(attribute='name') %}
 	cudaFree(dev_{{co.name}}_rand);
@@ -445,6 +477,7 @@ void _dealloc_arrays()
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "network.h"
+#include <ctime>
 
 #include <thrust/device_vector.h>
 #include <curand.h>
@@ -457,7 +490,6 @@ extern Clock {{clock.name}};
 {% endfor %}
 
 //////////////// networks /////////////////
-extern Network magicnetwork;
 {% for net in networks %}
 extern Network {{net.name}};
 {% endfor %}
@@ -525,14 +557,27 @@ extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 
-// Profiling information for each code object
-{% for codeobj in code_objects | sort(attribute='name') %}
-extern double {{codeobj.name}}_profiling_info;
+// timers for profiling
+{% if not profile or profile == 'blocking' %}
+typedef std::clock_t timer_type;
+{% else %}
+typedef cudaEvent_t timer_type;
+{% endif %}
+{% for codeobj in active_objects %}
+extern timer_type {{codeobj}}_timer_start;
+extern timer_type {{codeobj}}_timer_stop;
 {% endfor %}
+extern timer_type _sync_clocks_timer_start;
+extern timer_type _sync_clocks_timer_stop;
+extern timer_type random_number_generation_timer_start;
+extern timer_type random_number_generation_timer_stop;
+
+// profiling infos
+{% for codeobj in active_objects %}
+extern double {{codeobj}}_profiling_info;
+{% endfor %}
+extern double _sync_clocks_profiling_info;
 extern double random_number_generation_profiling_info;
-extern double brian_start_profiling_info;
-extern double brian_end_profiling_info;
-extern double _copyToHost_profiling_info;
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t random_float_generator;

@@ -400,8 +400,6 @@ void _run_{{pathobj}}_initialise_queue()
 	{% else %}
 	{{pathobj}}_scalar_delay = scalar_delay;
 	{% endif %}
-
-	printf("Done with initialise_queue\n");
 }
 
 {% endmacro %}

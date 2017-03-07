@@ -23,3 +23,9 @@
 {% block extra_maincode %}
 const int _N = _num_group_idx;
 {% endblock %}
+
+{% block profiling_start %}
+{% endblock %}
+
+{% block profiling_stop %}
+{% endblock %}

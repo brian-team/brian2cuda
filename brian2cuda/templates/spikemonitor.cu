@@ -9,8 +9,10 @@
 	{% endfor %}
 {% endblock %}
 
+
 {% block prepare_kernel_inner %}
 _run_{{codeobj_name}}_init<<<1,1>>>();
+
 cudaError_t status = cudaGetLastError();
 if (status != cudaSuccess)
 {
@@ -19,7 +21,8 @@ if (status != cudaSuccess)
 	_dealloc_arrays();
 	exit(status);
 }
-{% endblock %}
+{% endblock prepare_kernel_inner %}
+
 
 {% block kernel_call %}
 kernel_{{codeobj_name}}<<<1, 1>>>(
@@ -27,6 +30,7 @@ kernel_{{codeobj_name}}<<<1, 1>>>(
 		dev_array_{{owner.name}}_count,
 		// HOST_PARAMETERS
 		%HOST_PARAMETERS%);
+
 cudaError_t status = cudaGetLastError();
 if (status != cudaSuccess)
 {
@@ -36,6 +40,7 @@ if (status != cudaSuccess)
 	exit(status);
 }
 {% endblock %}
+
 
 {% block kernel %}
 __global__ void _run_{{codeobj_name}}_init()
@@ -229,10 +234,6 @@ void _copyToHost_{{codeobj_name}}()
 		_dealloc_arrays();
 		exit(status);
 	}
-
-	// Profiling
-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-	_copyToHost_profiling_info += _run_time;
 }
 
 void _debugmsg_{{codeobj_name}}()

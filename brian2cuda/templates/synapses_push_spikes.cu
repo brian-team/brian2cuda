@@ -68,7 +68,11 @@ void _run_{{codeobj_name}}()
 {
 	using namespace brian;
 
-	const std::clock_t _start_time = std::clock();
+	{% if profile and profile == 'blocking'%}
+	{{codeobj_name}}_timer_start = std::clock();
+	{% elif profile %}
+	cudaEventRecord({{codeobj_name}}_timer_start);
+	{% endif %}
 
 	///// CONSTANTS /////
 	%CONSTANTS%
@@ -126,9 +130,12 @@ void _run_{{codeobj_name}}()
 		}
 	}
 
-	// Profiling
-	const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-	{{codeobj_name}}_profiling_info += _run_time;
+	{% if profile and profile == 'blocking'%}
+	cudaDeviceSynchronize();
+	{{codeobj_name}}_timer_stop = std::clock();
+	{% elif profile %}
+	cudaEventRecord({{codeobj_name}}_timer_stop);
+	{% endif %}
 }
 {% endmacro %}
 

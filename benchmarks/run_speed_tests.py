@@ -28,6 +28,7 @@ from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationC
 from create_readme import create_readme
 
 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+prefs['devices.cuda_standalone.profile'] = True
 
 configs = [# configuration                       project_directory
           #(NumpyConfiguration,                  None),
