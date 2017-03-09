@@ -2,6 +2,8 @@
 brian2cuda
 ==========
 
+[![Join the chat at https://gitter.im/brian-team/brian2cuda](https://badges.gitter.im/brian-team/brian2cuda.svg)](https://gitter.im/brian-team/brian2cuda?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Please note that this package is still under developement and some features are not yet usable.
 
 Brian2cuda is an extention of the spiking neural network simulator [Brian2](https://github.com/brian-team/brian2), implementing a [Brian2 standalone device](http://brian2.readthedocs.io/en/stable/developer/devices.html) to generate C++/CUDA code to run simluations on NVIDIA general purpose graphics processing units (GPGPUs).
