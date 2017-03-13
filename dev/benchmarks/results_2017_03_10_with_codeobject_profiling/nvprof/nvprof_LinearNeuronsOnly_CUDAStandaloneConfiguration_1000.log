@@ -1,0 +1,34 @@
+==1825== NVPROF is profiling process 1825, command: ./main
+==1825== Profiling application: ./main
+==1825== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 66.29%  394.86ms    300014  1.3160us     928ns  337.87us  [CUDA memcpy HtoD]
+ 33.69%  200.69ms    100000  2.0060us  1.9520us  2.6560us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*)
+  0.02%  108.22us         5  21.643us  16.427us  30.563us  [CUDA memcpy DtoH]
+
+==1825== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 39.10%  2.32208s    300018  7.7390us  4.9810us  26.802ms  cudaMemcpy
+ 22.78%  1.35260s    600000  2.2540us  1.6920us  1.6473ms  cudaEventRecord
+ 17.83%  1.05861s    100000  10.586us  9.1920us  365.25us  cudaLaunch
+  6.61%  392.79ms    300000  1.3090us  1.0630us  313.99us  cudaEventElapsedTime
+  5.68%  337.03ms         1  337.03ms  337.03ms  337.03ms  cudaDeviceSetLimit
+  5.17%  307.00ms    299997  1.0230us     637ns  341.90us  cudaEventQuery
+  1.45%  86.181ms    400000     215ns     140ns  336.91us  cudaSetupArgument
+  0.65%  38.309ms    100000     383ns     284ns  12.869us  cudaConfigureCall
+  0.49%  29.089ms    100000     290ns     231ns  331.68us  cudaGetLastError
+  0.21%  12.536ms         6  2.0894ms  7.5530us  12.355ms  cudaFree
+  0.01%  751.87us         3  250.62us  217.74us  298.17us  cudaGetDeviceProperties
+  0.01%  539.08us       166  3.2470us     122ns  133.80us  cuDeviceGetAttribute
+  0.01%  430.90us         7  61.556us  7.8380us  150.39us  cudaMalloc
+  0.00%  75.096us         2  37.548us  28.980us  46.116us  cuDeviceGetName
+  0.00%  74.337us         2  37.168us  31.549us  42.788us  cuDeviceTotalMem
+  0.00%  10.671us         6  1.7780us     751ns  6.5770us  cudaEventCreate
+  0.00%  9.9980us         1  9.9980us  9.9980us  9.9980us  cudaMemcpyToSymbol
+  0.00%  6.3060us         1  6.3060us  6.3060us  6.3060us  cudaFuncGetAttributes
+  0.00%  5.8820us         1  5.8820us  5.8820us  5.8820us  cudaDeviceSynchronize
+  0.00%  3.4510us         1  3.4510us  3.4510us  3.4510us  cudaGetDevice
+  0.00%  2.4960us         3     832ns     239ns  1.3140us  cuDeviceGetCount
+  0.00%  1.0040us         3     334ns     238ns     496ns  cuDeviceGet
+  0.00%     577ns         1     577ns     577ns     577ns  cuInit
+  0.00%     359ns         1     359ns     359ns     359ns  cuDriverGetVersion

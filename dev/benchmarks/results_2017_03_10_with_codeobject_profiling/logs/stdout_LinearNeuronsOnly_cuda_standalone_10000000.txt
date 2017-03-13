@@ -1,0 +1,3 @@
+INFO: setting cudaDevice stuff took 0.270455 seconds
+INFO: main_lines took 75.723344 seconds
+INFO: main function took 76.271561 seconds

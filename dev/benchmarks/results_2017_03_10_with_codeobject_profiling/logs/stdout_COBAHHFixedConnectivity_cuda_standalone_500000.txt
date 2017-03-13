@@ -1,0 +1,10 @@
+INFO: setting cudaDevice stuff took 0.125803 seconds
+WARNING Not enough ressources available to call kernel_neurongroup_stateupdater_codeobject with maximum possible threads per block (1024). Reducing num_threads to 512. (Kernel needs 109 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory)
+[...]
+ERROR while allocating 33554428 bytes in cudaVector.h/reserve()
+ERROR while allocating 67108856 bytes in cudaVector.h/reserve()
+[...]
+Number of synapses: 8002827
+Number of synapses: 32002313
+INFO: main_lines took 3800.583468 seconds
+INFO: main function took 3809.578067 seconds

@@ -1,0 +1,5 @@
+INFO: setting cudaDevice stuff took 0.243918 seconds
+Number of synapses: 100000
+Number of synapses: 100000
+INFO: main_lines took 8.234835 seconds
+INFO: main function took 8.502791 seconds
