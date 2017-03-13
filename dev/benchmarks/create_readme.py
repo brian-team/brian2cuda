@@ -38,9 +38,10 @@ Profile summary for `N = {N}`:
 
 def create_readme(result_dir, description=''):
     test_names = set()
-    for plot_file in glob.glob(result_dir + "/plots/*"):
+    for plot_file in sorted(glob.glob(result_dir + "/plots/*")):
         name = os.path.splitext(os.path.basename(plot_file))[0].split('_')[2]
         test_names.add(name)
+    test_names = sorted(test_names)
     
     result_md = []
     for name in test_names:
@@ -50,7 +51,7 @@ def create_readme(result_dir, description=''):
             md = "![]({plot})".format(plot=plot_path)
             plots_md.append(md)
         profile_md = []
-        for nvprof_file in glob.glob(result_dir + "/nvprof/nvprof_{}_*".format(name)):
+        for nvprof_file in sorted(glob.glob(result_dir + "/nvprof/nvprof_{}_*".format(name))):
             nvprof_filename = os.path.splitext(os.path.basename(nvprof_file))[0]
             config = nvprof_filename.split('_')[2]
             N = nvprof_filename.split('_')[3].split('.')[0]
