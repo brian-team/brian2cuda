@@ -1,5 +1,5 @@
 {% extends 'common_group.cu' %}
-{# USES_VARIABLES { N, _clock_t, count,
+{# USES_VARIABLES { N, count,
                     _source_start, _source_stop} #}
                     
 {% block extra_device_helper %}
