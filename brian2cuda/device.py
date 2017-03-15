@@ -12,6 +12,7 @@ import numpy as np
 import brian2
 
 from brian2.codegen.cpp_prefs import get_compiler_and_args
+from brian2.codegen.translation import make_statements
 from brian2.core.clocks import defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
@@ -137,18 +138,36 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
+            ##################################################################
+            # This code is copied from CodeGenerator.translate() and CodeGenerator.array_read_write()
+            # and should give us a set of variables to which will be written in `vector_code`
+            vector_statements = {}
+            for ac_name, ac_code in abstract_code.iteritems():
+                statements = make_statements(ac_code,
+                                             variables,
+                                             prefs['core.default_float_dtype'],
+                                             optimise=True,
+                                             blockname=ac_name)
+                _, vector_statements[ac_name] = statements
+            write = set()
+            for statements in vector_statements.itervalues():
+                for stmt in statements:
+                    write.add(stmt.var)
+            write = set(varname for varname, var in variables.items()
+                        if isinstance(var, ArrayVariable) and varname in write)
+            ##################################################################
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
             for varname in variables.iterkeys():
-                idx = variable_indices[varname]
-                if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
-                    # The SynapticPathways 'target' group variables are modified
-                    if synaptic_effects == "synapse":
-                        synaptic_effects = "target"
-                if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
-                    # The SynapticPathways 'source' group variables are modified
-                    synaptic_effects = "source"
-            #synaptic_effects = "source"
+                if varname in write:
+                    idx = variable_indices[varname]
+                    if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
+                        # The SynapticPathways 'target' group variables are modified
+                        if synaptic_effects == "synapse":
+                            synaptic_effects = "target"
+                    if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
+                        # The SynapticPathways 'source' group variables are modified
+                        synaptic_effects = "source"
             template_kwds["synaptic_effects"] = synaptic_effects
             print('debug syn effect mdoe ', synaptic_effects)
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
