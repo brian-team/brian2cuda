@@ -1,0 +1,14 @@
+==16770== NVPROF is profiling process 16770, command: ./main
+==16770== Profiling application: ./main
+==16770== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+100.00%  200.62ms    100000  2.0060us  1.9520us  3.1360us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*)
+
+==16770== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 86.29%  839.42ms    100000  8.3940us  7.8810us  8.5752ms  cudaLaunch
+  8.58%  83.459ms    400000     208ns     150ns  348.82us  cudaSetupArgument
+  2.59%  25.203ms    100000     252ns     214ns  9.5060us  cudaConfigureCall
+  2.53%  24.602ms    100000     246ns     217ns  9.4530us  cudaGetLastError
+  0.01%  69.953us         1  69.953us  69.953us  69.953us  cudaMemGetInfo
+  0.00%  10.821us         1  10.821us  10.821us  10.821us  cudaFuncGetAttributes

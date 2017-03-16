@@ -1,0 +1,23 @@
+==10779== NVPROF is profiling process 10779, command: ./main
+==10779== Profiling application: ./main
+==10779== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 31.97%  5.2307ms      1000  5.2300us  3.0080us  24.768us  kernel_synapses_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double*, int*, int, double*, int*)
+ 28.15%  4.6051ms      1000  4.6050us  4.4160us  7.2960us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, double*, double*, bool*)
+ 18.97%  3.1038ms      1000  3.1030us  3.0400us  3.4880us  [CUDA memset]
+ 11.52%  1.8849ms      1000  1.8840us  1.7280us  2.3680us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double*, double*, double*, bool*)
+  8.80%  1.4396ms      1000  1.4390us  1.3760us  1.7280us  kernel_neurongroup_resetter_codeobject(unsigned int, unsigned int, double*, int*)
+  0.57%  93.696us         1  93.696us  93.696us  93.696us  void gen_sequenced<curandStateXORWOW, float2, normal_args_st, __operator_&__(float2 curand_normal_scaled2<curandStateXORWOW>(curandStateXORWOW*, normal_args_st))>(curandStateXORWOW*, float2*, unsigned long, unsigned long, normal_args_st)
+  0.01%     992ns         1     992ns     992ns     992ns  [CUDA memcpy HtoD]
+
+==10779== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 68.56%  41.193ms      4001  10.295us  8.1630us  6.3986ms  cudaLaunch
+ 14.58%  8.7623ms      1000  8.7620us  8.3720us  16.048us  cudaMemset
+ 10.68%  6.4182ms     32005     200ns     175ns  333.32us  cudaSetupArgument
+  2.71%  1.6288ms      4001     407ns     272ns  337.56us  cudaConfigureCall
+  1.98%  1.1896ms      4002     297ns     269ns  1.3110us  cudaGetLastError
+  1.14%  687.80us         1  687.80us  687.80us  687.80us  cudaMemcpyToSymbol
+  0.22%  134.43us         1  134.43us  134.43us  134.43us  cudaMalloc
+  0.09%  52.439us         1  52.439us  52.439us  52.439us  cudaMemGetInfo
+  0.02%  13.619us         4  3.4040us  2.8310us  5.0310us  cudaFuncGetAttributes

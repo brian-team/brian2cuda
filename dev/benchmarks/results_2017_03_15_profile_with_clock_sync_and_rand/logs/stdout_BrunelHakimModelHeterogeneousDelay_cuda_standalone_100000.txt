@@ -1,0 +1,2 @@
+INFO: setting cudaDevice stuff took 0.294883 seconds
+ERROR launching kernel_neurongroup_stateupdater_codeobject in code_objects/neurongroup_stateupdater_codeobject.cu:1028 invalid argument

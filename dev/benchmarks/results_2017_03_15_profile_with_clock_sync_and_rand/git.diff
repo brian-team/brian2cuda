@@ -1,0 +1,213 @@
+diff --git a/brian2cuda/templates/objects.cu b/brian2cuda/templates/objects.cu
+index 28ea859..4dbeeec 100644
+--- a/brian2cuda/templates/objects.cu
++++ b/brian2cuda/templates/objects.cu
+@@ -357,7 +357,7 @@ void _write_arrays()
+ 	{% for obj in active_objects %}
+ 	outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
+ 	{% endfor %}
+-	outfile_profiling_info << "_sync_clocks\t" << _sync_clocks_profiling_info << std::endl;
++	outfile_profiling_info << "sync_clocks\t" << _sync_clocks_profiling_info << std::endl;
+ 	outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
+ 	outfile_profiling_info.close();
+ 	} else
+diff --git a/brian2cuda/tests/features/cuda_configuration.py b/brian2cuda/tests/features/cuda_configuration.py
+index d6b7038..99816a8 100644
+--- a/brian2cuda/tests/features/cuda_configuration.py
++++ b/brian2cuda/tests/features/cuda_configuration.py
+@@ -4,6 +4,7 @@ import shutil
+ import sys
+ from brian2.tests.features import (Configuration, DefaultConfiguration,
+                                    run_feature_tests, run_single_feature_test)
++from brian2.core.preferences import prefs
+ 
+ __all__ = ['CUDAStandaloneConfiguration']
+ 
+@@ -11,9 +12,11 @@ class CUDAStandaloneConfiguration(Configuration):
+     name = 'CUDA standalone'
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False)
++        prefs['devices.cuda_standalone.profile'] = 'blocking'
+         
+     def after_run(self):
+         if os.path.exists('cuda_standalone'):
+             shutil.rmtree('cuda_standalone')
+-        brian2.device.build(directory='cuda_standalone', compile=True, run=True)
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
+ 
+diff --git a/brian2cuda/tests/test_profiling.py b/brian2cuda/tests/test_profiling.py
+index 2cb1609..eb39b6a 100644
+--- a/brian2cuda/tests/test_profiling.py
++++ b/brian2cuda/tests/test_profiling.py
+@@ -56,7 +56,7 @@ def test_profile_error():
+ 
+     G = NeuronGroup(1, 'v:1', threshold='True')
+ 
+-    assert_raises(ValueError, run(defaultclock.dt, profile='error'))
++    assert_raises(ValueError, lambda: run(defaultclock.dt, profile='error'))
+ 
+ @attr('cuda_standalone', 'standalone-only')
+ @with_setup(teardown=reinit_devices)
+diff --git a/brian2cuda/tools/run_test_suite_on_current_state.sh b/brian2cuda/tools/run_test_suite_on_current_state.sh
+index f6bb584..0cdcf13 100755
+--- a/brian2cuda/tools/run_test_suite_on_current_state.sh
++++ b/brian2cuda/tools/run_test_suite_on_current_state.sh
+@@ -1,4 +1,4 @@
+-!/bin/bash
++#!/bin/bash
+ # arguments:
+ # $1: additional name for log_file
+ # $2: number of cores used for parallel compilation (make -j $2)
+@@ -38,5 +38,5 @@ git submodule update --init frozen_repos/brian2
+ git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "LOG_FILE"
+ git rev-parse HEAD 2>&1 | tee -a "LOG_FILE"
+ cd "brian2cuda/tools"
+-PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py -j"$J" 2>&1 | tee -a "$LOG_FILE"
++PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+ 
+diff --git a/dev/benchmarks/run_speed_tests.py b/dev/benchmarks/run_speed_tests.py
+index 8745fb7..5167401 100644
+--- a/dev/benchmarks/run_speed_tests.py
++++ b/dev/benchmarks/run_speed_tests.py
+@@ -28,23 +28,23 @@ from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationC
+ from create_readme import create_readme
+ 
+ prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+-prefs['devices.cuda_standalone.profile'] = True
++prefs['devices.cuda_standalone.profile'] = 'blocking'
+ 
+ configs = [# configuration                       project_directory
+           #(NumpyConfiguration,                  None),
+           #(WeaveConfiguration,                  None),
+           #(LocalConfiguration,                  None),
+           (CUDAStandaloneConfiguration,         'cuda_standalone'),
+-          (CPPStandaloneConfiguration,          'cpp_standalone'),
+-          (GeNNConfiguration,                   'GeNNworkspace'),
++          #(CPPStandaloneConfiguration,          'cpp_standalone'),
++          #(GeNNConfiguration,                   'GeNNworkspace'),
+           #(CPPStandaloneConfigurationOpenMP,    'cpp_standalone'),
+           #(GeNNConfigurationCPU,                'GeNNworkspace'),
+           #(GeNNConfigurationOptimized,          'GeNNworkspace')
+           ]
+ 
+ speed_tests = [# feature_test                     name                                  n_slice
+-               (LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
+-               (HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
++               #(LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
++               #(HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
+ 
+                (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
+                (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
+@@ -123,9 +123,10 @@ try:
+                               speed_tests=[st],
+                               n_slice=sl,
+                               #n_slice=slice(0,2,None),
+-                              #run_twice=False,
++                              run_twice=False,
+                               verbose=True,
+-                              maximum_run_time=maximum_run_time)
++                              maximum_run_time=maximum_run_time,
++                              profile_only_active=False)
+         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
+         print("Running {} took {}.".format(name, diff))
+@@ -133,7 +134,7 @@ try:
+         savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
+         res.plot_all_tests(relative=True)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+-        res.plot_all_tests(profiling_minimum=0.15)
++        res.plot_all_tests(profiling_minimum=0.10)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+         if 3 != len(get_fignums()):
+             print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+diff --git a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+index 5776588..5827061 100644
+--- a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes two further modifications: 
++This version includes two further modifications:
+ traces in neurons and multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_multipost_standalone_cpp.py b/examples/STDP_multipost_standalone_cpp.py
+index 2cec4ae..a43459f 100644
+--- a/examples/STDP_multipost_standalone_cpp.py
++++ b/examples/STDP_multipost_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes a further modification: 
++This version includes a further modification:
+ multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_neuronaltraces_standalone_cpp.py b/examples/STDP_neuronaltraces_standalone_cpp.py
+index 4e0fc21..86590ca 100644
+--- a/examples/STDP_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_neuronaltraces_standalone_cpp.py
+@@ -15,7 +15,7 @@ import os
+ example_name = os.path.splitext(os.path.basename(__file__))[0]
+ 
+ from brian2 import *
+-set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=True)
++set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=False)
+ 
+ N = 1000
+ taum = 10*ms
+@@ -65,6 +65,8 @@ r_mon = PopulationRateMonitor(input_poisson)
+ 
+ run(100*second, report='text')
+ 
++print(profiling_summary())
++
+ subplot(311)
+ suptitle(example_name)
+ plot(S.w / gmax, '.k', ms=1)
+diff --git a/examples/cuba_cuda.py b/examples/cuba_cuda.py
+index 417f60d..eacbeae 100644
+--- a/examples/cuba_cuda.py
++++ b/examples/cuba_cuda.py
+@@ -37,11 +37,13 @@ Ci.connect('i>=3200', p=0.02)
+ 
+ s_mon = SpikeMonitor(P)
+ 
+-run(1 * second, report='text')
++run(10 * second, report='text')
+ 
+-plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
+-title('CUBA_CUDA')
+-xlabel('Time (ms)')
+-ylabel('Neuron index')
+-savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
++print(profiling_summary())
++
++#plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
++#title('CUBA_CUDA')
++#xlabel('Time (ms)')
++#ylabel('Neuron index')
++#savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
+ #show()
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67
++Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 0553cafeab49ea5403c0230411035df504d4db06
++Subproject commit 0553cafeab49ea5403c0230411035df504d4db06-dirty
+diff --git a/frozen_repos/genn b/frozen_repos/genn
+--- a/frozen_repos/genn
++++ b/frozen_repos/genn
+@@ -1 +1 @@
+-Subproject commit e01c85f18339249558d6e570ae976609dc972846
++Subproject commit e01c85f18339249558d6e570ae976609dc972846-dirty

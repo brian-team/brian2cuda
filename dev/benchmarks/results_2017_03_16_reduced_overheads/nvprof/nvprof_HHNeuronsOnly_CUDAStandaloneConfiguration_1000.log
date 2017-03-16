@@ -1,0 +1,17 @@
+==21055== NVPROF is profiling process 21055, command: ./main
+==21055== Profiling application: ./main
+==21055== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 72.65%  124.77ms     10000  12.476us  10.880us  15.104us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, bool*, double*, double*, double*, double*)
+ 17.67%  30.335ms     10000  3.0330us  2.8160us  3.5200us  [CUDA memset]
+  9.68%  16.623ms     10000  1.6620us  1.4400us  2.6240us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double*, double*, double*, bool*)
+
+==21055== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 58.37%  173.72ms     20000  8.6850us  7.9340us  5.6808ms  cudaLaunch
+ 28.36%  84.417ms     10000  8.4410us  7.9390us  77.003us  cudaMemset
+  9.48%  28.208ms    160000     176ns     145ns  313.53us  cudaSetupArgument
+  1.99%  5.9225ms     20000     296ns     222ns  312.64us  cudaConfigureCall
+  1.78%  5.3035ms     20000     265ns     227ns  320.86us  cudaGetLastError
+  0.02%  46.914us         1  46.914us  46.914us  46.914us  cudaMemGetInfo
+  0.00%  7.0510us         2  3.5250us  3.4680us  3.5830us  cudaFuncGetAttributes

@@ -1,0 +1,530 @@
+diff --git a/brian2cuda/device.py b/brian2cuda/device.py
+index 1a91126..86ec3f2 100644
+--- a/brian2cuda/device.py
++++ b/brian2cuda/device.py
+@@ -844,10 +844,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
+             if clock not in all_clocks:
+                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
+ 
++        run_lines.append('cudaProfilerStart();')
+         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
+                                                                                               duration=float(duration),
+                                                                                               report_call=report_call,
+                                                                                               report_period=float(report_period)))
++        run_lines.append('cudaProfilerStop();')
+         self.main_queue.append(('run_network', (net, run_lines)))
+ 
+         # Manually set the cache for the clocks, simulation scripts might
+diff --git a/brian2cuda/templates/main.cu b/brian2cuda/templates/main.cu
+index 8402033..af7cedf 100644
+--- a/brian2cuda/templates/main.cu
++++ b/brian2cuda/templates/main.cu
+@@ -16,6 +16,7 @@
+ 
+ #include <iostream>
+ #include <fstream>
++#include "cuda_profiler_api.h"
+ 
+ {{report_func|autoindent}}
+ 
+diff --git a/brian2cuda/templates/objects.cu b/brian2cuda/templates/objects.cu
+index a6edb09..824df2a 100644
+--- a/brian2cuda/templates/objects.cu
++++ b/brian2cuda/templates/objects.cu
+@@ -136,10 +136,12 @@ double brian::random_number_generation_profiling_info = 0.0;
+ curandGenerator_t brian::random_float_generator;
+ {% for co in codeobj_with_rand | sort(attribute='name') %}
+ float* brian::dev_{{co.name}}_rand;
++float* brian::dev_{{co.name}}_rand_allocator;
+ __device__ float* brian::_array_{{co.name}}_rand;
+ {% endfor %}
+ {% for co in codeobj_with_randn | sort(attribute='name') %}
+ float* brian::dev_{{co.name}}_randn;
++float* brian::dev_{{co.name}}_randn_allocator;
+ __device__ float* brian::_array_{{co.name}}_randn;
+ {% endfor %}
+ 
+@@ -398,10 +400,10 @@ void _dealloc_arrays()
+ 	{% endif %}
+ 
+ 	{% for co in codeobj_with_rand | sort(attribute='name') %}
+-	cudaFree(dev_{{co.name}}_rand);
++	cudaFree(dev_{{co.name}}_rand_allocator);
+ 	{% endfor %}
+ 	{% for co in codeobj_with_randn | sort(attribute='name') %}
+-	cudaFree(dev_{{co.name}}_randn);
++	cudaFree(dev_{{co.name}}_randn_allocator);
+ 	{% endfor %}
+ 
+ 	{% for S in synapses | sort(attribute='name') %}
+@@ -573,10 +575,12 @@ extern curandGenerator_t random_float_generator;
+ 
+ {% for co in codeobj_with_rand | sort(attribute='name') %}
+ extern float* dev_{{co.name}}_rand;
++extern float* dev_{{co.name}}_rand_allocator;
+ extern __device__ float* _array_{{co.name}}_rand;
+ {% endfor %}
+ {% for co in codeobj_with_randn | sort(attribute='name') %}
+ extern float* dev_{{co.name}}_randn;
++extern float* dev_{{co.name}}_randn_allocator;
+ extern __device__ float* _array_{{co.name}}_randn;
+ {% endfor %}
+ 
+diff --git a/brian2cuda/templates/rand.cu b/brian2cuda/templates/rand.cu
+index 02c62ec..f02f0ce 100644
+--- a/brian2cuda/templates/rand.cu
++++ b/brian2cuda/templates/rand.cu
+@@ -17,39 +17,156 @@ void _run_random_number_generation()
+ 	cudaEventRecord(random_number_generation_timer_start);
+ 	{% endif %}
+ 
+-	// Get the number of needed random numbers.
+-	// curandGenerateNormal requires an even number for pseudorandom generators
++	// how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
++	static double mb_per_obj = 50;  // MB per codeobject and rand / randn
++	static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(float);
++
++	// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
+ 	{% for co in codeobj_with_rand %}
+-	static unsigned int num_rand_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
++	static int num_per_cycle_rand_{{co.name}};
++	static int rand_interval_{{co.name}};
++	static int num_per_gen_rand_{{co.name}};
++	static int idx_rand_{{co.name}};
+ 	{% endfor %}
+ 	{% for co in codeobj_with_randn %}
+-	static unsigned int num_randn_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
++	static int num_per_cycle_randn_{{co.name}};
++	static int randn_interval_{{co.name}};
++	static int num_per_gen_randn_{{co.name}};
++	static int idx_randn_{{co.name}};
+ 	{% endfor %}
+-
++	
+ 	// Allocate device memory
+ 	static bool first_run = true;
+ 	if (first_run)
+ 	{
++
++		// check that we have enough memory available
++		size_t free_byte ;
++		size_t total_byte ;
++		cudaMemGetInfo(&free_byte, &total_byte);
++		size_t num_free_floats = free_byte / sizeof(float);
++
++
+ 		{% for co in codeobj_with_rand | sort(attribute='name') %}
+-		cudaMalloc((void**)&dev_{{co.name}}_rand, sizeof(float)*num_rand_{{co.name}} * {{co.rand_calls}});
+-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
++		// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
++		num_per_cycle_rand_{{co.name}} = {{co.owner._N}} * {{co.rand_calls}};
++		rand_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_rand_{{co.name}});
++		num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * rand_interval_{{co.name}};
++		idx_rand_{{co.name}} = rand_interval_{{co.name}};
++
++		if (rand_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
++		{
++			// create max as many random numbers as will be needed in the entire simulation
++			num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * {{co.owner.clock.name}}.i_end;
++		}
++		if (num_per_gen_rand_{{co.name}} % 2 != 0)
++		{
++			// curandGenerateNormal requires an even number for pseudorandom generators
++			num_per_gen_rand_{{co.name}} = num_per_gen_rand_{{co.name}} + 1;
++		}
++		printf("INFO generating %i rand every %i clock cycles for {{co.name}}\n", num_per_gen_rand_{{co.name}}, rand_interval_{{co.name}});
++
++		// make sure that we don't use more memory then available
++		while (num_free_floats < num_per_gen_rand_{{co.name}})
++		{
++			if (num_per_gen_rand_{{co.name}} < num_per_cycle_rand_{{co.name}})
++			{
++				if (num_free_floats < num_per_cycle_rand_{{co.name}})
++				{
++					printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
++					_dealloc_arrays();
++					exit(1);
++				}
++				else
++				{
++					num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}};
++					break;
++				}
++			}
++			num_per_gen_rand_{{co.name}} /= 2;
++		}
++		
++		cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(float)*num_per_gen_rand_{{co.name}});
++		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand_allocator, sizeof(float*));
++		dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
+ 		{% endfor %}
+ 
++
+ 		{% for co in codeobj_with_randn | sort(attribute='name') %}
+-		cudaMalloc((void**)&dev_{{co.name}}_randn, sizeof(float)*num_randn_{{co.name}} * {{co.randn_calls}});
+-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
++		// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
++		num_per_cycle_randn_{{co.name}} = {{co.owner._N}} * {{co.randn_calls}};
++		randn_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_randn_{{co.name}});
++		num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * randn_interval_{{co.name}};
++		idx_randn_{{co.name}} = randn_interval_{{co.name}};
++
++		if (randn_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
++		{
++			// create max as many random numbers as will be needed in the entire simulation
++			num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * {{co.owner.clock.name}}.i_end;
++		}
++		if (num_per_gen_randn_{{co.name}} % 2 != 0)
++		{
++			// curandGenerateNormal requires an even number for pseudorandom generators
++			num_per_gen_randn_{{co.name}} = num_per_gen_randn_{{co.name}} + 1;
++		}
++		printf("INFO generating %i randn every %i clock cycles for {{co.name}}\n", num_per_gen_randn_{{co.name}}, randn_interval_{{co.name}});
++
++		// make sure that we don't use more memory then available
++		while (num_free_floats < num_per_gen_randn_{{co.name}})
++		{
++			if (num_per_gen_randn_{{co.name}} < num_per_cycle_randn_{{co.name}})
++			{
++				if (num_free_floats < num_per_cycle_randn_{{co.name}})
++				{
++					printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
++					_dealloc_arrays();
++					exit(1);
++				}
++				else
++				{
++					num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}};
++					break;
++				}
++			}
++			num_per_gen_randn_{{co.name}} /= 2;
++		}
++		
++		cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(float)*num_per_gen_randn_{{co.name}});
++		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn_allocator, sizeof(float*));
++		dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
+ 		{% endfor %}
+-		first_run = false;
+ 
++		first_run = false;
+ 	}
+ 
+ 	// Generate random numbers
+ 	{% for co in codeobj_with_rand %}
+-	curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand, num_rand_{{co.name}} * {{co.rand_calls}});
++	if (idx_rand_{{co.name}} == rand_interval_{{co.name}})
++	{
++		curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
++		dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
++		idx_rand_{{co.name}} = 0;
++	}
++	else
++	{
++		// move device pointer to next numbers
++		dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
++		idx_rand_{{co.name}} += 1;
++	}
+ 	{% endfor %}
+ 
+ 	{% for co in codeobj_with_randn %}
+-	curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn, num_randn_{{co.name}} * {{co.randn_calls}}, 0, 1);
++	if (idx_randn_{{co.name}} == randn_interval_{{co.name}})
++	{
++		curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
++		dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
++		idx_randn_{{co.name}} = 0;
++	}
++	else
++	{
++		dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
++		idx_randn_{{co.name}} += 1;
++	}
+ 	{% endfor %}
+ 
+ 	{% if profile and profile == 'blocking'%}
+diff --git a/brian2cuda/tests/features/cuda_configuration.py b/brian2cuda/tests/features/cuda_configuration.py
+index d6b7038..0151e65 100644
+--- a/brian2cuda/tests/features/cuda_configuration.py
++++ b/brian2cuda/tests/features/cuda_configuration.py
+@@ -4,6 +4,7 @@ import shutil
+ import sys
+ from brian2.tests.features import (Configuration, DefaultConfiguration,
+                                    run_feature_tests, run_single_feature_test)
++from brian2.core.preferences import prefs
+ 
+ __all__ = ['CUDAStandaloneConfiguration']
+ 
+@@ -11,9 +12,36 @@ class CUDAStandaloneConfiguration(Configuration):
+     name = 'CUDA standalone'
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False)
++        prefs['devices.cuda_standalone.profile'] = False
+         
+     def after_run(self):
+         if os.path.exists('cuda_standalone'):
+             shutil.rmtree('cuda_standalone')
+-        brian2.device.build(directory='cuda_standalone', compile=True, run=True)
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
++
++class CUDAStandaloneConfigurationProfileGPU(Configuration):
++    name = 'CUDA standalone'
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False)
++        prefs['devices.cuda_standalone.profile'] = True
++        
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
++class CUDAStandaloneConfigurationProfileCPU(Configuration):
++    name = 'CUDA standalone'
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False)
++        prefs['devices.cuda_standalone.profile'] = 'blocking'
++        
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
+ 
+diff --git a/brian2cuda/tests/test_profiling.py b/brian2cuda/tests/test_profiling.py
+index 2cb1609..eb39b6a 100644
+--- a/brian2cuda/tests/test_profiling.py
++++ b/brian2cuda/tests/test_profiling.py
+@@ -56,7 +56,7 @@ def test_profile_error():
+ 
+     G = NeuronGroup(1, 'v:1', threshold='True')
+ 
+-    assert_raises(ValueError, run(defaultclock.dt, profile='error'))
++    assert_raises(ValueError, lambda: run(defaultclock.dt, profile='error'))
+ 
+ @attr('cuda_standalone', 'standalone-only')
+ @with_setup(teardown=reinit_devices)
+diff --git a/brian2cuda/tools/run_test_suite_on_current_state.sh b/brian2cuda/tools/run_test_suite_on_current_state.sh
+index f6bb584..0cdcf13 100755
+--- a/brian2cuda/tools/run_test_suite_on_current_state.sh
++++ b/brian2cuda/tools/run_test_suite_on_current_state.sh
+@@ -1,4 +1,4 @@
+-!/bin/bash
++#!/bin/bash
+ # arguments:
+ # $1: additional name for log_file
+ # $2: number of cores used for parallel compilation (make -j $2)
+@@ -38,5 +38,5 @@ git submodule update --init frozen_repos/brian2
+ git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "LOG_FILE"
+ git rev-parse HEAD 2>&1 | tee -a "LOG_FILE"
+ cd "brian2cuda/tools"
+-PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py -j"$J" 2>&1 | tee -a "$LOG_FILE"
++PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+ 
+diff --git a/dev/benchmarks/run_speed_tests.py b/dev/benchmarks/run_speed_tests.py
+index 8745fb7..2ac8750 100644
+--- a/dev/benchmarks/run_speed_tests.py
++++ b/dev/benchmarks/run_speed_tests.py
+@@ -28,18 +28,19 @@ from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationC
+ from create_readme import create_readme
+ 
+ prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+-prefs['devices.cuda_standalone.profile'] = True
+ 
+ configs = [# configuration                       project_directory
+           #(NumpyConfiguration,                  None),
+           #(WeaveConfiguration,                  None),
+           #(LocalConfiguration,                  None),
+           (CUDAStandaloneConfiguration,         'cuda_standalone'),
+-          (CPPStandaloneConfiguration,          'cpp_standalone'),
+-          (GeNNConfiguration,                   'GeNNworkspace'),
++          #(CUDAStandaloneConfigurationProfileGPU,         'cuda_standalone'),
++          #(CUDAStandaloneConfigurationProfileCPU,         'cuda_standalone'),
++          #(CPPStandaloneConfiguration,          'cpp_standalone'),
++          #(GeNNConfiguration,                   'GeNNworkspace'),
+           #(CPPStandaloneConfigurationOpenMP,    'cpp_standalone'),
+           #(GeNNConfigurationCPU,                'GeNNworkspace'),
+-          #(GeNNConfigurationOptimized,          'GeNNworkspace')
++          (GeNNConfigurationOptimized,          'GeNNworkspace')
+           ]
+ 
+ speed_tests = [# feature_test                     name                                  n_slice
+@@ -49,26 +50,26 @@ speed_tests = [# feature_test                     name
+                (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
+                (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
+ 
+-               (STDP,                                   'STDP',                                slice(None)         ),
+-               (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
+-               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
+-               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
+-               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
+-               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
+-
+-               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
+-               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
+-               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
+-               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
+-               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
+-
+-               (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
+-               (COBAHH,                                 'COBAHH',                              slice(None)         ),
+-               (Vogels,                                 'Vogels',                              slice(None)         ),
+-               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
+-
+-               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
+-               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
++               #(STDP,                                   'STDP',                                slice(None)         ),
++#               (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
++#               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
++#               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
++#               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
++#               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
++
++#               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
++#               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
++#               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
++#               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
++#               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
++#
++#               (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
++#               (COBAHH,                                 'COBAHH',                              slice(None)         ),
++#               (Vogels,                                 'Vogels',                              slice(None)         ),
++#               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
++#
++#               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
++#               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
+ ]
+ 
+ configurations = [config[0] for config in configs]
+@@ -123,9 +124,10 @@ try:
+                               speed_tests=[st],
+                               n_slice=sl,
+                               #n_slice=slice(0,2,None),
+-                              #run_twice=False,
++                              run_twice=False,
+                               verbose=True,
+-                              maximum_run_time=maximum_run_time)
++                              maximum_run_time=maximum_run_time,
++                              profile_only_active=False)
+         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
+         print("Running {} took {}.".format(name, diff))
+@@ -133,7 +135,7 @@ try:
+         savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
+         res.plot_all_tests(relative=True)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+-        res.plot_all_tests(profiling_minimum=0.15)
++        res.plot_all_tests(profiling_minimum=0.10)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+         if 3 != len(get_fignums()):
+             print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+@@ -160,7 +162,7 @@ try:
+         # run nvprof on n_range[2]
+         for conf, proj_dir in zip(configurations, project_dirs):
+             main_arg = ''
+-            if proj_dir in ['cuda_standalone', 'GeNNworkspace']:
++            if proj_dir == 'cuda_standalone':  #in ['cuda_standalone', 'GeNNworkspace']:
+                 if proj_dir == 'GeNNworkspace':
+                     main_arg = 'test {time} 1'.format(time=st.duration/second)
+                 ns = st.n_range[sl]
+@@ -170,7 +172,7 @@ try:
+                 print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
+                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
+                 if not isinstance(res, Exception) and runtime < max_runtime:
+-                    cmd = 'cd {proj_dir} && nvprof --log-file ../{log_file} ./main {arg}'.format(
++                    cmd = 'cd {proj_dir} && nvprof --profile-from-start-off --log-file ../{log_file} ./main {arg}'.format(
+                         proj_dir=proj_dir, arg=main_arg,
+                         log_file=os.path.join(prof_dir, 'nvprof_{st}_{conf}_{n}.log'.format(
+                             st=name, conf=conf_name, n=st.n_range[idx])))
+diff --git a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+index 5776588..5827061 100644
+--- a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes two further modifications: 
++This version includes two further modifications:
+ traces in neurons and multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_multipost_standalone_cpp.py b/examples/STDP_multipost_standalone_cpp.py
+index 2cec4ae..a43459f 100644
+--- a/examples/STDP_multipost_standalone_cpp.py
++++ b/examples/STDP_multipost_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes a further modification: 
++This version includes a further modification:
+ multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_neuronaltraces_standalone_cpp.py b/examples/STDP_neuronaltraces_standalone_cpp.py
+index 4e0fc21..86590ca 100644
+--- a/examples/STDP_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_neuronaltraces_standalone_cpp.py
+@@ -15,7 +15,7 @@ import os
+ example_name = os.path.splitext(os.path.basename(__file__))[0]
+ 
+ from brian2 import *
+-set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=True)
++set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=False)
+ 
+ N = 1000
+ taum = 10*ms
+@@ -65,6 +65,8 @@ r_mon = PopulationRateMonitor(input_poisson)
+ 
+ run(100*second, report='text')
+ 
++print(profiling_summary())
++
+ subplot(311)
+ suptitle(example_name)
+ plot(S.w / gmax, '.k', ms=1)
+diff --git a/examples/cuba_cuda.py b/examples/cuba_cuda.py
+index 417f60d..eacbeae 100644
+--- a/examples/cuba_cuda.py
++++ b/examples/cuba_cuda.py
+@@ -37,11 +37,13 @@ Ci.connect('i>=3200', p=0.02)
+ 
+ s_mon = SpikeMonitor(P)
+ 
+-run(1 * second, report='text')
++run(10 * second, report='text')
+ 
+-plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
+-title('CUBA_CUDA')
+-xlabel('Time (ms)')
+-ylabel('Neuron index')
+-savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
++print(profiling_summary())
++
++#plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
++#title('CUBA_CUDA')
++#xlabel('Time (ms)')
++#ylabel('Neuron index')
++#savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
+ #show()
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67
++Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 0553cafeab49ea5403c0230411035df504d4db06
++Subproject commit 0553cafeab49ea5403c0230411035df504d4db06-dirty
+diff --git a/frozen_repos/genn b/frozen_repos/genn
+--- a/frozen_repos/genn
++++ b/frozen_repos/genn
+@@ -1 +1 @@
+-Subproject commit e01c85f18339249558d6e570ae976609dc972846
++Subproject commit e01c85f18339249558d6e570ae976609dc972846-dirty

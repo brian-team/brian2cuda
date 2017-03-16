@@ -1,0 +1,5 @@
+INFO: setting cudaDevice stuff took 0.290923 seconds
+INFO generating 13100000 randn every 131 clock cycles for neurongroup_stateupdater_codeobject
+Number of synapses: 99992664
+INFO: main_lines took 232.858081 seconds
+INFO: main function took 234.646394 seconds
