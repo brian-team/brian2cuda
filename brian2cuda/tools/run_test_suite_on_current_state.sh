@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 # arguments:
 # $1: additional name for log_file
 # $2: number of cores used for parallel compilation (make -j $2)
@@ -38,5 +38,5 @@ git submodule update --init frozen_repos/brian2
 git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "LOG_FILE"
 git rev-parse HEAD 2>&1 | tee -a "LOG_FILE"
 cd "brian2cuda/tools"
-PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py -j"$J" 2>&1 | tee -a "$LOG_FILE"
+PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
 
