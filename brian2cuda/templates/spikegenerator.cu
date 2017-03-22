@@ -7,15 +7,58 @@ int mem_per_thread(){
 __device__ unsigned int _last_element_checked = 0;
 {% endblock %}
 
+{% block kernel_call %}
+kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+		_N,
+		num_threads,
+		{{owner.clock.name}}.t[0],
+		{{owner.clock.name}}.dt[0],
+		///// HOST_PARAMETERS /////
+		%HOST_PARAMETERS%
+	);
 
-{% block maincode %}
-    {# USES_VARIABLES {_spikespace, N, t, dt, neuron_index, spike_time, period, _lastindex } #}
+cudaError_t status = cudaGetLastError();
+if (status != cudaSuccess)
+{
+	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+			__FILE__, __LINE__, cudaGetErrorString(status));
+	_dealloc_arrays();
+	exit(status);
+}
+{% endblock kernel_call %}
 
+
+{% block kernel %}
+    {# USES_VARIABLES {_spikespace, N, neuron_index, spike_time, period, _lastindex } #}
+
+__global__ void kernel_{{codeobj_name}}(
+	unsigned int _N,
+	unsigned int THREADS_PER_BLOCK,
+	double t,
+	double dt,
+	///// DEVICE_PARAMETERS /////
+	%DEVICE_PARAMETERS%
+	)
+{
+	{# USES_VARIABLES { N } #}
+	using namespace brian;
+
+	unsigned int tid = threadIdx.x;
+	unsigned int bid = blockIdx.x;
+	unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
+	unsigned int _vectorisation_idx = _idx;
+	///// KERNEL_VARIABLES /////
+	%KERNEL_VARIABLES%
+
+	if(_idx >= _N)
+	{
+		return;
+	}
 
     double _the_period = {{period}};
-    double padding_before = fmod({{t}}, _the_period);
-    double padding_after  = fmod({{t}}+{{dt}}, _the_period);
-    double epsilon        = 1e-3*{{dt}};
+    double padding_before = fmod(t, _the_period);
+    double padding_after  = fmod(t+dt, _the_period);
+    double epsilon        = 1e-3*dt;
 
     // We need some precomputed values that will be used during looping
     bool not_first_spike = ({{_lastindex}} > 0);
@@ -59,6 +102,7 @@ __device__ unsigned int _last_element_checked = 0;
     	{{_spikespace}}[spikespace_index] = neuron_id;
 		__syncthreads();
 	}
+}
 {% endblock %}
 
 {% block prepare_kernel_inner %}

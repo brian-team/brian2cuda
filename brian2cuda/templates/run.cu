@@ -11,33 +11,6 @@
 #include "{{name}}"
 {% endfor %}
 
-void _sync_clocks()
-{
-	using namespace brian;
-
-	{% if profile and profile == 'blocking'%}
-	_sync_clocks_timer_start= std::clock();
-	{% elif profile %}
-	cudaEventRecord(_sync_clocks_timer_start);
-	{% endif %}
-
-	{% for clock in clocks | sort(attribute='name') %}
-	cudaMemcpy(dev{{array_specs[clock.variables['timestep']]}}, {{array_specs[clock.variables['timestep']]}},
-			sizeof(uint64_t)*_num_{{array_specs[clock.variables['timestep']]}}, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev{{array_specs[clock.variables['dt']]}}, {{array_specs[clock.variables['dt']]}},
-			sizeof(double)*_num_{{array_specs[clock.variables['dt']]}}, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev{{array_specs[clock.variables['t']]}}, {{array_specs[clock.variables['t']]}},
-			sizeof(double)*_num_{{array_specs[clock.variables['t']]}}, cudaMemcpyHostToDevice);
-    	{% endfor %}
-
-	{% if profile and profile == 'blocking'%}
-	cudaDeviceSynchronize();
-	_sync_clocks_timer_stop = std::clock();
-	{% elif profile %}
-	cudaEventRecord(_sync_clocks_timer_stop);
-	{% endif %}
-}
-
 void brian_start()
 {
 	_init_arrays();
@@ -74,7 +47,6 @@ void {{name}}()
 
 {% macro h_file() %}
 
-void _sync_clocks();
 void brian_start();
 void brian_end();
 

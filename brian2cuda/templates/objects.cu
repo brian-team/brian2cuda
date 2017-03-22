@@ -123,8 +123,6 @@ __global__ void {{path.name}}_init(
 timer_type brian::{{codeobj}}_timer_start;
 timer_type brian::{{codeobj}}_timer_stop;
 {% endfor %}
-timer_type brian::_sync_clocks_timer_start;
-timer_type brian::_sync_clocks_timer_stop;
 timer_type brian::random_number_generation_timer_start;
 timer_type brian::random_number_generation_timer_stop;
 
@@ -132,7 +130,6 @@ timer_type brian::random_number_generation_timer_stop;
 {% for codeobj in active_objects %}
 double brian::{{codeobj}}_profiling_info = 0.0;
 {% endfor %}
-double brian::_sync_clocks_profiling_info = 0.0;
 double brian::random_number_generation_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
@@ -186,8 +183,6 @@ void _init_arrays()
 	cudaEventCreate(&{{codeobj}}_timer_start);
 	cudaEventCreate(&{{codeobj}}_timer_stop);
 	{% endfor %}
-	cudaEventCreate(&_sync_clocks_timer_start);
-	cudaEventCreate(&_sync_clocks_timer_stop);
 	cudaEventCreate(&random_number_generation_timer_start);
 	cudaEventCreate(&random_number_generation_timer_stop);
 	{% endif %}
@@ -357,7 +352,6 @@ void _write_arrays()
 	{% for obj in active_objects %}
 	outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
 	{% endfor %}
-	outfile_profiling_info << "_sync_clocks\t" << _sync_clocks_profiling_info << std::endl;
 	outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
 	outfile_profiling_info.close();
 	} else
@@ -399,8 +393,6 @@ void _dealloc_arrays()
 	cudaEventDestroy({{codeobj}}_timer_start);
 	cudaEventDestroy({{codeobj}}_timer_stop);
 	{% endfor %}
-	cudaEventDestroy(_sync_clocks_timer_start);
-	cudaEventDestroy(_sync_clocks_timer_stop);
 	cudaEventDestroy(random_number_generation_timer_start);
 	cudaEventDestroy(random_number_generation_timer_stop);
 	{% endif %}
@@ -567,8 +559,6 @@ typedef cudaEvent_t timer_type;
 extern timer_type {{codeobj}}_timer_start;
 extern timer_type {{codeobj}}_timer_stop;
 {% endfor %}
-extern timer_type _sync_clocks_timer_start;
-extern timer_type _sync_clocks_timer_stop;
 extern timer_type random_number_generation_timer_start;
 extern timer_type random_number_generation_timer_stop;
 
@@ -576,7 +566,6 @@ extern timer_type random_number_generation_timer_stop;
 {% for codeobj in active_objects %}
 extern double {{codeobj}}_profiling_info;
 {% endfor %}
-extern double _sync_clocks_profiling_info;
 extern double random_number_generation_profiling_info;
 
 //////////////// random numbers /////////////////
