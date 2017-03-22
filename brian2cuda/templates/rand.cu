@@ -17,39 +17,161 @@ void _run_random_number_generation()
 	cudaEventRecord(random_number_generation_timer_start);
 	{% endif %}
 
-	// Get the number of needed random numbers.
-	// curandGenerateNormal requires an even number for pseudorandom generators
+	// how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
+	static double mb_per_obj = 50;  // MB per codeobject and rand / randn
+	static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(float);
+
+	// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
 	{% for co in codeobj_with_rand %}
-	static unsigned int num_rand_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
+	static int num_per_cycle_rand_{{co.name}};
+	static int rand_interval_{{co.name}};
+	static int num_per_gen_rand_{{co.name}};
+	static int idx_rand_{{co.name}};
 	{% endfor %}
 	{% for co in codeobj_with_randn %}
-	static unsigned int num_randn_{{co.name}} = ({{co.owner._N}} % 2 == 0) ? {{co.owner._N}} : {{co.owner._N}} + 1;
+	static int num_per_cycle_randn_{{co.name}};
+	static int randn_interval_{{co.name}};
+	static int num_per_gen_randn_{{co.name}};
+	static int idx_randn_{{co.name}};
 	{% endfor %}
 
 	// Allocate device memory
 	static bool first_run = true;
 	if (first_run)
 	{
+
+		// check that we have enough memory available
+		size_t free_byte ;
+		size_t total_byte ;
+		cudaMemGetInfo(&free_byte, &total_byte);
+		size_t num_free_floats = free_byte / sizeof(float);
+
+
 		{% for co in codeobj_with_rand | sort(attribute='name') %}
-		cudaMalloc((void**)&dev_{{co.name}}_rand, sizeof(float)*num_rand_{{co.name}} * {{co.rand_calls}});
-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
+		num_per_cycle_rand_{{co.name}} = {{co.owner._N}} * {{co.rand_calls}};
+		rand_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_rand_{{co.name}});
+		num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * rand_interval_{{co.name}};
+		idx_rand_{{co.name}} = rand_interval_{{co.name}};
+
+		if (rand_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
+		{
+			// create max as many random numbers as will be needed in the entire simulation
+			num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * {{co.owner.clock.name}}.i_end;
+		}
+		if (num_per_gen_rand_{{co.name}} % 2 != 0)
+		{
+			// curandGenerateNormal requires an even number for pseudorandom generators
+			num_per_gen_rand_{{co.name}} = num_per_gen_rand_{{co.name}} + 1;
+		}
+
+		// make sure that we don't use more memory then available
+		// TODO: this checks per codeobject the number of generated floats against total available floats. But we neet to check all generated floats against available floats.
+		while (num_free_floats < num_per_gen_rand_{{co.name}})
+		{
+			printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
+			if (num_per_gen_rand_{{co.name}} < num_per_cycle_rand_{{co.name}})
+			{
+				if (num_free_floats < num_per_cycle_rand_{{co.name}})
+				{
+					printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
+					_dealloc_arrays();
+					exit(1);
+				}
+				else
+				{
+					num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}};
+					break;
+				}
+			}
+			num_per_gen_rand_{{co.name}} /= 2;
+		}
+		printf("INFO generating %i rand every %i clock cycles for {{co.name}}\n", num_per_gen_rand_{{co.name}}, rand_interval_{{co.name}});
+
+		cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(float)*num_per_gen_rand_{{co.name}});
 		{% endfor %}
+
 
 		{% for co in codeobj_with_randn | sort(attribute='name') %}
-		cudaMalloc((void**)&dev_{{co.name}}_randn, sizeof(float)*num_randn_{{co.name}} * {{co.randn_calls}});
-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
-		{% endfor %}
-		first_run = false;
+		// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
+		num_per_cycle_randn_{{co.name}} = {{co.owner._N}} * {{co.randn_calls}};
+		randn_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_randn_{{co.name}});
+		num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * randn_interval_{{co.name}};
+		idx_randn_{{co.name}} = randn_interval_{{co.name}};
 
+		if (randn_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
+		{
+			// create max as many random numbers as will be needed in the entire simulation
+			num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * {{co.owner.clock.name}}.i_end;
+		}
+		if (num_per_gen_randn_{{co.name}} % 2 != 0)
+		{
+			// curandGenerateNormal requires an even number for pseudorandom generators
+			num_per_gen_randn_{{co.name}} = num_per_gen_randn_{{co.name}} + 1;
+		}
+
+		// make sure that we don't use more memory then available
+		// TODO: this checks per codeobject the number of generated floats against total available floats. But we neet to check all generated floats against available floats.
+		while (num_free_floats < num_per_gen_randn_{{co.name}})
+		{
+			printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
+			if (num_per_gen_randn_{{co.name}} < num_per_cycle_randn_{{co.name}})
+			{
+				if (num_free_floats < num_per_cycle_randn_{{co.name}})
+				{
+					printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
+					_dealloc_arrays();
+					exit(1);
+				}
+				else
+				{
+					num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}};
+					break;
+				}
+			}
+			num_per_gen_randn_{{co.name}} /= 2;
+		}
+		printf("INFO generating %i randn every %i clock cycles for {{co.name}}\n", num_per_gen_randn_{{co.name}}, randn_interval_{{co.name}});
+
+		cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(float)*num_per_gen_randn_{{co.name}});
+		{% endfor %}
+
+		first_run = false;
 	}
 
 	// Generate random numbers
 	{% for co in codeobj_with_rand %}
-	curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand, num_rand_{{co.name}} * {{co.rand_calls}});
+	if (idx_rand_{{co.name}} == rand_interval_{{co.name}})
+	{
+		curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
+		dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
+		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		idx_rand_{{co.name}} = 1;
+	}
+	else
+	{
+		// move device pointer to next numbers
+		dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
+		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		idx_rand_{{co.name}} += 1;
+	}
 	{% endfor %}
 
 	{% for co in codeobj_with_randn %}
-	curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn, num_randn_{{co.name}} * {{co.randn_calls}}, 0, 1);
+	if (idx_randn_{{co.name}} == randn_interval_{{co.name}})
+	{
+		curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
+		dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
+		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
+		idx_randn_{{co.name}} = 1;
+	}
+	else
+	{
+		// move device pointer to next numbers
+		dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
+		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
+		idx_randn_{{co.name}} += 1;
+	}
 	{% endfor %}
 
 	{% if profile and profile == 'blocking'%}

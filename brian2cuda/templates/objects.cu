@@ -136,10 +136,12 @@ double brian::random_number_generation_profiling_info = 0.0;
 curandGenerator_t brian::random_float_generator;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 float* brian::dev_{{co.name}}_rand;
+float* brian::dev_{{co.name}}_rand_allocator;
 __device__ float* brian::_array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
 float* brian::dev_{{co.name}}_randn;
+float* brian::dev_{{co.name}}_randn_allocator;
 __device__ float* brian::_array_{{co.name}}_randn;
 {% endfor %}
 
@@ -398,10 +400,10 @@ void _dealloc_arrays()
 	{% endif %}
 
 	{% for co in codeobj_with_rand | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_rand);
+	cudaFree(dev_{{co.name}}_rand_allocator);
 	{% endfor %}
 	{% for co in codeobj_with_randn | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_randn);
+	cudaFree(dev_{{co.name}}_randn_allocator);
 	{% endfor %}
 
 	{% for S in synapses | sort(attribute='name') %}
@@ -573,10 +575,12 @@ extern curandGenerator_t random_float_generator;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 extern float* dev_{{co.name}}_rand;
+extern float* dev_{{co.name}}_rand_allocator;
 extern __device__ float* _array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
 extern float* dev_{{co.name}}_randn;
+extern float* dev_{{co.name}}_randn_allocator;
 extern __device__ float* _array_{{co.name}}_randn;
 {% endfor %}
 
