@@ -75,15 +75,7 @@ prefs.register_preferences(
                                            'CURAND_ORDERING_PSEUDO_BEST',
                                            'CURAND_ORDERING_PSEUDO_SEEDED',
                                            'CURAND_ORDERING_QUASI_DEFAULT'],
-        default=False),  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
-
-    profile=BrianPreference(
-        docs='''Preference for collecting profiling information. This preference overwrites the `profile` argument in
-            `run()` and `network_run()`. If True, GPU time is collected per codeobject using cudaEvents.
-            If 'blocking', CPU times - including kernel execution - are collected per codeobject, using `std::clock()` and
-            `cudaDeviceSynchronize()` after each codeobject. If False, no profiling info is collected.''',
-        validator=lambda v: v is None or isinstance(v, bool) or (isinstance(v, basestring) and v=='blocking'),
-        default=None)
+        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
 )
 
 
@@ -346,6 +338,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_codeobj_source(self, writer):
         #check how many random numbers are needed per step
         for code_object in self.code_objects.itervalues():
+            # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
             if num_occurences_rand > 0:
@@ -587,7 +580,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              with_output=True,
+              profile=None, with_output=True,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
               run_args=None, direct_call=True, **kwds):
@@ -659,7 +652,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 else:
                     msg += "Unknown keyword argument '%s'. " % kwd
             raise TypeError(msg)
-    
+
+        if not profile is None:
+            raise TypeError("The profile argument has to be set in `set_device()`, not in `device.build()`.")
+
         if additional_source_files is None:
             additional_source_files = []
         if additional_header_files is None:
@@ -718,20 +714,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.run(directory, with_output, run_args)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=None, level=0, **kwds):
+                    namespace=None, profile=True, level=0, **kwds):
 
-        if not prefs.devices.cuda_standalone.profile is None:
-            self.profile = prefs.devices.cuda_standalone.profile
-            if not profile is None:
-                logger.warn("Got `profile` argumtent in `network_run` and `prefs.devices.cuda_standalone.profile` set. "
-                            "Ignoring the `network_run` argument.")
-        elif not profile is None:
-            if not isinstance(profile, (bool, basestring)) or (isinstance(profile, basestring) and profile != 'blocking'):
-                raise ValueError("network_run got an unexpected value for `profile`. It must be a bool or "
-                                 "'blocking'. Got {} ({}) instead.".format(profile, type(profile)))
+        if not isinstance(profile, bool) or not profile:
+            raise TypeError("The profile argument has to be set in `set_device()`, not in `run()`")
+
+        if 'profile' in self.build_options:
+            profile = self.build_options.pop('profile')
+            assert 'profile' not in self.build_options
+            if not isinstance(profile, bool) and not profile == 'blocking':
+                raise TypeError("Unknown profile argument in `set_device()`. Has to be bool or 'blocking'.")
             self.profile = profile
         else:
-            self.profile = False  # the default
+            self.profile = False  # default
 
         ###################################################
         ### This part is copied from CPPStandaoneDevice ###
