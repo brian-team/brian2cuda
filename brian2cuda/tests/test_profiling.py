@@ -51,7 +51,6 @@ def test_profile_False():
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_profile_in_run_raises():
-    assert_raises(TypeError, lambda: set_device('cuda_standalone', profile='error'))
     set_device('cuda_standalone', directory=None, build_on_run=False)
 
     G = NeuronGroup(1, 'v:1', threshold='True')
