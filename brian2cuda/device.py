@@ -535,7 +535,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         )
         writer.write('run.*', run_tmp)
         
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads, disable_asserts=False):
         nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
         gpu_arch_flags = ['']
         disable_warnings = False
@@ -575,12 +575,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 nvcc_optimization_flags=nvcc_optimization_flags,
                 gpu_arch_flags=gpu_arch_flags,
                 disable_warnings=disable_warnings,
+                disable_asserts=disable_asserts,
                 rm_cmd=rm_cmd)
             writer.write('makefile', makefile_tmp)
 
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              profile=None, with_output=True,
+              profile=None, with_output=True, disable_asserts=False,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
               run_args=None, direct_call=True, **kwds):
@@ -656,6 +657,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if not profile is None:
             raise TypeError("The profile argument has to be set in `set_device()`, not in `device.build()`.")
 
+        if debug and disable_asserts:
+            logger.warn("You have disabled asserts in debug mode. Are you sure this is what you wanted to do?")
+
         if additional_source_files is None:
             additional_source_files = []
         if additional_header_files is None:
@@ -706,7 +710,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.source_files.extend(additional_source_files)
         writer.header_files.extend(additional_header_files)
         
-        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0)
+        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
         
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
@@ -716,7 +720,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=True, level=0, **kwds):
 
-        if not isinstance(profile, bool) or not profile:
+        if not isinstance(profile, bool) or not profile:  # everything but True
             raise TypeError("The profile argument has to be set in `set_device()`, not in `run()`")
 
         if 'profile' in self.build_options:

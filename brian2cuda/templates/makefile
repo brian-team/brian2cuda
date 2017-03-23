@@ -4,7 +4,7 @@ OBJS_CU  = ${SRCS_CU:.cu=.o}
 CC = @nvcc
 DEBUG = -g -G -DTHRUST_DEBUG
 OPTIMISATIONFLAGS = {{ nvcc_optimization_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
-NVCCFLAGS = {% if disable_warnings %}-w{% endif %} -I.
+NVCCFLAGS = {% if disable_warnings %}-w{% endif %} {% if disable_asserts %}-DNDEBUG{% endif %} -I. 
 GPU_ARCH_FLAGS = {{ gpu_arch_flags }}
 LFLAGS = -lcurand
 
