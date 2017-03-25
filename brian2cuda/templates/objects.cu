@@ -96,7 +96,9 @@ bool brian::{{path.name}}_scalar_delay;
 
 unsigned int brian::num_parallel_blocks;
 unsigned int brian::max_threads_per_block;
+unsigned int brian::max_threads_per_sm;
 unsigned int brian::max_shared_mem_size;
+unsigned int brian::num_threads_per_warp;
 
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
@@ -155,7 +157,9 @@ void _init_arrays()
 
 	num_parallel_blocks = props.multiProcessorCount * {{multiplier}};
 	max_threads_per_block = props.maxThreadsPerBlock;
+	max_threads_per_sm = props.maxThreadsPerMultiProcessor;
 	max_shared_mem_size = props.sharedMemPerBlock;
+	num_threads_per_warp = props.warpSize;
 	
 	curandCreateGenerator(&random_float_generator, {{curand_generator_type}});
 	{% if curand_generator_ordering %}
@@ -587,7 +591,9 @@ extern __device__ float* _array_{{co.name}}_randn;
 //CUDA
 extern unsigned int num_parallel_blocks;
 extern unsigned int max_threads_per_block;
+extern unsigned int max_threads_per_sm;
 extern unsigned int max_shared_mem_size;
+extern unsigned int num_threads_per_warp;
 
 }
 

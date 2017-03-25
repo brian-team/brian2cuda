@@ -92,19 +92,41 @@ void _run_{{codeobj_name}}()
 	{% endblock %}
 
 	{% block prepare_kernel %}
-	static unsigned int num_threads, num_blocks;
+	static int num_threads, num_blocks;
 	static bool first_run = true;
 	if (first_run)
 	{
 		{% block prepare_kernel_inner %}
 		// get number of blocks and threads
+		{% if calc_occupancy %}
+		int min_num_threads; // The minimum grid size needed to achieve the
+							 // maximum occupancy for a full device launch
+
+		cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
+				kernel_{{codeobj_name}}, 0, 0);  // last args: dynamicSMemSize, blockSizeLimit
+
+		// Round up according to array size
+		num_blocks = (_N + num_threads - 1) / num_threads;
+		{% else %}
 		num_blocks = num_parallel_blocks;
 		while(num_blocks * max_threads_per_block < _N)
 		{
 			num_blocks *= 2;
 		}
 		num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
+		{% endif %}
 		{% endblock prepare_kernel_inner %}
+
+		{% block occupancy %}
+		// calculate theoretical occupancy
+		int max_active_blocks;
+		cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+				kernel_{{codeobj_name}}, num_threads, 0);
+
+		float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
+		                  (float)(max_threads_per_sm / num_threads_per_warp);
+		{% endblock occupancy %}
+
 
 		// check if we have enough ressources to call kernel with given number of blocks and threads
 		struct cudaFuncAttributes funcAttrib;
@@ -120,6 +142,17 @@ void _run_{{codeobj_name}}()
 					"a total of %i bytes of user-allocated constant memory)\n",
 					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
 					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
+		}
+		else
+		{
+			printf("INFO calling kernel_{{codeobj_name}} with %u blocks and %u threads. "
+					"Kernel needs %i registers per block, %i bytes of statically-allocated "
+					"shared memory per block, %i bytes of local memory per thread and "
+					"a total of %i bytes of user-allocated constant memory.{% if calc_occupancy %} "
+					"Theoretical occupancy is %f.{% endif %}\n",
+					num_blocks, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
+					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes{% if calc_occupancy %},occupancy{%endif%});
+					
 		}
 		first_run = false;
 	}

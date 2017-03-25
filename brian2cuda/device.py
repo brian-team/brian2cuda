@@ -63,6 +63,13 @@ prefs.register_preferences(
         validator=lambda v: isinstance(v, bool),
         default=False),
 
+    calc_occupancy=BrianPreference(
+        docs='''
+        Weather or not to use cuda occupancy api to decide of num_threads and num_blocks.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.
             Setting the generator type automatically resets the generator ordering
@@ -183,6 +190,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         template_kwds["launch_bounds"] = prefs["devices.cuda_standalone.launch_bounds"]
         template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]
+        template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,

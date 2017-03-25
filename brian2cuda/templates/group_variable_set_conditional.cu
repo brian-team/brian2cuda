@@ -71,15 +71,37 @@ void _run_{{codeobj_name}}()
 	///// CONSTANTS ///////////
 	%CONSTANTS%
 
-	static unsigned int num_threads, num_blocks;
+	static int num_threads, num_blocks;
 	static bool first_run = true;
 	if (first_run)
 	{
 		// get number of blocks and threads
-		// TODO: use CUDA occupancy API to get optimal num threads/blocks
-		// https://devblogs.nvidia.com/parallelforall/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/
-		num_blocks = ceil(_N / (double)max_threads_per_block);
-		num_threads = max_threads_per_block;
+		{% if calc_occupancy %}
+		int min_num_threads; // The minimum grid size needed to achieve the
+							 // maximum occupancy for a full device launch
+
+		cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
+				kernel_{{codeobj_name}}, 0, 0);  // last args: dynamicSMemSize, blockSizeLimit
+
+		// Round up according to array size
+		num_blocks = (_N + num_threads - 1) / num_threads;
+
+		// calculate theoretical occupancy
+		int max_active_blocks;
+		cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+				kernel_{{codeobj_name}}, num_threads, 0);
+
+		float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
+		                  (float)(max_threads_per_sm / num_threads_per_warp);
+
+		{% else %}
+		num_blocks = num_parallel_blocks;
+		while(num_blocks * max_threads_per_block < _N)
+		{
+			num_blocks *= 2;
+		}
+		num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
+		{% endif %}
 
 		// check if we have enough ressources to call kernel with given number of blocks and threads
 		struct cudaFuncAttributes funcAttrib;
@@ -94,6 +116,15 @@ void _run_{{codeobj_name}}()
 					"shared memory per block, %i bytes of local memory per thread and "
 					"a total of %i bytes of user-allocated constant memory)\n",
 					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
+					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
+		}
+		else
+		{
+			printf("INFO calling kernel_{{codeobj_name}} with %u blocks and %u threads. "
+					"Kernel needs %i registers per block, %i bytes of statically-allocated "
+					"shared memory per block, %i bytes of local memory per thread and "
+					"a total of %i bytes of user-allocated constant memory\n",
+					num_blocks, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
 					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
 		}
 		first_run = false;

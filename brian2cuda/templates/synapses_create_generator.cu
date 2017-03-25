@@ -17,6 +17,9 @@
 {% block prepare_kernel %}
 {% endblock %}
 
+{% block occupancy %}
+{% endblock %}
+
 {% block define_N %}
 {% endblock %}
 
