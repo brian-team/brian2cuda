@@ -11,7 +11,7 @@
 {% block kernel %}
 
 __global__ void
-{% if launch_bounds %}
+{% if launch_bounds or syn_launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
