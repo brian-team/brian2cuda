@@ -10,7 +10,11 @@
 
 {% block kernel %}
 
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	unsigned int bid_offset,
 	unsigned int timestep,
 	unsigned int THREADS_PER_BLOCK,

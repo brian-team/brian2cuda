@@ -75,7 +75,11 @@ if (_num__array_{{owner.name}}__indices > 0)
 {% endblock %}
 
 {% block kernel %}
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	int _num_indices,
 	int32_t* indices,
 	int current_iteration,

@@ -22,7 +22,11 @@ __global__ void _run_{{codeobj_name}}_advance_kernel()
 		tid);
 }
 
-__global__ void _run_{{codeobj_name}}_push_kernel(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+_run_{{codeobj_name}}_push_kernel(
 	unsigned int neurongroup_size,
 	unsigned int _num_blocks,
 	unsigned int _num_threads,

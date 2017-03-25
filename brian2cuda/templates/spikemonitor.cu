@@ -50,7 +50,11 @@ __global__ void _run_{{codeobj_name}}_init()
 	{% endfor %}
 }
 
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	unsigned int neurongroup_N,
 	int32_t* count,
 	// DEVICE_PARAMETERS

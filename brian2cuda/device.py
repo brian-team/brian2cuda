@@ -49,6 +49,13 @@ prefs.register_preferences(
         ''',
         ),
 
+    launch_bounds=BrianPreference(
+        docs='''
+        Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.
             Setting the generator type automatically resets the generator ordering
@@ -166,6 +173,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
+        template_kwds["launch_bounds"] = prefs["devices.cuda_standalone.launch_bounds"]
+        template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,

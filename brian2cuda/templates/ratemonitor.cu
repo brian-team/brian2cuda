@@ -41,7 +41,11 @@ if (status != cudaSuccess)
 {% endblock %}
 
 {% block kernel %}
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	int32_t current_iteration,
 	double* ratemonitor_rate,
 	double* ratemonitor_t,
