@@ -2,6 +2,7 @@ import os
 import shutil
 import glob
 import subprocess
+import sys
 
 # run tests without X-server
 import matplotlib
@@ -20,26 +21,47 @@ from brian2.tests.features.base import *
 from brian2.tests.features.base import results
 
 import brian2cuda
-from brian2cuda.tests.features.cuda_configuration import CUDAStandaloneConfiguration
+from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfiguration,
+                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPI,
+                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,
+                                                          CUDAStandaloneConfiguration2BlocksPerSM,
+                                                          CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds,
+                                                          CUDAStandaloneConfigurationSynLaunchBoundsOccup,
+                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup,
+                                                          CUDAStandaloneConfigurationProfileGPU,
+                                                          CUDAStandaloneConfigurationProfileCPU)
 from brian2cuda.tests.features.speed import *
 
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
 from create_readme import create_readme
 
-prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
-prefs['devices.cuda_standalone.profile'] = True
+assert len(sys.argv)<= 2, 'Only one command line argument supported! Got {}'.format(len(sys.argv)-1)
+if len(sys.argv) == 2:
+    additional_dir_name = '_' + sys.argv[1]
+else:
+    additional_dir_name = ''
 
-configs = [# configuration                       project_directory
-          #(NumpyConfiguration,                  None),
-          #(WeaveConfiguration,                  None),
-          #(LocalConfiguration,                  None),
-          (CUDAStandaloneConfiguration,         'cuda_standalone'),
-          (CPPStandaloneConfiguration,          'cpp_standalone'),
-          (GeNNConfiguration,                   'GeNNworkspace'),
-          #(CPPStandaloneConfigurationOpenMP,    'cpp_standalone'),
-          #(GeNNConfigurationCPU,                'GeNNworkspace'),
-          #(GeNNConfigurationOptimized,          'GeNNworkspace')
+prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+
+configs = [# configuration                          project_directory
+          #(NumpyConfiguration,                     None),
+          #(WeaveConfiguration,                     None),
+          #(LocalConfiguration,                     None),
+          #(CUDAStandaloneConfiguration,             'cuda_standalone'),
+          (CUDAStandaloneConfigurationUseCudaOccupancyAPI,      'cuda_standalone'),
+          #(CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
+          #(CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
+          #(CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
+          (CUDAStandaloneConfigurationSynLaunchBoundsOccup,     'cuda_standalone'),
+          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup, 'cuda_standalone'),
+          #(CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
+          #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
+          #(CPPStandaloneConfiguration,              'cpp_standalone'),
+          #(GeNNConfiguration,                       'GeNNworkspace'),
+          #(CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+          #(GeNNConfigurationCPU,                    'GeNNworkspace'),
+          (GeNNConfigurationOptimized,              'GeNNworkspace')
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
@@ -83,13 +105,13 @@ for proj_dir in project_dirs:
         if first_i != last_i:
             print("WARNING there are multiple configurations using {d} as project "
                   "directory. Profiling and logfiles will only be saved for the last one {c}.".format(
-                  d=proj_dir, c=configurations[last_idx]))
+                  d=proj_dir, c=configurations[last_i].__name__))
         last_idx[proj_dir] = last_i
 
 time_stemp = time.time()
 date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y_%m_%d')
 
-directory = 'results_{}'.format(date_str)
+directory = 'results_{}{}'.format(date_str, additional_dir_name)
 if os.path.exists(directory):
     new_dir = directory + '_bak_' + str(int(time.time()))
     print("Directory with name `{}` already exists. Renaming it to `{}`.".format(directory, new_dir))
@@ -170,7 +192,7 @@ try:
                 print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
                 if not isinstance(res, Exception) and runtime < max_runtime:
-                    cmd = 'cd {proj_dir} && nvprof --log-file ../{log_file} ./main {arg}'.format(
+                    cmd = 'cd {proj_dir} && nvprof --profile-from-start-off --log-file ../{log_file} ./main {arg}'.format(
                         proj_dir=proj_dir, arg=main_arg,
                         log_file=os.path.join(prof_dir, 'nvprof_{st}_{conf}_{n}.log'.format(
                             st=name, conf=conf_name, n=st.n_range[idx])))
