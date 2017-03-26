@@ -21,8 +21,8 @@ if (status != cudaSuccess)
 	_dealloc_arrays();
 	exit(status);
 }
-static int num_blocks = 1;
-static int num_threads = 1;
+num_blocks = 1;
+num_threads = 1;
 {% endblock prepare_kernel_inner %}
 
 

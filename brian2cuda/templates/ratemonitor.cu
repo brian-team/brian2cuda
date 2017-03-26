@@ -19,8 +19,8 @@ int num_iterations = {{owner.clock.name}}.i_end;
 unsigned int size_till_now = dev{{_dynamic_t}}.size();
 dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
 dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
-static int num_threads = 1;
-static int num_blocks = 1;
+num_threads = 1;
+num_blocks = 1;
 {% endblock %}
 
 {% block kernel_call %}
