@@ -143,6 +143,8 @@ void _run_{{codeobj_name}}()
 					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
 					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
 		}
+		{% block extra_info_msg %}
+		{% endblock %}
 		else
 		{
 			printf("INFO calling kernel_{{codeobj_name}} with %u blocks and %u threads. "

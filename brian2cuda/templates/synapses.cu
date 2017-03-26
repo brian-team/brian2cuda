@@ -122,28 +122,40 @@ num_loops = num_parallel_blocks;
 {% endif %}
 {% endblock prepare_kernel_inner %}
 
+{% block extra_info_msg %}
+else if ({{pathway.name}}_max_size <= 0)
+{
+	printf("INFO there are no synapses in the {{pathway.name}} pathway. Skipping synapses_push and synapses kernels.\n");
+}
+{% endblock %}
+
 {% block kernel_call %}
 {% set eventspace_variable = pathway.variables[pathway.eventspace_name] %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
+// TODO add INFO print when we have 0 synapses
+if ({{pathway.name}}_max_size > 0)
 {
-	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-		bid_offset,
-		{{owner.clock.name}}.timestep[0],
-		num_threads,
-		dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
-		_num_{{_eventspace}}-1,
-		%HOST_PARAMETERS%
-	);
-}
+	// only call kernel if we have synapses (otherwise we skipped the push kernel)
+	for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
+	{
+		kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+			bid_offset,
+			{{owner.clock.name}}.timestep[0],
+			num_threads,
+			dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
+			_num_{{_eventspace}}-1,
+			%HOST_PARAMETERS%
+		);
+	}
 
-cudaError_t status = cudaGetLastError();
-if (status != cudaSuccess)
-{
-	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-			__FILE__, __LINE__, cudaGetErrorString(status));
-	_dealloc_arrays();
-	exit(status);
+	cudaError_t status = cudaGetLastError();
+	if (status != cudaSuccess)
+	{
+		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
+				__FILE__, __LINE__, cudaGetErrorString(status));
+		_dealloc_arrays();
+		exit(status);
+	}
 }
 {% endblock kernel_call %}
 
