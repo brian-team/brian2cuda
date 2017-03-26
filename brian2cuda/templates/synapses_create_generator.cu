@@ -52,8 +52,8 @@
 	// NOTE: _array_%CODEOBJ_NAME%_rand is NOT an array
 	// but an instance of CurandBuffer, which overloads the operator[], which then just
 	// returns the next random number in the buffer, ignoring the argument passed to operator[]
-	CurandBuffer _array_%CODEOBJ_NAME%_rand(&random_float_generator, RAND);
-	CurandBuffer _array_%CODEOBJ_NAME%_randn(&random_float_generator, RANDN);
+	CurandBuffer<randomNumber_t> _array_%CODEOBJ_NAME%_rand(&curand_generator, RAND);
+	CurandBuffer<randomNumber_t> _array_%CODEOBJ_NAME%_randn(&curand_generator, RANDN);
 
 	int _raw_pre_idx, _raw_post_idx;
 	const int _vectorisation_idx = -1;

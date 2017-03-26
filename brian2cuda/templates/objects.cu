@@ -135,16 +135,16 @@ double brian::{{codeobj}}_profiling_info = 0.0;
 double brian::random_number_generation_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
-curandGenerator_t brian::random_float_generator;
+curandGenerator_t brian::curand_generator;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-float* brian::dev_{{co.name}}_rand;
-float* brian::dev_{{co.name}}_rand_allocator;
-__device__ float* brian::_array_{{co.name}}_rand;
+randomNumber_t* brian::dev_{{co.name}}_rand;
+randomNumber_t* brian::dev_{{co.name}}_rand_allocator;
+__device__ randomNumber_t* brian::_array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-float* brian::dev_{{co.name}}_randn;
-float* brian::dev_{{co.name}}_randn_allocator;
-__device__ float* brian::_array_{{co.name}}_randn;
+randomNumber_t* brian::dev_{{co.name}}_randn;
+randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
+__device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 {% endfor %}
 
 void _init_arrays()
@@ -161,12 +161,12 @@ void _init_arrays()
 	max_shared_mem_size = props.sharedMemPerBlock;
 	num_threads_per_warp = props.warpSize;
 	
-	curandCreateGenerator(&random_float_generator, {{curand_generator_type}});
+	curandCreateGenerator(&curand_generator, {{curand_generator_type}});
 	{% if curand_generator_ordering %}
-	curandSetGeneratorOrdering(random_float_generator, {{curand_generator_ordering}});
+	curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
 	{% endif %}
 	// These random seeds might be overwritten in main.cu
-	curandSetPseudoRandomGeneratorSeed(random_float_generator, time(0));
+	curandSetPseudoRandomGeneratorSeed(curand_generator, time(0));
 
 	{% for S in synapses | sort(attribute='name') %}
 	{% for path in S._pathways | sort(attribute='name') %}
@@ -466,6 +466,15 @@ void _dealloc_arrays()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 {% macro h_file() %}
+#include <ctime>
+// typedefs need to be outside the include guards to
+// be visible to all files including objects.h
+{% if not profile or profile == 'blocking' %}
+typedef std::clock_t timer_type;
+{% else %}
+typedef cudaEvent_t timer_type;
+{% endif %}
+typedef {{curand_float_type}} randomNumber_t;  // random number type
 
 #ifndef _BRIAN_OBJECTS_H
 #define _BRIAN_OBJECTS_H
@@ -475,7 +484,6 @@ void _dealloc_arrays()
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "network.h"
-#include <ctime>
 
 #include <thrust/device_vector.h>
 #include <curand.h>
@@ -556,11 +564,6 @@ extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 
 // timers for profiling
-{% if not profile or profile == 'blocking' %}
-typedef std::clock_t timer_type;
-{% else %}
-typedef cudaEvent_t timer_type;
-{% endif %}
 {% for codeobj in active_objects %}
 extern timer_type {{codeobj}}_timer_start;
 extern timer_type {{codeobj}}_timer_stop;
@@ -575,17 +578,17 @@ extern double {{codeobj}}_profiling_info;
 extern double random_number_generation_profiling_info;
 
 //////////////// random numbers /////////////////
-extern curandGenerator_t random_float_generator;
+extern curandGenerator_t curand_generator;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-extern float* dev_{{co.name}}_rand;
-extern float* dev_{{co.name}}_rand_allocator;
-extern __device__ float* _array_{{co.name}}_rand;
+extern randomNumber_t* dev_{{co.name}}_rand;
+extern randomNumber_t* dev_{{co.name}}_rand_allocator;
+extern __device__ randomNumber_t* _array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-extern float* dev_{{co.name}}_randn;
-extern float* dev_{{co.name}}_randn_allocator;
-extern __device__ float* _array_{{co.name}}_randn;
+extern randomNumber_t* dev_{{co.name}}_randn;
+extern randomNumber_t* dev_{{co.name}}_randn_allocator;
+extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 {% endfor %}
 
 //CUDA

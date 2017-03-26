@@ -49,6 +49,13 @@ prefs.register_preferences(
         ''',
         ),
 
+    curand_float_type=BrianPreference(
+        docs='''
+        Floating point type of generated random numbers (float/double).
+        ''',
+        validator=lambda v: v in ['float', 'double'],
+        default='float'),
+
     launch_bounds=BrianPreference(
         docs='''
         Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
@@ -237,6 +244,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         multiplier=multiplier,
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
+                        curand_float_type=prefs['devices.cuda_standalone.curand_float_type'],
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
                         active_objects=self.active_objects,
@@ -339,9 +347,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='seed':
                 seed = args
                 if seed is not None:
-                    main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator, {seed!r}ULL);'.format(seed=seed))
+                    main_lines.append('curandSetPseudoRandomGeneratorSeed(curand_generator, {seed!r}ULL);'.format(seed=seed))
                     # generator offset needs to be reset to its default (=0)
-                    main_lines.append('curandSetGeneratorOffset(random_float_generator, 0ULL);')
+                    main_lines.append('curandSetGeneratorOffset(curand_generator, 0ULL);')
                 # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
@@ -404,29 +412,35 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for k, v in codeobj.variables.iteritems():
                 #code objects which only run once
                 if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    additional_code.append('''
+                    code_snippet='''
                         //genenerate an array of random numbers on the device
-                        float* dev_array_randn;
-                        cudaMalloc((void**)&dev_array_randn, sizeof(float)*''' + number_elements + ''' * ''' + str(codeobj.randn_calls) + ''');
+                        {dtype}* dev_array_randn;
+                        cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
                         if(!dev_array_randn)
-                        {
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''');
-                        }
-                        curandGenerateNormal(random_float_generator, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
-                    line = "float* _array_{name}_randn".format(name=codeobj.name)
+                        {{
+                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
+                        }}
+                        curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                    additional_code.append(code_snippet)
+                    line = "{dtype}* _array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_randn")
                 elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    additional_code.append('''
+                    code_snippet = '''
                         //genenerate an array of random numbers on the device
-                        float* dev_array_rand;
-                        cudaMalloc((void**)&dev_array_rand, sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
+                        {dtype}* dev_array_rand;
+                        cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
                         if(!dev_array_rand)
-                        {
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
-                        }
-                        curandGenerateUniform(random_float_generator, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
-                    line = "float* _array_{name}_rand".format(name=codeobj.name)
+                        {{
+                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
+                        }}
+                        curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                    additional_code.append(code_snippet)
+                    line = "{dtype}* _array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
                     host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
@@ -520,7 +534,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
-                                                           profile=self.profile)
+                                                           profile=self.profile,
+                                                           curand_float_type=prefs['devices.cuda_standalone.curand_float_type'])
         writer.write('rand.*', rand_tmp)
     
     def copy_source_files(self, writer, directory):
@@ -752,7 +767,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             profile = self.build_options.pop('profile')
             assert 'profile' not in self.build_options
             if not isinstance(profile, bool) and not profile == 'blocking':
-                raise TypeError("Unknown profile argument in `set_device()`. Has to be bool or 'blocking'.")
+                raise TypeError("Unknown profile argument in `set_device()`. Has to be bool or 'blocking'. "
+                                "Got {} ({})".format(profile, type(profile)))
             self.profile = profile
         else:
             self.profile = False  # default

@@ -19,7 +19,7 @@ void _run_random_number_generation()
 
 	// how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
 	static double mb_per_obj = 50;  // MB per codeobject and rand / randn
-	static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(float);
+	static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(randomNumber_t);
 
 	// Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
 	{% for co in codeobj_with_rand %}
@@ -44,7 +44,7 @@ void _run_random_number_generation()
 		size_t free_byte ;
 		size_t total_byte ;
 		cudaMemGetInfo(&free_byte, &total_byte);
-		size_t num_free_floats = free_byte / sizeof(float);
+		size_t num_free_floats = free_byte / sizeof(randomNumber_t);
 
 
 		{% for co in codeobj_with_rand | sort(attribute='name') %}
@@ -88,7 +88,7 @@ void _run_random_number_generation()
 		}
 		printf("INFO generating %i rand every %i clock cycles for {{co.name}}\n", num_per_gen_rand_{{co.name}}, rand_interval_{{co.name}});
 
-		cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(float)*num_per_gen_rand_{{co.name}});
+		cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(randomNumber_t)*num_per_gen_rand_{{co.name}});
 		{% endfor %}
 
 
@@ -133,7 +133,7 @@ void _run_random_number_generation()
 		}
 		printf("INFO generating %i randn every %i clock cycles for {{co.name}}\n", num_per_gen_randn_{{co.name}}, randn_interval_{{co.name}});
 
-		cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(float)*num_per_gen_randn_{{co.name}});
+		cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(randomNumber_t)*num_per_gen_randn_{{co.name}});
 		{% endfor %}
 
 		first_run = false;
@@ -143,16 +143,20 @@ void _run_random_number_generation()
 	{% for co in codeobj_with_rand %}
 	if (idx_rand_{{co.name}} == rand_interval_{{co.name}})
 	{
-		curandGenerateUniform(random_float_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
+		{% if curand_float_type == 'float' %}
+		curandGenerateUniform(curand_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
+		{% else %}
+		curandGenerateUniformDouble(curand_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
+		{% endif %}
 		dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(randomNumber_t*));
 		idx_rand_{{co.name}} = 1;
 	}
 	else
 	{
 		// move device pointer to next numbers
 		dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(float*));
+		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(randomNumber_t*));
 		idx_rand_{{co.name}} += 1;
 	}
 	{% endfor %}
@@ -160,16 +164,20 @@ void _run_random_number_generation()
 	{% for co in codeobj_with_randn %}
 	if (idx_randn_{{co.name}} == randn_interval_{{co.name}})
 	{
-		curandGenerateNormal(random_float_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
+		{% if curand_float_type == 'float' %}
+		curandGenerateNormal(curand_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
+		{% else %}
+		curandGenerateNormalDouble(curand_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
+		{% endif %}
 		dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
+		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(randomNumber_t*));
 		idx_randn_{{co.name}} = 1;
 	}
 	else
 	{
 		// move device pointer to next numbers
 		dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(float*));
+		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(randomNumber_t*));
 		idx_randn_{{co.name}} += 1;
 	}
 	{% endfor %}

@@ -11,8 +11,9 @@ enum ProbDistr
 	RANDN  // standard normal distribution with mean 0 and std 1
 };
 
-typedef float randomNumber_t;  // random number type
 
+template <class randomNumber_t>  // random number type
+// only float and double are supported as template types
 class CurandBuffer
 /* This class generates a fixed sized buffer of random numbers on a cuda device,
  * copies them to the host and whenever the operater[] is called from the host 
@@ -61,7 +62,7 @@ private:
 		// generate random numbers on device
 		if (distribution == RAND)
 		{
-			curandStatus_t status = curandGenerateUniform(*generator, dev_data, buffer_size);
+			curandStatus_t status = generateUniform(*generator, dev_data, buffer_size);
 			if (status != CURAND_STATUS_SUCCESS)
 			{
 				printf("ERROR generating random numbers in %s(%d):\n", __FILE__, __LINE__);
@@ -70,7 +71,7 @@ private:
 		}
 		else  // distribution == RANDN
 		{
-			curandStatus_t status = curandGenerateNormal(*generator, dev_data, buffer_size, 0, 1);
+			curandStatus_t status = generateNormal(*generator, dev_data, buffer_size, 0, 1);
 			if (status != CURAND_STATUS_SUCCESS)
 			{
 				printf("ERROR generating normal distributed random numbers in %s(%d):\n",
@@ -91,6 +92,19 @@ private:
 		current_idx = 0;
 	}
 
+	curandStatus_t generateUniform(curandGenerator_t generator, randomNumber_t *outputPtr, size_t num)
+	{
+		printf("ERROR curand can only generate random numbers as 'float' or 'double' types.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	curandStatus_t generateNormal(curandGenerator_t generator, randomNumber_t *outputPtr,
+			size_t n, randomNumber_t mean, randomNumber_t stddev)
+	{
+		printf("ERROR curand can only generate random numbers as 'float' or 'double' types.\n");
+		exit(EXIT_FAILURE);
+	}
+
 public:
 	CurandBuffer(curandGenerator_t* gen, ProbDistr distr)
 	{
@@ -109,7 +123,7 @@ public:
 			cudaError_t status = cudaFree(dev_data);
 			if (status != cudaSuccess)
 			{
-				printf("ERROR freeing device memory in %s(%d):\n",
+				printf("ERROR freeing device memory in %s(%d):%s\n",
 						__FILE__, __LINE__, cudaGetErrorString(status));
 				exit(EXIT_FAILURE);
 			}
@@ -127,5 +141,37 @@ public:
 		return number;
 	}
 };  // class CurandBuffer
+
+
+// define generator functions depending on curand float type
+// normal (RANDN)
+template <> inline
+curandStatus_t CurandBuffer<float>::generateNormal(curandGenerator_t generator,
+	    float *outputPtr, size_t n, float mean, float stddev)
+{
+	return curandGenerateNormal(generator, outputPtr, n, mean, stddev);
+}
+
+template <> inline
+curandStatus_t CurandBuffer<double>::generateNormal(curandGenerator_t generator,
+	    double *outputPtr, size_t n, double mean, double stddev)
+{
+	return curandGenerateNormalDouble(generator, outputPtr, n, mean, stddev);
+}
+
+// uniform (RAND)
+template <> inline
+curandStatus_t CurandBuffer<float>::generateUniform(curandGenerator_t generator,
+	    float *outputPtr, size_t num)
+{
+	return curandGenerateUniform(generator, outputPtr, num);
+}
+
+template <> inline
+curandStatus_t CurandBuffer<double>::generateUniform(curandGenerator_t generator,
+	    double *outputPtr, size_t num)
+{
+	return curandGenerateUniformDouble(generator, outputPtr, num);
+}
 
 #endif
