@@ -49,11 +49,11 @@
 	{{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
 	{{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
 
-	// NOTE: _array_%CODEOBJ_NAME%_rand is NOT an array
+	// NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
 	// but an instance of CurandBuffer, which overloads the operator[], which then just
 	// returns the next random number in the buffer, ignoring the argument passed to operator[]
-	CurandBuffer<randomNumber_t> _array_%CODEOBJ_NAME%_rand(&curand_generator, RAND);
-	CurandBuffer<randomNumber_t> _array_%CODEOBJ_NAME%_randn(&curand_generator, RANDN);
+	CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&curand_generator, RAND);
+	CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&curand_generator, RANDN);
 
 	int _raw_pre_idx, _raw_post_idx;
 	const int _vectorisation_idx = -1;

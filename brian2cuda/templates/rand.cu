@@ -149,16 +149,15 @@ void _run_random_number_generation()
 		curandGenerateUniformDouble(curand_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
 		{% endif %}
 		dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(randomNumber_t*));
 		idx_rand_{{co.name}} = 1;
 	}
 	else
 	{
 		// move device pointer to next numbers
 		dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
-		cudaMemcpyToSymbol(_array_{{co.name}}_rand, &dev_{{co.name}}_rand, sizeof(randomNumber_t*));
 		idx_rand_{{co.name}} += 1;
 	}
+	assert(dev_{{co.name}}_rand < dev_{{co.name}}_rand_allocator + num_per_gen_rand_{{co.name}});
 	{% endfor %}
 
 	{% for co in codeobj_with_randn %}
@@ -170,16 +169,15 @@ void _run_random_number_generation()
 		curandGenerateNormalDouble(curand_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
 		{% endif %}
 		dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(randomNumber_t*));
 		idx_randn_{{co.name}} = 1;
 	}
 	else
 	{
 		// move device pointer to next numbers
 		dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
-		cudaMemcpyToSymbol(_array_{{co.name}}_randn, &dev_{{co.name}}_randn, sizeof(randomNumber_t*));
 		idx_randn_{{co.name}} += 1;
 	}
+	assert(dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}});
 	{% endfor %}
 
 	{% if profile and profile == 'blocking'%}

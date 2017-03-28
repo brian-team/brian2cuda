@@ -424,8 +424,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
                                    curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
                     additional_code.append(code_snippet)
-                    line = "{dtype}* _array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
+                    line = "{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                                          name=codeobj.name))
                     host_parameters_lines.append("dev_array_randn")
                 elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     code_snippet = '''
@@ -440,8 +442,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
                                    curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
                     additional_code.append(code_snippet)
-                    line = "{dtype}* _array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
+                    line = "{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                                          name=codeobj.name))
                     host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
@@ -488,6 +492,22 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         except TypeError:
                             pass
                     
+            # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
+            # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
+            # TODO can we just include this in the k == '_python_rand' test above?
+            if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
+                host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
+                device_parameters_lines.append("{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                name=codeobj.name))
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                  name=codeobj.name))
+            if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
+                host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
+                device_parameters_lines.append("{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                name=codeobj.name))
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                  name=codeobj.name))
+
             # Sometimes an array is referred to by to different keys in our
             # dictionary -- make sure to never add a line twice
             for line in code_object_defs_lines:
