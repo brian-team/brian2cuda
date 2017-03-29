@@ -62,7 +62,7 @@ prefs.register_preferences(
         cudaMemset before thresholder kernel.
         ''',
         validator=lambda v: isinstance(v, bool),
-        default=False),
+        default=True),
 
     launch_bounds=BrianPreference(
         docs='''

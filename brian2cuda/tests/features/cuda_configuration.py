@@ -26,11 +26,11 @@ class CUDAStandaloneConfiguration(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfigurationOccupancyAPIThreadfence(Configuration):
-    name = 'CUDA standalone (using cuda occupancy API and __threadfence in thesholder)'
+class CUDAStandaloneConfigurationOccupancyAPINoThreadfence(Configuration):
+    name = 'CUDA standalone (using cuda occupancy API and reset eventspace with cudaMemset)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
-        prefs['devices.cuda_standalone.threshold_threadfence'] = True
+        prefs['devices.cuda_standalone.threshold_threadfence'] = False
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
