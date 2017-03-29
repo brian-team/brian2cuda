@@ -80,10 +80,10 @@ prefs.register_preferences(
 
     calc_occupancy=BrianPreference(
         docs='''
-        Weather or not to use cuda occupancy api to decide of num_threads and num_blocks.
+        Weather or not to use cuda occupancy api to choose num_threads and num_blocks.
         ''',
         validator=lambda v: isinstance(v, bool),
-        default=False),
+        default=True),
 
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.

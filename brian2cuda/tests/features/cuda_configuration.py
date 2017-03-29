@@ -26,8 +26,8 @@ class CUDAStandaloneConfiguration(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfigurationOccupancyAPINoThreadfence(Configuration):
-    name = 'CUDA standalone (using cuda occupancy API and reset eventspace with cudaMemset)'
+class CUDAStandaloneConfigurationNoThreadfence(Configuration):
+    name = 'CUDA standalone (reset eventspace with cudaMemset)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
         prefs['devices.cuda_standalone.threshold_threadfence'] = False
@@ -60,11 +60,11 @@ class CUDAStandaloneConfigurationCurandDouble(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfigurationUseCudaOccupancyAPI(Configuration):
-    name = 'CUDA standalone (using cuda occupancy API)'
+class CUDAStandaloneConfigurationNoCudaOccupancyAPI(Configuration):
+    name = 'CUDA standalone (not using cuda occupancy API)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
-        prefs['devices.cuda_standalone.calc_occupancy'] = True
+        prefs['devices.cuda_standalone.calc_occupancy'] = False
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
@@ -77,11 +77,11 @@ class CUDAStandaloneConfigurationUseCudaOccupancyAPI(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU(Configuration):
-    name = "CUDA standalone (using cuda occupancy API and profile='blocking')"
+class CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU(Configuration):
+    name = "CUDA standalone (not cuda occupancy API and profile='blocking')"
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False, profile='blocking')
-        prefs['devices.cuda_standalone.calc_occupancy'] = True
+        prefs['devices.cuda_standalone.calc_occupancy'] = False
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
@@ -129,12 +129,11 @@ class CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfigurationSynLaunchBoundsOccup(Configuration):
-    name = 'CUDA standalone (SYN __launch_bounds__, occup)'
+class CUDAStandaloneConfigurationSynLaunchBounds(Configuration):
+    name = 'CUDA standalone (SYN __launch_bounds__)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
         prefs['devices.cuda_standalone.syn_launch_bounds'] = True
-        prefs['devices.cuda_standalone.calc_occupancy'] = True
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
@@ -147,13 +146,12 @@ class CUDAStandaloneConfigurationSynLaunchBoundsOccup(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
-class CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup(Configuration):
-    name = 'CUDA standalone (2 bl/SM, SYN __launch_bounds__, occup)'
+class CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds(Configuration):
+    name = 'CUDA standalone (2 bl/SM, SYN __launch_bounds__)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False)
         prefs['devices.cuda_standalone.SM_multiplier'] = 2
         prefs['devices.cuda_standalone.syn_launch_bounds'] = True
-        prefs['devices.cuda_standalone.calc_occupancy'] = True
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
