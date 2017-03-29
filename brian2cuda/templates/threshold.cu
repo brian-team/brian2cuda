@@ -12,6 +12,15 @@
 	{#  Get the name of the array that stores these events (e.g. the spikespace array) #}
 	{% set _eventspace = get_array_name(eventspace_variable) %}
 
+	{% if threadfence %}
+	if (tid==0 && bid==0)
+	{
+		// reset eventspace counter to 0
+		{{_eventspace}}[_N] = 0;
+	}
+	__threadfence();
+	{% endif %}
+
 	///// scalar_code /////
 	{{scalar_code|autoindent}}
 
@@ -38,6 +47,8 @@
 
 {% block extra_maincode %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+{% if not threadfence %}
 // reset eventspace counter to 0
 cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
+{% endif %}
 {% endblock extra_maincode %}

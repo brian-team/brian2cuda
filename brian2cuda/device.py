@@ -56,6 +56,14 @@ prefs.register_preferences(
         validator=lambda v: v in ['float', 'double'],
         default='float'),
 
+    threshold_threadfence=BrianPreference(
+        docs='''
+        Weather or not to to reset eventspace counter in thresholder kernel using __threadfence() instead of
+        cudaMemset before thresholder kernel.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
     launch_bounds=BrianPreference(
         docs='''
         Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
@@ -157,6 +165,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
                 no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
+        if template_name == "threshold":
+            template_kwds["threadfence"] = prefs["devices.cuda_standalone.threshold_threadfence"]
         if template_name == "synapses":
             ##################################################################
             # This code is copied from CodeGenerator.translate() and CodeGenerator.array_read_write()
