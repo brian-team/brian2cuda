@@ -22,12 +22,15 @@ from brian2.tests.features.base import results
 
 import brian2cuda
 from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfiguration,
-                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPI,
-                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,
+                                                          CUDAStandaloneConfigurationNoAssert,
+                                                          CUDAStandaloneConfigurationExtraThresholdKernel,
+                                                          CUDAStandaloneConfigurationCurandDouble,
+                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPI,
+                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,
                                                           CUDAStandaloneConfiguration2BlocksPerSM,
                                                           CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds,
-                                                          CUDAStandaloneConfigurationSynLaunchBoundsOccup,
-                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup,
+                                                          CUDAStandaloneConfigurationSynLaunchBounds,
+                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds,
                                                           CUDAStandaloneConfigurationProfileGPU,
                                                           CUDAStandaloneConfigurationProfileCPU)
 from brian2cuda.tests.features.speed import *
@@ -45,52 +48,74 @@ else:
 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
 
 configs = [# configuration                          project_directory
-          #(NumpyConfiguration,                     None),
-          #(WeaveConfiguration,                     None),
-          #(LocalConfiguration,                     None),
-          #(CUDAStandaloneConfiguration,             'cuda_standalone'),
-          (CUDAStandaloneConfigurationUseCudaOccupancyAPI,      'cuda_standalone'),
-          #(CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
-          #(CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
-          #(CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
-          (CUDAStandaloneConfigurationSynLaunchBoundsOccup,     'cuda_standalone'),
-          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup, 'cuda_standalone'),
-          #(CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
-          #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
-          #(CPPStandaloneConfiguration,              'cpp_standalone'),
-          #(GeNNConfiguration,                       'GeNNworkspace'),
-          #(CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
-          #(GeNNConfigurationCPU,                    'GeNNworkspace'),
+          (NumpyConfiguration,                     None),
+          (WeaveConfiguration,                     None),
+          (LocalConfiguration,                     None),
+          (CUDAStandaloneConfiguration,             'cuda_standalone'),
+          (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
+          (CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
+          (CUDAStandaloneConfigurationNoThreadfence,  'cuda_standalone'),
+          (CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
+          (CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
+          (CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
+          (CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
+          (CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
+          (CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
+          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
+          (CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
+          (CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
+          (CPPStandaloneConfiguration,              'cpp_standalone'),
+          (GeNNConfiguration,                       'GeNNworkspace'),
+          (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+          (GeNNConfigurationCPU,                    'GeNNworkspace'),
           (GeNNConfigurationOptimized,              'GeNNworkspace')
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
-               (LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
-               (HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
 
-               (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
-               (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
+               (ThresholderOnlyPoissonLowRate,                  'ThresholderOnlyPoissonLowRate',                slice(None)         ),
+               (ThresholderOnlyPoissonMediumRate,               'ThresholderOnlyPoissonMediumRate',             slice(None)         ),
+               (ThresholderOnlyPoissonHighRate,                 'ThresholderOnlyPoissonHighRate',               slice(None)         ),
+               (ThresholderOnlyAlwaysSpiking,                   'ThresholderOnlyAlwaysSpiking',                 slice(None)         ),
 
-               (STDP,                                   'STDP',                                slice(None)         ),
-               (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
-               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
-               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
-               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
-               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
+               (BrunelHakimStateupdateOnlyDouble,               'BrunelHakimStateupdateOnlyDouble',             slice(None)         ),
+               (BrunelHakimStateupdateOnlyTriple,               'BrunelHakimStateupdateOnlyTriple',             slice(None)         ),
+               (BrunelHakimStateupdateOnly,                     'BrunelHakimStateupdateOnly',                   slice(None)         ),
+               (BrunelHakimNeuronsOnly,                         'BrunelHakimNeuronsOnly',                       slice(None)         ),
+               (BrunelHakimNeuronsOnlyNoXi,                     'BrunelHakimNeuronsOnlyNoXi',                   slice(None)         ),
+               (BrunelHakimNeuronsOnlyNoRand,                   'BrunelHakimNeuronsOnlyNoRand',                 slice(None)         ),
+               (BrunelHakimStateupdateThresholdOnly,            'BrunelHakimStateupdateThresholdOnly',          slice(None)         ),
+               (BrunelHakimStateupdateThresholdResetOnly,       'BrunelHakimStateupdateThresholdResetOnly',     slice(None)         ),
+               (BrunelHakimModelScalarDelayShort,               'BrunelHakimModelScalarDelayShort',             slice(None)         ),
+               (BrunelHakimModelScalarDelayNoSelfConnections,   'BrunelHakimModelScalarDelayNoSelfConnections', slice(None)         ),
+               (CUBA,                                           'CUBA',                                         slice(None)         ),
+               (COBAHH,                                         'COBAHH',                                       slice(None)         ),
+               (AdaptationOscillation,                          'AdaptationOscillation',                        slice(None)         ),
+               (Vogels,                                         'Vogels',                                       slice(None)         ),
+               (STDP,                                           'STDP',                                         slice(None)         ),
+               (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
+               (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
 
-               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
-               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
-               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
-               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
-               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
+               (VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
+               (SparseMediumRateSynapsesOnly,                   'SparseMediumRateSynapsesOnly',                 slice(None)         ),
+               (DenseMediumRateSynapsesOnly,                    'DenseMediumRateSynapsesOnly',                  slice(None)         ),
+               (SparseLowRateSynapsesOnly,                      'SparseLowRateSynapsesOnly',                    slice(None)         ),
+               (SparseHighRateSynapsesOnly,                     'SparseHighRateSynapsesOnly',                   slice(None)         ),
 
-               (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
-               (COBAHH,                                 'COBAHH',                              slice(None)         ),
-               (Vogels,                                 'Vogels',                              slice(None)         ),
-               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
+               (STDPNotEventDriven,                             'STDPNotEventDriven',                           slice(None)         ),
+               (STDPMultiPost,                                  'STDPMultiPost',                                slice(None)         ),
+               (STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
+               (STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
 
-               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
-               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
+               (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
+
+               (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
+               (HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
+               (VogelsWithSynapticDynamic,                      'VogelsWithSynapticDynamic',                    slice(None)         ),
+
+               ## below uses monitors
+               (CUBAFixedConnectivity,                          'CUBAFixedConnectivity',                        slice(None)         ),
+               (COBAHHFixedConnectivity,                        'COBAHHFixedConnectivity',                      slice(None, -1)     ),
 ]
 
 configurations = [config[0] for config in configs]
@@ -140,22 +165,27 @@ try:
         start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         print("Starting {} on {}.".format(name, start))
         maximum_run_time = 1*60*60*second
-        st.duration = 10*second
         res = run_speed_tests(configurations=configurations,
                               speed_tests=[st],
                               n_slice=sl,
-                              #n_slice=slice(0,2,None),
-                              #run_twice=False,
+                              #n_slice=slice(0,1,None),
+                              run_twice=False,
                               verbose=True,
-                              maximum_run_time=maximum_run_time)
+                              maximum_run_time=maximum_run_time#,
+                              ## this needs modification of brian2 code
+                              #profile_only_active=True 
+                              #profile_only_active=False
+                             )
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
         print("Running {} took {}.".format(name, diff))
         res.plot_all_tests()
+        ## this needs modification of brian2 code
+        #res.plot_all_tests(print_relative=True)
         savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
         res.plot_all_tests(relative=True)
         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
-        res.plot_all_tests(profiling_minimum=0.15)
+        res.plot_all_tests(profiling_minimum=0.05)
         savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
         if 3 != len(get_fignums()):
             print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
@@ -192,8 +222,9 @@ try:
                 print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
                 if not isinstance(res, Exception) and runtime < max_runtime:
-                    cmd = 'cd {proj_dir} && nvprof --profile-from-start-off --log-file ../{log_file} ./main {arg}'.format(
-                        proj_dir=proj_dir, arg=main_arg,
+                    option = '--profile-from-start-off' if proj_dir == 'cuda_standalone' else ''
+                    cmd = 'cd {proj_dir} && nvprof {opt} --log-file ../{log_file} ./main {arg}'.format(
+                        proj_dir=proj_dir, arg=main_arg, opt=option,
                         log_file=os.path.join(prof_dir, 'nvprof_{st}_{conf}_{n}.log'.format(
                             st=name, conf=conf_name, n=st.n_range[idx])))
                     prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
