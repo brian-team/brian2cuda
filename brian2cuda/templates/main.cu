@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <fstream>
+#include "cuda_profiler_api.h"
 
 {{report_func|autoindent}}
 
