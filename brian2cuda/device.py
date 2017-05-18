@@ -77,6 +77,13 @@ prefs.register_preferences(
         validator=lambda v: isinstance(v, bool),
         default=True),
 
+    extra_threshold_kernel=BrianPreference(
+        docs='''
+        Weather or not to use a extra threshold kernel for resetting or not.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.
             Setting the generator type automatically resets the generator ordering
@@ -198,6 +205,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]
         template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
+        if template_name == "threshold":
+            template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,

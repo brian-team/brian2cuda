@@ -40,6 +40,8 @@ kernel_{{codeobj_name}}(
 	///// KERNEL_VARIABLES /////
 	%KERNEL_VARIABLES%
 
+	assert(THREADS_PER_BLOCK == blockDim.x);
+
 	{% block additional_variables %}
 	{% endblock %}
 
@@ -161,6 +163,9 @@ void _run_{{codeobj_name}}()
 		first_run = false;
 	}
 	{% endblock prepare_kernel %}
+
+	{% block extra_kernel_call %}
+	{% endblock %}
 
 	{% block kernel_call %}
 	kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(

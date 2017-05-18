@@ -26,6 +26,23 @@ class CUDAStandaloneConfiguration(Configuration):
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
                             with_output=False)
 
+class CUDAStandaloneConfigurationExtraThresholdKernel(Configuration):
+    name = 'CUDA standalone with extra threshold reset kernel'
+    def before_run(self):
+        prefs['devices.cuda_standalone.extra_threshold_kernel'] = True
+        brian2.set_device('cuda_standalone', build_on_run=False)
+        if socket.gethostname() == 'elnath':
+            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
+                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
+            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
+
+    def after_run(self):
+        if os.path.exists('cuda_standalone'):
+            shutil.rmtree('cuda_standalone')
+        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
+                            with_output=False)
+
 class CUDAStandaloneConfigurationCurandDouble(Configuration):
     name = 'CUDA standalone (curand_float_type = double)'
     def before_run(self):
