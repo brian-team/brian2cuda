@@ -20,6 +20,7 @@
 	{{_eventspace}}[_idx] = -1;
 	{% endif %}
 
+	{// there might be the same variable defined in scalar and vector code
 	///// vector_code /////
 	{{vector_code|autoindent}}
 
@@ -35,6 +36,7 @@
 		{# we can't use {{t}} directly, since it returns ...[0] (in Device.code_object()) but our t is not a pointer #}
 		{{lastspike}}[_idx] = {{get_array_name(variables['t'])}};
 		{% endif %}
+	}
 	}
 {% endblock %}
 
