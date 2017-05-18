@@ -7,8 +7,23 @@ from brian2.tests.features.speed import *
 
 from brian2.tests.features.speed import __all__
 __all__.extend(['AdaptationOscillation',
+                'ThresholderOnlyAlwaysSpiking',
+                'ThresholderOnlyPoissonLowRate',
+                'ThresholderOnlyPoissonMediumRate',
+                'ThresholderOnlyPoissonHighRate',
+                'BrunelHakimNeuronsOnly',
+                'BrunelHakimStateupdateOnly',
+                'BrunelHakimStateupdateOnlyDouble',
+                'BrunelHakimStateupdateOnlyTriple',
+                'BrunelHakimStateupdateThresholdOnly',
+                'BrunelHakimStateupdateThresholdResetOnly',
+                'BrunelHakimNeuronsOnlyNoXi',
+                'BrunelHakimNeuronsOnlyNoRand',
                 'BrunelHakimModelScalarDelay',
+                'BrunelHakimModelScalarDelayNoSelfConnections',
+                'BrunelHakimModelScalarDelayShort',
                 'BrunelHakimModelHeterogeneousDelay',
+                'CUBA',
                 'COBAHH',
                 'STDPEventDriven',
                 'STDPNotEventDriven',
@@ -73,17 +88,17 @@ class AdaptationOscillation(SpeedTest):
         
         self.timed_run(self.duration)
 
-class BrunelHakimModelScalarDelay(SpeedTest):
-    
-    category = "Full examples"
-    name = "Brunel Hakim with scalar delay"
-    tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+class BrunelHakimNeuronsOnly(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
     n_label = 'Num neurons'
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         Vr = 10*mV
@@ -91,27 +106,382 @@ class BrunelHakimModelScalarDelay(SpeedTest):
         tau = 20*ms
         delta = 2*ms
         taurefr = 2*ms
-        duration = .1*second
         C = 1000
         sparseness = float(C)/N
         J = .1*mV
         muext = 25*mV
         sigmaext = 1*mV
-        
+
         eqs = """
         dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
         """
-        
+
+        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimStateupdateOnlyTriple(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (3 x stateupdate)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
+                            #reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        self.group2 = group2 = NeuronGroup(N, eqs)
+        group2.V = Vr
+
+        self.group3 = group3 = NeuronGroup(N, eqs)
+        group3.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimStateupdateOnlyDouble(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (2 x stateupdate)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
+                            #reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        self.group2 = group2 = NeuronGroup(N, eqs)
+        group2.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimStateupdateOnly(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (stateupdate)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
+                            #reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimStateupdateThresholdOnly(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (stateupdate + threshold)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs, threshold='V>theta')
+        group.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimStateupdateThresholdResetOnly(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (stateupdate + threshold + reset)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr')
+        group.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimNeuronsOnlyNoXi(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (no xi)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau/ms))/tau : volt
+        """
+
+        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        self.timed_run(self.duration)
+
+class BrunelHakimNeuronsOnlyNoRand(SpeedTest):
+
+    category = "Neurons only"
+    name = "Brunel Hakim (no rand)"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        myxi = np.random.randn(N)
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * myxi/sqrt(ms))/tau : volt
+        myxi : 1
+        """
+
+        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+        group.myxi = myxi
+
+        self.timed_run(self.duration)
+
+class BrunelHakimModelScalarDelayNoSelfConnections(SpeedTest):
+
+    category = "Full examples"
+    name = "Brunel Hakim with scalar delay (1s, no multip pre-post connections)"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 250000]#, 350000]#500000, 1000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
+        conn.connect('i!=j and rand()<sparseness')
+
+        self.timed_run(self.duration)
+
+class BrunelHakimModelScalarDelay(SpeedTest):
+
+    category = "Full examples"
+    name = "Brunel Hakim with scalar delay (1s)"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 250000]#, 350000]#500000, 1000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
         group = NeuronGroup(N, eqs, threshold='V>theta',
                             reset='V=Vr', refractory=taurefr)
         group.V = Vr
         conn = Synapses(group, group, on_pre='V += -J', delay=delta)
         conn.connect('rand()<sparseness')
-        
-        self.timed_run(duration)
-        
+
+        self.timed_run(self.duration)
+
+class BrunelHakimModelScalarDelayShort(SpeedTest):
+
+    category = "Full examples"
+    name = "Brunel Hakim with scalar delay (0.01s)"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]#, 200000, 500000, 1000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 0.01*second
+
+    def run(self):
+        N = self.n
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        C = 1000
+        sparseness = float(C)/N
+        J = .1*mV
+        muext = 25*mV
+        sigmaext = 1*mV
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        group = NeuronGroup(N, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
+        conn.connect('rand()<sparseness')
+
+        self.timed_run(self.duration)
+
 class BrunelHakimModelHeterogeneousDelay(SpeedTest):
-    
+
     category = "Full examples"
     name = "Brunel Hakim with heterogenous delays"
     tags = ["Neurons", "Synapses"]
@@ -120,7 +490,7 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         Vr = 10*mV
@@ -128,28 +498,106 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
         tau = 20*ms
         delta = 2*ms
         taurefr = 2*ms
-        duration = .1*second
         C = 1000
         sparseness = float(C)/N
         J = .1*mV
         muext = 25*mV
         sigmaext = 1*mV
-        
+
         eqs = """
         dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
         """
-        
+
         group = NeuronGroup(N, eqs, threshold='V>theta',
                             reset='V=Vr', refractory=taurefr)
         group.V = Vr
         conn = Synapses(group, group, on_pre='V += -J')
         conn.connect('rand()<sparseness')
         conn.delay = "delta * 2 * rand()"
-        
-        self.timed_run(duration)
+
+        self.timed_run(self.duration)
+
+class ThresholderOnly(SpeedTest):
+    category = "Neurons only"
+    name = "Thresholder only"
+    tags = ["Neurons"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
+    n_label = 'Num neurons'
+    rate = None
+
+    # configuration options
+    duration = 1 * second
+
+    def run(self):
+        N = self.n
+        rate = self.rate
+        self.group = group = NeuronGroup(N, 'v:1', threshold=self.threshold_condition)
+        self.timed_run(self.duration)
+
+class ThresholderOnlyAlwaysSpiking(ThresholderOnly, SpeedTest):
+    name = "Thresholder only (always spiking)"
+    threshold_condition = 'True'
+
+class ThresholderOnlyPoissonHighRate(ThresholderOnly, SpeedTest):
+    name = "Thresholder only (high rate)"
+    rate = 100 * Hz
+    threshold_condition = 'rand() < rate*dt'
+
+class ThresholderOnlyPoissonMediumRate(ThresholderOnly, SpeedTest):
+    name = "Thresholder only (medium rate)"
+    rate = 10 * Hz
+    threshold_condition = 'rand() < rate*dt'
+
+class ThresholderOnlyPoissonLowRate(ThresholderOnly, SpeedTest):
+    name = "Thresholder only (low rate)"
+    rate = 1 * Hz
+    threshold_condition = 'rand() < rate*dt'
+
+class CUBA(SpeedTest):
+
+    category = "Full examples"
+    name = "CUBA fixed connectivity"
+    tags = ["Neurons", "Synapses"]
+    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1 * second
+
+    def run(self):
+        N = self.n
+        Ne = int(.8 * N)
+
+        taum = 20 * ms
+        taue = 5 * ms
+        taui = 10 * ms
+        Vt = -50 * mV
+        Vr = -60 * mV
+        El = -49 * mV
+
+        eqs = '''
+        dv/dt  = (ge+gi-(v-El))/taum : volt (unless refractory)
+        dge/dt = -ge/taue : volt (unless refractory)
+        dgi/dt = -gi/taui : volt (unless refractory)
+        '''
+
+        P = NeuronGroup(
+            N, eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms)
+        P.v = 'Vr + rand() * (Vt - Vr)'
+        P.ge = 0 * mV
+        P.gi = 0 * mV
+
+        we = (60 * 0.27 / 10) * mV  # excitatory synaptic weight (voltage)
+        wi = (-20 * 4.5 / 10) * mV  # inhibitory synaptic weight
+        Ce = Synapses(P, P, on_pre='ge += we')
+        Ci = Synapses(P, P, on_pre='gi += wi')
+        Ce.connect('i<Ne', p=80. / N)
+        Ci.connect('i>=Ne', p=80. / N)
+
+        self.timed_run(self.duration)
 
 class COBAHH(SpeedTest):
-    
+
     category = "Full examples"
     name = "COBAHH"
     tags = ["Neurons", "Synapses"]
@@ -158,13 +606,13 @@ class COBAHH(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         area = 20000*umetre**2
         Cm = (1*ufarad*cm**-2) * area
         gl = (5e-5*siemens*cm**-2) * area
-        
+
         El = -60*mV
         EK = -90*mV
         ENa = 50*mV
@@ -179,7 +627,7 @@ class COBAHH(SpeedTest):
         Ei = -80*mV
         we = 6*nS  # excitatory synaptic weight
         wi = 67*nS  # inhibitory synaptic weight
-        
+
         # The model
         eqs = Equations('''
         dv/dt = (gl*(El-v)+ge*(Ee-v)+gi*(Ei-v)-
@@ -200,7 +648,7 @@ class COBAHH(SpeedTest):
                  (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
         beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
         ''')
-        
+
         P = NeuronGroup(N, model=eqs, threshold='v>-20*mV', refractory=3*ms,
                         method='exponential_euler')
         N_Pi = int(0.8*N)
@@ -210,25 +658,25 @@ class COBAHH(SpeedTest):
         Ce.connect('rand()<0.02')
         Ci = Synapses(Pi, P, on_pre='gi+=wi')
         Ci.connect('rand()<0.02')
-        
+
         # Initialization
         P.v = 'El + (randn() * 5 - 5)*mV'
         P.ge = '(randn() * 1.5 + 4) * 10.*nS'
         P.gi = '(randn() * 12 + 20) * 10.*nS'
-        
+
         self.timed_run(self.duration)
 
 class STDPEventDriven(SpeedTest):
-    
+
     category = "Full examples"
     name = "STDP (event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000]
     n_label = 'Num neurons'
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         taum = 10*ms
@@ -245,12 +693,12 @@ class STDPEventDriven(SpeedTest):
         dApost = -dApre * taupre / taupost * 1.05
         dApost *= gmax
         dApre *= gmax
-    
+
         eqs_neurons = '''
         dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
         dge/dt = -ge / taue : 1
         '''
-        
+
         input_poisson = PoissonGroup(N, rates=F)
         neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
         S = Synapses(input_poisson, neurons,
@@ -266,9 +714,9 @@ class STDPEventDriven(SpeedTest):
         S.connect()
         S.w = 'rand() * gmax'
         self.timed_run(self.duration)
-        
+
 class STDPNotEventDriven(SpeedTest):
-    
+
     category = "Full examples"
     name = "STDP (not event-driven)"
     tags = ["Neurons", "Synapses"]
@@ -277,7 +725,7 @@ class STDPNotEventDriven(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         taum = 10*ms
@@ -294,12 +742,12 @@ class STDPNotEventDriven(SpeedTest):
         dApost = -dApre * taupre / taupost * 1.05
         dApost *= gmax
         dApre *= gmax
-    
+
         eqs_neurons = '''
         dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
         dge/dt = -ge / taue : 1
         '''
-        
+
         input_poisson = PoissonGroup(N, rates=F)
         neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
         S = Synapses(input_poisson, neurons,
@@ -316,7 +764,6 @@ class STDPNotEventDriven(SpeedTest):
         S.connect()
         S.w = 'rand() * gmax'
         self.timed_run(self.duration)
-        
 
 class STDPMultiPost(SpeedTest):
     '''
@@ -543,18 +990,18 @@ class Vogels(SpeedTest):
         
         eqs_stdp_inhib = '''
         w : 1
-        dA_pre/dt=-A_pre/tau_stdp : 1 (event-driven)
-        dA_post/dt=-A_post/tau_stdp : 1 (event-driven)
+        dApre/dt=-Apre/tau_stdp : 1 (event-driven)
+        dApost/dt=-Apost/tau_stdp : 1 (event-driven)
         '''
         alpha = 3*Hz*tau_stdp*2  # Target rate parameter
         gmax = 100               # Maximum inhibitory weight
         
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
-                          on_pre='''A_pre += 1.
-                                 w = clip(w+(A_post-alpha)*eta, 0, gmax)
+                          on_pre='''Apre += 1.
+                                 w = clip(w+(Apost-alpha)*eta, 0, gmax)
                                  g_gaba += w*nS''',
-                          on_post='''A_post += 1.
-                                  w = clip(w+A_pre*eta, 0, gmax)
+                          on_post='''Apost += 1.
+                                  w = clip(w+Apre*eta, 0, gmax)
                                '''
                          )
         con_ie.connect('rand()<epsilon')
@@ -630,5 +1077,5 @@ class VogelsWithSynapticDynamic(SpeedTest):
 
 if __name__=='__main__':
     #prefs.codegen.target = 'numpy'
-    VerySparseMediumRateSynapsesOnly(100000).run()
-    show()
+    ThresholderOnlyPoissonLowRate(10).run()
+    #show()
