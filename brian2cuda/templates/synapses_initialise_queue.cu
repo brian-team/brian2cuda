@@ -161,10 +161,12 @@ void _run_{{pathobj}}_initialise_queue()
 	{% endif %}
 
 
+	int size_connectivity_matrix = 0;
 	//fill temp arrays with device pointers
 	for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix
 	{
 		int num_elements = h_synapses_by_pre_id[i].size();
+		size_connectivity_matrix += num_elements;
 		temp_size_by_pre_id[i] = num_elements;
 		if (num_elements > {{pathobj}}_max_size)
 			{{pathobj}}_max_size = num_elements;
@@ -281,6 +283,7 @@ void _run_{{pathobj}}_initialise_queue()
 			{% endif %}
 		}
 	}
+	printf("INFO connectivity matrix has size %i\n", size_connectivity_matrix);
 
 
 	//copy temp arrays to device
