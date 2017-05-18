@@ -82,7 +82,7 @@ prefs.register_preferences(
         Weather or not to use a extra threshold kernel for resetting or not.
         ''',
         validator=lambda v: isinstance(v, bool),
-        default=False),
+        default=True),
 
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.
