@@ -7,6 +7,8 @@
 {# remove this once we have properly defined num_threads, num_blocks here... #}
 {% block occupancy %}
 {% endblock occupancy %}
+{% block kernel_info %}
+{% endblock %}
 
 {% block prepare_kernel_inner %}
 {% for varname, var in _recorded_variables | dictsort %}

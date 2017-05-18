@@ -145,6 +145,7 @@ void _run_{{codeobj_name}}()
 		}
 		{% block extra_info_msg %}
 		{% endblock %}
+		{% block kernel_info %}
 		else
 		{
 			printf("INFO calling kernel_{{codeobj_name}} with %u blocks and %u threads. "
@@ -156,6 +157,7 @@ void _run_{{codeobj_name}}()
 					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes{% if calc_occupancy %},occupancy{%endif%});
 					
 		}
+		{% endblock %}
 		first_run = false;
 	}
 	{% endblock prepare_kernel %}
