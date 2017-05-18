@@ -1,0 +1,24 @@
+==21166== NVPROF is profiling process 21166, command: ./main
+==21166== Profiling application: ./main
+==21166== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 48.52%  22.334ms     10000  2.2330us  2.0480us  3.2640us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double*, float*)
+ 32.57%  14.991ms     10000  1.4990us  1.3760us  2.2080us  _GLOBAL__N__69_tmpxft_00005187_00000000_7_neurongroup_thresholder_codeobject_cpp1_ii_70a65da3::_reset_neurongroup_thresholder_codeobject(int*)
+ 17.98%  8.2778ms         1  8.2778ms  8.2778ms  8.2778ms  generate_seed_pseudo(__int64, __int64, __int64, curandOrdering, curandStateXORWOW*, unsigned int*)
+  0.93%  425.76us         1  425.76us  425.76us  425.76us  void gen_sequenced<curandStateXORWOW, float, int, __operator_&__(float curand_uniform_noargs<curandStateXORWOW>(curandStateXORWOW*, int))>(curandStateXORWOW*, float*, unsigned long, unsigned long, int)
+
+==21166== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 86.86%  186.42ms     20002  9.3190us  8.3980us  5.6294ms  cudaLaunch
+  4.97%  10.670ms     60011     177ns     144ns  316.47us  cudaSetupArgument
+  3.90%  8.3784ms         1  8.3784ms  8.3784ms  8.3784ms  cudaFree
+  2.66%  5.7119ms     20002     285ns     218ns  320.00us  cudaConfigureCall
+  1.37%  2.9306ms     10004     292ns     163ns  322.94us  cudaGetLastError
+  0.20%  419.20us         3  139.73us  122.06us  157.51us  cudaMalloc
+  0.02%  46.236us         1  46.236us  46.236us  46.236us  cudaMemGetInfo
+  0.01%  11.362us         1  11.362us  11.362us  11.362us  cudaDeviceSynchronize
+  0.00%  9.7120us         2  4.8560us  2.2010us  7.5110us  cudaFuncGetAttributes
+  0.00%  6.5280us         1  6.5280us  6.5280us  6.5280us  cudaThreadSynchronize
+  0.00%  3.2590us         1  3.2590us  3.2590us  3.2590us  cudaGetDevice
+  0.00%  2.7720us         2  1.3860us     534ns  2.2380us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+  0.00%  2.4080us         4     602ns     412ns  1.0020us  cudaDeviceGetAttribute

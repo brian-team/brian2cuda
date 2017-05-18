@@ -1,0 +1,1075 @@
+diff --git a/brian2cuda/device.py b/brian2cuda/device.py
+index cd08312..eb40398 100644
+--- a/brian2cuda/device.py
++++ b/brian2cuda/device.py
+@@ -82,7 +82,7 @@ prefs.register_preferences(
+         Weather or not to use a extra threshold kernel for resetting or not.
+         ''',
+         validator=lambda v: isinstance(v, bool),
+-        default=True),
++        default=False),
+ 
+     random_number_generator_type=BrianPreference(
+         docs='''Generator type (str) that cuRAND uses for random number generation.
+@@ -919,10 +919,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
+             if clock not in all_clocks:
+                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
+ 
++        run_lines.append('cudaProfilerStart();')
+         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
+                                                                                               duration=float(duration),
+                                                                                               report_call=report_call,
+                                                                                               report_period=float(report_period)))
++        run_lines.append('cudaDeviceSynchronize();')
++        run_lines.append('cudaProfilerStop();')
+         self.main_queue.append(('run_network', (net, run_lines)))
+ 
+         # Manually set the cache for the clocks, simulation scripts might
+diff --git a/brian2cuda/templates/main.cu b/brian2cuda/templates/main.cu
+index 8402033..af7cedf 100644
+--- a/brian2cuda/templates/main.cu
++++ b/brian2cuda/templates/main.cu
+@@ -16,6 +16,7 @@
+ 
+ #include <iostream>
+ #include <fstream>
++#include "cuda_profiler_api.h"
+ 
+ {{report_func|autoindent}}
+ 
+diff --git a/brian2cuda/templates/synapses_initialise_queue.cu b/brian2cuda/templates/synapses_initialise_queue.cu
+index 869812f..13245dd 100644
+--- a/brian2cuda/templates/synapses_initialise_queue.cu
++++ b/brian2cuda/templates/synapses_initialise_queue.cu
+@@ -161,10 +161,12 @@ void _run_{{pathobj}}_initialise_queue()
+ 	{% endif %}
+ 
+ 
++	int size_connectivity_matrix = 0;
+ 	//fill temp arrays with device pointers
+ 	for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix
+ 	{
+ 		int num_elements = h_synapses_by_pre_id[i].size();
++		size_connectivity_matrix += num_elements;
+ 		temp_size_by_pre_id[i] = num_elements;
+ 		if (num_elements > {{pathobj}}_max_size)
+ 			{{pathobj}}_max_size = num_elements;
+@@ -281,6 +283,7 @@ void _run_{{pathobj}}_initialise_queue()
+ 			{% endif %}
+ 		}
+ 	}
++	printf("INFO connectivity matrix has size %i\n", size_connectivity_matrix);
+ 
+ 
+ 	//copy temp arrays to device
+@@ -400,6 +403,15 @@ void _run_{{pathobj}}_initialise_queue()
+ 	{% else %}
+ 	{{pathobj}}_scalar_delay = scalar_delay;
+ 	{% endif %}
++
++	cudaError_t status = cudaGetLastError();
++	if (status != cudaSuccess)
++	{
++		printf("ERROR initialising {{pathobj}} in %s:%d %s\n",
++				__FILE__, __LINE__, cudaGetErrorString(status));
++		_dealloc_arrays();
++		exit(status);
++	}
+ }
+ 
+ {% endmacro %}
+diff --git a/brian2cuda/templates/threshold.cu b/brian2cuda/templates/threshold.cu
+index b8d93b2..c2b38a3 100644
+--- a/brian2cuda/templates/threshold.cu
++++ b/brian2cuda/templates/threshold.cu
+@@ -20,6 +20,7 @@
+ 	{{_eventspace}}[_idx] = -1;
+ 	{% endif %}
+ 
++	{// there might be the same variable defined in scalar and vector code
+ 	///// vector_code /////
+ 	{{vector_code|autoindent}}
+ 
+@@ -36,46 +37,51 @@
+ 		{{lastspike}}[_idx] = {{get_array_name(variables['t'])}};
+ 		{% endif %}
+ 	}
++	}
+ {% endblock %}
+ 
+-{% if extra_threshold_kernel %}
+ {% block extra_device_helper %}
+-__global__ void
+-{% if launch_bounds %}
+-__launch_bounds__(1024, {{sm_multiplier}})
+-{% endif %}
+-_reset_{{codeobj_name}}(
+-	int32_t* eventspace
+-	)
+-{
+-	using namespace brian;
+-
+-	unsigned int _idx = blockIdx.x * blockDim.x + threadIdx.x;
+-
+-	if (_idx == 0)
+-	{
+-		// reset eventspace counter
+-		eventspace[N] = 0;
+-	}
+-
+-	if (_idx < N)
+-	{
+-		// reset eventspace
+-		eventspace[_idx] = -1;
+-	}
+-}
++	{% if extra_threshold_kernel %}
++		__global__ void
++		{% if launch_bounds %}
++		__launch_bounds__(1024, {{sm_multiplier}})
++		{% endif %}
++		_reset_{{codeobj_name}}(
++			int32_t* eventspace
++			)
++		{
++			using namespace brian;
++		
++			unsigned int _idx = blockIdx.x * blockDim.x + threadIdx.x;
++		
++			if (_idx == 0)
++			{
++				// reset eventspace counter
++				eventspace[N] = 0;
++			}
++		
++			if (_idx < N)
++			{
++				// reset eventspace
++				eventspace[_idx] = -1;
++			}
++		}
++	{% endif %}
+ {% endblock %}
+ 
+ {% block extra_kernel_call %}
+-{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+-_reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+-		dev{{_eventspace}}[current_idx{{_eventspace}}]
+-	);
++	{% if extra_threshold_kernel %}
++		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
++		_reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
++				dev{{_eventspace}}[current_idx{{_eventspace}}]
++			);
++	{% endif %}	
+ {% endblock extra_kernel_call %}
+-{% else %}
++
+ {% block extra_maincode %}
+-{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+-// reset eventspace counter to 0
+-cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
++	{% if not extra_threshold_kernel %}
++		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
++		// reset eventspace counter to 0
++		cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
++	{% endif %}
+ {% endblock extra_maincode %}
+-{% endif %}
+diff --git a/brian2cuda/tests/features/cuda_configuration.py b/brian2cuda/tests/features/cuda_configuration.py
+index c5b0369..145fabc 100644
+--- a/brian2cuda/tests/features/cuda_configuration.py
++++ b/brian2cuda/tests/features/cuda_configuration.py
+@@ -43,6 +43,22 @@ class CUDAStandaloneConfigurationExtraThresholdKernel(Configuration):
+         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
+                             with_output=False)
+ 
++class CUDAStandaloneConfigurationNoAssert(Configuration):
++    name = 'CUDA standalone (asserts disabled)'
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False, disable_asserts=True)
++        if socket.gethostname() == 'elnath':
++            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
++                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
++
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
+ class CUDAStandaloneConfigurationCurandDouble(Configuration):
+     name = 'CUDA standalone (curand_float_type = double)'
+     def before_run(self):
+diff --git a/brian2cuda/tests/features/speed.py b/brian2cuda/tests/features/speed.py
+index 49c6e52..4947841 100644
+--- a/brian2cuda/tests/features/speed.py
++++ b/brian2cuda/tests/features/speed.py
+@@ -7,8 +7,23 @@ from brian2.tests.features.speed import *
+ 
+ from brian2.tests.features.speed import __all__
+ __all__.extend(['AdaptationOscillation',
++                'ThresholderOnlyAlwaysSpiking',
++                'ThresholderOnlyPoissonLowRate',
++                'ThresholderOnlyPoissonMediumRate',
++                'ThresholderOnlyPoissonHighRate',
++                'BrunelHakimNeuronsOnly',
++                'BrunelHakimStateupdateOnly',
++                'BrunelHakimStateupdateOnlyDouble',
++                'BrunelHakimStateupdateOnlyTriple',
++                'BrunelHakimStateupdateThresholdOnly',
++                'BrunelHakimStateupdateThresholdResetOnly',
++                'BrunelHakimNeuronsOnlyNoXi',
++                'BrunelHakimNeuronsOnlyNoRand',
+                 'BrunelHakimModelScalarDelay',
++                'BrunelHakimModelScalarDelayNoSelfConnections',
++                'BrunelHakimModelScalarDelayShort',
+                 'BrunelHakimModelHeterogeneousDelay',
++                'CUBA',
+                 'COBAHH',
+                 'STDPEventDriven',
+                 'STDPNotEventDriven',
+@@ -73,12 +88,334 @@ class AdaptationOscillation(SpeedTest):
+         
+         self.timed_run(self.duration)
+ 
++class BrunelHakimNeuronsOnly(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimStateupdateOnlyTriple(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (3 x stateupdate)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
++                            #reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++
++        self.group2 = group2 = NeuronGroup(N, eqs)
++        group2.V = Vr
++
++        self.group3 = group3 = NeuronGroup(N, eqs)
++        group3.V = Vr
++        
++        self.timed_run(self.duration)
++
++
++class BrunelHakimStateupdateOnlyDouble(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (2 x stateupdate)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
++                            #reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++
++        self.group2 = group2 = NeuronGroup(N, eqs)
++        group2.V = Vr
++        
++        self.timed_run(self.duration)
++
++
++class BrunelHakimStateupdateOnly(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (stateupdate)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs)#, threshold='V>theta',
++                            #reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimStateupdateThresholdOnly(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (stateupdate + threshold)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs, threshold='V>theta')
++        group.V = Vr
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimStateupdateThresholdResetOnly(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (stateupdate + threshold + reset)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr')
++        group.V = Vr
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimNeuronsOnlyNoXi(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (no xi)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau/ms))/tau : volt
++        """
++        
++        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimNeuronsOnlyNoRand(SpeedTest):
++    
++    category = "Neurons only"
++    name = "Brunel Hakim (no rand)"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        myxi = np.random.randn(N)
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * myxi/sqrt(ms))/tau : volt
++        myxi : 1
++        """
++        
++        self.group = group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        group.myxi = myxi
++        
++        self.timed_run(self.duration)
++
++class BrunelHakimModelScalarDelayNoSelfConnections(SpeedTest):
++    
++    category = "Full examples"
++    name = "Brunel Hakim with scalar delay (1s, no multip pre-post connections)"
++    tags = ["Neurons", "Synapses"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 250000]#, 350000]#500000, 1000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
++        conn.connect('i!=j and rand()<sparseness')
++        
++        self.timed_run(self.duration)
++        
+ class BrunelHakimModelScalarDelay(SpeedTest):
+     
+     category = "Full examples"
+-    name = "Brunel Hakim with scalar delay"
++    name = "Brunel Hakim with scalar delay (1s)"
+     tags = ["Neurons", "Synapses"]
+-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 250000]#, 350000]#500000, 1000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -91,7 +428,6 @@ class BrunelHakimModelScalarDelay(SpeedTest):
+         tau = 20*ms
+         delta = 2*ms
+         taurefr = 2*ms
+-        duration = .1*second
+         C = 1000
+         sparseness = float(C)/N
+         J = .1*mV
+@@ -108,8 +444,44 @@ class BrunelHakimModelScalarDelay(SpeedTest):
+         conn = Synapses(group, group, on_pre='V += -J', delay=delta)
+         conn.connect('rand()<sparseness')
+         
+-        self.timed_run(duration)
++        self.timed_run(self.duration)
+         
++class BrunelHakimModelScalarDelayShort(SpeedTest):
++    
++    category = "Full examples"
++    name = "Brunel Hakim with scalar delay (0.01s)"
++    tags = ["Neurons", "Synapses"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]#, 200000, 500000, 1000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 0.01*second
++    
++    def run(self):
++        N = self.n
++        Vr = 10*mV
++        theta = 20*mV
++        tau = 20*ms
++        delta = 2*ms
++        taurefr = 2*ms
++        C = 1000
++        sparseness = float(C)/N
++        J = .1*mV
++        muext = 25*mV
++        sigmaext = 1*mV
++        
++        eqs = """
++        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
++        """
++        
++        group = NeuronGroup(N, eqs, threshold='V>theta',
++                            reset='V=Vr', refractory=taurefr)
++        group.V = Vr
++        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
++        conn.connect('rand()<sparseness')
++        
++        self.timed_run(self.duration)
++
+ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
+     
+     category = "Full examples"
+@@ -128,7 +500,6 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
+         tau = 20*ms
+         delta = 2*ms
+         taurefr = 2*ms
+-        duration = .1*second
+         C = 1000
+         sparseness = float(C)/N
+         J = .1*mV
+@@ -146,7 +517,86 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
+         conn.connect('rand()<sparseness')
+         conn.delay = "delta * 2 * rand()"
+         
+-        self.timed_run(duration)
++        self.timed_run(self.duration)
++
++class ThresholderOnly(SpeedTest):
++    category = "Neurons only"
++    name = "Thresholder only"
++    tags = ["Neurons"]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 10000000]
++    n_label = 'Num neurons'
++    rate = None
++
++    # configuration options
++    duration = 1 * second
++
++    def run(self):
++        N = self.n
++        rate = self.rate
++        self.group = group = NeuronGroup(N, 'v:1', threshold=self.threshold_condition)
++        self.timed_run(self.duration)
++
++class ThresholderOnlyAlwaysSpiking(ThresholderOnly, SpeedTest):
++    name = "Thresholder only (always spiking)"
++    threshold_condition = 'True'
++
++class ThresholderOnlyPoissonHighRate(ThresholderOnly, SpeedTest):
++    name = "Thresholder only (high rate)"
++    rate = 100 * Hz
++    threshold_condition = 'rand() < rate*dt'
++
++class ThresholderOnlyPoissonMediumRate(ThresholderOnly, SpeedTest):
++    name = "Thresholder only (medium rate)"
++    rate = 10 * Hz
++    threshold_condition = 'rand() < rate*dt'
++
++class ThresholderOnlyPoissonLowRate(ThresholderOnly, SpeedTest):
++    name = "Thresholder only (low rate)"
++    rate = 1 * Hz
++    threshold_condition = 'rand() < rate*dt'
++
++class CUBA(SpeedTest):
++
++    category = "Full examples"
++    name = "CUBA fixed connectivity"
++    tags = ["Neurons", "Synapses"]
++    n_range = [10, 100, 1000, 10000, 100000, 1000000]
++    n_label = 'Num neurons'
++
++    # configuration options
++    duration = 1 * second
++
++    def run(self):
++        N = self.n
++        Ne = int(.8 * N)
++
++        taum = 20 * ms
++        taue = 5 * ms
++        taui = 10 * ms
++        Vt = -50 * mV
++        Vr = -60 * mV
++        El = -49 * mV
++
++        eqs = '''
++        dv/dt  = (ge+gi-(v-El))/taum : volt (unless refractory)
++        dge/dt = -ge/taue : volt (unless refractory)
++        dgi/dt = -gi/taui : volt (unless refractory)
++        '''
++
++        P = NeuronGroup(
++            N, eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms)
++        P.v = 'Vr + rand() * (Vt - Vr)'
++        P.ge = 0 * mV
++        P.gi = 0 * mV
++
++        we = (60 * 0.27 / 10) * mV  # excitatory synaptic weight (voltage)
++        wi = (-20 * 4.5 / 10) * mV  # inhibitory synaptic weight
++        Ce = Synapses(P, P, on_pre='ge += we')
++        Ci = Synapses(P, P, on_pre='gi += wi')
++        Ce.connect('i<Ne', p=80. / N)
++        Ci.connect('i>=Ne', p=80. / N)
++
++        self.timed_run(self.duration)
+ 
+ class COBAHH(SpeedTest):
+     
+@@ -223,7 +673,7 @@ class STDPEventDriven(SpeedTest):
+     category = "Full examples"
+     name = "STDP (event-driven)"
+     tags = ["Neurons", "Synapses"]
+-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -543,18 +993,18 @@ class Vogels(SpeedTest):
+         
+         eqs_stdp_inhib = '''
+         w : 1
+-        dA_pre/dt=-A_pre/tau_stdp : 1 (event-driven)
+-        dA_post/dt=-A_post/tau_stdp : 1 (event-driven)
++        dApre/dt=-Apre/tau_stdp : 1 (event-driven)
++        dApost/dt=-Apost/tau_stdp : 1 (event-driven)
+         '''
+         alpha = 3*Hz*tau_stdp*2  # Target rate parameter
+         gmax = 100               # Maximum inhibitory weight
+         
+         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
+-                          on_pre='''A_pre += 1.
+-                                 w = clip(w+(A_post-alpha)*eta, 0, gmax)
++                          on_pre='''Apre += 1.
++                                 w = clip(w+(Apost-alpha)*eta, 0, gmax)
+                                  g_gaba += w*nS''',
+-                          on_post='''A_post += 1.
+-                                  w = clip(w+A_pre*eta, 0, gmax)
++                          on_post='''Apost += 1.
++                                  w = clip(w+Apre*eta, 0, gmax)
+                                '''
+                          )
+         con_ie.connect('rand()<epsilon')
+@@ -630,5 +1080,5 @@ class VogelsWithSynapticDynamic(SpeedTest):
+ 
+ if __name__=='__main__':
+     #prefs.codegen.target = 'numpy'
+-    VerySparseMediumRateSynapsesOnly(100000).run()
+-    show()
++    ThresholderOnlyPoissonLowRate(10).run()
++    #show()
+diff --git a/brian2cuda/tests/test_profiling.py b/brian2cuda/tests/test_profiling.py
+index 7f2c7da..687bf7d 100644
+--- a/brian2cuda/tests/test_profiling.py
++++ b/brian2cuda/tests/test_profiling.py
+@@ -80,6 +80,6 @@ def test_profile_build_raises():
+     assert_raises(TypeError, lambda: device.build(profile='string'))
+ 
+ if __name__ == '__main__':
+-    #test_profile_in_run_raises()
++    test_profile_in_run_raises()
+     #test_profile_wrong_raises()
+-    test_profile_build_raises()
++    #test_profile_build_raises()
+diff --git a/dev/benchmarks/run_speed_tests.py b/dev/benchmarks/run_speed_tests.py
+index ea45b35..4beee3e 100644
+--- a/dev/benchmarks/run_speed_tests.py
++++ b/dev/benchmarks/run_speed_tests.py
+@@ -22,12 +22,15 @@ from brian2.tests.features.base import results
+ 
+ import brian2cuda
+ from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfiguration,
+-                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPI,
+-                                                          CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,
++                                                          CUDAStandaloneConfigurationNoAssert,
++                                                          CUDAStandaloneConfigurationExtraThresholdKernel,
++                                                          CUDAStandaloneConfigurationCurandDouble,
++                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPI,
++                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,
+                                                           CUDAStandaloneConfiguration2BlocksPerSM,
+                                                           CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds,
+-                                                          CUDAStandaloneConfigurationSynLaunchBoundsOccup,
+-                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup,
++                                                          CUDAStandaloneConfigurationSynLaunchBounds,
++                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds,
+                                                           CUDAStandaloneConfigurationProfileGPU,
+                                                           CUDAStandaloneConfigurationProfileCPU)
+ from brian2cuda.tests.features.speed import *
+@@ -48,49 +51,70 @@ configs = [# configuration                          project_directory
+           #(NumpyConfiguration,                     None),
+           #(WeaveConfiguration,                     None),
+           #(LocalConfiguration,                     None),
+-          #(CUDAStandaloneConfiguration,             'cuda_standalone'),
+-          (CUDAStandaloneConfigurationUseCudaOccupancyAPI,      'cuda_standalone'),
+-          #(CUDAStandaloneConfigurationUseCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
++          (CUDAStandaloneConfiguration,             'cuda_standalone'),
++          (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoThreadfence,  'cuda_standalone'),
++          #(CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
+           #(CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
+           #(CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
+-          (CUDAStandaloneConfigurationSynLaunchBoundsOccup,     'cuda_standalone'),
+-          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBoundsOccup, 'cuda_standalone'),
++          #(CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
++          #(CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
+           #(CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
+           #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
+           #(CPPStandaloneConfiguration,              'cpp_standalone'),
+           #(GeNNConfiguration,                       'GeNNworkspace'),
+           #(CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+           #(GeNNConfigurationCPU,                    'GeNNworkspace'),
+-          (GeNNConfigurationOptimized,              'GeNNworkspace')
++          #(GeNNConfigurationOptimized,              'GeNNworkspace')
+           ]
+ 
+ speed_tests = [# feature_test                     name                                  n_slice
+-               (LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
+-               (HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
+-
+-               (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
+-               (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
+-
+-               (STDP,                                   'STDP',                                slice(None)         ),
+-               (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
+-               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
+-               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
+-               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
+-               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
+-
+-               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
+-               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
+-               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
+-               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
+-               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
+-
+-               (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
+-               (COBAHH,                                 'COBAHH',                              slice(None)         ),
+-               (Vogels,                                 'Vogels',                              slice(None)         ),
+-               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
+-
+-               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
+-               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
++
++               #(ThresholderOnlyPoissonLowRate,                         'ThresholderOnlyPoissonLowRate',                       slice(None)         ),
++               #(ThresholderOnlyPoissonMediumRate,                         'ThresholderOnlyPoissonMediumRate',                       slice(None)         ),
++               (ThresholderOnlyPoissonHighRate,                         'ThresholderOnlyPoissonHighRate',                       slice(None)         ),
++               #(ThresholderOnlyAlwaysSpiking,                         'ThresholderOnlyAlwaysSpiking',                       slice(None)         ),
++
++               #(BrunelHakimStateupdateOnlyDouble,           'BrunelHakimStateupdateOnlyDouble',         slice(None)         ),
++               #(BrunelHakimStateupdateOnlyTriple,           'BrunelHakimStateupdateOnlyTriple',         slice(None)         ),
++               #(BrunelHakimStateupdateOnly,           'BrunelHakimStateupdateOnly',         slice(None)         ),
++               #(BrunelHakimNeuronsOnly,           'BrunelHakimNeuronsOnly',         slice(None)         ),
++               #(BrunelHakimNeuronsOnlyNoXi,           'BrunelHakimNeuronsOnlyNoXi',         slice(None)         ),
++               #(BrunelHakimNeuronsOnlyNoRand,           'BrunelHakimNeuronsOnlyNoRand',         slice(None)         ),
++               #(BrunelHakimStateupdateThresholdOnly,           'BrunelHakimStateupdateThresholdOnly',         slice(None)         ),
++               #(BrunelHakimStateupdateThresholdResetOnly,           'BrunelHakimStateupdateThresholdResetOnly',         slice(None)         ),
++               #(BrunelHakimModelScalarDelayShort,      'BrunelHakimModelScalarDelayShort',     slice(None)         ),
++              #(BrunelHakimModelScalarDelayNoSelfConnections,           'BrunelHakimModelScalarDelayNoSelfConnections',         slice(None)         ),
++#              (CUBA,                                 'CUBA',                              slice(None)         ),
++#              (COBAHH,                                 'COBAHH',                              slice(None)         ),
++#              (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
++#              (Vogels,                                 'Vogels',                              slice(None)         ),
++#               (STDP,                                   'STDP',                                slice(None)         ),
++#              (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
++#              (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
++#
++#               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
++#               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
++#               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
++#               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
++#               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
++#
++#               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
++#               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
++#               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
++#               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
++#
++#              (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
++#
++#              (LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
++#              (HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
++#               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
++### below uses monitors
++#               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
++#               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
+ ]
+ 
+ configurations = [config[0] for config in configs]
+@@ -140,22 +164,24 @@ try:
+         start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+         print("Starting {} on {}.".format(name, start))
+         maximum_run_time = 1*60*60*second
+-        st.duration = 10*second
++        #st.duration = 10*second
+         res = run_speed_tests(configurations=configurations,
+                               speed_tests=[st],
+                               n_slice=sl,
+-                              #n_slice=slice(0,2,None),
+-                              #run_twice=False,
++                              #n_slice=slice(0,1,None),
++                              run_twice=False,
+                               verbose=True,
+-                              maximum_run_time=maximum_run_time)
++                              maximum_run_time=maximum_run_time,
++                              profile_only_active=True)
++                              #profile_only_active=False)
+         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
+         print("Running {} took {}.".format(name, diff))
+-        res.plot_all_tests()
++        res.plot_all_tests(print_relative=True)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
+         res.plot_all_tests(relative=True)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+-        res.plot_all_tests(profiling_minimum=0.15)
++        res.plot_all_tests(profiling_minimum=0.05)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+         if 3 != len(get_fignums()):
+             print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+@@ -192,8 +218,9 @@ try:
+                 print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
+                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
+                 if not isinstance(res, Exception) and runtime < max_runtime:
+-                    cmd = 'cd {proj_dir} && nvprof --profile-from-start-off --log-file ../{log_file} ./main {arg}'.format(
+-                        proj_dir=proj_dir, arg=main_arg,
++                    option = '--profile-from-start-off' if proj_dir == 'cuda_standalone' else ''
++                    cmd = 'cd {proj_dir} && nvprof {opt} --log-file ../{log_file} ./main {arg}'.format(
++                        proj_dir=proj_dir, arg=main_arg, opt=option,
+                         log_file=os.path.join(prof_dir, 'nvprof_{st}_{conf}_{n}.log'.format(
+                             st=name, conf=conf_name, n=st.n_range[idx])))
+                     prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+diff --git a/dev/issues/issue9_spikespace/global_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu b/dev/issues/issue9_spikespace/global_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
+index 1c749a9..44ea6cd 100644
+--- a/dev/issues/issue9_spikespace/global_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
++++ b/dev/issues/issue9_spikespace/global_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
+@@ -88,7 +88,8 @@ __global__ void kernel_neurongroup_thresholder_codeobject(
+ 
+  	
+  const int32_t i = _ptr_array_neurongroup_i[_idx];
+- const double _cond = true;//(i / 2) == ((i + 1) / 2);
++ //const double _cond = true;//(i / 2) == ((i + 1) / 2);
++  const double _cond = fmodf(float(i), float(500)) == 0;//(i / 2) == ((i + 1) / 2);
+ 
+ 	int32_t spike_index;
+ 
+diff --git a/dev/issues/issue9_spikespace/shared_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu b/dev/issues/issue9_spikespace/shared_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
+index aa4b1e2..1a3800f 100644
+--- a/dev/issues/issue9_spikespace/shared_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
++++ b/dev/issues/issue9_spikespace/shared_atomicAdds/code_objects/neurongroup_thresholder_codeobject.cu
+@@ -100,7 +100,7 @@ __global__ void kernel_neurongroup_thresholder_codeobject(
+ 
+  	
+  const int32_t i = _ptr_array_neurongroup_i[_idx];
+- const double _cond = true;//(i / 2) == ((i + 1) / 2);
++ const double _cond = fmodf(float(i),float(500)) == 0;//(i / 2) == ((i + 1) / 2);
+ 
+ 
+ 	int32_t spike_index;
+diff --git a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+index 5776588..5827061 100644
+--- a/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_multipost_neuronaltraces_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes two further modifications: 
++This version includes two further modifications:
+ traces in neurons and multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_multipost_standalone_cpp.py b/examples/STDP_multipost_standalone_cpp.py
+index 2cec4ae..a43459f 100644
+--- a/examples/STDP_multipost_standalone_cpp.py
++++ b/examples/STDP_multipost_standalone_cpp.py
+@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
+ This example is modified from ``synapses_STDP.py`` and writes a standalone
+ C++ project in the directory ``STDP_standalone``.
+ 
+-This version includes a further modification: 
++This version includes a further modification:
+ multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
+ '''
+ import matplotlib
+diff --git a/examples/STDP_neuronaltraces_standalone_cpp.py b/examples/STDP_neuronaltraces_standalone_cpp.py
+index 4e0fc21..86590ca 100644
+--- a/examples/STDP_neuronaltraces_standalone_cpp.py
++++ b/examples/STDP_neuronaltraces_standalone_cpp.py
+@@ -15,7 +15,7 @@ import os
+ example_name = os.path.splitext(os.path.basename(__file__))[0]
+ 
+ from brian2 import *
+-set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=True)
++set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=False)
+ 
+ N = 1000
+ taum = 10*ms
+@@ -65,6 +65,8 @@ r_mon = PopulationRateMonitor(input_poisson)
+ 
+ run(100*second, report='text')
+ 
++print(profiling_summary())
++
+ subplot(311)
+ suptitle(example_name)
+ plot(S.w / gmax, '.k', ms=1)
+diff --git a/examples/STDP_standalone_cuda.py b/examples/STDP_standalone_cuda.py
+index 8807b28..d73b5a7 100644
+--- a/examples/STDP_standalone_cuda.py
++++ b/examples/STDP_standalone_cuda.py
+@@ -53,7 +53,7 @@ mon = StateMonitor(S, 'w', record=[0, 1])
+ s_mon = SpikeMonitor(input)
+ r_mon = PopulationRateMonitor(input)
+ 
+-run(100*second, report='text')
++run(1*second, report='text')
+ 
+ subplot(311)
+ suptitle('STDP_standalone_cuda')
+diff --git a/examples/cuba_cuda.py b/examples/cuba_cuda.py
+index 417f60d..eacbeae 100644
+--- a/examples/cuba_cuda.py
++++ b/examples/cuba_cuda.py
+@@ -37,11 +37,13 @@ Ci.connect('i>=3200', p=0.02)
+ 
+ s_mon = SpikeMonitor(P)
+ 
+-run(1 * second, report='text')
++run(10 * second, report='text')
+ 
+-plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
+-title('CUBA_CUDA')
+-xlabel('Time (ms)')
+-ylabel('Neuron index')
+-savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
++print(profiling_summary())
++
++#plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
++#title('CUBA_CUDA')
++#xlabel('Time (ms)')
++#ylabel('Neuron index')
++#savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
+ #show()
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67
++Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 0553cafeab49ea5403c0230411035df504d4db06
++Subproject commit 0553cafeab49ea5403c0230411035df504d4db06-dirty
+diff --git a/frozen_repos/genn b/frozen_repos/genn
+--- a/frozen_repos/genn
++++ b/frozen_repos/genn
+@@ -1 +1 @@
+-Subproject commit e01c85f18339249558d6e570ae976609dc972846
++Subproject commit e01c85f18339249558d6e570ae976609dc972846-dirty

@@ -1,0 +1,25 @@
+==20789== NVPROF is profiling process 20789, command: ./main
+==20789== Profiling application: ./main
+==20789== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 48.24%  30.930ms     10000  3.0920us  3.0400us  3.8720us  [CUDA memset]
+ 38.24%  24.519ms     10000  2.4510us  2.2720us  3.7760us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double*, float*)
+ 12.85%  8.2417ms         1  8.2417ms  8.2417ms  8.2417ms  generate_seed_pseudo(__int64, __int64, __int64, curandOrdering, curandStateXORWOW*, unsigned int*)
+  0.66%  424.74us         1  424.74us  424.74us  424.74us  void gen_sequenced<curandStateXORWOW, float, int, __operator_&__(float curand_uniform_noargs<curandStateXORWOW>(curandStateXORWOW*, int))>(curandStateXORWOW*, float*, unsigned long, unsigned long, int)
+
+==20789== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 46.50%  102.26ms     10002  10.223us  8.9260us  5.7940ms  cudaLaunch
+ 42.55%  93.569ms     10000  9.3560us  8.4570us  980.55us  cudaMemset
+  4.00%  8.7936ms     50011     175ns     147ns  319.59us  cudaSetupArgument
+  3.80%  8.3497ms         1  8.3497ms  8.3497ms  8.3497ms  cudaFree
+  1.70%  3.7341ms     10002     373ns     309ns  311.65us  cudaConfigureCall
+  1.23%  2.7110ms     10004     270ns     183ns  1.7120us  cudaGetLastError
+  0.19%  418.83us         3  139.61us  121.60us  157.57us  cudaMalloc
+  0.02%  47.653us         1  47.653us  47.653us  47.653us  cudaMemGetInfo
+  0.01%  11.213us         1  11.213us  11.213us  11.213us  cudaDeviceSynchronize
+  0.00%  9.1830us         2  4.5910us  2.1060us  7.0770us  cudaFuncGetAttributes
+  0.00%  6.6730us         1  6.6730us  6.6730us  6.6730us  cudaThreadSynchronize
+  0.00%  2.6330us         2  1.3160us     525ns  2.1080us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+  0.00%  2.6220us         1  2.6220us  2.6220us  2.6220us  cudaGetDevice
+  0.00%  2.3320us         4     583ns     363ns  1.0530us  cudaDeviceGetAttribute
