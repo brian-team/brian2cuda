@@ -21,11 +21,13 @@ if (status != cudaSuccess)
 	_dealloc_arrays();
 	exit(status);
 }
+num_blocks = 1;
+num_threads = 1;
 {% endblock prepare_kernel_inner %}
 
 
 {% block kernel_call %}
-kernel_{{codeobj_name}}<<<1, 1>>>(
+kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 		_num{{eventspace_variable.name}}-1,
 		dev_array_{{owner.name}}_count,
 		// HOST_PARAMETERS
@@ -50,7 +52,11 @@ __global__ void _run_{{codeobj_name}}_init()
 	{% endfor %}
 }
 
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	unsigned int neurongroup_N,
 	int32_t* count,
 	// DEVICE_PARAMETERS

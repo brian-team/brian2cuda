@@ -22,7 +22,11 @@ __global__ void _run_{{codeobj_name}}_advance_kernel()
 		tid);
 }
 
-__global__ void _run_{{codeobj_name}}_push_kernel(
+__global__ void
+{% if launch_bounds or syn_launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+_run_{{codeobj_name}}_push_kernel(
 	unsigned int neurongroup_size,
 	unsigned int _num_blocks,
 	unsigned int _num_threads,
@@ -88,8 +92,9 @@ void _run_{{codeobj_name}}()
 		//// No pushing in no_or_const_delay_mode ////
 		//////////////////////////////////////////////
 	}
-	else
+	else if ({{owner.name}}_max_size > 0)
 	{
+		// only push if there any synapses
 		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 
 		cudaError_t status = cudaGetLastError();
@@ -100,6 +105,8 @@ void _run_{{codeobj_name}}()
 			_dealloc_arrays();
 			exit(status);
 		}
+
+		// TODO: make all these vars static and put into first_run scope and prinf info if no synapses
 
 		// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
 		// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).

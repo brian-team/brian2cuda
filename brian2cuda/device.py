@@ -49,6 +49,41 @@ prefs.register_preferences(
         ''',
         ),
 
+    curand_float_type=BrianPreference(
+        docs='''
+        Floating point type of generated random numbers (float/double).
+        ''',
+        validator=lambda v: v in ['float', 'double'],
+        default='float'),
+
+    launch_bounds=BrianPreference(
+        docs='''
+        Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
+    syn_launch_bounds=BrianPreference(
+        docs='''
+        Weather or not to use `__launch_bounds__` in synapses and synapses_push to optimise register usage in kernels.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=False),
+
+    calc_occupancy=BrianPreference(
+        docs='''
+        Weather or not to use cuda occupancy api to choose num_threads and num_blocks.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=True),
+
+    extra_threshold_kernel=BrianPreference(
+        docs='''
+        Weather or not to use a extra threshold kernel for resetting or not.
+        ''',
+        validator=lambda v: isinstance(v, bool),
+        default=True),
+
     random_number_generator_type=BrianPreference(
         docs='''Generator type (str) that cuRAND uses for random number generation.
             Setting the generator type automatically resets the generator ordering
@@ -75,15 +110,7 @@ prefs.register_preferences(
                                            'CURAND_ORDERING_PSEUDO_BEST',
                                            'CURAND_ORDERING_PSEUDO_SEEDED',
                                            'CURAND_ORDERING_QUASI_DEFAULT'],
-        default=False),  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
-
-    profile=BrianPreference(
-        docs='''Preference for collecting profiling information. This preference overwrites the `profile` argument in
-            `run()` and `network_run()`. If True, GPU time is collected per codeobject using cudaEvents.
-            If 'blocking', CPU times - including kernel execution - are collected per codeobject, using `std::clock()` and
-            `cudaDeviceSynchronize()` after each codeobject. If False, no profiling info is collected.''',
-        validator=lambda v: v is None or isinstance(v, bool) or (isinstance(v, basestring) and v=='blocking'),
-        default=None)
+        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
 )
 
 
@@ -174,6 +201,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
+        template_kwds["launch_bounds"] = prefs["devices.cuda_standalone.launch_bounds"]
+        template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
+        template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]
+        template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
+        if template_name == "threshold":
+            template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
                                                                codeobj_class=codeobj_class,
@@ -220,6 +253,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         multiplier=multiplier,
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
+                        curand_float_type=prefs['devices.cuda_standalone.curand_float_type'],
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
                         active_objects=self.active_objects,
@@ -322,9 +356,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='seed':
                 seed = args
                 if seed is not None:
-                    main_lines.append('curandSetPseudoRandomGeneratorSeed(random_float_generator, {seed!r}ULL);'.format(seed=seed))
+                    main_lines.append('curandSetPseudoRandomGeneratorSeed(curand_generator, {seed!r}ULL);'.format(seed=seed))
                     # generator offset needs to be reset to its default (=0)
-                    main_lines.append('curandSetGeneratorOffset(random_float_generator, 0ULL);')
+                    main_lines.append('curandSetGeneratorOffset(curand_generator, 0ULL);')
                 # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
@@ -346,6 +380,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_codeobj_source(self, writer):
         #check how many random numbers are needed per step
         for code_object in self.code_objects.itervalues():
+            # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
             if num_occurences_rand > 0:
@@ -386,30 +421,40 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for k, v in codeobj.variables.iteritems():
                 #code objects which only run once
                 if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    additional_code.append('''
+                    code_snippet='''
                         //genenerate an array of random numbers on the device
-                        float* dev_array_randn;
-                        cudaMalloc((void**)&dev_array_randn, sizeof(float)*''' + number_elements + ''' * ''' + str(codeobj.randn_calls) + ''');
+                        {dtype}* dev_array_randn;
+                        cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
                         if(!dev_array_randn)
-                        {
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''');
-                        }
-                        curandGenerateNormal(random_float_generator, dev_array_randn, ''' + number_elements + '''*''' + str(codeobj.randn_calls) + ''', 0, 1);''')
-                    line = "float* _array_{name}_randn".format(name=codeobj.name)
+                        {{
+                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
+                        }}
+                        curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                    additional_code.append(code_snippet)
+                    line = "{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                                          name=codeobj.name))
                     host_parameters_lines.append("dev_array_randn")
                 elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    additional_code.append('''
+                    code_snippet = '''
                         //genenerate an array of random numbers on the device
-                        float* dev_array_rand;
-                        cudaMalloc((void**)&dev_array_rand, sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
+                        {dtype}* dev_array_rand;
+                        cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
                         if(!dev_array_rand)
-                        {
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof(float)*''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');
-                        }
-                        curandGenerateUniform(random_float_generator, dev_array_rand, ''' + number_elements + '''*''' + str(codeobj.rand_calls) + ''');''')
-                    line = "float* _array_{name}_rand".format(name=codeobj.name)
+                        {{
+                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
+                        }}
+                        curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                    additional_code.append(code_snippet)
+                    line = "{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
                     device_parameters_lines.append(line)
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                                          name=codeobj.name))
                     host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
@@ -456,6 +501,22 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         except TypeError:
                             pass
                     
+            # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
+            # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
+            # TODO can we just include this in the k == '_python_rand' test above?
+            if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
+                host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
+                device_parameters_lines.append("{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                name=codeobj.name))
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                  name=codeobj.name))
+            if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
+                host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
+                device_parameters_lines.append("{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                name=codeobj.name))
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                                                                                  name=codeobj.name))
+
             # Sometimes an array is referred to by to different keys in our
             # dictionary -- make sure to never add a line twice
             for line in code_object_defs_lines:
@@ -502,7 +563,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
-                                                           profile=self.profile)
+                                                           profile=self.profile,
+                                                           curand_float_type=prefs['devices.cuda_standalone.curand_float_type'])
         writer.write('rand.*', rand_tmp)
     
     def copy_source_files(self, writer, directory):
@@ -542,7 +604,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         )
         writer.write('run.*', run_tmp)
         
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads, disable_asserts=False):
         nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
         gpu_arch_flags = ['']
         disable_warnings = False
@@ -582,12 +644,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 nvcc_optimization_flags=nvcc_optimization_flags,
                 gpu_arch_flags=gpu_arch_flags,
                 disable_warnings=disable_warnings,
+                disable_asserts=disable_asserts,
                 rm_cmd=rm_cmd)
             writer.write('makefile', makefile_tmp)
 
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              with_output=True,
+              profile=None, with_output=True, disable_asserts=False,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
               run_args=None, direct_call=True, **kwds):
@@ -659,7 +722,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 else:
                     msg += "Unknown keyword argument '%s'. " % kwd
             raise TypeError(msg)
-    
+
+        if not profile is None:
+            raise TypeError("The profile argument has to be set in `set_device()`, not in `device.build()`.")
+
+        if debug and disable_asserts:
+            logger.warn("You have disabled asserts in debug mode. Are you sure this is what you wanted to do?")
+
         if additional_source_files is None:
             additional_source_files = []
         if additional_header_files is None:
@@ -710,7 +779,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.source_files.extend(additional_source_files)
         writer.header_files.extend(additional_header_files)
         
-        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0)
+        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
         
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
@@ -718,20 +787,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.run(directory, with_output, run_args)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=None, level=0, **kwds):
+                    namespace=None, profile=True, level=0, **kwds):
 
-        if not prefs.devices.cuda_standalone.profile is None:
-            self.profile = prefs.devices.cuda_standalone.profile
-            if not profile is None:
-                logger.warn("Got `profile` argumtent in `network_run` and `prefs.devices.cuda_standalone.profile` set. "
-                            "Ignoring the `network_run` argument.")
-        elif not profile is None:
-            if not isinstance(profile, (bool, basestring)) or (isinstance(profile, basestring) and profile != 'blocking'):
-                raise ValueError("network_run got an unexpected value for `profile`. It must be a bool or "
-                                 "'blocking'. Got {} ({}) instead.".format(profile, type(profile)))
+        if not isinstance(profile, bool) or not profile:  # everything but True
+            raise TypeError("The profile argument has to be set in `set_device()`, not in `run()`")
+
+        if 'profile' in self.build_options:
+            profile = self.build_options.pop('profile')
+            assert 'profile' not in self.build_options
+            if not isinstance(profile, bool) and not profile == 'blocking':
+                raise TypeError("Unknown profile argument in `set_device()`. Has to be bool or 'blocking'. "
+                                "Got {} ({})".format(profile, type(profile)))
             self.profile = profile
         else:
-            self.profile = False  # the default
+            self.profile = False  # default
 
         ###################################################
         ### This part is copied from CPPStandaoneDevice ###
@@ -850,10 +919,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if clock not in all_clocks:
                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
 
+        if self.profile and self.profile != 'blocking':  # self.profile == True
+            run_lines.append('cudaProfilerStart();')
         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
                                                                                               duration=float(duration),
                                                                                               report_call=report_call,
                                                                                               report_period=float(report_period)))
+        if self.profile and self.profile != 'blocking':  # self.profile == True
+            run_lines.append('cudaDeviceSynchronize();')
+            run_lines.append('cudaProfilerStop();')
         self.main_queue.append(('run_network', (net, run_lines)))
 
         # Manually set the cache for the clocks, simulation scripts might

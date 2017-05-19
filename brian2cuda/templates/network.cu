@@ -247,11 +247,6 @@ Clock* Network::next_clocks()
 #include "brianlib/clocks.h"
 
 typedef void (*codeobj_func)();
-{% if profile and profile != 'blocking' %}
-typedef cudaEvent_t timer_type;
-{% else %}
-typedef std::clock_t timer_type;
-{% endif %}
 
 class Network
 {

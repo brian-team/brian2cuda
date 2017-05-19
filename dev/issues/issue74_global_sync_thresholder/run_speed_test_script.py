@@ -48,74 +48,73 @@ else:
 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
 
 configs = [# configuration                          project_directory
-          (NumpyConfiguration,                     None),
-          (WeaveConfiguration,                     None),
-          (LocalConfiguration,                     None),
+          #(NumpyConfiguration,                     None),
+          #(WeaveConfiguration,                     None),
+          #(LocalConfiguration,                     None),
           (CUDAStandaloneConfiguration,             'cuda_standalone'),
           (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
-          (CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
-          (CUDAStandaloneConfigurationNoThreadfence,  'cuda_standalone'),
-          (CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
-          (CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
-          (CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
-          (CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
-          (CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
-          (CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
-          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
-          (CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
-          (CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
-          (CPPStandaloneConfiguration,              'cpp_standalone'),
-          (GeNNConfiguration,                       'GeNNworkspace'),
-          (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
-          (GeNNConfigurationCPU,                    'GeNNworkspace'),
-          (GeNNConfigurationOptimized,              'GeNNworkspace')
+          #(CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
+          #(CUDAStandaloneConfigurationNoThreadfence,  'cuda_standalone'),
+          #(CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
+          #(CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
+          #(CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
+          #(CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
+          #(CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
+          #(CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
+          #(CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
+          #(CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
+          #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
+          #(CPPStandaloneConfiguration,              'cpp_standalone'),
+          #(GeNNConfiguration,                       'GeNNworkspace'),
+          #(CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+          #(GeNNConfigurationCPU,                    'GeNNworkspace'),
+          #(GeNNConfigurationOptimized,              'GeNNworkspace')
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
 
-               (ThresholderOnlyPoissonLowRate,                  'ThresholderOnlyPoissonLowRate',                slice(None)         ),
-               (ThresholderOnlyPoissonMediumRate,               'ThresholderOnlyPoissonMediumRate',             slice(None)         ),
-               (ThresholderOnlyPoissonHighRate,                 'ThresholderOnlyPoissonHighRate',               slice(None)         ),
-               (ThresholderOnlyAlwaysSpiking,                   'ThresholderOnlyAlwaysSpiking',                 slice(None)         ),
+               #(ThresholderOnlyPoissonLowRate,                         'ThresholderOnlyPoissonLowRate',                       slice(None)         ),
+               #(ThresholderOnlyPoissonMediumRate,                         'ThresholderOnlyPoissonMediumRate',                       slice(None)         ),
+               (ThresholderOnlyPoissonHighRate,                         'ThresholderOnlyPoissonHighRate',                       slice(None)         ),
+               #(ThresholderOnlyAlwaysSpiking,                         'ThresholderOnlyAlwaysSpiking',                       slice(None)         ),
 
-               (BrunelHakimStateupdateOnlyDouble,               'BrunelHakimStateupdateOnlyDouble',             slice(None)         ),
-               (BrunelHakimStateupdateOnlyTriple,               'BrunelHakimStateupdateOnlyTriple',             slice(None)         ),
-               (BrunelHakimStateupdateOnly,                     'BrunelHakimStateupdateOnly',                   slice(None)         ),
-               (BrunelHakimNeuronsOnly,                         'BrunelHakimNeuronsOnly',                       slice(None)         ),
-               (BrunelHakimNeuronsOnlyNoXi,                     'BrunelHakimNeuronsOnlyNoXi',                   slice(None)         ),
-               (BrunelHakimNeuronsOnlyNoRand,                   'BrunelHakimNeuronsOnlyNoRand',                 slice(None)         ),
-               (BrunelHakimStateupdateThresholdOnly,            'BrunelHakimStateupdateThresholdOnly',          slice(None)         ),
-               (BrunelHakimStateupdateThresholdResetOnly,       'BrunelHakimStateupdateThresholdResetOnly',     slice(None)         ),
-               (BrunelHakimModelScalarDelayShort,               'BrunelHakimModelScalarDelayShort',             slice(None)         ),
-               (BrunelHakimModelScalarDelayNoSelfConnections,   'BrunelHakimModelScalarDelayNoSelfConnections', slice(None)         ),
-               (CUBA,                                           'CUBA',                                         slice(None)         ),
-               (COBAHH,                                         'COBAHH',                                       slice(None)         ),
-               (AdaptationOscillation,                          'AdaptationOscillation',                        slice(None)         ),
-               (Vogels,                                         'Vogels',                                       slice(None)         ),
-               (STDP,                                           'STDP',                                         slice(None)         ),
-               (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
-               (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
-
-               (VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
-               (SparseMediumRateSynapsesOnly,                   'SparseMediumRateSynapsesOnly',                 slice(None)         ),
-               (DenseMediumRateSynapsesOnly,                    'DenseMediumRateSynapsesOnly',                  slice(None)         ),
-               (SparseLowRateSynapsesOnly,                      'SparseLowRateSynapsesOnly',                    slice(None)         ),
-               (SparseHighRateSynapsesOnly,                     'SparseHighRateSynapsesOnly',                   slice(None)         ),
-
-               (STDPNotEventDriven,                             'STDPNotEventDriven',                           slice(None)         ),
-               (STDPMultiPost,                                  'STDPMultiPost',                                slice(None)         ),
-               (STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
-               (STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
-
-               (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
-
-               (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
-               (HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
-               (VogelsWithSynapticDynamic,                      'VogelsWithSynapticDynamic',                    slice(None)         ),
-
-               ## below uses monitors
-               (CUBAFixedConnectivity,                          'CUBAFixedConnectivity',                        slice(None)         ),
-               (COBAHHFixedConnectivity,                        'COBAHHFixedConnectivity',                      slice(None, -1)     ),
+               #(BrunelHakimStateupdateOnlyDouble,           'BrunelHakimStateupdateOnlyDouble',         slice(None)         ),
+               #(BrunelHakimStateupdateOnlyTriple,           'BrunelHakimStateupdateOnlyTriple',         slice(None)         ),
+               #(BrunelHakimStateupdateOnly,           'BrunelHakimStateupdateOnly',         slice(None)         ),
+               #(BrunelHakimNeuronsOnly,           'BrunelHakimNeuronsOnly',         slice(None)         ),
+               #(BrunelHakimNeuronsOnlyNoXi,           'BrunelHakimNeuronsOnlyNoXi',         slice(None)         ),
+               #(BrunelHakimNeuronsOnlyNoRand,           'BrunelHakimNeuronsOnlyNoRand',         slice(None)         ),
+               #(BrunelHakimStateupdateThresholdOnly,           'BrunelHakimStateupdateThresholdOnly',         slice(None)         ),
+               #(BrunelHakimStateupdateThresholdResetOnly,           'BrunelHakimStateupdateThresholdResetOnly',         slice(None)         ),
+               #(BrunelHakimModelScalarDelayShort,      'BrunelHakimModelScalarDelayShort',     slice(None)         ),
+              #(BrunelHakimModelScalarDelayNoSelfConnections,           'BrunelHakimModelScalarDelayNoSelfConnections',         slice(None)         ),
+#              (CUBA,                                 'CUBA',                              slice(None)         ),
+#              (COBAHH,                                 'COBAHH',                              slice(None)         ),
+#              (AdaptationOscillation,                  'AdaptationOscillation',               slice(None)         ),
+#              (Vogels,                                 'Vogels',                              slice(None)         ),
+#               (STDP,                                   'STDP',                                slice(None)         ),
+#              (STDPEventDriven,                        'STDPEventDriven',                     slice(None)         ),
+#              (BrunelHakimModelScalarDelay,           'BrunelHakimModelScalarDelay',         slice(None)         ),
+#
+#               (VerySparseMediumRateSynapsesOnly,       'VerySparseMediumRateSynapsesOnly',    slice(None)         ),
+#               (SparseMediumRateSynapsesOnly,           'SparseMediumRateSynapsesOnly',        slice(None)         ),
+#               (DenseMediumRateSynapsesOnly,            'DenseMediumRateSynapsesOnly',         slice(None)         ),
+#               (SparseLowRateSynapsesOnly,              'SparseLowRateSynapsesOnly',           slice(None)         ),
+#               (SparseHighRateSynapsesOnly,             'SparseHighRateSynapsesOnly',          slice(None)         ),
+#
+#               (STDPNotEventDriven,                     'STDPNotEventDriven',                  slice(None)         ),
+#               (STDPMultiPost,                          'STDPMultiPost',                        slice(None)         ),
+#               (STDPNeuronalTraces,                     'STDPNeuronalTraces',                   slice(None)         ),
+#               (STDPMultiPostNeuronalTraces,            'STDPMultiPostNeuronalTraces',          slice(None)         ),
+#
+#              (BrunelHakimModelHeterogeneousDelay,    'BrunelHakimModelHeterogeneousDelay',  slice(None)         ),
+#
+#              (LinearNeuronsOnly,                     'LinearNeuronsOnly',                   slice(None)         ),
+#              (HHNeuronsOnly,                         'HHNeuronsOnly',                       slice(None)         ),
+#               (VogelsWithSynapticDynamic,              'VogelsWithSynapticDynamic',           slice(None)         ),
+### below uses monitors
+#               (CUBAFixedConnectivity,                 'CUBAFixedConnectivity',               slice(None)         ),
+#               (COBAHHFixedConnectivity,                'COBAHHFixedConnectivity',             slice(None, -1)     ),
 ]
 
 configurations = [config[0] for config in configs]
@@ -165,23 +164,20 @@ try:
         start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         print("Starting {} on {}.".format(name, start))
         maximum_run_time = 1*60*60*second
+        #st.duration = 10*second
         res = run_speed_tests(configurations=configurations,
                               speed_tests=[st],
                               n_slice=sl,
                               #n_slice=slice(0,1,None),
                               run_twice=False,
                               verbose=True,
-                              maximum_run_time=maximum_run_time#,
-                              ## this needs modification of brian2 code
-                              #profile_only_active=True 
-                              #profile_only_active=False
-                             )
+                              maximum_run_time=maximum_run_time,
+                              profile_only_active=True)
+                              #profile_only_active=False)
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
         print("Running {} took {}.".format(name, diff))
-        res.plot_all_tests()
-        ## this needs modification of brian2 code
-        #res.plot_all_tests(print_relative=True)
+        res.plot_all_tests(print_relative=True)
         savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
         res.plot_all_tests(relative=True)
         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))

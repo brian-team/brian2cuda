@@ -3,6 +3,8 @@ import os
 import glob
 from subprocess import check_output
 
+from update_readme import update_benchmark_readme
+
 readme_tmpl = '''
 # Benchmark results from {date}
 ## Description:
@@ -72,6 +74,8 @@ def create_readme(result_dir, description=''):
     
     with open(result_dir + "/README.md", "w") as readme_file:
         readme_file.write(readme_md)
+
+    update_benchmark_readme()
 
 if __name__ == '__main__':
 

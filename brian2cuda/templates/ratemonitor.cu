@@ -19,10 +19,12 @@ int num_iterations = {{owner.clock.name}}.i_end;
 unsigned int size_till_now = dev{{_dynamic_t}}.size();
 dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
 dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
+num_threads = 1;
+num_blocks = 1;
 {% endblock %}
 
 {% block kernel_call %}
-kernel_{{codeobj_name}}<<<1,1>>>(
+kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 	current_iteration - start_offset,
 	thrust::raw_pointer_cast(&(dev{{_dynamic_rate}}[0])),
 	thrust::raw_pointer_cast(&(dev{{_dynamic_t}}[0])),
@@ -41,7 +43,11 @@ if (status != cudaSuccess)
 {% endblock %}
 
 {% block kernel %}
-__global__ void kernel_{{codeobj_name}}(
+__global__ void
+{% if launch_bounds %}
+__launch_bounds__(1024, {{sm_multiplier}})
+{% endif %}
+kernel_{{codeobj_name}}(
 	int32_t current_iteration,
 	double* ratemonitor_rate,
 	double* ratemonitor_t,

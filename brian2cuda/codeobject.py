@@ -43,7 +43,7 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
 codegen_targets.add(CUDAStandaloneCodeObject)
 
 rand_code = '''
-    #define _rand(vectorisation_idx) (_array_%CODEOBJ_NAME%_rand[vectorisation_idx])
+    #define _rand(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_rand[vectorisation_idx])
     '''
 rand_impls = DEFAULT_FUNCTIONS['rand'].implementations
 rand_impls.add_implementation(CUDAStandaloneCodeObject,
@@ -51,7 +51,7 @@ rand_impls.add_implementation(CUDAStandaloneCodeObject,
                               name='_rand')
 
 randn_code = '''
-    #define _randn(vectorisation_idx) (_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
+    #define _randn(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
         '''
 randn_impls = DEFAULT_FUNCTIONS['randn'].implementations
 randn_impls.add_implementation(CUDAStandaloneCodeObject,

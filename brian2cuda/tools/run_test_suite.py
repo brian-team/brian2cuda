@@ -25,6 +25,7 @@ args = parser.parse_args()
 
 import os
 from StringIO import StringIO
+import socket
 
 from brian2 import test, prefs
 import brian2cuda
@@ -39,6 +40,12 @@ prefs['codegen.cpp.extra_compile_args_msvc'].extend(['/Od'])
 prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-Xcudafe "--diag_suppress=declared_but_not_referenced"'])
 
 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j' + str(args.jobs[0])]
+
+if socket.gethostname() == 'elnath':
+    if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
+        prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
+    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+    prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
 
 extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
 
