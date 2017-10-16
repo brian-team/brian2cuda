@@ -54,7 +54,6 @@ configs = [# configuration                          project_directory
           (CUDAStandaloneConfiguration,             'cuda_standalone'),
           (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
           (CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
-          (CUDAStandaloneConfigurationNoThreadfence,  'cuda_standalone'),
           (CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
           (CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
           (CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
