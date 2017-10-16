@@ -184,7 +184,6 @@ class CUDAStandaloneConfigurationProfileGPU(Configuration):
     name = 'CUDA standalone (profile=True)'
     def before_run(self):
         brian2.set_device('cuda_standalone', build_on_run=False, profile=True)
-        prefs['devices.cuda_standalone.profile'] = True
         if socket.gethostname() == 'elnath':
             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
                 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
