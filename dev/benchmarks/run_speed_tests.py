@@ -3,6 +3,7 @@ import shutil
 import glob
 import subprocess
 import sys
+import socket
 
 # run tests without X-server
 import matplotlib
@@ -46,6 +47,12 @@ else:
     additional_dir_name = ''
 
 prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
+
+# host specific settings
+if socket.gethostname() == 'elnath':
+    prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
+    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+    prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
 
 configs = [# configuration                          project_directory
           (NumpyConfiguration,                     None),
