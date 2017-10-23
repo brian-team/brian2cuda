@@ -1,0 +1,36 @@
+diff --git a/brian2genn/device.py b/brian2genn/device.py
+index 01b3f03..7c2dfa8 100644
+--- a/brian2genn/device.py
++++ b/brian2genn/device.py
+@@ -673,6 +673,7 @@ class GeNNDevice(CPPStandaloneDevice):
+             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
+         self._last_run_time, self._last_run_completed_fraction = map(float,
+                                                                      last_run_info.split())
++        print("INFO _last_run_time = {} s".format(self._last_run_time))
+ 
+         # The following is a verbatim copy of the respective code in
+         # CPPStandaloneDevice.run. In the long run, we can hopefully implement
+@@ -737,7 +738,7 @@ class GeNNDevice(CPPStandaloneDevice):
+                     args += ['-c']
+                 check_call(args, cwd=directory)
+                 call(["make", "clean"], cwd=directory)
+-                check_call(["make"], cwd=directory)
++                check_call(["make", "-j6"], cwd=directory)
+ 
+     def add_parameter(self, model, varname, variable):
+         model.parameters.append(varname)
+diff --git a/brian2genn/templates/engine.cpp b/brian2genn/templates/engine.cpp
+index dfcb2c9..0271c0f 100644
+--- a/brian2genn/templates/engine.cpp
++++ b/brian2genn/templates/engine.cpp
+@@ -186,6 +186,10 @@ void engine::run(double duration, //!< Duration of time to run the model for
+       }
+       {% endif %}
+   }  
++  {% if maximum_run_time is none %}
++  current= std::clock();
++  elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
++  {% endif %}
+   brian::_last_run_time = elapsed_realtime;
+   if (duration > 0.0)
+   {

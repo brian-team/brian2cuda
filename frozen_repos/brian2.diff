@@ -1,0 +1,305 @@
+diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
+index a4f487e..60b84a5 100644
+--- a/brian2/devices/cpp_standalone/device.py
++++ b/brian2/devices/cpp_standalone/device.py
+@@ -826,7 +826,7 @@ def compile_source(self, directory, compiler, debug, clean):
+                     if clean:
+                         os.system('make clean')
+                     if debug:
+-                        x = os.system('make debug')
++                        x = os.system('make -j12 debug')
+                     else:
+                         make_args = ' '.join(prefs.devices.cpp_standalone.extra_make_args_unix)
+                         x = os.system('make %s' % (make_args, ))
+@@ -866,6 +866,7 @@ def run(self, directory, with_output, run_args):
+             if os.path.isfile('results/last_run_info.txt'):
+                 last_run_info = open('results/last_run_info.txt', 'r').read()
+                 self._last_run_time, self._last_run_completed_fraction = map(float, last_run_info.split())
++        print("INFO _last_run_time = {} s".format(self._last_run_time))
+ 
+         # Make sure that integration did not create NaN or very large values
+         owners = [var.owner for var in self.arrays]
+diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
+index 14021ef..5d4f5cd 100644
+--- a/brian2/tests/features/base.py
++++ b/brian2/tests/features/base.py
+@@ -98,6 +98,8 @@ def compare_arrays(self, maxrelerr, v_base, v_test):
+                 self.compare_arrays(maxrelerr, v_base[k], v_test[k])
+         else:
+             I = (v_base!=0)
++            #print('vbase', v_base)
++            #print('vtest', v_test)
+             err = numpy.amax(numpy.abs(v_base[I]-v_test[I])/v_base[I])
+             if err>maxrelerr:
+                 raise InaccuracyError(err)
+@@ -226,8 +228,10 @@ def after_run(self):
+                             with_output=False)
+     
+     
+-def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+-    tempfilename = tempfile.mktemp('exception')
++def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second,
++           profile_only_active=False):
++    tempfilename = 'my_file_1'#tempfile.mktemp('exception')
++    tempfilename_net_obj = 'my_file_2'#tempfile.mktemp('network_objects')
+     if n is None:
+         init_args = ''
+     else:
+@@ -246,6 +250,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+     configuration.before_run()
+     brian2.device._set_maximum_run_time({maximum_run_time})
+     feature.run()
++    if {prof_active}:
++        code_objects = []
++        for obj in brian2.magic_network.objects:
++            if obj.active:
++                for codeobj in obj._code_objects:
++                    code_objects.append(codeobj.name)
+     configuration.after_run()
+     results = feature.results()
+     run_time = time.time()-start_time
+@@ -263,20 +273,30 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+     f = open(r'{tempfname}', 'wb')
+     pickle.dump((None, results, run_time, new_prof_info), f, -1)
+     f.close()
++    if {prof_active}:
++        f2 = open(r'{tempfname_net_obj}', 'wb')
++        pickle.dump(code_objects, f2, -1)
++        f2.close()
+ except Exception, ex:
+     #traceback.print_exc(file=sys.stdout)
+     tb = traceback.format_exc()
+     f = open(r'{tempfname}', 'wb')
+     pickle.dump((tb, ex, 0.0, []), f, -1)
+     f.close()
++    if {prof_active}:
++        f2 = open(r'{tempfname_net_obj}', 'wb')
++        pickle.dump([], f2, -1)
++        f2.close()
+     '''.format(config_module=configuration.__module__,
+                config_name=configuration.__name__,
+                feature_module=feature.__module__,
+                feature_name=feature.__name__,
+                tempfname=tempfilename,
++               tempfname_net_obj=tempfilename_net_obj,
+                fname=__file__,
+                init_args=init_args,
+                maximum_run_time=float(maximum_run_time),
++               prof_active=str(profile_only_active)
+                )
+     args = [sys.executable, '-c',
+             code_string]
+@@ -289,6 +309,16 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+     #sys.stderr.write(stderr)
+     f = open(tempfilename, 'rb')
+     tb, res, runtime, profiling_info = pickle.load(f)
++    if isinstance(res, Exception):
++        tb = stdout + '\n' + stderr + '\n' + tb
++    f.close()
++    if profile_only_active:
++        f2 = open(tempfilename_net_obj, 'rb')
++        network_codeobjects = pickle.load(f2)
++        f2.close()
++        profiling_info = [(codeobj, time)
++                              for (codeobj, time) in profiling_info
++                              if codeobj in network_codeobjects]
+     return tb, res, runtime, profiling_info
+     
+ 
+@@ -477,7 +507,7 @@ def __str__(self):
+ 
+ 
+ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
+-                    n_slice=slice(None), maximum_run_time=1e7*brian2.second):
++                    n_slice=slice(None), maximum_run_time=1e7*brian2.second, profile_only_active=True):
+     if configurations is None:
+         # some configurations to attempt to import
+         try:
+@@ -495,15 +525,22 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+     full_results = {}
+     tag_results = defaultdict(lambda:defaultdict(list))
+     for ft in speed_tests:
++        traceback = {}
++        brian_stdouts = {}
++        result = {}
+         if verbose:
+             print ft.fullname()+': ',
++            sys.stdout.flush()
+         for n in ft.n_range[n_slice]:
+             if verbose:
+                 print 'n=%d [' % n,
++                sys.stdout.flush()
+             for configuration in configurations:
+                 sym = '.'
++                brian_stdout = ''
+                 for _ in xrange(1+int(run_twice)):
+-                    tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time)
++                    tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time,
++                                                          profile_only_active=profile_only_active)
+                 if isinstance(res, Exception):
+                     if isinstance(res, NotImplementedError):
+                         sym = 'N'
+@@ -512,8 +549,24 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+                     if configuration is DefaultConfiguration:
+                         raise res
+                     runtime = numpy.NAN
++                    proj_dir = ''
++                    if configuration.name.startswith("CUDA"):
++                        proj_dir = 'cuda_standalone'
++                    elif configuration.name.startswith("CPP"):
++                        proj_dir = 'cpp_standalone'
++                    elif configuration.name.startswith("GeNN"):
++                        proj_dir = 'GeNNWorkspace'
++                    stdout_file = os.path.join(os.getcwd(), proj_dir, 'results/stdout.txt')
++                    if os.path.exists(stdout_file):
++                        brian_stdout = open(stdout_file, 'r').read()
++                    else:
++                        brian_stdout = 'no stdout file found, cwd = {}'.format(stdout_file)
+                 sys.stdout.write(sym)
++                sys.stdout.flush()
+                 full_results[configuration.name, ft.fullname(), n, 'All'] = runtime
++                traceback[configuration.name, n] = tb
++                brian_stdouts[configuration.name, n] = brian_stdout
++                result[configuration.name, n] = res
+                 suffixtime = defaultdict(float)
+                 overheadstime = float(runtime)
+                 for codeobjname, proftime in prof_info:
+@@ -528,8 +581,14 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+                 full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
+             if verbose:
+                 print ']',
++                sys.stdout.flush()
+         if verbose:
+             print
++            for n in ft.n_range[n_slice]:
++                for conf in configurations:
++                    if isinstance(result[conf.name, n], Exception):
++                        print("\nTRACEBACK {} N={}\n{}\n{}\n\n".format(conf.name, n, brian_stdouts[conf.name, n],
++                                                                       traceback[conf.name, n]))
+         
+     return SpeedTestResults(full_results, configurations, speed_tests)
+ 
+@@ -550,7 +609,7 @@ def get_codeobjsuffixes(self, fullname):
+         confignames, fullnames, n, codeobjsuffixes  = zip(*L)
+         return set(codeobjsuffixes)
+ 
+-    def plot_all_tests(self, relative=False, profiling_minimum=1.0):
++    def plot_all_tests(self, relative=False, profiling_minimum=1.0, print_relative=False):
+         if relative and profiling_minimum<1:
+             raise ValueError("Cannot use relative plots with profiling")
+         import pylab
+@@ -581,13 +640,22 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+                         if float(thistime/runtime)>=profiling_minimum:
+                             skip = False
+                         runtimes.append(thistime)
++                        #overheadstime = self.full_results.get((configname, fullname, n, 'Overheads'), numpy.nan)
++                        #if (profiling_minimum<1 and  overheadstime == runtime:
++                        #    skip = True
+                     if skip:
+                         continue
+                     runtimes = numpy.array(runtimes)
+-                    if relative:
++                    if relative or print_relative:
+                         if baseline is None:
+                             baseline = runtimes
++                    if relative:
+                         runtimes = baseline/runtimes
++                    if print_relative:
++                        rel = baseline/runtimes
++                        for ni, n in enumerate(ns):
++                            print("INFO relative performance for {ft} N={n} {conf}: {factor}".format(
++                                ft=fullname, n=n, conf=config.name, factor=rel[ni]))
+                     if suffix=='All':
+                         lw = 2
+                         label = configname
+@@ -627,6 +695,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+                 pylab.gca().set_xscale('log')
+             if st.time_axis_log:
+                 pylab.gca().set_yscale('log')
++            pylab.grid(True, which='both')    
+ 
+ # Code below auto generates restructured text tables, copied from:
+ # http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte
+diff --git a/brian2/tests/features/speed.py b/brian2/tests/features/speed.py
+index 0c8f928..05ef208 100644
+--- a/brian2/tests/features/speed.py
++++ b/brian2/tests/features/speed.py
+@@ -22,7 +22,7 @@ class LinearNeuronsOnly(SpeedTest):
+     category = "Neurons only"
+     name = "Linear 1D"
+     tags = ["Neurons"]
+-    n_range = [10, 100, 1000, 10000, 100000, 1000000]
++    n_range = [10, 100, 1000, 10000, 100000, 1000000, 10000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -41,7 +41,7 @@ class HHNeuronsOnly(SpeedTest):
+     category = "Neurons only"
+     name = "Hodgkin-Huxley"
+     tags = ["Neurons"]
+-    n_range = [10, 100, 1000, 10000, 100000]
++    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -85,7 +85,7 @@ class CUBAFixedConnectivity(SpeedTest):
+     category = "Full examples"
+     name = "CUBA fixed connectivity"
+     tags = ["Neurons", "Synapses", "SpikeMonitor"]
+-    n_range = [10, 100, 1000, 10000, 100000]
++    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -254,7 +254,7 @@ def run(self):
+ class SynapsesOnly(object):
+     category = "Synapses only"
+     tags = ["Synapses"]
+-    n_range = [10, 100, 1000, 10000]
++    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+     n_label = 'Num neurons'
+     duration = 1 * second
+     # memory usage will be approximately p**2*rate*dt*N**2*bytes_per_synapse/1024**3 GB
+@@ -281,7 +281,7 @@ class VerySparseMediumRateSynapsesOnly(SynapsesOnly, SpeedTest):
+     name = "Very sparse, medium rate (10s duration)"
+     rate = 10 * Hz
+     p = 0.02
+-    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 20s
++    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 20s
+     duration = 10 * second
+ 
+ 
+@@ -289,21 +289,21 @@ class SparseMediumRateSynapsesOnly(SynapsesOnly, SpeedTest):
+     name = "Sparse, medium rate (1s duration)"
+     rate = 10 * Hz
+     p = 0.2
+-    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 5m
++    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 5m
+ 
+ 
+ class DenseMediumRateSynapsesOnly(SynapsesOnly, SpeedTest):
+     name = "Dense, medium rate (1s duration)"
+     rate = 10 * Hz
+     p = 1.0
+-    n_range = [10, 100, 1000, 10000, 40000]  # weave max CPU time should be about 4m
++    n_range = [10, 100, 1000, 10000, 100000, 500000]#40000]  # weave max CPU time should be about 4m
+ 
+ 
+ class SparseLowRateSynapsesOnly(SynapsesOnly, SpeedTest):
+     name = "Sparse, low rate (10s duration)"
+     rate = 1 * Hz
+     p = 0.2
+-    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 20s
++    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 20s
+     duration = 10 * second
+ 
+ 
+@@ -311,7 +311,7 @@ class SparseHighRateSynapsesOnly(SynapsesOnly, SpeedTest):
+     name = "Sparse, high rate (1s duration)"
+     rate = 100 * Hz
+     p = 0.2
+-    n_range = [10, 100, 1000, 10000]  # weave max CPU time should be about 5m
++    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 5m
+ 
+ 
+ if __name__ == '__main__':
