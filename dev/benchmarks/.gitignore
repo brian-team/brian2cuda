@@ -1,0 +1,4 @@
+cuda_standalone/*
+cpp_standalone/*
+GeNNworkspace/*
+results_*_bak_*
