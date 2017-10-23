@@ -1,0 +1,14 @@
+
+prefs.codegen.generators.cuda.default_functions_integral_convertion = 'single_precision' | 'double_precision'
+We can use this between definitions, getting different behaviour for different codeobjects
+```
+prefs.codegen.generators.cuda.default_functions_integral_convertion == 'double_precision'
+G = NeuronGroup(1, 'v:1')
+G.v = 'sin(i)'  # will convert i to double
+
+prefs.codegen.generators.cuda.default_functions_integral_convertion == 'single_precision'
+G2 = NeuronGroup(1, 'v:1')
+G.v = 'sin(i)'  # will convert i to float
+
+run(0*ms)
+```
