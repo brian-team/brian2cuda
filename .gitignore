@@ -36,3 +36,9 @@ nosetests.xml
 # ignore compiled files in dev folder
 /dev/**/*.o
 /dev/**/main
+
+# ignore benchmarks folder
+/dev/benchmarks
+
+# ignore tags files
+tags
