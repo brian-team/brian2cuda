@@ -16,7 +16,9 @@ import os
 example_name = os.path.splitext(os.path.basename(__file__))[0]
 
 from brian2 import *
-set_device('cpp_standalone', directory=example_name, compile=True, run=True, debug=True)
+import brian2cuda
+
+set_device('cuda_standalone', directory=example_name, compile=True, run=True, debug=False)
 
 N = 1000000 # no of synapses
 N_neuron = int(sqrt(N))
