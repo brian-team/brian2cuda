@@ -106,24 +106,80 @@ void _run_{{codeobj_name}}()
 			exit(status);
 		}
 
-		// TODO: make all these vars static and put into first_run scope and prinf info if no synapses
+	    static int num_threads, num_blocks;
+        static unsigned int needed_shared_memory;
+	    static bool first_run = true;
+	    if (first_run)
+	    {
 
-		// We are copying next_delay_start_idx (size = num_unique_delays) into shared memory. Since num_unique_delays
-		// varies for different combinations of pre neuron and bid, we allocate for max(num_unique_delays).
-		// And +1 per block for copying size_before_resize into shared memory when we need to use the outer loop.
-		unsigned int needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
-		assert (needed_shared_memory <= max_shared_mem_size);
+            /* We are copying next_delay_start_idx (size = num_unique_delays)
+               into shared memory. Since num_unique_delays
+               varies for different combinations of pre neuron and bid, we
+               allocate for max(num_unique_delays). And +1 per block for
+               copying size_before_resize into shared memory when we need to
+               use the outer loop.
+            */
+		    needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
+		    assert (needed_shared_memory <= max_shared_mem_size);
 
-		// We don't need more then max(num_synapses) threads per block.
-		unsigned int num_threads = {{owner.name}}_max_size;
-		if (num_threads > max_threads_per_block)
-		{
-			num_threads = max_threads_per_block;
-		}
+		    // We don't need more then max(num_synapses) threads per block.
+		    num_threads = {{owner.name}}_max_size;
+		    if (num_threads > max_threads_per_block)
+		    {
+		    	num_threads = max_threads_per_block;
+		    }
 
-		_run_{{codeobj_name}}_push_kernel<<<num_parallel_blocks, num_threads, needed_shared_memory>>>(
+	    	num_blocks = num_parallel_blocks;
+
+	    	// calculate theoretical occupancy
+	    	int max_active_blocks;
+	    	cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+	    			_run_{{codeobj_name}}_push_kernel, num_threads,
+                    needed_shared_memory);
+
+	    	float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
+	    	                  (float)(max_threads_per_sm / num_threads_per_warp);
+
+            // check if we have enough ressources to call kernel with given
+            // number of blocks and threads
+	    	struct cudaFuncAttributes funcAttrib;
+	    	cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_push_kernel);
+	    	if (num_threads > funcAttrib.maxThreadsPerBlock)
+	    	{
+	    		// use the max num_threads before launch failure
+	    		num_threads = funcAttrib.maxThreadsPerBlock;
+	    		printf("WARNING Not enough ressources available to call "
+                       "_run_{{codeobj_name}}_push_kernel "
+                       "with maximum possible threads per block (%u). "
+                       "Reducing num_threads to %u. (Kernel needs %i "
+                       "registers per block, %i bytes of "
+                       "statically-allocated shared memory per block, %i "
+                       "bytes of local memory per thread and a total of %i "
+                       "bytes of user-allocated constant memory)\n",
+                       max_threads_per_block, num_threads, funcAttrib.numRegs,
+                       funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                       funcAttrib.constSizeBytes);
+	    	}
+	    	else
+	    	{
+                printf("INFO calling "
+                       "_run_{{codeobj_name}}_push_kernel "
+                       "with %u blocks and %u threads. Kernel needs %i "
+                       "registers per block, %i bytes of statically-allocated "
+                       "shared memory per block, %i bytes of local memory per "
+                       "thread and a total of %i bytes of user-allocated "
+                       "constant memory.{% if calc_occupancy %} Theoretical "
+                       "occupancy is %f.{% endif %}\n",
+                       num_blocks, num_threads, funcAttrib.numRegs,
+                       funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                       funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
+	    	}
+	    	first_run = false;
+	    }
+
+		_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
 			_num{{eventspace_variable.name}}-1,
-			num_parallel_blocks,
+			num_blocks,
 			num_threads,
 			dev{{_eventspace}}[current_idx{{_eventspace}}]);
 
