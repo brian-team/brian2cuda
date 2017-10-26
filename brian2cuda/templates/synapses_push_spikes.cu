@@ -162,14 +162,18 @@ void _run_{{codeobj_name}}()
 	    	}
 	    	else
 	    	{
-                printf("INFO calling "
-                       "_run_{{codeobj_name}}_push_kernel "
-                       "with %u blocks and %u threads. Kernel needs %i "
-                       "registers per block, %i bytes of statically-allocated "
-                       "shared memory per block, %i bytes of local memory per "
-                       "thread and a total of %i bytes of user-allocated "
-                       "constant memory.{% if calc_occupancy %} Theoretical "
-                       "occupancy is %f.{% endif %}\n",
+                printf("INFO _run_{{codeobj_name}}_push_kernel\n"
+                       "\t%u blocks\n"
+                       "\t%u threads\n"
+                       "\t%i registers per block\n"
+                       "\t%i bytes statically-allocated shared memory per block\n"
+                       "\t%i bytes local memory per thread\n"
+                       "\t%i bytes user-allocated constant memory\n"
+                       {% if calc_occupancy %}
+                       "\t%.3f theoretical occupancy\n",
+                       {% else %}
+                       "",
+                       {% endif %}
                        num_blocks, num_threads, funcAttrib.numRegs,
                        funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                        funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});

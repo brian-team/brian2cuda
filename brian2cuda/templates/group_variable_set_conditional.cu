@@ -125,13 +125,13 @@ void _run_{{codeobj_name}}()
 		}
 		else
 		{
-            printf("INFO calling "
-                   "kernel_{{codeobj_name}} "
-                   "with %u blocks and %u threads. Kernel needs %i "
-                   "registers per block, %i bytes of statically-allocated "
-                   "shared memory per block, %i bytes of local memory per "
-                   "thread and a total of %i bytes of user-allocated "
-                   "constant memory.\n",
+            printf("INFO kernel_{{codeobj_name}}\n"
+                   "\t%u blocks\n"
+                   "\t%u threads\n"
+                   "\t%i registers per block\n"
+                   "\t%i bytes statically-allocated shared memory per block\n"
+                   "\t%i bytes local memory per thread\n"
+                   "\t%i bytes user-allocated constant memory\n",
                    num_blocks, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes);
