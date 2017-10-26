@@ -130,34 +130,42 @@ void _run_{{codeobj_name}}()
 		{% endblock occupancy %}
 
 
-		// check if we have enough ressources to call kernel with given number of blocks and threads
+        // check if we have enough ressources to call kernel with given number
+        // of blocks and threads
 		struct cudaFuncAttributes funcAttrib;
 		cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
 		if (num_threads > funcAttrib.maxThreadsPerBlock)
 		{
 			// use the max num_threads before launch failure
 			num_threads = funcAttrib.maxThreadsPerBlock;
-			printf("WARNING Not enough ressources available to call kernel_{{codeobj_name}} with "
-					"maximum possible threads per block (%u). Reducing num_threads to "
-					"%u. (Kernel needs %i registers per block, %i bytes of statically-allocated "
-					"shared memory per block, %i bytes of local memory per thread and "
-					"a total of %i bytes of user-allocated constant memory)\n",
-					max_threads_per_block, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
-					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes);
+	    	printf("WARNING Not enough ressources available to call "
+                   "kernel_{{codeobj_name}} "
+                   "with maximum possible threads per block (%u). "
+                   "Reducing num_threads to %u. (Kernel needs %i "
+                   "registers per block, %i bytes of "
+                   "statically-allocated shared memory per block, %i "
+                   "bytes of local memory per thread and a total of %i "
+                   "bytes of user-allocated constant memory)\n",
+                   max_threads_per_block, num_threads, funcAttrib.numRegs,
+                   funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                   funcAttrib.constSizeBytes);
 		}
 		{% block extra_info_msg %}
 		{% endblock %}
 		{% block kernel_info %}
 		else
 		{
-			printf("INFO calling kernel_{{codeobj_name}} with %u blocks and %u threads. "
-					"Kernel needs %i registers per block, %i bytes of statically-allocated "
-					"shared memory per block, %i bytes of local memory per thread and "
-					"a total of %i bytes of user-allocated constant memory.{% if calc_occupancy %} "
-					"Theoretical occupancy is %f.{% endif %}\n",
-					num_blocks, num_threads, funcAttrib.numRegs, funcAttrib.sharedSizeBytes,
-					funcAttrib.localSizeBytes, funcAttrib.constSizeBytes{% if calc_occupancy %},occupancy{%endif%});
-					
+            printf("INFO calling "
+                   "kernel_{{codeobj_name}} "
+                   "with %u blocks and %u threads. Kernel needs %i "
+                   "registers per block, %i bytes of statically-allocated "
+                   "shared memory per block, %i bytes of local memory per "
+                   "thread and a total of %i bytes of user-allocated "
+                   "constant memory.{% if calc_occupancy %} Theoretical "
+                   "occupancy is %f.{% endif %}\n",
+                   num_blocks, num_threads, funcAttrib.numRegs,
+                   funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                   funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
 		}
 		{% endblock %}
 		first_run = false;
