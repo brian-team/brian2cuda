@@ -40,5 +40,13 @@ nosetests.xml
 # ignore benchmarks folder
 /dev/benchmarks
 
+# ignore directories in example folder (generated code)
+/examples/*/*
+
+# ignore project directories
+cuda_standalone/
+cpp_standalone/
+GeNNworkspace/
+
 # ignore tags files
 tags
