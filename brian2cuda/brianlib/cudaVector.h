@@ -90,7 +90,8 @@ public:
 
 	__device__ void resize(size_type new_size)
 	{
-		reserve(new_size);
+        if (new_size > m_capacity)
+            reserve(new_size * 2);
 		m_size = new_size;
 	}
 
