@@ -1,0 +1,7 @@
+[cuda_cpp_comparison_for_heterogenous_delay_mode](cuda_cpp_comparison_for_heterogenous_delay_mode)
+
+[cuda_atomics_original_and_atomics_effects_profiled](cuda_atomics_original_and_atomics_effects_profiled)
+
+[cuda_atomics_in_heterogenous_delay_mode](cuda_atomics_in_heterogenous_delay_mode)
+
+[cuda_atomics_effects_and_queue_resize_profiled](cuda_atomics_effects_and_queue_resize_profiled)

@@ -1,0 +1,20 @@
+==9905== NVPROF is profiling process 9905, command: ./main
+==9905== Profiling application: ./main
+==9905== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   27.60%  60.179ms     10000  6.0170us  5.8560us  7.0720us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, double, double*, double*, double*, bool*)
+                   23.08%  50.318ms     10000  5.0310us  3.2960us  23.232us  kernel_synapses_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double*, double, int*, int, int*, bool*)
+                   21.95%  47.850ms     10000  4.7840us  3.2960us  19.968us  kernel_synapses_1_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double, int*, int, int*, double*, bool*)
+                   11.42%  24.905ms     10000  2.4900us  2.2720us  2.8800us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double, double*, double*, bool*)
+                    8.26%  18.018ms     10000  1.8010us  1.6640us  2.1120us  kernel_neurongroup_resetter_codeobject(unsigned int, unsigned int, double*, int*, bool*)
+                    7.68%  16.743ms     10000  1.6740us  1.5360us  2.0800us  _GLOBAL__N__69_tmpxft_000024a7_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_97ebdcc0::_reset_neurongroup_thresholder_codeobject(int*)
+      API calls:   85.15%  643.72ms     60000  10.728us  9.3820us  9.0568ms  cudaLaunch
+                   11.40%  86.186ms    520000     165ns     134ns  363.54us  cudaSetupArgument
+                    1.93%  14.574ms     60000     242ns     182ns  349.11us  cudaConfigureCall
+                    1.50%  11.304ms     50000     226ns     194ns  14.049us  cudaGetLastError
+                    0.02%  134.84us         1  134.84us  134.84us  134.84us  cudaMemGetInfo
+                    0.00%  31.105us         8  3.8880us  3.0120us  5.6890us  cudaFuncGetAttributes
+                    0.00%  30.378us        39     778ns     653ns  1.8930us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  13.359us         1  13.359us  13.359us  13.359us  cudaDeviceSynchronize
+                    0.00%  6.2530us        12     521ns     334ns  1.3690us  cudaDeviceGetAttribute
+                    0.00%  3.6520us         3  1.2170us     789ns  1.6000us  cudaGetDevice

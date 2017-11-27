@@ -1,0 +1,21 @@
+INFO: setting cudaDevice stuff took 0.275236 seconds
+INFO calling kernel_synapses_group_variable_set_conditional_codeobject with 977 blocks and 1024 threads. Kernel needs 6 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO connectivity matrix has size 1000000
+INFO connectivity matrix has size 1000000
+INFO generating 13000000 rand every 13 clock cycles for poissongroup_thresholder_codeobject
+INFO calling kernel_neurongroup_stateupdater_codeobject with 1 blocks and 768 threads. Kernel needs 36 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.750000.
+INFO calling kernel_neurongroup_thresholder_codeobject with 1 blocks and 1024 threads. Kernel needs 9 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_poissongroup_thresholder_codeobject with 977 blocks and 1024 threads. Kernel needs 15 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_spikemonitor_codeobject with 1 blocks and 1 threads. Kernel needs 37 registers per block, 0 bytes of statically-allocated shared memory per block, 16 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.000000.
+INFO calling kernel_synapses_pre_codeobject with 15 blocks and 1024 threads. Kernel needs 42 registers per block, 0 bytes of statically-allocated shared memory per block, 8 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.500000.
+INFO calling kernel_synapses_post_codeobject with 15 blocks and 1024 threads. Kernel needs 34 registers per block, 0 bytes of statically-allocated shared memory per block, 8 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.500000.
+INFO calling kernel_neurongroup_resetter_codeobject with 1 blocks and 1024 threads. Kernel needs 14 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+...
+ERROR while allocating 33554428 bytes in cudaVector.h/reserve()
+ERROR while allocating 67108856 bytes in cudaVector.h/reserve()
+...
+Number of synapses: 1000000
+Number of synapses: 1000000
+INFO: main_lines took 2321.434166 seconds
+Number of spikes: 4194303
+INFO: main function took 2329.753789 seconds

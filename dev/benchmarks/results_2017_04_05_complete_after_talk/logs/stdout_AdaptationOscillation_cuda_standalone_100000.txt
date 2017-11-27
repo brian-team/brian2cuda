@@ -1,0 +1,3 @@
+INFO: setting cudaDevice stuff took 0.311282 seconds
+INFO calling kernel_neurongroup_group_variable_set_conditional_codeobject with 98 blocks and 1024 threads. Kernel needs 8 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO calling kernel_neurongroup_group_variable_set_conditional_codeobject_1 with 98 blocks and 1024 threads. Kernel needs 8 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory

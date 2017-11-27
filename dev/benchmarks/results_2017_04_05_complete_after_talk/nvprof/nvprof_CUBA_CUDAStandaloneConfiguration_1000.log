@@ -1,0 +1,24 @@
+==31291== NVPROF is profiling process 31291, command: ./main
+==31291== Profiling application: ./main
+==31291== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 31.18%  76.419ms     10000  7.6410us  7.3920us  8.7360us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, double, double*, double*, double*, bool*)
+ 19.96%  48.924ms     10000  4.8920us  3.4560us  20.384us  kernel_synapses_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double*, double, int*, int, int*, bool*)
+ 18.13%  44.432ms     10000  4.4430us  3.2960us  17.952us  kernel_synapses_1_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double, int*, int, int*, double*, bool*)
+ 13.38%  32.789ms     10000  3.2780us  3.2320us  3.7760us  [CUDA memset]
+  9.59%  23.496ms     10000  2.3490us  2.0480us  2.7520us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double, double*, double*, bool*)
+  7.76%  19.020ms     10000  1.9010us  1.6640us  2.0800us  kernel_neurongroup_resetter_codeobject(unsigned int, unsigned int, double*, int*, bool*)
+
+==31291== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 68.69%  471.10ms     50000  9.4220us  8.2170us  19.231ms  cudaLaunch
+ 13.91%  95.387ms     10000  9.5380us  8.7960us  312.26us  cudaMemset
+ 13.50%  92.578ms    510000     181ns     148ns  324.51us  cudaSetupArgument
+  2.05%  14.040ms     50000     280ns     237ns  5.2940us  cudaConfigureCall
+  1.83%  12.581ms     50000     251ns     217ns  12.226us  cudaGetLastError
+  0.01%  51.575us         1  51.575us  51.575us  51.575us  cudaMemGetInfo
+  0.00%  21.460us        39     550ns     461ns  1.4270us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+  0.00%  21.129us         8  2.6410us  1.9560us  4.4310us  cudaFuncGetAttributes
+  0.00%  16.670us         1  16.670us  16.670us  16.670us  cudaDeviceSynchronize
+  0.00%  5.5840us        12     465ns     285ns  1.2870us  cudaDeviceGetAttribute
+  0.00%  3.3860us         3  1.1280us     653ns  1.8010us  cudaGetDevice

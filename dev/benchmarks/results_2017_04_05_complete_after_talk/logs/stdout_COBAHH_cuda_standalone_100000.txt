@@ -1,0 +1,14 @@
+INFO: setting cudaDevice stuff took 0.293608 seconds
+INFO calling kernel_neurongroup_group_variable_set_conditional_codeobject with 98 blocks and 1024 threads. Kernel needs 14 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO calling kernel_neurongroup_group_variable_set_conditional_codeobject_1 with 98 blocks and 1024 threads. Kernel needs 7 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO calling kernel_neurongroup_group_variable_set_conditional_codeobject_2 with 98 blocks and 1024 threads. Kernel needs 7 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO connectivity matrix has size 40000194
+INFO connectivity matrix has size 159996627
+INFO calling kernel_neurongroup_stateupdater_codeobject with 196 blocks and 512 threads. Kernel needs 109 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.250000.
+INFO calling kernel_neurongroup_thresholder_codeobject with 98 blocks and 1024 threads. Kernel needs 11 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_synapses_1_pre_codeobject with 15 blocks and 1024 threads. Kernel needs 27 registers per block, 0 bytes of statically-allocated shared memory per block, 8 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_synapses_pre_codeobject with 15 blocks and 1024 threads. Kernel needs 27 registers per block, 0 bytes of statically-allocated shared memory per block, 8 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+Number of synapses: 40000194
+Number of synapses: 159996627
+INFO: main_lines took 362.221271 seconds
+INFO: main function took 368.960768 seconds

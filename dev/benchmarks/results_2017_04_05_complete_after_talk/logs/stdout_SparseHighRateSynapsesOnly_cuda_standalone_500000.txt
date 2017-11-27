@@ -1,0 +1,1 @@
+INFO: setting cudaDevice stuff took 0.286275 seconds

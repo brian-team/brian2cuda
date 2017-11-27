@@ -1,0 +1,10 @@
+INFO: setting cudaDevice stuff took 0.282011 seconds
+INFO connectivity matrix has size 249991134
+INFO generating 13000000 randn every 52 clock cycles for neurongroup_stateupdater_codeobject
+INFO calling kernel_neurongroup_stateupdater_codeobject with 435 blocks and 576 threads. Kernel needs 52 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.562500.
+INFO calling kernel_neurongroup_thresholder_codeobject with 245 blocks and 1024 threads. Kernel needs 11 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_synapses_pre_codeobject with 15 blocks and 1024 threads. Kernel needs 27 registers per block, 0 bytes of statically-allocated shared memory per block, 8 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO calling kernel_neurongroup_resetter_codeobject with 245 blocks and 1024 threads. Kernel needs 14 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+Number of synapses: 249991134
+INFO: main_lines took 851.693748 seconds
+INFO: main function took 860.695222 seconds

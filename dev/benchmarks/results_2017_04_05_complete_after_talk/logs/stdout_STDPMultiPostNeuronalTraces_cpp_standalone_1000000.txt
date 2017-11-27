@@ -1,0 +1,2 @@
+Number of synapses: 1000000
+Number of synapses: 1000000

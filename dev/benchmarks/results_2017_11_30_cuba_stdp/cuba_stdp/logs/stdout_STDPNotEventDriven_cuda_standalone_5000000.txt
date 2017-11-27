@@ -1,0 +1,71 @@
+INFO: setting cudaDevice stuff took 0.345858 seconds
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	4883 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 5000000
+INFO connectivity matrix has size 5000000
+INFO generating 10000000 rand every 2 clock cycles for poissongroup_thresholder_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_synapses_stateupdater_codeobject
+	6511 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_poissongroup_thresholder_codeobject
+	4883 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_post_codeobject
+	15 blocks
+	1024 threads
+	26 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 5000000
+Number of synapses: 5000000
+INFO: main_lines took 328.762289 seconds
+INFO: main function took 329.622826 seconds

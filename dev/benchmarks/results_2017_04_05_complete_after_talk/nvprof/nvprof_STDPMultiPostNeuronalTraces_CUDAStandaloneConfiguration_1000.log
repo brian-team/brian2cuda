@@ -1,0 +1,28 @@
+==31645== NVPROF is profiling process 31645, command: ./main
+==31645== Profiling application: ./main
+==31645== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 23.09%  63.632ms     20000  3.1810us  3.0400us  3.8080us  [CUDA memset]
+ 21.51%  59.284ms     10000  5.9280us  5.6320us  7.6160us  kernel_neurongroup_1_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, double*, double*)
+ 13.19%  36.348ms     10000  3.6340us  3.4240us  12.288us  kernel_synapses_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, double*, double, double*, int, int*, int, int*, int, double*)
+ 12.65%  34.859ms     10000  3.4850us  3.3920us  94.048us  kernel_synapses_post_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, double, double*, int, double*, int*, int, int)
+  9.89%  27.258ms     10000  2.7250us  2.5280us  2.9760us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*)
+  6.72%  18.518ms     10000  1.8510us  1.7600us  2.8160us  kernel_neurongroup_1_thresholder_codeobject(unsigned int, unsigned int, int*, double*)
+  6.69%  18.444ms     10000  1.8440us  1.6000us  2.4320us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double*, double*, float*)
+  6.26%  17.266ms     10000  1.7260us  1.6640us  2.4000us  kernel_neurongroup_1_resetter_codeobject(unsigned int, unsigned int, double*, int*, double*)
+  0.01%  22.689us         1  22.689us  22.689us  22.689us  void gen_sequenced<curandStateXORWOW, float, int, __operator_&__(float curand_uniform_noargs<curandStateXORWOW>(curandStateXORWOW*, int))>(curandStateXORWOW*, float*, unsigned long, unsigned long, int)
+
+==31645== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 66.34%  631.89ms     70001  9.0260us  7.8240us  7.5683ms  cudaLaunch
+ 18.61%  177.26ms     20000  8.8630us  8.0310us  327.63us  cudaMemset
+ 11.06%  105.29ms    570005     184ns     147ns  324.54us  cudaSetupArgument
+  1.98%  18.868ms     70002     269ns     211ns  316.30us  cudaGetLastError
+  1.98%  18.848ms     70001     269ns     196ns  10.259us  cudaConfigureCall
+  0.01%  123.44us         1  123.44us  123.44us  123.44us  cudaMalloc
+  0.01%  48.253us         1  48.253us  48.253us  48.253us  cudaMemGetInfo
+  0.00%  38.693us        74     522ns     468ns  1.2040us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+  0.00%  30.351us        12  2.5290us  2.0130us  4.4000us  cudaFuncGetAttributes
+  0.00%  17.703us         1  17.703us  17.703us  17.703us  cudaDeviceSynchronize
+  0.00%  8.0120us        20     400ns     315ns     771ns  cudaDeviceGetAttribute
+  0.00%  3.7350us         5     747ns     588ns  1.2880us  cudaGetDevice

@@ -1,0 +1,4 @@
+INFO: setting cudaDevice stuff took 0.113374 seconds
+INFO connectivity matrix has size 250000000
+INFO calling kernel_neurongroup_thresholder_codeobject with 1 blocks and 1024 threads. Kernel needs 14 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+ERROR launching kernel_neurongroup_thresholder_codeobject in code_objects/neurongroup_thresholder_codeobject.cu:1008 invalid argument

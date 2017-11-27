@@ -1,0 +1,60 @@
+diff --git a/brian2cuda/device.py b/brian2cuda/device.py
+index b4610ee..e032d32 100644
+--- a/brian2cuda/device.py
++++ b/brian2cuda/device.py
+@@ -919,13 +919,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
+             if clock not in all_clocks:
+                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
+ 
+-        if self.profile and self.profile != 'blocking':  # self.profile == True
++        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
+             run_lines.append('cudaProfilerStart();')
+         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
+                                                                                               duration=float(duration),
+                                                                                               report_call=report_call,
+                                                                                               report_period=float(report_period)))
+-        if self.profile and self.profile != 'blocking':  # self.profile == True
++        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
+             run_lines.append('cudaDeviceSynchronize();')
+             run_lines.append('cudaProfilerStop();')
+         self.main_queue.append(('run_network', (net, run_lines)))
+diff --git a/brian2cuda/tests/features/speed.py b/brian2cuda/tests/features/speed.py
+index 2293533..c093bc9 100644
+--- a/brian2cuda/tests/features/speed.py
++++ b/brian2cuda/tests/features/speed.py
+@@ -558,7 +558,7 @@ class CUBA(SpeedTest):
+     category = "Full examples"
+     name = "CUBA fixed connectivity"
+     tags = ["Neurons", "Synapses"]
+-    n_range = [10, 100, 1000, 10000, 100000, 1000000]
++    n_range = [10, 100, 1000, 10000, 100000, 200000, 500000, 1000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+@@ -720,7 +720,7 @@ class STDPNotEventDriven(SpeedTest):
+     category = "Full examples"
+     name = "STDP (not event-driven)"
+     tags = ["Neurons", "Synapses"]
+-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
++    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000]
+     n_label = 'Num neurons'
+ 
+     # configuration options
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67
++Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 0553cafeab49ea5403c0230411035df504d4db06
++Subproject commit 0553cafeab49ea5403c0230411035df504d4db06-dirty
+diff --git a/frozen_repos/genn b/frozen_repos/genn
+--- a/frozen_repos/genn
++++ b/frozen_repos/genn
+@@ -1 +1 @@
+-Subproject commit e01c85f18339249558d6e570ae976609dc972846
++Subproject commit e01c85f18339249558d6e570ae976609dc972846-dirty

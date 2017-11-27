@@ -1,0 +1,305 @@
+diff --git a/brian2cuda/tests/features/cuda_configuration.py b/brian2cuda/tests/features/cuda_configuration.py
+index 250687d..622f73a 100644
+--- a/brian2cuda/tests/features/cuda_configuration.py
++++ b/brian2cuda/tests/features/cuda_configuration.py
+@@ -225,7 +225,7 @@ class CUDAStandaloneConfigurationProfileCPU(Configuration):
+                             with_output=False)
+ 
+ class CUDAStandaloneConfigurationTestBrunelHeteroAtomics(Configuration):
+-    name = 'CUDA standalone with atomics in heterog delay mode'
++    name = 'CUDA standalone with atomics in effect application'
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False)
+         prefs["devices.cuda_standalone.test_brunel_hetero_atomics"] = True
+@@ -248,7 +248,7 @@ class CUDAStandaloneConfigurationTestBrunelHeteroAtomics(Configuration):
+                             with_output=False)
+ 
+ class CUDAStandaloneConfigurationTestBrunelHeteroAtomicsProfileCPU(Configuration):
+-    name = "CUDA standalone with atomics in heterog delay mode (profile='blocking')"
++    name = "CUDA standalone with atomics in effect application (profile='blocking')"
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False, profile='blocking')
+         prefs["devices.cuda_standalone.test_brunel_hetero_atomics"] = True
+@@ -270,12 +270,10 @@ class CUDAStandaloneConfigurationTestBrunelHeteroAtomicsProfileCPU(Configuration
+         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
+                             with_output=False)
+ 
+-
+ class CUDAStandaloneConfigurationPushAtomicResize(Configuration):
+-    name = "CUDA standalone with atomics in queue resize"
++    name = "CUDA standalone with atomics in spikequeue resize"
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False)
+-        prefs["devices.cuda_standalone.test_brunel_hetero_atomics"] = True
+         prefs["devices.cuda_standalone.push_atomic_resize"] = True
+         if socket.gethostname() == 'elnath':
+             if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
+@@ -295,8 +293,82 @@ class CUDAStandaloneConfigurationPushAtomicResize(Configuration):
+         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
+                             with_output=False)
+ 
++
+ class CUDAStandaloneConfigurationPushAtomicResizeProfileCPU(Configuration):
+-    name = "CUDA standalone with atomics in queue resize (profile='blocking')"
++    name = "CUDA standalone with atomics in spikequeue resize (profile='blocking')"
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False, profile='blocking')
++        prefs["devices.cuda_standalone.push_atomic_resize"] = True
++        if socket.gethostname() == 'elnath':
++            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
++                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
++        elif socket.gethostname() == 'sabik':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_52'])
++        elif socket.gethostname() == 'eltanin':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_61'])
++
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
++
++class CUDAStandaloneConfigurationPushAtomicResizProfileCPU(Configuration):
++    name = "CUDA standalone with atomics in spikequeue resize (profile='blocking)"
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False,
++                          profile='blocking')
++        prefs["devices.cuda_standalone.push_atomic_resize"] = True
++        if socket.gethostname() == 'elnath':
++            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
++                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
++        elif socket.gethostname() == 'sabik':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_52'])
++        elif socket.gethostname() == 'eltanin':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_61'])
++
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
++
++class CUDAStandaloneConfigurationBrunelHeterogAndPushAtomicResize(Configuration):
++    name = "CUDA standalone with atomics in effect application and in spikequeue resize"
++    def before_run(self):
++        brian2.set_device('cuda_standalone', build_on_run=False)
++        prefs["devices.cuda_standalone.test_brunel_hetero_atomics"] = True
++        prefs["devices.cuda_standalone.push_atomic_resize"] = True
++        if socket.gethostname() == 'elnath':
++            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
++                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
++        elif socket.gethostname() == 'sabik':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_52'])
++        elif socket.gethostname() == 'eltanin':
++            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
++            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_61'])
++
++    def after_run(self):
++        if os.path.exists('cuda_standalone'):
++            shutil.rmtree('cuda_standalone')
++        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
++                            with_output=False)
++
++class CUDAStandaloneConfigurationBrunelHeterogAndPushAtomicResizeProfileCPU(Configuration):
++    name = "CUDA standalone with atomics in effect application and in spikequeue resize (profile='blocking')"
+     def before_run(self):
+         brian2.set_device('cuda_standalone', build_on_run=False, profile='blocking')
+         prefs["devices.cuda_standalone.test_brunel_hetero_atomics"] = True
+diff --git a/dev/benchmarks/run_speed_tests.py b/dev/benchmarks/run_speed_tests.py
+index 2518634..b525e97 100644
+--- a/dev/benchmarks/run_speed_tests.py
++++ b/dev/benchmarks/run_speed_tests.py
+@@ -37,6 +37,7 @@ from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfigur
+                                                           CUDAStandaloneConfigurationTestBrunelHeteroAtomics,
+                                                           CUDAStandaloneConfigurationTestBrunelHeteroAtomicsProfileCPU,
+                                                           CUDAStandaloneConfigurationPushAtomicResize,
++                                                          CUDAStandaloneConfigurationBrunelHeterogAndPushAtomicResize,
+                                                           CUDAStandaloneConfigurationPushAtomicResizeProfileCPU,
+                                                           CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpy,
+                                                           CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpyProfileCPU)
+@@ -61,79 +62,80 @@ if socket.gethostname() == 'elnath':
+     prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
+ 
+ configs = [# configuration                          project_directory
+-          (NumpyConfiguration,                     None),
+-          (WeaveConfiguration,                     None),
+-          (LocalConfiguration,                     None),
++          #(NumpyConfiguration,                     None),
++          #(WeaveConfiguration,                     None),
++          #(LocalConfiguration,                     None),
++          #(CPPStandaloneConfiguration,              'cpp_standalone'),
++          #(CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+           (CUDAStandaloneConfiguration,             'cuda_standalone'),
+-          (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
+-          (CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
+-          (CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
+-          (CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
+-          (CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
+-          (CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
+-          (CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
+-          (CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
+-          (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
+-          (CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
+-          (CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
+-          (CPPStandaloneConfiguration,              'cpp_standalone'),
+-          (CUDAStandaloneConfigurationTestBrunelHeteroAtomics,   'cuda_standalone'),
+-          (CUDAStandaloneConfigurationTestBrunelHeteroAtomicsProfileCPU,   'cuda_standalone'),
+           (CUDAStandaloneConfigurationPushAtomicResize,   'cuda_standalone'),
+-          (CUDAStandaloneConfigurationPushAtomicResizeProfileCPU,   'cuda_standalone'),
+-          (CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpy,   'cuda_standalone'),
+-          (CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpyProfileCPU,   'cuda_standalone'),
+-          (GeNNConfiguration,                       'GeNNworkspace'),
+-          (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
+-          (GeNNConfigurationCPU,                    'GeNNworkspace'),
+-          (GeNNConfigurationOptimized,              'GeNNworkspace')
++          (CUDAStandaloneConfigurationTestBrunelHeteroAtomics,   'cuda_standalone'),
++          (CUDAStandaloneConfigurationBrunelHeterogAndPushAtomicResize,     'cuda_standalone'),
++          #(CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
++          #(CUDAStandaloneConfigurationCurandDouble,              'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoCudaOccupancyAPI,      'cuda_standalone'),
++          #(CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,    'cuda_standalone'),
++          #(CUDAStandaloneConfiguration2BlocksPerSM, 'cuda_standalone'),
++          #(CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds, 'cuda_standalone'),
++          #(CUDAStandaloneConfigurationSynLaunchBounds,     'cuda_standalone'),
++          #(CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
++          #(CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
++          #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
++          #(CUDAStandaloneConfigurationTestBrunelHeteroAtomicsProfileCPU,   'cuda_standalone'),
++          #(CUDAStandaloneConfigurationPushAtomicResizeProfileCPU,   'cuda_standalone'),
++          #(CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpy,   'cuda_standalone'),
++          #(CUDAStandaloneConfigurationPushAtomicResizeAsyncMemcpyProfileCPU,   'cuda_standalone'),
++          #(GeNNConfiguration,                       'GeNNworkspace'),
++          #(GeNNConfigurationCPU,                    'GeNNworkspace'),
++          #(GeNNConfigurationOptimized,              'GeNNworkspace')
+           ]
+ 
+ speed_tests = [# feature_test                     name                                  n_slice
+ 
+-               (ThresholderOnlyPoissonLowRate,                  'ThresholderOnlyPoissonLowRate',                slice(None)         ),
+-               (ThresholderOnlyPoissonMediumRate,               'ThresholderOnlyPoissonMediumRate',             slice(None)         ),
+-               (ThresholderOnlyPoissonHighRate,                 'ThresholderOnlyPoissonHighRate',               slice(None)         ),
+-               (ThresholderOnlyAlwaysSpiking,                   'ThresholderOnlyAlwaysSpiking',                 slice(None)         ),
+-
+-               (BrunelHakimStateupdateOnlyDouble,               'BrunelHakimStateupdateOnlyDouble',             slice(None)         ),
+-               (BrunelHakimStateupdateOnlyTriple,               'BrunelHakimStateupdateOnlyTriple',             slice(None)         ),
+-               (BrunelHakimStateupdateOnly,                     'BrunelHakimStateupdateOnly',                   slice(None)         ),
+-               (BrunelHakimNeuronsOnly,                         'BrunelHakimNeuronsOnly',                       slice(None)         ),
+-               (BrunelHakimNeuronsOnlyNoXi,                     'BrunelHakimNeuronsOnlyNoXi',                   slice(None)         ),
+-               (BrunelHakimNeuronsOnlyNoRand,                   'BrunelHakimNeuronsOnlyNoRand',                 slice(None)         ),
+-               (BrunelHakimStateupdateThresholdOnly,            'BrunelHakimStateupdateThresholdOnly',          slice(None)         ),
+-               (BrunelHakimStateupdateThresholdResetOnly,       'BrunelHakimStateupdateThresholdResetOnly',     slice(None)         ),
+-               (BrunelHakimModelScalarDelayShort,               'BrunelHakimModelScalarDelayShort',             slice(None)         ),
+-               (BrunelHakimModelScalarDelayNoSelfConnections,   'BrunelHakimModelScalarDelayNoSelfConnections', slice(None)         ),
+-               (CUBA,                                           'CUBA',                                         slice(None)         ),
+-               (COBAHH,                                         'COBAHH',                                       slice(None)         ),
+-               (AdaptationOscillation,                          'AdaptationOscillation',                        slice(None)         ),
+-               (Vogels,                                         'Vogels',                                       slice(None)         ),
+-               (STDP,                                           'STDP',                                         slice(None)         ),
+-               (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
+-               (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
+-
+-               (VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
+-               (SparseMediumRateSynapsesOnly,                   'SparseMediumRateSynapsesOnly',                 slice(None)         ),
+-               (DenseMediumRateSynapsesOnly,                    'DenseMediumRateSynapsesOnly',                  slice(None)         ),
+-               (SparseLowRateSynapsesOnly,                      'SparseLowRateSynapsesOnly',                    slice(None)         ),
+-               (SparseHighRateSynapsesOnly,                     'SparseHighRateSynapsesOnly',                   slice(None)         ),
+-
+-               (STDPNotEventDriven,                             'STDPNotEventDriven',                           slice(None)         ),
+-               (STDPMultiPost,                                  'STDPMultiPost',                                slice(None)         ),
+-               (STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
+-               (STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
++               #(ThresholderOnlyPoissonLowRate,                  'ThresholderOnlyPoissonLowRate',                slice(None)         ),
++               #(ThresholderOnlyPoissonMediumRate,               'ThresholderOnlyPoissonMediumRate',             slice(None)         ),
++               #(ThresholderOnlyPoissonHighRate,                 'ThresholderOnlyPoissonHighRate',               slice(None)         ),
++               #(ThresholderOnlyAlwaysSpiking,                   'ThresholderOnlyAlwaysSpiking',                 slice(None)         ),
++
++               #(BrunelHakimStateupdateOnlyDouble,               'BrunelHakimStateupdateOnlyDouble',             slice(None)         ),
++               #(BrunelHakimStateupdateOnlyTriple,               'BrunelHakimStateupdateOnlyTriple',             slice(None)         ),
++               #(BrunelHakimStateupdateOnly,                     'BrunelHakimStateupdateOnly',                   slice(None)         ),
++               #(BrunelHakimNeuronsOnly,                         'BrunelHakimNeuronsOnly',                       slice(None)         ),
++               #(BrunelHakimNeuronsOnlyNoXi,                     'BrunelHakimNeuronsOnlyNoXi',                   slice(None)         ),
++               #(BrunelHakimNeuronsOnlyNoRand,                   'BrunelHakimNeuronsOnlyNoRand',                 slice(None)         ),
++               #(BrunelHakimStateupdateThresholdOnly,            'BrunelHakimStateupdateThresholdOnly',          slice(None)         ),
++               #(BrunelHakimStateupdateThresholdResetOnly,       'BrunelHakimStateupdateThresholdResetOnly',     slice(None)         ),
++               #(BrunelHakimModelScalarDelayShort,               'BrunelHakimModelScalarDelayShort',             slice(None)         ),
++               #(BrunelHakimModelScalarDelayNoSelfConnections,   'BrunelHakimModelScalarDelayNoSelfConnections', slice(None)         ),
++               #(CUBA,                                           'CUBA',                                         slice(None)         ),
++               #(COBAHH,                                         'COBAHH',                                       slice(None)         ),
++               #(AdaptationOscillation,                          'AdaptationOscillation',                        slice(None)         ),
++               #(Vogels,                                         'Vogels',                                       slice(None)         ),
++               #(STDP,                                           'STDP',                                         slice(None)         ),
++               #(STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
++               #(BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
++
++               #(VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
++               #(SparseMediumRateSynapsesOnly,                   'SparseMediumRateSynapsesOnly',                 slice(None)         ),
++               #(DenseMediumRateSynapsesOnly,                    'DenseMediumRateSynapsesOnly',                  slice(None)         ),
++               #(SparseLowRateSynapsesOnly,                      'SparseLowRateSynapsesOnly',                    slice(None)         ),
++               #(SparseHighRateSynapsesOnly,                     'SparseHighRateSynapsesOnly',                   slice(None)         ),
++
++               #(STDPNotEventDriven,                             'STDPNotEventDriven',                           slice(None)         ),
++               #(STDPMultiPost,                                  'STDPMultiPost',                                slice(None)         ),
++               #(STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
++               #(STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
+ 
+                (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
+ 
+-               (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
+-               (HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
+-               (VogelsWithSynapticDynamic,                      'VogelsWithSynapticDynamic',                    slice(None)         ),
++               #(LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
++               #(HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
++               #(VogelsWithSynapticDynamic,                      'VogelsWithSynapticDynamic',                    slice(None)         ),
+ 
+-               ## below uses monitors
+-               (CUBAFixedConnectivity,                          'CUBAFixedConnectivity',                        slice(None)         ),
+-               (COBAHHFixedConnectivity,                        'COBAHHFixedConnectivity',                      slice(None, -1)     ),
++               ### below uses monitors
++               #(CUBAFixedConnectivity,                          'CUBAFixedConnectivity',                        slice(None)         ),
++               #(COBAHHFixedConnectivity,                        'COBAHHFixedConnectivity',                      slice(None, -1)     ),
+ ]
+ 
+ configurations = [config[0] for config in configs]
+@@ -205,6 +207,16 @@ try:
+         savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+         res.plot_all_tests(profiling_minimum=0.05)
+         savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
++
++        res.plot_all_tests()
++        ## this needs modification of brian2 code
++        #res.plot_all_tests(print_relative=True)
++        savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.svg'.format(speed_tests[n][1])))
++        res.plot_all_tests(relative=True)
++        savefig(os.path.join(plot_dir, 'speed_test_{}_relative.svg'.format(name)))
++        res.plot_all_tests(profiling_minimum=0.05)
++        savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.svg'.format(name)))
++
+         if 3 != len(get_fignums()):
+             print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+         for n in get_fignums():
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67
++Subproject commit fadc6a0aeb90d1b4d343470628457d8561536f67-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 0553cafeab49ea5403c0230411035df504d4db06
++Subproject commit 0553cafeab49ea5403c0230411035df504d4db06-dirty

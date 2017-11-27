@@ -1,0 +1,7 @@
+INFO: setting cudaDevice stuff took 0.256535 seconds
+INFO connectivity matrix has size 7999692
+INFO connectivity matrix has size 32002251
+INFO connectivity matrix has size 160017025
+INFO connectivity matrix has size 32002251
+INFO calling kernel_neurongroup_stateupdater_codeobject with 131 blocks and 768 threads. Kernel needs 40 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.750000.
+ERROR launching kernel_neurongroup_stateupdater_codeobject in code_objects/neurongroup_stateupdater_codeobject.cu:1066 invalid argument

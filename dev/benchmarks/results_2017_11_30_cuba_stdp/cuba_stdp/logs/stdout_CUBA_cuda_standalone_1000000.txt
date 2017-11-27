@@ -1,0 +1,9 @@
+INFO: setting cudaDevice stuff took 0.347672 seconds
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	977 blocks
+	1024 threads
+	12 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 15994612

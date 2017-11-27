@@ -1,0 +1,12 @@
+INFO: setting cudaDevice stuff took 0.094517 seconds
+INFO calling kernel_synapses_group_variable_set_conditional_codeobject with 97661 blocks and 1024 threads. Kernel needs 6 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory
+INFO connectivity matrix has size 100004409
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO not enough memory available to generate 247808 random numbers for neurongroup_stateupdater_codeobject, reducing the buffer size
+INFO generating 204687 randn every 131 clock cycles for neurongroup_stateupdater_codeobject
+INFO calling kernel_neurongroup_stateupdater_codeobject with 174 blocks and 576 threads. Kernel needs 52 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 256 bytes of user-allocated constant memory. Theoretical occupancy is 0.562500.
+ERROR launching kernel_neurongroup_stateupdater_codeobject in code_objects/neurongroup_stateupdater_codeobject.cu:1051 out of memory

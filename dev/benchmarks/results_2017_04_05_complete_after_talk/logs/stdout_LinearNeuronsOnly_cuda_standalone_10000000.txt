@@ -1,0 +1,4 @@
+INFO: setting cudaDevice stuff took 0.274551 seconds
+INFO calling kernel_neurongroup_stateupdater_codeobject with 9766 blocks and 1024 threads. Kernel needs 12 registers per block, 0 bytes of statically-allocated shared memory per block, 0 bytes of local memory per thread and a total of 0 bytes of user-allocated constant memory. Theoretical occupancy is 1.000000.
+INFO: main_lines took 68.949131 seconds
+INFO: main function took 69.505944 seconds

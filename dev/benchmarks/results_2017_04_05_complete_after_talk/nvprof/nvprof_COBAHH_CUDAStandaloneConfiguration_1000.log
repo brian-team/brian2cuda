@@ -1,0 +1,23 @@
+==11907== NVPROF is profiling process 11907, command: ./main
+==11907== Profiling application: ./main
+==11907== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 39.16%  186.02ms     10000  18.602us  17.856us  21.568us  kernel_neurongroup_stateupdater_codeobject(unsigned int, unsigned int, double*, double*, double*, bool*, double*, double*, double*, double*, double, double*)
+ 29.93%  142.18ms     10000  14.218us  3.2320us  35.680us  kernel_synapses_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double*, double, int*, int, int*)
+ 19.08%  90.630ms     10000  9.0620us  3.1680us  24.448us  kernel_synapses_1_pre_codeobject(unsigned int, unsigned int, unsigned int, int*, unsigned int, double*, int, int*, int, double, int*, int, int*, double*)
+  6.67%  31.670ms     10000  3.1660us  3.0400us  4.1920us  [CUDA memset]
+  5.15%  24.481ms     10000  2.4480us  2.0480us  2.7840us  kernel_neurongroup_thresholder_codeobject(unsigned int, unsigned int, int*, double, double*, double*, bool*)
+
+==11907== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 66.01%  376.74ms     40000  9.4180us  8.4480us  6.9662ms  cudaLaunch
+ 15.97%  91.133ms     10000  9.1130us  8.5190us  28.283us  cudaMemset
+ 13.95%  79.611ms    470000     169ns     149ns  316.22us  cudaSetupArgument
+  2.29%  13.092ms     40000     327ns     202ns  311.93us  cudaConfigureCall
+  1.76%  10.072ms     40000     251ns     230ns  5.0760us  cudaGetLastError
+  0.01%  50.252us         1  50.252us  50.252us  50.252us  cudaMemGetInfo
+  0.00%  22.121us         1  22.121us  22.121us  22.121us  cudaDeviceSynchronize
+  0.00%  16.912us         6  2.8180us  2.0980us  4.5270us  cudaFuncGetAttributes
+  0.00%  13.875us        21     660ns     520ns  1.5110us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+  0.00%  3.9730us         8     496ns     302ns  1.1490us  cudaDeviceGetAttribute
+  0.00%  2.3840us         2  1.1920us     836ns  1.5480us  cudaGetDevice
