@@ -364,7 +364,45 @@ void _run_{{pathobj}}_initialise_queue()
 	{
 		num_threads = max_threads_per_block;
 	}
-	_run_{{codeobj_name}}_kernel<<<1, num_threads>>>(
+    unsigned int num_blocks = 1;
+
+    // check if we have enough ressources to call kernel with given number
+    // of blocks and threads
+    struct cudaFuncAttributes funcAttrib;
+    cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_kernel);
+    if (num_threads > funcAttrib.maxThreadsPerBlock)
+    {
+        // use the max num_threads before launch failure
+        num_threads = funcAttrib.maxThreadsPerBlock;
+        printf("WARNING Not enough ressources available to call "
+               "_run_{{codeobj_name}}_kernel "
+               "with maximum possible threads per block (%u). "
+               "Reducing num_threads to %u. (Kernel needs %i "
+               "registers per block, %i bytes of "
+               "statically-allocated shared memory per block, %i "
+               "bytes of local memory per thread and a total of %i "
+               "bytes of user-allocated constant memory)\n",
+               max_threads_per_block, num_threads, funcAttrib.numRegs,
+               funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+               funcAttrib.constSizeBytes);
+    }
+    else
+    {
+        printf("INFO _run_{{codeobj_name}}_kernel\n"
+               "\t%u blocks\n"
+               "\t%u threads\n"
+               "\t%i registers per block\n"
+               "\t%i bytes statically-allocated shared memory per block\n"
+               "\t%i bytes local memory per thread\n"
+               "\t%i bytes user-allocated constant memory\n"
+               "",
+               num_blocks, num_threads, funcAttrib.numRegs,
+               funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+               funcAttrib.constSizeBytes);
+    }
+
+
+	_run_{{codeobj_name}}_kernel<<<num_blocks, num_threads>>>(
 		source_N,
 		num_parallel_blocks,
 		max_threads_per_block,
