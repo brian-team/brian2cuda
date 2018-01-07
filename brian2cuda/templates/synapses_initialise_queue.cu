@@ -17,7 +17,7 @@ namespace {
 __global__ void _run_{{codeobj_name}}_kernel(
 	unsigned int _source_N,
 	unsigned int _num_blocks,
-	unsigned int _num_threads_per_block,
+	unsigned int _num_threads,
 	double _dt,
 	unsigned int _syn_N,
 	unsigned int num_delays,
@@ -29,7 +29,7 @@ __global__ void _run_{{codeobj_name}}_kernel(
 
 	{{pathobj}}.queue->prepare(
 		tid,
-		_num_threads_per_block,
+		_num_threads,
 		_num_blocks,
 		0,
 		_source_N,
@@ -405,7 +405,7 @@ void _run_{{pathobj}}_initialise_queue()
 	_run_{{codeobj_name}}_kernel<<<num_blocks, num_threads>>>(
 		source_N,
 		num_parallel_blocks,
-		max_threads_per_block,
+		num_threads,
 		dt,
 		syn_N,
 		num_delays,
