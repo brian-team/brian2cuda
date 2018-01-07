@@ -49,6 +49,17 @@ prefs.register_preferences(
         ''',
         ),
 
+    gpu_heap_size = BrianPreference(
+        docs='''
+        Size of the heap (in MB) used by malloc() and free() device system calls, which
+        are used in the `cudaVector` implementation. `cudaVectors` are used to
+        dynamically allocate device memory for `Spikemonitors` and the synapse
+        queues in the `CudaSpikeQueue` implementation for networks with
+        heterogeneously distributed delays.
+        ''',
+        validator=lambda v: isinstance(v, int) and v >= 0,
+        default=128),
+
     curand_float_type=BrianPreference(
         docs='''
         Floating point type of generated random numbers (float/double).
@@ -373,7 +384,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                           code_objects=self.code_objects.values(),
                                                           report_func=self.report_func,
                                                           dt=float(defaultclock.dt),
-                                                          additional_headers=main_includes
+                                                          additional_headers=main_includes,
+                                                          gpu_heap_size=prefs['devices.cuda_standalone.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
         
