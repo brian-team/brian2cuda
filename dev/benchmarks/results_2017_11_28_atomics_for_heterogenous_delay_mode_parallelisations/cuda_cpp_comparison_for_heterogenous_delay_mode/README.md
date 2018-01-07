@@ -18,9 +18,9 @@ There is also a `git diff` saved in the current directory.
 ## Results
 
 ### BrunelHakimModelHeterogeneousDelay
-![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_absolute.svg)
-![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_profiling.svg)
-![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_relative.svg)
+![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_absolute.png)
+![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_profiling.png)
+![](plots/speed_test_BrunelHakimModelHeterogeneousDelay_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfigurationBrunelHeterogAndPushAtomicResize**</summary><p>
 Profile summary for `N = 1000`:

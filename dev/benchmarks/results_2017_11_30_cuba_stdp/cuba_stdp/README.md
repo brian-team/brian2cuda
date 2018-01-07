@@ -18,9 +18,9 @@ There is also a `git diff` saved in the current directory.
 ## Results
 
 ### CUBA
-![](plots/speed_test_CUBA_absolute.svg)
-![](plots/speed_test_CUBA_profiling.svg)
-![](plots/speed_test_CUBA_relative.svg)
+![](plots/speed_test_CUBA_absolute.png)
+![](plots/speed_test_CUBA_profiling.png)
+![](plots/speed_test_CUBA_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfiguration**</summary><p>
 Profile summary for `N = 1000`:
@@ -87,9 +87,9 @@ Profile summary for `N = 1000`:
 ***
 
 ### STDP (with SpikeMonitor)
-![](plots/speed_test_STDP_absolute.svg)
-![](plots/speed_test_STDP_profiling.svg)
-![](plots/speed_test_STDP_relative.svg)
+![](plots/speed_test_STDP_absolute.png)
+![](plots/speed_test_STDP_profiling.png)
+![](plots/speed_test_STDP_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfiguration**</summary><p>
 Profile summary for `N = 1000`:
@@ -163,9 +163,9 @@ Profile summary for `N = 1000`:
 ***
 
 ### STDPEventDriven
-![](plots/speed_test_STDPEventDriven_absolute.svg)
-![](plots/speed_test_STDPEventDriven_profiling.svg)
-![](plots/speed_test_STDPEventDriven_relative.svg)
+![](plots/speed_test_STDPEventDriven_absolute.png)
+![](plots/speed_test_STDPEventDriven_profiling.png)
+![](plots/speed_test_STDPEventDriven_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfiguration**</summary><p>
 Profile summary for `N = 1000`:
@@ -237,9 +237,9 @@ Profile summary for `N = 1000`:
 ***
 
 ### STDPNotEventDriven
-![](plots/speed_test_STDPNotEventDriven_absolute.svg)
-![](plots/speed_test_STDPNotEventDriven_profiling.svg)
-![](plots/speed_test_STDPNotEventDriven_relative.svg)
+![](plots/speed_test_STDPNotEventDriven_absolute.png)
+![](plots/speed_test_STDPNotEventDriven_profiling.png)
+![](plots/speed_test_STDPNotEventDriven_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfiguration**</summary><p>
 Profile summary for `N = 1000`:

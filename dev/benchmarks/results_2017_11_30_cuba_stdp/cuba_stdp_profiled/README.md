@@ -18,9 +18,9 @@ There is also a `git diff` saved in the current directory.
 ## Results
 
 ### CUBA
-![](plots/speed_test_CUBA_absolute.svg)
-![](plots/speed_test_CUBA_profiling.svg)
-![](plots/speed_test_CUBA_relative.svg)
+![](plots/speed_test_CUBA_absolute.png)
+![](plots/speed_test_CUBA_profiling.png)
+![](plots/speed_test_CUBA_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfigurationProfileCPU**</summary><p>
 Profile summary for `N = 1000`:
@@ -85,15 +85,15 @@ Profile summary for `N = 1000`:
 ***
 
 ### CUBA - less kernels displayed
-![](plots/speed_test_CUBA-less_kernels_displayed_min_15_profiling.svg)
+![](plots/speed_test_CUBA-less_kernels_displayed_min_15_profiling.png)
 
 
 ***
 
 ### STDPNotEventDriven
-![](plots/speed_test_STDP_absolute.svg)
-![](plots/speed_test_STDP_profiling.svg)
-![](plots/speed_test_STDP_relative.svg)
+![](plots/speed_test_STDP_absolute.png)
+![](plots/speed_test_STDP_profiling.png)
+![](plots/speed_test_STDP_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfigurationProfileCPU**</summary><p>
 Profile summary for `N = 1000`:
@@ -168,15 +168,15 @@ Profile summary for `N = 1000`:
 ***
 
 ### STDPNotEventDriven - less kernels displayed
-![](plots/speed_test_STDP-less_kernels_displayed_min_15_profiling.svg)
+![](plots/speed_test_STDP-less_kernels_displayed_min_15_profiling.png)
 
 
 ***
 
 ### STDPEventDriven
-![](plots/speed_test_STDPEventDriven_absolute.svg)
-![](plots/speed_test_STDPEventDriven_profiling.svg)
-![](plots/speed_test_STDPEventDriven_relative.svg)
+![](plots/speed_test_STDPEventDriven_absolute.png)
+![](plots/speed_test_STDPEventDriven_profiling.png)
+![](plots/speed_test_STDPEventDriven_relative.png)
 
 <details><summary>Examplary `nvprof` results for **CUDAStandaloneConfigurationProfileCPU**</summary><p>
 Profile summary for `N = 1000`:
@@ -249,6 +249,6 @@ Profile summary for `N = 1000`:
 ***
 
 ### STDPEventDriven - less kernels displayed
-![](plots/speed_test_STDPEventDriven-less_kernels_displayed_min_15_profiling.svg)
+![](plots/speed_test_STDPEventDriven-less_kernels_displayed_min_15_profiling.png)
 
 
