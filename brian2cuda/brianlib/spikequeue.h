@@ -150,8 +150,9 @@ public:
 		unsigned int num_unique_delays = unique_delay_size_by_pre[right_offset];
 		// shared_mem is allocated in push_spikes
 		unsigned int* shared_mem_unique_delay_start_idx_by_pre = (unsigned int*)_shared_mem;
-		unsigned int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idx_by_pre + num_unique_delays;
-		unsigned int* shared_mem_last_cycle_size_before_resize = shared_mem_size_before_resize + num_unique_delays;
+		// shared memory for inter thread communication needs to be volatile
+		volatile unsigned int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idx_by_pre + num_unique_delays;
+		volatile unsigned int* shared_mem_last_cycle_size_before_resize = shared_mem_size_before_resize + num_unique_delays;
 
 		// spiking_neuron_id should be in range [0,neuron_N]
 		assert(spiking_neuron_id < neuron_N);
