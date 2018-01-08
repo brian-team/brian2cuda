@@ -49,6 +49,14 @@ prefs.register_preferences(
         ''',
         ),
 
+    parallel_blocks = BrianPreference(
+        docs='''
+        The total number of parallel blocks to use. The default is the number
+        of streaming multiprocessors.
+        ''',
+        validator=lambda v: v is None or (isinstance(v, int) and v > 0),
+        default=None),
+
     gpu_heap_size = BrianPreference(
         docs='''
         Size of the heap (in MB) used by malloc() and free() device system calls, which
@@ -233,7 +241,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
-        multiplier = prefs.devices.cuda_standalone.SM_multiplier
+        sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
+        num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         self.eventspace_arrays = {}
@@ -261,7 +270,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         get_array_filename=self.get_array_filename,
                         codeobj_with_rand=codeobj_with_rand,
                         codeobj_with_randn=codeobj_with_randn,
-                        multiplier=multiplier,
+                        sm_multiplier=sm_multiplier,
+                        num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
                         curand_float_type=prefs['devices.cuda_standalone.curand_float_type'],
