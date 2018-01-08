@@ -78,19 +78,28 @@ kernel_{{codeobj_name}}(
 	}
 	else  // heterogeneous delay mode
 	{
-	        cudaVector<int32_t>* synapses_queue;
-	        {{pathway.name}}.queue->peek(
-	                &synapses_queue);
+        cudaVector<int32_t>* synapses_queue;
+        {{pathway.name}}.queue->peek(
+                &synapses_queue);
 
-		int size = synapses_queue[bid].size();
-		for(int j = tid; j < size; j+=THREADS_PER_BLOCK)
-		{
-			int32_t _idx = synapses_queue[bid].at(j);
-	
-			{{vector_code|autoindent}}
-		}
-	}
-	}
+        int num_bundles = synapses_queue[bid].size();
+        // one thread per bundle (parallel)
+        for (int i = tid; i < num_bundles; i+=THREADS_PER_BLOCK)
+        {
+            unsigned int bundle_id = synapses_queue[bid].at(i);
+            unsigned int bundle_size = {{pathway.name}}_size_by_bundle_id[bundle_id];
+            int32_t* synapse_bundle = {{pathway.name}}_synapses_id_by_bundle_id[bundle_id];
+            // loop through bundle
+            for (int j = 0; j < bundle_size; j++)
+            {
+
+                int32_t _idx = synapse_bundle[j];
+
+                {{vector_code|autoindent}}
+            }
+        }
+    }
+    }
 }
 
 {% endblock %}
