@@ -35,7 +35,7 @@ public:
 			}
 			else
 			{
-				printf("ERROR while creating vector with size %d in cudaVector.h/resize()\n", sizeof(scalar)*INITIAL_SIZE);
+				printf("ERROR while creating cudaVector with size %d in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
 			}
 		}
 	};
@@ -93,6 +93,16 @@ public:
         if (new_size > m_capacity)
             reserve(new_size * 2);
 		m_size = new_size;
+	}
+
+	__device__ size_type increaseSizeBy(size_type add_size)
+	{
+		size_type old_size = m_size;
+		size_type new_size = old_size + add_size;
+		if (new_size > m_capacity)
+			reserve(new_size * 2);
+		m_size = new_size;
+		return old_size;
 	}
 
 	__device__ void reserve(size_type new_capacity)

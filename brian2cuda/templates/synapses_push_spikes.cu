@@ -27,7 +27,7 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 _run_{{codeobj_name}}_push_kernel(
-	unsigned int neurongroup_size,
+    unsigned int num_parallel_blocks,
 	unsigned int _num_blocks,
 	unsigned int _num_threads,
 	int32_t* {{_eventspace}})
@@ -38,34 +38,27 @@ _run_{{codeobj_name}}_push_kernel(
 
 	using namespace brian;
 
-	// TODO: check if static shared memory is faster / makes any difference 
+	// TODO: check if static shared memory is faster / makes any difference
 	extern __shared__ char shared_mem[];
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
 
-	// loop through spiking neurons in spikespace (indices of spiking neurons, rest -1)
-	for(int i = 0; i < neurongroup_size; i++)
-	{
-		// spiking_neuron is index in NeuronGroup
-		int32_t spiking_neuron = {{_eventspace}}[i];
+    int post_neuron_bid = bid % num_parallel_blocks;
+    int pre_neuron_idx = bid / num_parallel_blocks;
 
-		if(spiking_neuron == -1) // end of spiking neurons
-		{
-			assert(i == {{_eventspace}}[neurongroup_size]);
-			return;
-		}
-		// push to spikequeue if spiking_neuron is in sources of current SynapticPathway
-		if({{owner.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{owner.name}}.spikes_stop)
-		{
-			__syncthreads();
-			{{owner.name}}.queue->push(
-				bid,
-				tid,
-				_num_threads,
-				spiking_neuron - {{owner.name}}.spikes_start,
-				shared_mem);
-		}
-	}
+    int32_t spiking_neuron = {{_eventspace}}[pre_neuron_idx];
+    assert(spiking_neuron != -1);
+
+    // push to spikequeue if spiking_neuron is in sources of current SynapticPathway
+    if({{owner.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{owner.name}}.spikes_stop)
+    {
+        {{owner.name}}.queue->push(
+            post_neuron_bid,
+            tid,
+            _num_threads,
+            spiking_neuron - {{owner.name}}.spikes_start,
+            shared_mem);
+    }
 }
 
 void _run_{{codeobj_name}}()
@@ -94,7 +87,14 @@ void _run_{{codeobj_name}}()
 	}
 	else if ({{owner.name}}_max_size > 0)
 	{
-		// only push if there any synapses
+
+		// get the number of spiking neurons
+		int32_t num_spiking_neurons;
+		cudaMemcpy(&num_spiking_neurons,
+				dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
+				sizeof(int32_t), cudaMemcpyDeviceToHost);
+
+		// advance spike queues
 		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 
 		cudaError_t status = cudaGetLastError();
@@ -112,14 +112,14 @@ void _run_{{codeobj_name}}()
 	    if (first_run)
 	    {
 
-            /* We are copying next_delay_start_idx (size = num_unique_delays)
-               into shared memory. Since num_unique_delays
-               varies for different combinations of pre neuron and bid, we
-               allocate for max(num_unique_delays). And +1 per block for
-               copying size_before_resize into shared memory when we need to
-               use the outer loop.
-            */
-		    needed_shared_memory = ({{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
+            /* We are copying next_delay_start_idx and the atomic offset (both
+             * size = num_unique_delays) into shared memory. Since
+             * num_unique_delays varies for different combinations of pre
+             * neuron and bid, we allocate for max(num_unique_delays). And +1
+             * per block for copying size_before_resize into shared memory when
+             * we need to use the outer loop.
+             */
+		    needed_shared_memory = (2 * {{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
 		    assert (needed_shared_memory <= max_shared_mem_size);
 
 		    // We don't need more then max(num_synapses) threads per block.
@@ -128,8 +128,6 @@ void _run_{{codeobj_name}}()
 		    {
 		    	num_threads = max_threads_per_block;
 		    }
-
-	    	num_blocks = num_parallel_blocks;
 
 	    	// calculate theoretical occupancy
 	    	int max_active_blocks;
@@ -163,7 +161,7 @@ void _run_{{codeobj_name}}()
 	    	else
 	    	{
                 printf("INFO _run_{{codeobj_name}}_push_kernel\n"
-                       "\t%u blocks\n"
+                       "\t%u blocks per spiking neuron\n"
                        "\t%u threads\n"
                        "\t%i registers per block\n"
                        "\t%i bytes statically-allocated shared memory per block\n"
@@ -174,26 +172,32 @@ void _run_{{codeobj_name}}()
                        {% else %}
                        "",
                        {% endif %}
-                       num_blocks, num_threads, funcAttrib.numRegs,
+                       num_parallel_blocks, num_threads, funcAttrib.numRegs,
                        funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                        funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
 	    	}
 	    	first_run = false;
 	    }
 
-		_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
-			_num{{eventspace_variable.name}}-1,
-			num_blocks,
-			num_threads,
-			dev{{_eventspace}}[current_idx{{_eventspace}}]);
 
-		status = cudaGetLastError();
-		if (status != cudaSuccess)
+		if (num_spiking_neurons > 0)
 		{
-			printf("ERROR launching _run_{{codeobj_name}}_push_kernel in %s:%d %s\n",
-					__FILE__, __LINE__, cudaGetErrorString(status));
-			_dealloc_arrays();
-			exit(status);
+			num_blocks = num_parallel_blocks * num_spiking_neurons;
+
+			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
+					num_parallel_blocks,
+					num_blocks,
+					num_threads,
+					dev{{_eventspace}}[current_idx{{_eventspace}}]);
+
+			status = cudaGetLastError();
+			if (status != cudaSuccess)
+			{
+				printf("ERROR launching _run_{{codeobj_name}}_push_kernel in %s:%d %s\n",
+						__FILE__, __LINE__, cudaGetErrorString(status));
+				_dealloc_arrays();
+				exit(status);
+			}
 		}
 	}
 
