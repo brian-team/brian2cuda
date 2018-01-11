@@ -38,8 +38,6 @@ _run_{{codeobj_name}}_push_kernel(
 
 	using namespace brian;
 
-	// TODO: check if static shared memory is faster / makes any difference
-	extern __shared__ char shared_mem[];
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
 
@@ -56,8 +54,7 @@ _run_{{codeobj_name}}_push_kernel(
             post_neuron_bid,
             tid,
             _num_threads,
-            spiking_neuron - {{owner.name}}.spikes_start,
-            shared_mem);
+            spiking_neuron - {{owner.name}}.spikes_start);
     }
 }
 
@@ -107,20 +104,9 @@ void _run_{{codeobj_name}}()
 		}
 
 	    static int num_threads, num_blocks;
-        static unsigned int needed_shared_memory;
 	    static bool first_run = true;
 	    if (first_run)
 	    {
-
-            /* We are copying next_delay_start_idx and the atomic offset (both
-             * size = num_unique_delays) into shared memory. Since
-             * num_unique_delays varies for different combinations of pre
-             * neuron and bid, we allocate for max(num_unique_delays). And +1
-             * per block for copying size_before_resize into shared memory when
-             * we need to use the outer loop.
-             */
-		    needed_shared_memory = (2 * {{owner.name}}_max_unique_delay_size + 1) * sizeof(unsigned int);
-		    assert (needed_shared_memory <= max_shared_mem_size);
 
 		    // We don't need more then max(num_synapses) threads per block.
 		    num_threads = {{owner.name}}_max_size;
@@ -132,8 +118,7 @@ void _run_{{codeobj_name}}()
 	    	// calculate theoretical occupancy
 	    	int max_active_blocks;
 	    	cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-	    			_run_{{codeobj_name}}_push_kernel, num_threads,
-                    needed_shared_memory);
+					_run_{{codeobj_name}}_push_kernel, num_threads, 0);
 
 	    	float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
 	    	                  (float)(max_threads_per_sm / num_threads_per_warp);
@@ -184,7 +169,7 @@ void _run_{{codeobj_name}}()
 		{
 			num_blocks = num_parallel_blocks * num_spiking_neurons;
 
-			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
+			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads>>>(
 					num_parallel_blocks,
 					num_blocks,
 					num_threads,

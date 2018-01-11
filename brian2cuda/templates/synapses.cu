@@ -89,7 +89,7 @@ kernel_{{codeobj_name}}(
             unsigned int bundle_id = synapses_queue[bid].at(i);
             unsigned int bundle_size = {{pathway.name}}_size_by_bundle_id[bundle_id];
             int32_t* synapse_bundle = {{pathway.name}}_synapses_id_by_bundle_id[bundle_id];
-            // loop through bundle
+            // loop through bundle (serial)
             for (int j = 0; j < bundle_size; j++)
             {
 

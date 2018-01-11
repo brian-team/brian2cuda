@@ -134,8 +134,7 @@ public:
 		unsigned int post_neuron_bid,
 		unsigned int tid,
 		unsigned int num_threads,
-		unsigned int spiking_neuron_id,
-		char* _shared_mem)
+		unsigned int spiking_neuron_id)
 	{
 
 		// following arrays are in global device memory:
