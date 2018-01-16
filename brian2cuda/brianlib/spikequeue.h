@@ -46,7 +46,8 @@ public:
 	unsigned int** unique_delay_start_idx_by_pre;
 
 	unsigned int current_offset;
-	unsigned int max_delay;
+	unsigned int num_queues;
+	unsigned int num_delays;
 	unsigned int num_blocks;
 	unsigned int neuron_N; // number of neurons in source of SynapticPathway
 	unsigned int syn_N;
@@ -75,7 +76,8 @@ public:
 		scalar _dt,
 		unsigned int _neuron_N,
 		unsigned int _syn_N,
-		unsigned int _max_delay,
+		unsigned int _num_queues,
+		unsigned int _num_delays,
 		unsigned int* _size_by_pre,
 		unsigned int* _size_by_bundle_id,
 		unsigned int* _unique_delay_size_by_pre,
@@ -95,7 +97,8 @@ public:
 			num_blocks = _num_blocks;
 			neuron_N = _neuron_N;
 			syn_N = _syn_N;
-			max_delay = _max_delay;
+			num_queues = _num_queues;
+			num_delays = _num_delays;
 
 			// TODO: do we need size_by_pre? is size_by_pre[right_offset] faster then synapses_by_pre[right_offset].size()?
 			// if so, add unique_size_by_pre as well!
@@ -108,10 +111,10 @@ public:
 			unique_delay_by_pre = _unique_delay_by_pre;
 			unique_delay_start_idx_by_pre = _unique_delay_start_idx_by_pre;
 
-			synapses_queue = new cudaVector<DTYPE_int>*[max_delay];
+			synapses_queue = new cudaVector<DTYPE_int>*[num_queues];
 			if(!synapses_queue)
 			{
-				printf("ERROR while allocating memory with size %ld in spikequeue.h/prepare()\n", sizeof(cudaVector<DTYPE_int>*)*max_delay);
+				printf("ERROR while allocating memory with size %ld in spikequeue.h/prepare()\n", sizeof(cudaVector<DTYPE_int>*)*num_queues);
 			}
 		}
 		for (int i = tid; i < _num_blocks; i++)
@@ -120,7 +123,7 @@ public:
 		}
 		__syncthreads();
 
-        for(int i = tid; i < max_delay; i+=num_threads)
+        for(int i = tid; i < num_queues; i+=num_threads)
         {
 	    	synapses_queue[i] = new cudaVector<DTYPE_int>[num_blocks];
     		if(!synapses_queue[i])
@@ -171,11 +174,11 @@ public:
 				// we have per right_offset (total of num_blocks * source_N) a
 				// local bundle index going from 0 to num_delays for that
 				// right_offset
-				global_bundle_id = global_bundle_id_start_idx + bundle_idx;
+				global_bundle_id = num_delays * right_offset + bundle_idx;
 
 				unsigned int delay = unique_delay_by_pre[right_offset][bundle_idx];
 				// find the spike queue corresponding to this synapses delay
-				delay_queue = (current_offset + delay) % max_delay;
+				delay_queue = (current_offset + delay) % num_queues;
 			}
 
 			// make sure only one block resizes (and therefore possibly
@@ -204,11 +207,11 @@ public:
 	__device__ void advance(
 		unsigned int tid)
 	{
-		assert(tid < num_blocks && current_offset < max_delay);
+		assert(tid < num_blocks && current_offset < num_queues);
 		synapses_queue[current_offset][tid].reset();
 		__syncthreads(); //TODO no need for this?...
 		if(tid == 0)
-			current_offset = (current_offset + 1)%max_delay;
+			current_offset = (current_offset + 1)%num_queues;
 	}
 
 	__device__  void peek(

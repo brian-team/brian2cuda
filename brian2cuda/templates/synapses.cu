@@ -43,8 +43,8 @@ kernel_{{codeobj_name}}(
 	if ({{pathway.name}}.no_or_const_delay_mode)
 	{
 	        // for the first delay timesteps the eventspace is not yet filled
-		// note that max_delay is the number of eventspaces, max_delay-1 the delay in timesteps
-	        if (timestep >= {{pathway.name}}.queue->max_delay - 1)
+		// note that num_queues is the number of eventspaces, num_queues-1 the delay in timesteps
+	        if (timestep >= {{pathway.name}}.queue->num_queues - 1)
 	        {
 	                // loop through neurons in eventspace (indices of event neurons, rest -1)
 	                for(int i = 0; i < neurongroup_size; i++)
@@ -89,6 +89,7 @@ kernel_{{codeobj_name}}(
             unsigned int bundle_id = synapses_queue[bid].at(i);
             unsigned int bundle_size = {{pathway.name}}_size_by_bundle_id[bundle_id];
             int32_t* synapse_bundle = {{pathway.name}}_synapses_id_by_bundle_id[bundle_id];
+            assert(synapse_bundle);  // check this is not a NULL ptr (unused bundle_id)
             // loop through bundle (serial)
             for (int j = 0; j < bundle_size; j++)
             {
