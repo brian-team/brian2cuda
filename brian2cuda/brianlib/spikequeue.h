@@ -46,7 +46,7 @@ public:
 
 	unsigned int current_offset;
 	unsigned int num_queues;
-	unsigned int num_delays;
+	unsigned int max_num_delays_per_block;
 	unsigned int num_blocks;
 	unsigned int neuron_N; // number of neurons in source of SynapticPathway
 	unsigned int syn_N;
@@ -76,7 +76,7 @@ public:
 		unsigned int _neuron_N,
 		unsigned int _syn_N,
 		unsigned int _num_queues,
-		unsigned int _num_delays,
+		unsigned int _max_num_delays_per_block,
 		unsigned int* _size_by_pre,
 		unsigned int* _size_by_bundle_id,
 		unsigned int* _unique_delay_size_by_pre,
@@ -96,7 +96,7 @@ public:
 			neuron_N = _neuron_N;
 			syn_N = _syn_N;
 			num_queues = _num_queues;
-			num_delays = _num_delays;
+			max_num_delays_per_block = _max_num_delays_per_block;
 
 			// TODO: do we need size_by_pre? is size_by_pre[right_offset] faster then synapses_by_pre[right_offset].size()?
 			// if so, add unique_size_by_pre as well!
@@ -168,9 +168,9 @@ public:
 			if (bundle_idx < num_unique_delays)
 			{
 				// we have per right_offset (total of num_blocks * source_N) a
-				// local bundle index going from 0 to num_delays for that
+				// local bundle index going from 0 to max_num_delays_per_block for that
 				// right_offset
-				global_bundle_id = num_delays * right_offset + bundle_idx;
+				global_bundle_id = max_num_delays_per_block * right_offset + bundle_idx;
 
 				unsigned int delay = unique_delay_by_pre[right_offset][bundle_idx];
 				// find the spike queue corresponding to this synapses delay
