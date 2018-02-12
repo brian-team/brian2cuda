@@ -41,7 +41,6 @@ __global__ void _run_{{codeobj_name}}_kernel(
 		{{pathobj}}_size_by_pre,
 		{{pathobj}}_size_by_bundle_id,
 		{{pathobj}}_unique_delay_size_by_pre,
-		{{pathobj}}_global_bundle_id_start_idx_by_pre,
 		{{pathobj}}_synapses_id_by_pre,
 		{{pathobj}}_synapses_id_by_bundle_id,
 		{{pathobj}}_unique_delay_by_pre,
@@ -94,8 +93,6 @@ void _run_{{pathobj}}_initialise_queue()
 	// this is a vector of host pointers (since we don't know how many bundles we will have in total)
 	thrust::host_vector<int32_t*> h_synapses_by_bundle_id;
 	thrust::host_vector<unsigned int> h_size_by_bundle_id;
-	// start index for local bundle_idx per right_offset
-	unsigned int* global_bundle_id_start_idx_by_pre_id = new unsigned int[num_parallel_blocks * source_N];
 	{% endif %}
 
 	//fill vectors of connectivity matrix with synapse IDs and delay IDs (in units of simulation time step)
@@ -170,7 +167,6 @@ void _run_{{pathobj}}_initialise_queue()
 
 
 	int size_connectivity_matrix = 0;
-	unsigned int global_bundle_id_start_idx = 0;
 	unsigned int max_num_unique_elements = 0;
 	unsigned int num_used_bundle_ids = 0;
 	//fill temp arrays with device pointers
@@ -258,12 +254,10 @@ void _run_{{pathobj}}_initialise_queue()
 				{{pathobj}}_max_unique_delay_size = num_unique_elements;
 
 			// nemo bundle stuff
-			// we need a start idx per i (right_offset) to calc the global bundle ID from the local bundle_idx when pushing
+			// we need the maximum number of delays over all i (right_offset) to calculate the global bundle ID when pushing
 			if (num_unique_elements > max_num_unique_elements)
 				max_num_unique_elements = num_unique_elements;
 			num_used_bundle_ids += num_unique_elements;
-			global_bundle_id_start_idx_by_pre_id[i] = global_bundle_id_start_idx;
-			global_bundle_id_start_idx += num_unique_elements;
 			// the local bundle_idx goes from 0 to num_bundles for each i (right_offset)
 			assert(num_unique_elements <= delay_set.size());
 			for (int bundle_idx = 0; bundle_idx < delay_set.size(); bundle_idx++)
@@ -280,6 +274,8 @@ void _run_{{pathobj}}_initialise_queue()
 						num_synapses = h_unique_delay_start_idx_by_pre_id[i][bundle_idx + 1] - synapses_start_idx;
 					h_size_by_bundle_id.push_back(num_synapses);
 					int32_t* synapse_bundle = new int32_t[num_synapses];
+					// TODO: don't copy synapses to synapse_bundle, just cudaMemcpy it directly to the device with
+					// cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
 					for (int j = 0; j < num_synapses; j++)
 					{
 						synapse_bundle[j] = h_synapses_by_pre_id[i][synapses_start_idx + j];
@@ -365,12 +361,6 @@ void _run_{{pathobj}}_initialise_queue()
         cudaMemcpy(d_synapses_by_bundle_id, thrust::raw_pointer_cast(&(h_synapses_by_bundle_id[0])),
                 sizeof(int32_t*) * h_synapses_by_bundle_id.size(), cudaMemcpyHostToDevice);
         cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**));
-        unsigned int* d_global_bundle_id_start_idx_by_pre_id;
-        cudaMalloc((void**)&d_global_bundle_id_start_idx_by_pre_id, sizeof(unsigned int) * num_parallel_blocks * source_N);
-        cudaMemcpy(d_global_bundle_id_start_idx_by_pre_id, global_bundle_id_start_idx_by_pre_id,
-                sizeof(unsigned int) * num_parallel_blocks * source_N, cudaMemcpyHostToDevice);
-        cudaMemcpyToSymbol({{pathobj}}_global_bundle_id_start_idx_by_pre, &d_global_bundle_id_start_idx_by_pre_id,
-                sizeof(unsigned int*));
     }
 	{% endif %}
 
@@ -479,10 +469,11 @@ void _run_{{pathobj}}_initialise_queue()
 		dt,
 		syn_N,
 		num_queues,
-		delay_set.size(),
 	{% if no_or_const_delay_mode %}
+		1,
 		true
 	{% else %}
+		delay_set.size(),
 		scalar_delay
 	{% endif %}
 	);
@@ -501,7 +492,6 @@ void _run_{{pathobj}}_initialise_queue()
 		delete [] temp_unique_delay_size_by_pre_id;
 		delete [] temp_unique_delay_start_idx_by_pre_id;
 		delete [] temp_unique_delay_by_pre_id;
-		delete [] global_bundle_id_start_idx_by_pre_id;
 
 	}
 	{% endif %}

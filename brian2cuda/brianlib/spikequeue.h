@@ -39,7 +39,6 @@ public:
 	unsigned int* size_by_pre;
 	unsigned int* size_by_bundle_id;
 	unsigned int* unique_delay_size_by_pre;
-	unsigned int* global_bundle_id_start_idx_by_pre;
 	DTYPE_int** synapses_id_by_pre;
 	DTYPE_int** synapses_id_by_bundle_id;
 	unsigned int** unique_delay_by_pre;
@@ -81,7 +80,6 @@ public:
 		unsigned int* _size_by_pre,
 		unsigned int* _size_by_bundle_id,
 		unsigned int* _unique_delay_size_by_pre,
-		unsigned int* _global_bundle_id_start_idx_by_pre,
 		DTYPE_int** _synapses_by_pre,
 		DTYPE_int** _synapses_by_bundle_id,
 		unsigned int** _unique_delay_by_pre,
@@ -105,7 +103,6 @@ public:
 			size_by_pre = _size_by_pre;
 			size_by_bundle_id = _size_by_bundle_id;
 			unique_delay_size_by_pre = _unique_delay_size_by_pre;
-			global_bundle_id_start_idx_by_pre = _global_bundle_id_start_idx_by_pre;
 			synapses_id_by_pre = _synapses_by_pre;
 			synapses_id_by_bundle_id = _synapses_by_bundle_id;
 			unique_delay_by_pre = _unique_delay_by_pre;
@@ -154,7 +151,6 @@ public:
 		unsigned int right_offset = spiking_neuron_id * num_blocks + post_neuron_bid;
 		// num_unique_delays == num_bundles
 		unsigned int num_unique_delays = unique_delay_size_by_pre[right_offset];
-		unsigned int global_bundle_id_start_idx = global_bundle_id_start_idx_by_pre[right_offset];
 
 		// spiking_neuron_id should be in range [0,neuron_N]
 		assert(spiking_neuron_id < neuron_N);
