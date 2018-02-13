@@ -80,9 +80,11 @@ bool brian::{{S.name}}_multiple_pre_post = false;
 // {{path.name}}
 __device__ unsigned int* brian::{{path.name}}_size_by_pre;
 __device__ unsigned int* brian::{{path.name}}_size_by_bundle_id;
+unsigned int brian::{{path.name}}_max_bundle_size = 0;
+unsigned int brian::{{path.name}}_mean_bundle_size = 0;
 unsigned int brian::{{path.name}}_max_size = 0;
 __device__ unsigned int* brian::{{path.name}}_unique_delay_size_by_pre;
-unsigned int brian::{{path.name}}_max_unique_delay_size = 0;
+unsigned int brian::{{path.name}}_max_num_bundles = 0;
 __device__ int32_t** brian::{{path.name}}_synapses_id_by_pre;
 __device__ int32_t** brian::{{path.name}}_synapses_id_by_bundle_id;
 __device__ unsigned int** brian::{{path.name}}_unique_delay_start_idx_by_pre;
@@ -554,9 +556,11 @@ extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
 extern __device__ unsigned int* {{path.name}}_size_by_pre;
 extern __device__ unsigned int* {{path.name}}_size_by_bundle_id;
+extern unsigned int {{path.name}}_max_bundle_size;
+extern unsigned int {{path.name}}_mean_bundle_size;
 extern unsigned int {{path.name}}_max_size;
 extern __device__ unsigned int* {{path.name}}_unique_delay_size_by_pre;
-extern unsigned int {{path.name}}_max_unique_delay_size;
+extern unsigned int {{path.name}}_max_num_bundles;
 extern __device__ int32_t** {{path.name}}_synapses_id_by_pre;
 extern __device__ int32_t** {{path.name}}_synapses_id_by_bundle_id;
 extern __device__ unsigned int** {{path.name}}_unique_delay_start_idx_by_pre;

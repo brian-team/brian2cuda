@@ -99,7 +99,7 @@ void _run_{{pathobj}}_initialise_queue()
 	unsigned int max_delay = (int)({{_dynamic_delay}}[0] / dt + 0.5);
 	{% if not no_or_const_delay_mode %}
 	unsigned int min_delay = max_delay;
-	// TODO: remove delay_set, we are using max_num_unique_elements now
+	// TODO: remove delay_set, we are using {{pathobj}}_max_num_bundles now
 	std::set<unsigned int> delay_set;
 	{% endif %}
 	for(int syn_id = 0; syn_id < syn_N; syn_id++)  // loop through all synapses
@@ -168,7 +168,6 @@ void _run_{{pathobj}}_initialise_queue()
 
 
 	int size_connectivity_matrix = 0;
-	unsigned int max_num_unique_elements = 0;
 	unsigned int num_used_bundle_ids = 0;
 	//fill temp arrays with device pointers
 	for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix
@@ -251,13 +250,11 @@ void _run_{{pathobj}}_initialise_queue()
 
 			num_unique_elements = h_unique_delay_by_pre_id[i].size();
 			temp_unique_delay_size_by_pre_id[i] = num_unique_elements;
-			if (num_unique_elements > {{pathobj}}_max_unique_delay_size)
-				{{pathobj}}_max_unique_delay_size = num_unique_elements;
 
 			// nemo bundle stuff
 			// we need the maximum number of delays over all i (right_offset) to calculate the global bundle ID when pushing
-			if (num_unique_elements > max_num_unique_elements)
-				max_num_unique_elements = num_unique_elements;
+			if (num_unique_elements > {{pathobj}}_max_num_bundles)
+				{{pathobj}}_max_num_bundles = num_unique_elements;
 			num_used_bundle_ids += num_unique_elements;
 			// the local bundle_idx goes from 0 to num_bundles for each i (right_offset)
 			assert(num_unique_elements <= delay_set.size());
@@ -323,18 +320,23 @@ void _run_{{pathobj}}_initialise_queue()
 	{% if not no_or_const_delay_mode %}
 	if (!scalar_delay)
 	{
-		unsigned int num_bundle_ids = num_parallel_blocks * source_N * max_num_unique_elements;
+		unsigned int num_bundle_ids = num_parallel_blocks * source_N * {{pathobj}}_max_num_bundles;
 		int32_t** h_synapses_by_bundle_id = new int32_t*[num_bundle_ids];
 		unsigned int* h_size_by_bundle_id = new unsigned int[num_bundle_ids];
+		unsigned int bundle_size_sum = 0;
 		for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix again
 		{
 			unsigned int num_unique_elements = h_size_by_bundle_id_by_pre[i].size();
-			for (int j = 0; j < max_num_unique_elements; j++)
+			for (int j = 0; j < {{pathobj}}_max_num_bundles; j++)
 			{
-				int idx = i * max_num_unique_elements + j;
+				int idx = i * {{pathobj}}_max_num_bundles + j;
 				if (j < num_unique_elements)
 				{
-					h_size_by_bundle_id[idx] = h_size_by_bundle_id_by_pre[i][j];
+					unsigned int size = h_size_by_bundle_id_by_pre[i][j];
+					h_size_by_bundle_id[idx] = size;
+					if (size > {{pathobj}}_max_bundle_size)
+					{{pathobj}}_max_bundle_size = size;
+					bundle_size_sum += size;
 					h_synapses_by_bundle_id[idx] = h_synapses_by_bundle_id_by_pre[i][j];
 				}
 				else
@@ -344,18 +346,20 @@ void _run_{{pathobj}}_initialise_queue()
 				}
 			}
 		}
+		// floor(mean(h_size_by_bundle_id))
+		{{pathobj}}_mean_bundle_size = bundle_size_sum / num_bundle_ids;
 		delete [] h_size_by_bundle_id_by_pre;
 		delete [] h_synapses_by_bundle_id_by_pre;
 
 		// nemo bundle stuff info prints
-		printf("INFO used bundle IDS %u, unused bundle IDs %u, would have unused bundle IDs with set %u, max(num_unique_elements) %u, delay_set.size() %u\n",
-				num_used_bundle_ids, num_parallel_blocks * source_N * max_num_unique_elements - num_used_bundle_ids,
+		printf("INFO used bundle IDS %u, unused bundle IDs %u, would have unused bundle IDs with set %u, max(num_bundles) %u, delay_set.size() %u, \n",
+				num_used_bundle_ids, num_parallel_blocks * source_N * {{pathobj}}_max_num_bundles - num_used_bundle_ids,
 				num_parallel_blocks * source_N * delay_set.size() - num_used_bundle_ids,
-				max_num_unique_elements, delay_set.size());
+				{{pathobj}}_max_num_bundles, delay_set.size());
 
         unsigned int* d_size_by_bundle_id;
         cudaMalloc((void**)&d_size_by_bundle_id, sizeof(unsigned int) * num_bundle_ids);
-        cudaMemcpy(d_size_by_bundle_id, thrust::raw_pointer_cast(&(h_size_by_bundle_id[0])),
+        cudaMemcpy(d_size_by_bundle_id, h_size_by_bundle_id,
                 sizeof(unsigned int) * num_bundle_ids, cudaMemcpyHostToDevice);
         cudaMemcpyToSymbol({{pathobj}}_size_by_bundle_id, &d_size_by_bundle_id, sizeof(unsigned int*));
         int32_t* d_synapses_by_bundle_id;
@@ -485,7 +489,7 @@ void _run_{{pathobj}}_initialise_queue()
 		1,
 		true
 	{% else %}
-		max_num_unique_elements,
+		{{pathobj}}_max_num_bundles,
 		scalar_delay
 	{% endif %}
 	);

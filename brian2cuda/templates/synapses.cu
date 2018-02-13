@@ -18,6 +18,7 @@ kernel_{{codeobj_name}}(
 	unsigned int bid_offset,
 	unsigned int timestep,
 	unsigned int THREADS_PER_BLOCK,
+	unsigned int threads_per_bundle,
 	int32_t* eventspace,
 	unsigned int neurongroup_size,
 	%DEVICE_PARAMETERS%
@@ -83,15 +84,23 @@ kernel_{{codeobj_name}}(
                 &synapses_queue);
 
         int num_bundles = synapses_queue[bid].size();
-        // one thread per bundle (parallel)
-        for (int i = tid; i < num_bundles; i+=THREADS_PER_BLOCK)
+        // use a fixed number of threads per bundle, i runs through all those threads of all bundles
+        // for threads_per_bundle == 1, we have one thread per bundle (parallel)
+        for (int i = tid; i < num_bundles*threads_per_bundle; i+=THREADS_PER_BLOCK)
         {
-            unsigned int bundle_id = synapses_queue[bid].at(i);
+            // bundle_idx runs through all bundles
+            unsigned int bundle_idx = i / threads_per_bundle;
+            // syn_in_bundle_idx runs through all threads in a single bundle
+            unsigned int syn_in_bundle_idx = i % threads_per_bundle;
+
+            unsigned int bundle_id = synapses_queue[bid].at(bundle_idx);
             unsigned int bundle_size = {{pathway.name}}_size_by_bundle_id[bundle_id];
             int32_t* synapse_bundle = {{pathway.name}}_synapses_id_by_bundle_id[bundle_id];
             assert(synapse_bundle);  // check this is not a NULL ptr (unused bundle_id)
-            // loop through bundle (serial)
-            for (int j = 0; j < bundle_size; j++)
+
+            // loop through synapses of this bundle with all available threads_per_bundle
+            // if threads_per_bundle == 1, this is serial
+            for (int j = syn_in_bundle_idx; j < bundle_size; j+=threads_per_bundle)
             {
 
                 int32_t _idx = synapse_bundle[j];
@@ -106,6 +115,7 @@ kernel_{{codeobj_name}}(
 {% endblock %}
 
 {% block extra_maincode %}
+static unsigned int num_threads_per_bundle;
 static unsigned int num_loops;
 {% endblock %}
 
@@ -114,11 +124,19 @@ static unsigned int num_loops;
 // Synaptic effects modify only synapse variables.
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
+// TODO: effect of mean instead of max?
+num_threads_per_bundle = {{pathway.name}}_max_bundle_size;
 num_loops = 1;
 {% elif synaptic_effects == "target" %}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
-num_threads = 1;
+// if no bundles: num_threads = 1
+num_threads = {{pathway.name}}_max_num_bundles;
+if (num_threads > max_threads_per_block)
+{
+	num_threads = max_threads_per_block;
+}
+num_threads_per_bundle = 1;
 num_loops = 1;
 if ({{pathway.name}}_scalar_delay && !{{owner.name}}_multiple_pre_post)
 {
@@ -128,6 +146,7 @@ if ({{pathway.name}}_scalar_delay && !{{owner.name}}_multiple_pre_post)
 // Synaptic effects modify source group variables.
 num_blocks = 1;
 num_threads = 1;
+num_threads_per_bundle = 1;
 num_loops = num_parallel_blocks;
 {% endif %}
 {% endblock prepare_kernel_inner %}
@@ -152,6 +171,7 @@ if ({{pathway.name}}_max_size > 0)
 			bid_offset,
 			{{owner.clock.name}}.timestep[0],
 			num_threads,
+			num_threads_per_bundle,
 			dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
 			_num_{{_eventspace}}-1,
 			%HOST_PARAMETERS%
