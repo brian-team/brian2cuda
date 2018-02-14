@@ -20,19 +20,10 @@ index a4f487e..60b84a5 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 14021ef..5d4f5cd 100644
+index 14021ef..a81da83 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
-@@ -98,6 +98,8 @@ def compare_arrays(self, maxrelerr, v_base, v_test):
-                 self.compare_arrays(maxrelerr, v_base[k], v_test[k])
-         else:
-             I = (v_base!=0)
-+            #print('vbase', v_base)
-+            #print('vtest', v_test)
-             err = numpy.amax(numpy.abs(v_base[I]-v_test[I])/v_base[I])
-             if err>maxrelerr:
-                 raise InaccuracyError(err)
-@@ -226,8 +228,10 @@ def after_run(self):
+@@ -226,8 +226,10 @@ def after_run(self):
                              with_output=False)
      
      
@@ -45,7 +36,19 @@ index 14021ef..5d4f5cd 100644
      if n is None:
          init_args = ''
      else:
-@@ -246,6 +250,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -235,9 +237,9 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+     code_string = '''
+ __file__ = '{fname}'
+ import brian2
+-from {config_module} import {config_name}
++import {config_module}
+ from {feature_module} import {feature_name}
+-configuration = {config_name}()
++configuration = {config_module}.{config_name}()
+ feature = {feature_name}({init_args})
+ import warnings, traceback, pickle, sys, os, time
+ warnings.simplefilter('ignore')
+@@ -246,6 +248,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      configuration.before_run()
      brian2.device._set_maximum_run_time({maximum_run_time})
      feature.run()
@@ -58,7 +61,7 @@ index 14021ef..5d4f5cd 100644
      configuration.after_run()
      results = feature.results()
      run_time = time.time()-start_time
-@@ -263,20 +273,30 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -263,32 +271,64 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      f = open(r'{tempfname}', 'wb')
      pickle.dump((None, results, run_time, new_prof_info), f, -1)
      f.close()
@@ -89,8 +92,27 @@ index 14021ef..5d4f5cd 100644
                 )
      args = [sys.executable, '-c',
              code_string]
-@@ -289,6 +309,16 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
-     #sys.stderr.write(stderr)
++    if hasattr(configuration, 'git_commit') and configuration.git_commit is not None:
++        # checkout the commit specified in the DynamicConfigCreator
++        configuration.git_checkout()
++        # checkout the original version of the module defining the feature
++        configuration.git_checkout_feature(feature.__module__)
++        configuration.git_checkout_feature(configuration.__module__)
+     # Run the example in a new process and make sure that stdout gets
+     # redirected into the capture plugin
+     p = subprocess.Popen(args, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+     stdout, stderr = p.communicate()
+-    #sys.stdout.write(stdout)
+-    #sys.stderr.write(stderr)
++    if p.returncode:
++        sys.stdout.write(stdout)
++        sys.stderr.write(stderr)
++    if hasattr(configuration, 'git_commit') and configuration.git_commit is not None:
++        # reset the current changes before checking out original commit
++        configuration.git_reset()
++        # check out the original commit
++        configuration.git_checkout(reverse=True)
      f = open(tempfilename, 'rb')
      tb, res, runtime, profiling_info = pickle.load(f)
 +    if isinstance(res, Exception):
@@ -106,7 +128,7 @@ index 14021ef..5d4f5cd 100644
      return tb, res, runtime, profiling_info
      
  
-@@ -477,7 +507,7 @@ def __str__(self):
+@@ -477,7 +517,7 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
@@ -115,7 +137,7 @@ index 14021ef..5d4f5cd 100644
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -495,15 +525,22 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -495,15 +535,22 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
      full_results = {}
      tag_results = defaultdict(lambda:defaultdict(list))
      for ft in speed_tests:
@@ -139,7 +161,7 @@ index 14021ef..5d4f5cd 100644
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -512,8 +549,24 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -512,8 +559,24 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -164,7 +186,7 @@ index 14021ef..5d4f5cd 100644
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -528,8 +581,14 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -528,8 +591,14 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
              if verbose:
                  print ']',
@@ -179,7 +201,7 @@ index 14021ef..5d4f5cd 100644
          
      return SpeedTestResults(full_results, configurations, speed_tests)
  
-@@ -550,7 +609,7 @@ def get_codeobjsuffixes(self, fullname):
+@@ -550,7 +619,7 @@ def get_codeobjsuffixes(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
          return set(codeobjsuffixes)
  
@@ -188,7 +210,7 @@ index 14021ef..5d4f5cd 100644
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -581,13 +640,22 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -581,13 +650,22 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                          if float(thistime/runtime)>=profiling_minimum:
                              skip = False
                          runtimes.append(thistime)
@@ -212,11 +234,11 @@ index 14021ef..5d4f5cd 100644
                      if suffix=='All':
                          lw = 2
                          label = configname
-@@ -627,6 +695,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -627,6 +705,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')
-+            pylab.grid(True, which='both')    
++            pylab.grid(True, which='both')
  
  # Code below auto generates restructured text tables, copied from:
  # http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte

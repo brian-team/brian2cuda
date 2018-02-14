@@ -4,6 +4,7 @@ import glob
 import subprocess
 import sys
 import socket
+import shlex
 
 # run tests without X-server
 import matplotlib
@@ -20,8 +21,11 @@ from brian2 import *
 from brian2.tests.features import *
 from brian2.tests.features.base import *
 from brian2.tests.features.base import results
+from brian2.utils.logger import BrianLogger
 
 import brian2cuda
+from brian2cuda.utils.logger import suppress_brian2_logs
+from brian2cuda.tests.features.cuda_configuration import DynamicConfigCreator
 from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfiguration,
                                                           CUDAStandaloneConfigurationNoAssert,
                                                           CUDAStandaloneConfigurationExtraThresholdKernel,
@@ -39,6 +43,9 @@ from brian2cuda.tests.features.speed import *
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
 from create_readme import create_readme
+from helpers import pickle_results
+
+#BrianLogger.log_level_diagnostic()
 
 assert len(sys.argv)<= 2, 'Only one command line argument supported! Got {}'.format(len(sys.argv)-1)
 if len(sys.argv) == 2:
@@ -58,6 +65,21 @@ configs = [# configuration                          project_directory
           (NumpyConfiguration,                     None),
           (WeaveConfiguration,                     None),
           (LocalConfiguration,                     None),
+
+          (DynamicConfigCreator('CUDA standalone'),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator('CUDA standalone bundles',
+                                git_commit='nemo_bundles'),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator("CUDA standalone (profile='blocking')",
+                                set_device_kwargs={'profile': 'blocking'}),
+           'cuda_standalone'),
+          (DynamicConfigCreator("CUDA standalone with 2 blocks per SM",
+                                prefs={'devices.cuda_standalone.SM_multiplier': 2}),
+           'cuda_standalone'),
+
           (CUDAStandaloneConfiguration,             'cuda_standalone'),
           (CUDAStandaloneConfigurationExtraThresholdKernel,             'cuda_standalone'),
           (CUDAStandaloneConfigurationNoAssert,             'cuda_standalone'),
@@ -200,8 +222,7 @@ try:
 
         # pickel results object to disk
         pkl_file = os.path.join(data_dir, name + '.pkl' )
-        with open(pkl_file, 'wb') as output:
-                pickle.dump(res, output, pickle.HIGHEST_PROTOCOL)
+        pickle_results(res, pkl_file)
 
         # save stdout log of last run (the other are deleted in run_speed_tests())
         for proj_dir in set(project_dirs):
@@ -234,13 +255,20 @@ try:
                         log_file=os.path.join(prof_dir, 'nvprof_{st}_{conf}_{n}.log'.format(
                             st=name, conf=conf_name, n=st.n_range[idx])))
                     prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
-                    print(cmd)
-                    x = os.system(cmd)
-                    if x:
-                        print('nvprof failed with {}'.format(x))
+                    cmd = cmd.replace('(', '\(').replace(')', '\)')
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                    except subprocess.CalledProcessError as err:
+                        print("ERROR: nvprof failed with:{} output: {}".format(err, err.output))
+                        raise
                     prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
                     prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
                     print("Profiling took {} for runtime of {}".format(prof_diff, runtime))
+                elif isinstance(res, Exception):
+                    print("Didn't run nvprof, got an Exception", res)
+                else:  # runtime >= max_runtime
+                    print("Didn't run nvprof, runtime ({}) >= max_runtime ({}".format(runtime, max_runtime))
+            else:
 finally:
     create_readme(directory)
     print("\nSummarized speed test results in {}".format(directory + '/README.md'))
