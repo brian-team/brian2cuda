@@ -1,7 +1,8 @@
 #!/bin/bash
 # arguments:
 # $1: additional name for log_file
-# $2: number of cores used for parallel compilation (make -j $2)
+# $2: commit hash or branch name to check out after cloning
+# $3: number of cores used for parallel compilation (make -j $3)
 
 # the directory of the script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -22,21 +23,27 @@ function cleanup {
 # register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
 
-if [ -z "$2" ]
+if [ -z "$3" ]
 then
 	J=12
 else
-	J=$2
+	J=$3
 fi
-	
 
-source activate b2c_test
+source activate dev_b2c
 
 git clone "$GIT_DIR" "$WORK_DIR"
 cd "$WORK_DIR"
 git submodule update --init frozen_repos/brian2
+if [ -z "$2" ]
+then
+    echo "using tip of master"
+else
+    git checkout $2
+    echo "checked out $2"
+fi
 git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "LOG_FILE"
 git rev-parse HEAD 2>&1 | tee -a "LOG_FILE"
 cd "brian2cuda/tools"
-PYTHONPATH="$PYTHONPATH:../..:../../frozen_repos/brian2" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
 
