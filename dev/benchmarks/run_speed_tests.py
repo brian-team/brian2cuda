@@ -45,7 +45,8 @@ from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationC
 from create_readme import create_readme
 from helpers import pickle_results
 
-#BrianLogger.log_level_diagnostic()
+suppress_brian2_logs()
+BrianLogger.log_level_diagnostic()
 
 assert len(sys.argv)<= 2, 'Only one command line argument supported! Got {}'.format(len(sys.argv)-1)
 if len(sys.argv) == 2:
