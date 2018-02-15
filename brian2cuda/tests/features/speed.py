@@ -11,6 +11,8 @@ __all__.extend(['AdaptationOscillation',
                 'ThresholderOnlyPoissonLowRate',
                 'ThresholderOnlyPoissonMediumRate',
                 'ThresholderOnlyPoissonHighRate',
+                'DenseMediumRateSynapsesOnlyHeterogeneousDelays',
+                'SparseLowRateSynapsesOnlyHeterogeneousDelays',
                 'BrunelHakimNeuronsOnly',
                 'BrunelHakimStateupdateOnly',
                 'BrunelHakimStateupdateOnlyDouble',
@@ -552,6 +554,49 @@ class ThresholderOnlyPoissonLowRate(ThresholderOnly, SpeedTest):
     name = "Thresholder only (low rate)"
     rate = 1 * Hz
     threshold_condition = 'rand() < rate*dt'
+
+
+class SynapsesOnlyHeterogeneousDelays(object):
+    category = "Synapses only with heterogeneous delays"
+    tags = ["Synapses"]
+    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+    n_label = 'Num neurons'
+    duration = 1 * second
+    # memory usage will be approximately p**2*rate*dt*N**2*bytes_per_synapse/1024**3 GB
+    # for CPU, bytes_per_synapse appears to be around 40?
+
+    def run(self):
+        N = self.n
+        rate = self.rate
+        M = int(rate * N * defaultclock.dt)
+        if M <= 0:
+            M = 1
+        G = NeuronGroup(M, 'v:1', threshold='True')
+        H = NeuronGroup(N, 'w:1')
+        S = Synapses(G, H, on_pre='w += 1.0')
+        S.connect(True, p=self.p)
+        S.delay = '4*ms * rand()'
+        #M = SpikeMonitor(G)
+        self.timed_run(self.duration,
+            # report='text',
+            )
+        #plot(M.t/ms, M.i, ',k')
+
+
+class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
+    name = "Dense, medium rate (1s duration)"
+    rate = 10 * Hz
+    p = 1.0
+    n_range = [10, 100, 1000, 10000, 100000, 200000]#500000, #40000]  # weave max CPU time should be about 4m
+
+
+class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
+    name = "Sparse, low rate (10s duration)"
+    rate = 1 * Hz
+    p = 0.2
+    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 20s
+    duration = 10 * second
+
 
 class CUBA(SpeedTest):
 

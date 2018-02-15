@@ -135,6 +135,8 @@ speed_tests = [# feature_test                     name                          
                (STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
                (STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
 
+               (DenseMediumRateSynapsesOnlyHeterogeneousDelays, 'DenseMediumRateSynapsesOnlyHeterogeneousDelays', slice(None)       ),
+               (SparseLowRateSynapsesOnlyHeterogeneousDelays,   'SparseLowRateSynapsesOnlyHeterogeneousDelays', slice(None)         ),
                (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
 
                (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
