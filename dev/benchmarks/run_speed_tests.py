@@ -271,7 +271,6 @@ try:
                     print("Didn't run nvprof, got an Exception", res)
                 else:  # runtime >= max_runtime
                     print("Didn't run nvprof, runtime ({}) >= max_runtime ({}".format(runtime, max_runtime))
-            else:
 finally:
     create_readme(directory)
     print("\nSummarized speed test results in {}".format(directory + '/README.md'))
