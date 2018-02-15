@@ -941,13 +941,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if clock not in all_clocks:
                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
 
-        if self.profile and self.profile != 'blocking':  # self.profile == True
+        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
             run_lines.append('cudaProfilerStart();')
         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
                                                                                               duration=float(duration),
                                                                                               report_call=report_call,
                                                                                               report_period=float(report_period)))
-        if self.profile and self.profile != 'blocking':  # self.profile == True
+        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
             run_lines.append('cudaDeviceSynchronize();')
             run_lines.append('cudaProfilerStop();')
         self.main_queue.append(('run_network', (net, run_lines)))
