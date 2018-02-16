@@ -36,14 +36,13 @@ public:
 
 	//our connectivity matrix with dimensions (num_blocks) * neuron_N
 	//each element
-	//unsigned int* size_by_pre;
+	unsigned int* size_by_pre;
 	unsigned int* size_by_bundle_id;
 	unsigned int* unique_delay_size_by_pre;
 	unsigned int* global_bundle_id_start_idx_by_pre;
-	//DTYPE_int** synapses_id_by_pre;
+	DTYPE_int** synapses_id_by_pre;
 	DTYPE_int** synapses_id_by_bundle_id;
 	unsigned int** unique_delay_by_pre;
-	//unsigned int** unique_delay_start_idx_by_pre;
 
 	unsigned int current_offset;
 	unsigned int num_queues;
@@ -78,14 +77,13 @@ public:
 		unsigned int _syn_N,
 		unsigned int _num_queues,
 		//unsigned int _max_num_delays_per_block,
-		//unsigned int* _size_by_pre,
+		unsigned int* _size_by_pre,
 		unsigned int* _size_by_bundle_id,
 		unsigned int* _unique_delay_size_by_pre,
 		unsigned int* _global_bundle_id_start_idx_by_pre,
-		//DTYPE_int** _synapses_by_pre,
+		DTYPE_int** _synapses_by_pre,
 		DTYPE_int** _synapses_by_bundle_id,
 		unsigned int** _unique_delay_by_pre
-		//unsigned int** _unique_delay_start_idx_by_pre
 		)
 	{
 		if(tid == 0)
@@ -109,7 +107,6 @@ public:
 			//synapses_id_by_pre = _synapses_by_pre;
 			synapses_id_by_bundle_id = _synapses_by_bundle_id;
 			unique_delay_by_pre = _unique_delay_by_pre;
-			//unique_delay_start_idx_by_pre = _unique_delay_start_idx_by_pre;
 
 			synapses_queue = new cudaVector<DTYPE_int>*[num_queues];
 			if(!synapses_queue)
