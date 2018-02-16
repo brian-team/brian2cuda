@@ -367,6 +367,9 @@ void _run_{{pathobj}}_initialise_queue()
         cudaMemcpy(d_synapses_by_bundle_id, h_synapses_by_bundle_id,
                 sizeof(int32_t*) * num_bundle_ids, cudaMemcpyHostToDevice);
         cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**));
+
+        delete [] h_synapses_by_bundle_id;
+        delete [] h_size_by_bundle_id;
 	}
 	{% endif %}
 
