@@ -38,8 +38,6 @@ __global__ void _run_{{codeobj_name}}_kernel(
 		{{pathobj}}_size_by_pre,
 		{{pathobj}}_unique_delay_size_by_pre,
 		{{pathobj}}_synapses_id_by_pre,
-		// TODO: delete _delay_by_pre
-		{{pathobj}}_delay_by_pre,
 		{{pathobj}}_unique_delay_by_pre,
 		{{pathobj}}_unique_delay_start_idx_by_pre);
 	{{pathobj}}.no_or_const_delay_mode = new_mode;
@@ -137,8 +135,6 @@ void _run_{{pathobj}}_initialise_queue()
 	{% if not no_or_const_delay_mode %}
 	int num_unique_elements;
 	unsigned int* temp_unique_delay_size_by_pre_id;
-	unsigned int** temp_delay_by_pre_id;
-	unsigned int** temp_delay_count_by_pre_id;
 	unsigned int** temp_unique_delay_start_idx_by_pre_id;
 	unsigned int** temp_unique_delay_by_pre_id;
 	// vectors store only unique set of delays and the corresponding start index in the h_delay_by_pre_id vectors
@@ -149,8 +145,6 @@ void _run_{{pathobj}}_initialise_queue()
 	{
 		// allocate memory only if the delays are not all the same
 		temp_unique_delay_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
-		temp_delay_by_pre_id = new unsigned int*[num_parallel_blocks*source_N];
-		temp_delay_count_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 		temp_unique_delay_start_idx_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 		temp_unique_delay_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
 
@@ -259,18 +253,8 @@ void _run_{{pathobj}}_initialise_queue()
 			{% if not no_or_const_delay_mode %}
 			if (!scalar_delay)
 			{
-				cudaMalloc((void**)&temp_delay_by_pre_id[i], sizeof(unsigned int)*num_elements);
-				cudaMalloc((void**)&temp_delay_count_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
 				cudaMalloc((void**)&temp_unique_delay_start_idx_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
 				cudaMalloc((void**)&temp_unique_delay_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
-				cudaMemcpy(temp_delay_by_pre_id[i],
-					thrust::raw_pointer_cast(&(h_delay_by_pre_id[i][0])),
-					sizeof(unsigned int)*num_elements,
-					cudaMemcpyHostToDevice);
-				cudaMemcpy(temp_delay_count_by_pre_id[i],
-					thrust::raw_pointer_cast(&(h_delay_count_by_pre_id[i][0])),
-					sizeof(unsigned int)*num_unique_elements,
-					cudaMemcpyHostToDevice);
 				cudaMemcpy(temp_unique_delay_start_idx_by_pre_id[i],
 					thrust::raw_pointer_cast(&(h_unique_delay_start_idx_by_pre_id[i][0])),
 					sizeof(unsigned int)*num_unique_elements,
@@ -304,14 +288,6 @@ void _run_{{pathobj}}_initialise_queue()
 		cudaMalloc((void**)&temp7, sizeof(unsigned int)*num_parallel_blocks*source_N);
 		cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*));
-		unsigned int* temp3;
-		cudaMalloc((void**)&temp3, sizeof(unsigned int*)*num_parallel_blocks*source_N);
-		cudaMemcpy(temp3, temp_delay_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol({{pathobj}}_delay_by_pre, &temp3, sizeof(unsigned int**));
-		unsigned int* temp4;
-		cudaMalloc((void**)&temp4, sizeof(unsigned int*)*num_parallel_blocks*source_N);
-		cudaMemcpy(temp4, temp_delay_count_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol({{pathobj}}_delay_count_by_pre, &temp4, sizeof(unsigned int**));
 		unsigned int* temp5;
 		cudaMalloc((void**)&temp5, sizeof(unsigned int*)*num_parallel_blocks*source_N);
 		cudaMemcpy(temp5, temp_unique_delay_start_idx_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
@@ -429,8 +405,6 @@ void _run_{{pathobj}}_initialise_queue()
 		delete [] h_unique_delay_start_idx_by_pre_id;
 		delete [] h_unique_delay_by_pre_id;
 		delete [] temp_unique_delay_size_by_pre_id;
-		delete [] temp_delay_by_pre_id;
-		delete [] temp_delay_count_by_pre_id;
 		delete [] temp_unique_delay_start_idx_by_pre_id;
 		delete [] temp_unique_delay_by_pre_id;
 	}

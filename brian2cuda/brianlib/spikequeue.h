@@ -39,7 +39,6 @@ public:
 	unsigned int* size_by_pre;
 	unsigned int* unique_delay_size_by_pre;
 	DTYPE_int** synapses_id_by_pre;
-	unsigned int** delay_by_pre;
 	unsigned int** unique_delay_by_pre;
 	unsigned int** unique_delay_start_idx_by_pre;
 
@@ -77,7 +76,6 @@ public:
 		unsigned int* _size_by_pre,
 		unsigned int* _unique_delay_size_by_pre,
 		DTYPE_int** _synapses_by_pre,
-		unsigned int** _delay_by_pre,
 		unsigned int** _unique_delay_by_pre,
 		unsigned int** _unique_delay_start_idx_by_pre
 		)
@@ -98,7 +96,6 @@ public:
 			size_by_pre = _size_by_pre;
 			unique_delay_size_by_pre = _unique_delay_size_by_pre;
 			synapses_id_by_pre = _synapses_by_pre;
-			delay_by_pre = _delay_by_pre;
 			unique_delay_by_pre = _unique_delay_by_pre;
 			unique_delay_start_idx_by_pre = _unique_delay_start_idx_by_pre;
 
