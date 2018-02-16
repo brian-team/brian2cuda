@@ -248,7 +248,10 @@ try:
                 ns = st.n_range[sl]
                 idx = 2
                 max_runtime = 20
-                conf_name = conf.__name__
+                if isinstance(conf, DynamicConfigCreator):
+                    conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')
+                else:
+                    conf_name = conf.__name__
                 print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
                 if not isinstance(res, Exception) and runtime < max_runtime:
