@@ -20,7 +20,7 @@ index a4f487e..60b84a5 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 14021ef..a81da83 100644
+index 14021ef..61a9b70 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
 @@ -226,8 +226,10 @@ def after_run(self):
@@ -108,11 +108,6 @@ index 14021ef..a81da83 100644
 +    if p.returncode:
 +        sys.stdout.write(stdout)
 +        sys.stderr.write(stderr)
-+    if hasattr(configuration, 'git_commit') and configuration.git_commit is not None:
-+        # reset the current changes before checking out original commit
-+        configuration.git_reset()
-+        # check out the original commit
-+        configuration.git_checkout(reverse=True)
      f = open(tempfilename, 'rb')
      tb, res, runtime, profiling_info = pickle.load(f)
 +    if isinstance(res, Exception):
@@ -125,6 +120,11 @@ index 14021ef..a81da83 100644
 +        profiling_info = [(codeobj, time)
 +                              for (codeobj, time) in profiling_info
 +                              if codeobj in network_codeobjects]
++    if hasattr(configuration, 'git_commit') and configuration.git_commit is not None:
++        # reset the current changes before checking out original commit
++        configuration.git_reset()
++        # check out the original commit
++        configuration.git_checkout(reverse=True)
      return tb, res, runtime, profiling_info
      
  
