@@ -17,6 +17,9 @@ namespace {
 	}
 }
 
+#ifndef BRIAN2CUDA_INIT_QUEUE_HELPERS
+#define BRIAN2CUDA_INIT_QUEUE_HELPERS
+// TODO: move this somewhere else, brianlib e.g.
 // for a new value newValue, compute the new count, new mean, the new M2.
 // mean accumulates the mean of the entire dataset
 // M2 aggregates the squared distance from the mean
@@ -38,6 +41,7 @@ double getStd(unsigned int count, double M2){
     double std = sqrt(variance);
     return std;
 }
+#endif
 
 __global__ void _run_{{codeobj_name}}_kernel(
 	unsigned int _source_N,
@@ -342,7 +346,7 @@ void _run_{{pathobj}}_initialise_queue()
 				// copy this bundle to device
 				size_t memory_size = sizeof(int32_t) * num_synapses;
 				CudaSafeCall( cudaMemcpy(d_synapse_bundle + sum_num_synapses, synapse_bundle, memory_size, cudaMemcpyHostToDevice) );
-				h_synapses_by_bundle_id_by_pre[i].push_back(d_synapse_bundle);
+				h_synapses_by_bundle_id_by_pre[i].push_back(d_synapse_bundle + sum_num_synapses);
 				delete [] synapse_bundle;
 
                 sum_num_synapses += num_synapses;
