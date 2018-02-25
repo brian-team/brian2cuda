@@ -4,6 +4,8 @@
 #include <thrust/reduce.h>
 #include <set>
 #include "code_objects/{{codeobj_name}}.h"
+#include <iostream>
+#include "brianlib/cuda_utils.h"
 {% set pathobj = owner.name %}
 
 namespace {
@@ -13,6 +15,28 @@ namespace {
 	int num_threads(int objects){
 		return brian::max_threads_per_block;
 	}
+}
+
+// for a new value newValue, compute the new count, new mean, the new M2.
+// mean accumulates the mean of the entire dataset
+// M2 aggregates the squared distance from the mean
+// count aggregates the number of samples seen so far
+void updateMeanStd(unsigned int &count, double &mean, double& M2, double newValue){
+    count += 1;
+    double delta = newValue - mean;
+    mean += delta / count;
+    double delta2 = newValue - mean;
+    M2 += delta * delta2;
+}
+
+double getStd(unsigned int count, double M2){
+    if (count < 2){
+        printf("ERROR: getStd: count < 2\n");
+        return NAN;
+    }
+    double variance = M2 / (count - 1);
+    double std = sqrt(variance);
+    return std;
 }
 
 __global__ void _run_{{codeobj_name}}_kernel(
@@ -55,6 +79,12 @@ void _run_{{pathobj}}_initialise_queue()
 {
 	using namespace brian;
 
+    const double to_MB = 1.0 / (1024.0 * 1024.0);
+
+    size_t used_device_memory, used_device_memory_start = 0;
+    CudaCheckMemory(used_device_memory);
+    used_device_memory_start = used_device_memory;
+
 	{# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %DEVICE_PARAMETERS% #}
 	unsigned int syn_N = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
 	if (syn_N == 0)
@@ -63,6 +93,8 @@ void _run_{{pathobj}}_initialise_queue()
 	double dt = {{owner.clock.name}}.dt[0];
 	unsigned int source_N = {{owner.source.N}};
 	unsigned int target_N = {{owner.target.N}};
+
+    unsigned int num_pre_post_blocks = num_parallel_blocks * source_N;
 
 	// DENIS: TODO check speed difference when using thrust host vectors instead for easier readability and programming comfort, e.g.:
 	// thrust::host_vector<int32_t> h_synapses_synaptic_sources = dev_dynamic_array_{{owner.synapses.name}}_{{owner.synapse_sources.name}}
@@ -86,13 +118,13 @@ void _run_{{pathobj}}_initialise_queue()
 	// the index for one pre neuron ID and block ID is: ( pre_neuron_ID * num_blocks + block_ID )
 
 	// vectors store synapse IDs and delays for each synapse, will be sorted by delay
-	thrust::host_vector<int32_t>* h_synapses_by_pre_id = new thrust::host_vector<int32_t>[num_parallel_blocks*source_N];
+	thrust::host_vector<int32_t>* h_synapses_by_pre_id = new thrust::host_vector<int32_t>[num_pre_post_blocks];
 	{% if not no_or_const_delay_mode %}
-	thrust::host_vector<unsigned int>* h_delay_by_pre_id = new thrust::host_vector<unsigned int>[num_parallel_blocks*source_N];
+	thrust::host_vector<unsigned int>* h_delay_by_pre_id = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
 	// nemo bundle stuff
 	// this is one vector of host pointers per right_offset (since we don't know how many bundles we will have per right_offset)
-	thrust::host_vector<int32_t*>* h_synapses_by_bundle_id_by_pre = new thrust::host_vector<int32_t*>[num_parallel_blocks * source_N];
-	thrust::host_vector<unsigned int>* h_size_by_bundle_id_by_pre = new thrust::host_vector<unsigned int>[num_parallel_blocks * source_N];
+	thrust::host_vector<int32_t*>* h_synapses_by_bundle_id_by_pre = new thrust::host_vector<int32_t*>[num_pre_post_blocks];
+	thrust::host_vector<unsigned int>* h_size_by_bundle_id_by_pre = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
 	{% endif %}
 
 	//fill vectors of connectivity matrix with synapse IDs and delay IDs (in units of simulation time step)
@@ -141,8 +173,8 @@ void _run_{{pathobj}}_initialise_queue()
 	///////////////////////////////////////
 
 	// TODO rename temp
-	//unsigned int* temp_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
-	//int32_t** temp_synapses_by_pre_id = new int32_t*[num_parallel_blocks*source_N];
+	//unsigned int* temp_size_by_pre_id = new unsigned int[num_pre_post_blocks];
+	//int32_t** temp_synapses_by_pre_id = new int32_t*[num_pre_post_blocks];
 
 	{% if not no_or_const_delay_mode %}
 	int num_unique_elements;
@@ -156,21 +188,49 @@ void _run_{{pathobj}}_initialise_queue()
 	if (!scalar_delay)
 	{
 		// allocate memory only if the delays are not all the same
-		temp_unique_delay_size_by_pre_id = new unsigned int[num_parallel_blocks*source_N];
-		//temp_unique_delay_start_idx_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
-		temp_unique_delay_by_pre_id =  new unsigned int*[num_parallel_blocks*source_N];
+		temp_unique_delay_size_by_pre_id = new unsigned int[num_pre_post_blocks];
+		//temp_unique_delay_start_idx_by_pre_id =  new unsigned int*[num_pre_post_blocks];
+		temp_unique_delay_by_pre_id =  new unsigned int*[num_pre_post_blocks];
 
-		h_delay_count_by_pre_id = new thrust::host_vector<unsigned int>[num_parallel_blocks*source_N];
-		h_unique_delay_start_idx_by_pre_id = new thrust::host_vector<unsigned int>[num_parallel_blocks*source_N];
-		h_unique_delay_by_pre_id = new thrust::host_vector<unsigned int>[num_parallel_blocks*source_N];
+		h_delay_count_by_pre_id = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
+		h_unique_delay_start_idx_by_pre_id = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
+		h_unique_delay_by_pre_id = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
 	}
 	{% endif %}
 
+    long unsigned int sum_num_synapses = 0;
+    unsigned int count_num_synapses = 0;
+    double mean_num_synapses = 0;
+    double M2_num_synapses = 0;
+    size_t sum_memory_synapse_IDs = 0;
+
+    long unsigned int sum_num_unique_elements = 0;
+    unsigned int count_num_unique_elements = 0;
+    double mean_num_unique_elements = 0;
+    double M2_num_unique_elements = 0;
+
+    size_t sum_memory_delay_by_pre_id = 0;
+    size_t memory_size_by_bundle_id = 0;  // num_bundle_ids are copied
+    size_t memory_synapses_bundle_ptrs = 0;  // num_bundle_ids are copied
+    size_t memory_unique_delay_size_by_pre = 0;  // num_pre_post_blocks are copied
+    size_t memory_unique_delay_by_pre_ptrs = 0;  // num_pre_post_blocks are copied
+
+    printf("AFTER INIT ALL HOST VARIABLES");
+    CudaCheckMemory(used_device_memory);
+
+    // copy this bundle to device
+    int32_t* d_synapse_bundle;
+    size_t memory_synapse_IDs = sizeof(int32_t) * syn_N;
+    CudaSafeCall( cudaMalloc((void**)&d_synapse_bundle, memory_synapse_IDs) );
+
+    printf("AFTER ALLOC SYNAPSES IDs");
+    CudaCheckMemory(used_device_memory);
+    std::cout << "Allocated memory for synapseIDs: " << memory_synapse_IDs * to_MB << " MB" << std::endl;
 
 	int size_connectivity_matrix = 0;
 	unsigned int num_used_bundle_ids = 0;
 	//fill temp arrays with device pointers
-	for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix
+	for(int i = 0; i < num_pre_post_blocks; i++)  // loop through connectivity matrix
 	{
 		int num_elements = h_synapses_by_pre_id[i].size();
 		size_connectivity_matrix += num_elements;
@@ -183,6 +243,7 @@ void _run_{{pathobj}}_initialise_queue()
 		if (!scalar_delay)
 		{# all delays have the same value, e.g. `conn.delay = 2*ms` or because of small jitter + rounding to dt #}
 		{
+
 			// sort synapses (values) and delays (keys) by delay
 			thrust::sort_by_key(
 					h_delay_by_pre_id[i].begin(), 		// keys start
@@ -205,6 +266,7 @@ void _run_{{pathobj}}_initialise_queue()
 					h_unique_delay_by_pre_id[i].begin(),  	// unique values
 					h_delay_count_by_pre_id[i].begin()  	// reduced keys
 					);
+
 			thrust::host_vector<unsigned int>::iterator unique_delay_end = end_pair.first;
 			thrust::host_vector<unsigned int>::iterator count_end = end_pair.second;
 
@@ -258,6 +320,7 @@ void _run_{{pathobj}}_initialise_queue()
 			num_used_bundle_ids += num_unique_elements;
 			// the local bundle_idx goes from 0 to num_bundles for each i (right_offset)
 			assert(num_unique_elements <= delay_set.size());
+
 			for (int bundle_idx = 0; bundle_idx < num_unique_elements; bundle_idx++)
 			{
 				// find the start idx in the synapses array for this delay (bundle)
@@ -271,60 +334,59 @@ void _run_{{pathobj}}_initialise_queue()
 				h_size_by_bundle_id_by_pre[i].push_back(num_synapses);
 				int32_t* synapse_bundle = new int32_t[num_synapses];
 				// TODO: don't copy synapses to synapse_bundle, just cudaMemcpy it directly to the device with
-				// cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
+				// CudaSafeCall( cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
 				for (int j = 0; j < num_synapses; j++)
 				{
 					synapse_bundle[j] = h_synapses_by_pre_id[i][synapses_start_idx + j];
 				}
 				// copy this bundle to device
-				int32_t* d_synapse_bundle;
-				unsigned int memory_size = sizeof(int32_t) * num_synapses;
-				cudaMalloc((void**)&d_synapse_bundle, memory_size);
-				cudaMemcpy(d_synapse_bundle, synapse_bundle, memory_size, cudaMemcpyHostToDevice);
+				size_t memory_size = sizeof(int32_t) * num_synapses;
+				CudaSafeCall( cudaMemcpy(d_synapse_bundle + sum_num_synapses, synapse_bundle, memory_size, cudaMemcpyHostToDevice) );
 				h_synapses_by_bundle_id_by_pre[i].push_back(d_synapse_bundle);
 				delete [] synapse_bundle;
+
+                sum_num_synapses += num_synapses;
+                sum_memory_synapse_IDs += memory_size;
+                updateMeanStd(count_num_synapses, mean_num_synapses, M2_num_synapses, num_synapses);
 			}
+            sum_num_unique_elements += num_unique_elements;
+            updateMeanStd(count_num_unique_elements, mean_num_unique_elements, M2_num_unique_elements, num_unique_elements);
+
 		}  // end if (!scalar_delay)
 		{% endif %}{# not no_or_const_delay_mode #}
-
-		// TODO: here the copying to device happens, get rid of what we don't need to solve memory issues
-		if(num_elements > 0)
-		{
-			//cudaMalloc((void**)&temp_synapses_by_pre_id[i], sizeof(int32_t)*num_elements);
-			//cudaMemcpy(temp_synapses_by_pre_id[i],
-			//	thrust::raw_pointer_cast(&(h_synapses_by_pre_id[i][0])),
-			//	sizeof(int32_t)*num_elements,
-			//	cudaMemcpyHostToDevice);
-
-			{% if not no_or_const_delay_mode %}
-			if (!scalar_delay)
-			{
-				//cudaMalloc((void**)&temp_unique_delay_start_idx_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
-				cudaMalloc((void**)&temp_unique_delay_by_pre_id[i], sizeof(unsigned int)*num_unique_elements);
-				//cudaMemcpy(temp_unique_delay_start_idx_by_pre_id[i],
-				//	thrust::raw_pointer_cast(&(h_unique_delay_start_idx_by_pre_id[i][0])),
-				//	sizeof(unsigned int)*num_unique_elements,
-				//	cudaMemcpyHostToDevice);
-				cudaMemcpy(temp_unique_delay_by_pre_id[i],
-					thrust::raw_pointer_cast(&(h_unique_delay_by_pre_id[i][0])),
-					sizeof(unsigned int)*num_unique_elements,
-					cudaMemcpyHostToDevice);
-			}
-			{% endif %}
-		}  // end if(num_elements < 0)
 	}  // end for loop through connectivity matrix
 	printf("INFO connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
-			size_connectivity_matrix, num_parallel_blocks * source_N);
+			size_connectivity_matrix, num_pre_post_blocks);
+
+    assert(sum_num_synapses == syn_N);
+    assert(sum_memory_synapse_IDs = memory_synapse_IDs);
+
+    printf("AFTER CONN MATRIX");
+    CudaCheckMemory(used_device_memory);
+
+    unsigned int *d_unique_delays;
+    {
+    size_t memory_size = sizeof(unsigned int) * sum_num_unique_elements;
+    CudaSafeCall( cudaMalloc((void**)&d_unique_delays, memory_size) );
+    sum_memory_delay_by_pre_id += memory_size;
+    }
+    long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
+    sum_num_unique_elements = 0;
+
+    printf("AFTER ALLOCATING UNIQUE DELAY BY PRE");
+    CudaCheckMemory(used_device_memory);
+    std::cout << "Allocated memory for unique_delay_values: " << sum_memory_delay_by_pre_id * to_MB << " MB" << std::endl;
 
 	// nemo bundle stuff
+    long unsigned int num_bundle_ids = 0;
 	{% if not no_or_const_delay_mode %}
 	if (!scalar_delay)
 	{
-		unsigned int num_bundle_ids = num_parallel_blocks * source_N * {{pathobj}}_max_num_bundles;
+		num_bundle_ids = num_pre_post_blocks * {{pathobj}}_max_num_bundles;
 		int32_t** h_synapses_by_bundle_id = new int32_t*[num_bundle_ids];
 		unsigned int* h_size_by_bundle_id = new unsigned int[num_bundle_ids];
 		unsigned int bundle_size_sum = 0;
-		for(int i = 0; i < num_parallel_blocks*source_N; i++)  // loop through connectivity matrix again
+		for(int i = 0; i < num_pre_post_blocks; i++)  // loop through connectivity matrix again
 		{
 			unsigned int num_unique_elements = h_size_by_bundle_id_by_pre[i].size();
 			for (int j = 0; j < {{pathobj}}_max_num_bundles; j++)
@@ -345,28 +407,83 @@ void _run_{{pathobj}}_initialise_queue()
 					h_synapses_by_bundle_id[idx] = NULL;
 				}
 			}
+
+		    int num_elements = h_synapses_by_pre_id[i].size();
+            // TODO: here the copying to device happens, get rid of what we don't need to solve memory issues
+            if(num_elements > 0)
+            {
+                //CudaSafeCall( cudaMalloc((void**)&temp_synapses_by_pre_id[i], sizeof(int32_t)*num_elements) );
+                //CudaSafeCall( cudaMemcpy(temp_synapses_by_pre_id[i],
+                //	thrust::raw_pointer_cast(&(h_synapses_by_pre_id[i][0])),
+                //	sizeof(int32_t)*num_elements,
+                //	cudaMemcpyHostToDevice) );
+
+                {% if not no_or_const_delay_mode %}
+                if (!scalar_delay)
+                {
+                    //CudaSafeCall( cudaMalloc((void**)&temp_unique_delay_start_idx_by_pre_id[i], sizeof(unsigned int)*num_unique_elements) );
+
+                    //CudaSafeCall( cudaMemcpy(temp_unique_delay_start_idx_by_pre_id[i],
+                    //	thrust::raw_pointer_cast(&(h_unique_delay_start_idx_by_pre_id[i][0])),
+                    //	sizeof(unsigned int)*num_unique_elements,
+                    //	cudaMemcpyHostToDevice) );
+                    temp_unique_delay_by_pre_id[i] = d_unique_delays + sum_num_unique_elements;
+                    CudaSafeCall( cudaMemcpy(temp_unique_delay_by_pre_id[i],
+                        thrust::raw_pointer_cast(&(h_unique_delay_by_pre_id[i][0])),
+                        sizeof(unsigned int)*num_unique_elements,
+                        cudaMemcpyHostToDevice) );
+                    sum_num_unique_elements += num_unique_elements;
+                }
+                {% endif %}
+            }  // end if(num_elements < 0)
 		}
 		// floor(mean(h_size_by_bundle_id))
 		{{pathobj}}_mean_bundle_size = bundle_size_sum / num_bundle_ids;
 		delete [] h_size_by_bundle_id_by_pre;
 		delete [] h_synapses_by_bundle_id_by_pre;
 
+        assert(sum_num_unique_elements_bak == sum_num_unique_elements);
+        printf("AFTER 2nd CONN MATRIX LOOP");
+        CudaCheckMemory(used_device_memory);
+
 		// nemo bundle stuff info prints
 		printf("INFO used bundle IDS %u, unused bundle IDs %u, would have unused bundle IDs with set %u, max(num_bundles) %u, delay_set.size() %u, \n",
-				num_used_bundle_ids, num_parallel_blocks * source_N * {{pathobj}}_max_num_bundles - num_used_bundle_ids,
-				num_parallel_blocks * source_N * delay_set.size() - num_used_bundle_ids,
+				num_used_bundle_ids, num_pre_post_blocks * {{pathobj}}_max_num_bundles - num_used_bundle_ids,
+				num_pre_post_blocks * delay_set.size() - num_used_bundle_ids,
 				{{pathobj}}_max_num_bundles, delay_set.size());
 
         unsigned int* d_size_by_bundle_id;
-        cudaMalloc((void**)&d_size_by_bundle_id, sizeof(unsigned int) * num_bundle_ids);
-        cudaMemcpy(d_size_by_bundle_id, h_size_by_bundle_id,
-                sizeof(unsigned int) * num_bundle_ids, cudaMemcpyHostToDevice);
-        cudaMemcpyToSymbol({{pathobj}}_size_by_bundle_id, &d_size_by_bundle_id, sizeof(unsigned int*));
+
+        {
+        size_t memory_size = sizeof(unsigned int) * num_bundle_ids;
+        CudaSafeCall( cudaMalloc((void**)&d_size_by_bundle_id, memory_size) );
+        memory_size_by_bundle_id += memory_size;
+        printf("AFTER ALLOCATING SIZE_BY_BUNDLE_ID");
+        CudaCheckMemory(used_device_memory);
+        std::cout << "Allocated memory for size_by_bundle_id: " << memory_size * to_MB << " MB" << std::endl;
+        }
+
+
+        CudaSafeCall( cudaMemcpy(d_size_by_bundle_id, h_size_by_bundle_id,
+                sizeof(unsigned int) * num_bundle_ids, cudaMemcpyHostToDevice) );
+        CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_size_by_bundle_id, &d_size_by_bundle_id, sizeof(unsigned int*)) );
+
         int32_t* d_synapses_by_bundle_id;
-        cudaMalloc((void**)&d_synapses_by_bundle_id, sizeof(int32_t*) * num_bundle_ids);
-        cudaMemcpy(d_synapses_by_bundle_id, h_synapses_by_bundle_id,
-                sizeof(int32_t*) * num_bundle_ids, cudaMemcpyHostToDevice);
-        cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**));
+
+        {
+        size_t memory_size = sizeof(int32_t*) * num_bundle_ids;
+        CudaSafeCall( cudaMalloc((void**)&d_synapses_by_bundle_id, memory_size) );
+        memory_synapses_bundle_ptrs += memory_size;
+        CudaCheckMemory("AFTER ALLOCATING BUNDLE POINTERS");
+        std::cout << "Allocated memory for bundle ptrs: " << memory_size * to_MB << " MB" << std::endl;
+        }
+
+
+        CudaSafeCall( cudaMemcpy(d_synapses_by_bundle_id, h_synapses_by_bundle_id,
+                sizeof(int32_t*) * num_bundle_ids, cudaMemcpyHostToDevice) );
+        CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**)) );
+
+        CudaCheckMemory("D");
 
         delete [] h_synapses_by_bundle_id;
         delete [] h_size_by_bundle_id;
@@ -376,31 +493,95 @@ void _run_{{pathobj}}_initialise_queue()
 	//copy temp arrays to device
 	// DENIS: TODO: rename those temp1... variables AND: why sizeof(int32_t*) and not sizeof(unsigned int*) for last 3 cpys? typo? --> CHANGED!
 	//unsigned int* temp;
-	//cudaMalloc((void**)&temp, sizeof(unsigned int)*num_parallel_blocks*source_N);
-	//cudaMemcpy(temp, temp_size_by_pre_id, sizeof(unsigned int)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-	//cudaMemcpyToSymbol({{pathobj}}_size_by_pre, &temp, sizeof(unsigned int*));
+	//CudaSafeCall( cudaMalloc((void**)&temp, sizeof(unsigned int)*num_pre_post_blocks) );
+	//CudaSafeCall( cudaMemcpy(temp, temp_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+	//CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_size_by_pre, &temp, sizeof(unsigned int*)) );
 	//int32_t* temp2;
-	//cudaMalloc((void**)&temp2, sizeof(int32_t*)*num_parallel_blocks*source_N);
-	//cudaMemcpy(temp2, temp_synapses_by_pre_id, sizeof(int32_t*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-	//cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_pre, &temp2, sizeof(int32_t**));
+	//CudaSafeCall( cudaMalloc((void**)&temp2, sizeof(int32_t*)*num_pre_post_blocks) );
+	//CudaSafeCall( cudaMemcpy(temp2, temp_synapses_by_pre_id, sizeof(int32_t*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+	//CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_pre, &temp2, sizeof(int32_t**)) );
 
 	{% if not no_or_const_delay_mode %}
 	if (!scalar_delay)
 	{
 		unsigned int* temp7;
-		cudaMalloc((void**)&temp7, sizeof(unsigned int)*num_parallel_blocks*source_N);
-		cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*));
+        {
+        size_t memory_size = sizeof(unsigned int)*num_pre_post_blocks;
+		CudaSafeCall( cudaMalloc((void**)&temp7, memory_size) );
+        memory_unique_delay_size_by_pre += memory_size;
+        CudaCheckMemory("AFTER ALLOCATING NUM UNIQUE DELAYS PER PRE/POST BLOCK");
+        std::cout << "Allocated memory for unique_delay_size_by_pre: " << memory_size * to_MB << " MB" << std::endl;
+        }
+
+        CudaCheckMemory("E");
+
+		CudaSafeCall( cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*)) );
 		//unsigned int* temp5;
-		//cudaMalloc((void**)&temp5, sizeof(unsigned int*)*num_parallel_blocks*source_N);
-		//cudaMemcpy(temp5, temp_unique_delay_start_idx_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-		//cudaMemcpyToSymbol({{pathobj}}_unique_delay_start_idx_by_pre, &temp5, sizeof(unsigned int**));
+		//CudaSafeCall( cudaMalloc((void**)&temp5, sizeof(unsigned int*)*num_pre_post_blocks) );
+		//CudaSafeCall( cudaMemcpy(temp5, temp_unique_delay_start_idx_by_pre_id, sizeof(unsigned int*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		//CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_unique_delay_start_idx_by_pre, &temp5, sizeof(unsigned int**)) );
+
+        CudaCheckMemory("F");
+
 		unsigned int* temp6;
-		cudaMalloc((void**)&temp6, sizeof(unsigned int*)*num_parallel_blocks*source_N);
-		cudaMemcpy(temp6, temp_unique_delay_by_pre_id, sizeof(unsigned int*)*num_parallel_blocks*source_N, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol({{pathobj}}_unique_delay_by_pre, &temp6, sizeof(unsigned int**));
+        {
+        size_t memory_size = sizeof(unsigned int*)*num_pre_post_blocks;
+		CudaSafeCall( cudaMalloc((void**)&temp6, memory_size) );
+        memory_unique_delay_by_pre_ptrs += memory_size;
+        CudaCheckMemory("AFTER ALLOCATING UNIQUE DELAY PTRS");
+        std::cout << "Allocated memory for unique_delay_by_pre ptrs: " << memory_size * to_MB << " MB" << std::endl;
+        }
+
+		CudaSafeCall( cudaMemcpy(temp6, temp_unique_delay_by_pre_id, sizeof(unsigned int*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_unique_delay_by_pre, &temp6, sizeof(unsigned int**)) );
+
+        CudaCheckMemory("G");
 	}
 	{% endif %}
+
+    double std_num_synapses = getStd(count_num_synapses, M2_num_synapses);
+    double std_num_unique_elements = getStd(count_num_unique_elements, M2_num_unique_elements);
+    double MB_sum_memory_synapse_IDs = sum_memory_synapse_IDs * to_MB;
+    double MB_sum_memory_delay_by_pre_id = sum_memory_delay_by_pre_id * to_MB;
+    double MB_memory_size_by_bundle_id = memory_size_by_bundle_id * to_MB;  // num_bundle_ids are copied
+    double MB_memory_synapses_bundle_ptrs = memory_synapses_bundle_ptrs * to_MB;  // num_bundle_ids are copied
+    double MB_memory_unique_delay_size_by_pre = memory_unique_delay_size_by_pre * to_MB;  // num_pre_post_blocks are copied
+    double MB_memory_unique_delay_by_pre_ptrs = memory_unique_delay_by_pre_ptrs * to_MB;  // num_pre_post_blocks are copied
+    double MB_total_synapses_init = MB_sum_memory_synapse_IDs +
+        MB_sum_memory_delay_by_pre_id + MB_memory_size_by_bundle_id +
+        MB_memory_synapses_bundle_ptrs + MB_memory_unique_delay_size_by_pre +
+        MB_memory_unique_delay_by_pre_ptrs;
+
+    printf("INFO: memory usage {{pathobj}}:\n"
+           "\t bundle size over all pre/post blocks:\n"
+           "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
+           "\t num bundles per pre/post block:\n"
+           "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
+           "\t memory usage: TOTAL: %f MB\n"
+           "\t\t synapse IDs (inside bundles):\n"
+           "\t\t\t %f MB \t (size: %lu [total_num_synapses])\n"
+           "\t\t delay_by_pre (unique delay values for all pre/post blocks):\n"
+           "\t\t\t %f MB \t (size: %lu)\n"
+           "\t\t bundle sizes:\n"
+           "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
+           "\t\t ptrs to bundles:\n"
+           "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
+           "\t\t num bundles per pre/post block:\n"
+           "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n"
+           "\t\t ptrs to delays per pre/post block:\n"
+           "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n",
+           mean_num_synapses, std_num_synapses, sum_num_synapses,
+           mean_num_unique_elements, std_num_unique_elements, sum_num_unique_elements,
+           MB_total_synapses_init,
+           MB_sum_memory_synapse_IDs, sum_num_synapses,
+           MB_sum_memory_delay_by_pre_id, sum_num_unique_elements,
+           MB_memory_size_by_bundle_id, num_bundle_ids,
+           MB_memory_synapses_bundle_ptrs, num_bundle_ids,
+           MB_memory_unique_delay_size_by_pre, num_pre_post_blocks,
+           MB_memory_unique_delay_by_pre_ptrs, num_pre_post_blocks);
+
+    CudaCheckMemory("BEFORE EVENTSPACES");
 
 	// Create circular eventspaces in no_or_const_delay_mode
 	{% if not no_or_const_delay_mode %}
@@ -480,6 +661,7 @@ void _run_{{pathobj}}_initialise_queue()
                funcAttrib.constSizeBytes);
     }
 
+    CudaCheckMemory("BEFORE KERNEL");
 
 	_run_{{codeobj_name}}_kernel<<<num_blocks, num_threads>>>(
 		source_N,
@@ -529,6 +711,10 @@ void _run_{{pathobj}}_initialise_queue()
 		_dealloc_arrays();
 		exit(status);
 	}
+
+    printf("TOTAL OF INIT FUNCTION");
+    CudaCheckMemory(used_device_memory_start);
+
 }
 
 {% endmacro %}
