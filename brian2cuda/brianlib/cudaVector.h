@@ -36,6 +36,7 @@ public:
 			else
 			{
 				printf("ERROR while creating cudaVector with size %d in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
+				assert(true);
 			}
 		}
 	};
@@ -85,6 +86,7 @@ public:
 		else
 		{
 			printf("ERROR invalid index %d, must be in range 0 - %d\n", pos, m_size);
+			assert(true);
 		}
 	};
 
@@ -133,6 +135,7 @@ public:
 			else
 			{
 				printf("ERROR while allocating %d bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
+				assert(true);
 			}
 		}
 		else
