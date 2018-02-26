@@ -8,40 +8,33 @@
 #include "brianlib/cuda_utils.h"
 {% set pathobj = owner.name %}
 
+
 namespace {
-	int num_blocks(int objects){
-		return ceil(objects / (double)brian::max_threads_per_block);
+	// Functions for online update of mean and std
+	// for a new value newValue, compute the new count, new mean, the new M2.
+	// mean accumulates the mean of the entire dataset
+	// M2 aggregates the squared distance from the mean
+	// count aggregates the number of samples seen so far
+	inline void updateMeanStd(unsigned int &count, double &mean, double& M2, double newValue){
+		count += 1;
+		double delta = newValue - mean;
+		mean += delta / count;
+		double delta2 = newValue - mean;
+		M2 += delta * delta2;
 	}
-	int num_threads(int objects){
-		return brian::max_threads_per_block;
+
+	// get std from aggregated M2 value
+	double getStd(unsigned int count, double M2){
+		if (count < 2){
+			printf("ERROR: getStd: count < 2\n");
+			return NAN;
+		}
+		double variance = M2 / (count - 1);
+		double stdValue = sqrt(variance);
+		return stdValue;
 	}
 }
 
-#ifndef BRIAN2CUDA_INIT_QUEUE_HELPERS
-#define BRIAN2CUDA_INIT_QUEUE_HELPERS
-// TODO: move this somewhere else, brianlib e.g.
-// for a new value newValue, compute the new count, new mean, the new M2.
-// mean accumulates the mean of the entire dataset
-// M2 aggregates the squared distance from the mean
-// count aggregates the number of samples seen so far
-void updateMeanStd(unsigned int &count, double &mean, double& M2, double newValue){
-    count += 1;
-    double delta = newValue - mean;
-    mean += delta / count;
-    double delta2 = newValue - mean;
-    M2 += delta * delta2;
-}
-
-double getStd(unsigned int count, double M2){
-    if (count < 2){
-        printf("ERROR: getStd: count < 2\n");
-        return NAN;
-    }
-    double variance = M2 / (count - 1);
-    double std = sqrt(variance);
-    return std;
-}
-#endif
 
 __global__ void _run_{{codeobj_name}}_kernel(
 	unsigned int _source_N,
@@ -222,14 +215,19 @@ void _run_{{pathobj}}_initialise_queue()
     printf("AFTER INIT ALL HOST VARIABLES");
     CudaCheckMemory(used_device_memory);
 
-    // copy this bundle to device
+    {% if not no_or_const_delay_mode %}
     int32_t* d_synapse_bundle;
     size_t memory_synapse_IDs = sizeof(int32_t) * syn_N;
-    CudaSafeCall( cudaMalloc((void**)&d_synapse_bundle, memory_synapse_IDs) );
+    if (!scalar_delay)
+    {
+        // copy this bundle to device
+        CudaSafeCall( cudaMalloc((void**)&d_synapse_bundle, memory_synapse_IDs) );
 
-    printf("AFTER ALLOC SYNAPSES IDs");
-    CudaCheckMemory(used_device_memory);
-    std::cout << "Allocated memory for synapseIDs: " << memory_synapse_IDs * to_MB << " MB" << std::endl;
+        printf("AFTER ALLOC SYNAPSES IDs");
+        CudaCheckMemory(used_device_memory);
+        std::cout << "Allocated memory for synapseIDs: " << memory_synapse_IDs * to_MB << " MB" << std::endl;
+    }
+    {% endif %}
 
 	int size_connectivity_matrix = 0;
 	unsigned int num_used_bundle_ids = 0;
@@ -362,30 +360,30 @@ void _run_{{pathobj}}_initialise_queue()
 	printf("INFO connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
 			size_connectivity_matrix, num_pre_post_blocks);
 
-    assert(sum_num_synapses == syn_N);
-    assert(sum_memory_synapse_IDs = memory_synapse_IDs);
-
-    printf("AFTER CONN MATRIX");
-    CudaCheckMemory(used_device_memory);
-
-    unsigned int *d_unique_delays;
-    {
-    size_t memory_size = sizeof(unsigned int) * sum_num_unique_elements;
-    CudaSafeCall( cudaMalloc((void**)&d_unique_delays, memory_size) );
-    sum_memory_delay_by_pre_id += memory_size;
-    }
-    long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
-    sum_num_unique_elements = 0;
-
-    printf("AFTER ALLOCATING UNIQUE DELAY BY PRE");
-    CudaCheckMemory(used_device_memory);
-    std::cout << "Allocated memory for unique_delay_values: " << sum_memory_delay_by_pre_id * to_MB << " MB" << std::endl;
-
 	// nemo bundle stuff
+    {% if not no_or_const_delay_mode %}
     long unsigned int num_bundle_ids = 0;
-	{% if not no_or_const_delay_mode %}
-	if (!scalar_delay)
-	{
+    if (!scalar_delay)
+    {
+        assert(sum_num_synapses == syn_N);
+        assert(sum_memory_synapse_IDs = memory_synapse_IDs);
+
+        printf("AFTER CONN MATRIX");
+        CudaCheckMemory(used_device_memory);
+
+        unsigned int *d_unique_delays;
+        {
+        size_t memory_size = sizeof(unsigned int) * sum_num_unique_elements;
+        CudaSafeCall( cudaMalloc((void**)&d_unique_delays, memory_size) );
+        sum_memory_delay_by_pre_id += memory_size;
+        }
+        long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
+        sum_num_unique_elements = 0;
+
+        printf("AFTER ALLOCATING UNIQUE DELAY BY PRE");
+        CudaCheckMemory(used_device_memory);
+        std::cout << "Allocated memory for unique_delay_values: " << sum_memory_delay_by_pre_id * to_MB << " MB" << std::endl;
+
 		num_bundle_ids = num_pre_post_blocks * {{pathobj}}_max_num_bundles;
 		int32_t** h_synapses_by_bundle_id = new int32_t*[num_bundle_ids];
 		unsigned int* h_size_by_bundle_id = new unsigned int[num_bundle_ids];
@@ -491,8 +489,8 @@ void _run_{{pathobj}}_initialise_queue()
 
         delete [] h_synapses_by_bundle_id;
         delete [] h_size_by_bundle_id;
-	}
-	{% endif %}
+    }  // end if (!scalar_delay)
+    {% endif %}{# not no_or_const_delay_mode #}
 
 	//copy temp arrays to device
 	// DENIS: TODO: rename those temp1... variables AND: why sizeof(int32_t*) and not sizeof(unsigned int*) for last 3 cpys? typo? --> CHANGED!
@@ -544,46 +542,58 @@ void _run_{{pathobj}}_initialise_queue()
 	}
 	{% endif %}
 
-    double std_num_synapses = getStd(count_num_synapses, M2_num_synapses);
-    double std_num_unique_elements = getStd(count_num_unique_elements, M2_num_unique_elements);
-    double MB_sum_memory_synapse_IDs = sum_memory_synapse_IDs * to_MB;
-    double MB_sum_memory_delay_by_pre_id = sum_memory_delay_by_pre_id * to_MB;
-    double MB_memory_size_by_bundle_id = memory_size_by_bundle_id * to_MB;  // num_bundle_ids are copied
-    double MB_memory_synapses_bundle_ptrs = memory_synapses_bundle_ptrs * to_MB;  // num_bundle_ids are copied
-    double MB_memory_unique_delay_size_by_pre = memory_unique_delay_size_by_pre * to_MB;  // num_pre_post_blocks are copied
-    double MB_memory_unique_delay_by_pre_ptrs = memory_unique_delay_by_pre_ptrs * to_MB;  // num_pre_post_blocks are copied
-    double MB_total_synapses_init = MB_sum_memory_synapse_IDs +
-        MB_sum_memory_delay_by_pre_id + MB_memory_size_by_bundle_id +
-        MB_memory_synapses_bundle_ptrs + MB_memory_unique_delay_size_by_pre +
-        MB_memory_unique_delay_by_pre_ptrs;
+    {% if not no_or_const_delay_mode %}
+    if (scalar_delay)
+    {% endif %}
+    {
+        // TODO: print memory consumption for scalar delay case
+    }
+    {% if not no_or_const_delay_mode %}
+    else
+    {
+        double std_num_synapses = getStd(count_num_synapses, M2_num_synapses);
+        double std_num_unique_elements = getStd(count_num_unique_elements, M2_num_unique_elements);
+        double MB_sum_memory_synapse_IDs = sum_memory_synapse_IDs * to_MB;
+        double MB_sum_memory_delay_by_pre_id = sum_memory_delay_by_pre_id * to_MB;
+        double MB_memory_size_by_bundle_id = memory_size_by_bundle_id * to_MB;  // num_bundle_ids are copied
+        double MB_memory_synapses_bundle_ptrs = memory_synapses_bundle_ptrs * to_MB;  // num_bundle_ids are copied
+        double MB_memory_unique_delay_size_by_pre = memory_unique_delay_size_by_pre * to_MB;  // num_pre_post_blocks are copied
+        double MB_memory_unique_delay_by_pre_ptrs = memory_unique_delay_by_pre_ptrs * to_MB;  // num_pre_post_blocks are copied
+        double MB_total_synapses_init = MB_sum_memory_synapse_IDs +
+            MB_sum_memory_delay_by_pre_id + MB_memory_size_by_bundle_id +
+            MB_memory_synapses_bundle_ptrs + MB_memory_unique_delay_size_by_pre +
+            MB_memory_unique_delay_by_pre_ptrs;
 
-    printf("INFO: memory usage {{pathobj}}:\n"
-           "\t bundle size over all pre/post blocks:\n"
-           "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
-           "\t num bundles per pre/post block:\n"
-           "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
-           "\t memory usage: TOTAL: %f MB\n"
-           "\t\t synapse IDs (inside bundles):\n"
-           "\t\t\t %f MB \t (size: %lu [total_num_synapses])\n"
-           "\t\t delay_by_pre (unique delay values for all pre/post blocks):\n"
-           "\t\t\t %f MB \t (size: %lu)\n"
-           "\t\t bundle sizes:\n"
-           "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
-           "\t\t ptrs to bundles:\n"
-           "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
-           "\t\t num bundles per pre/post block:\n"
-           "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n"
-           "\t\t ptrs to delays per pre/post block:\n"
-           "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n",
-           mean_num_synapses, std_num_synapses, sum_num_synapses,
-           mean_num_unique_elements, std_num_unique_elements, sum_num_unique_elements,
-           MB_total_synapses_init,
-           MB_sum_memory_synapse_IDs, sum_num_synapses,
-           MB_sum_memory_delay_by_pre_id, sum_num_unique_elements,
-           MB_memory_size_by_bundle_id, num_bundle_ids,
-           MB_memory_synapses_bundle_ptrs, num_bundle_ids,
-           MB_memory_unique_delay_size_by_pre, num_pre_post_blocks,
-           MB_memory_unique_delay_by_pre_ptrs, num_pre_post_blocks);
+        // heterogeneous delays --> bundles
+        printf("INFO: memory usage {{pathobj}}:\n"
+               "\t bundle size over all pre/post blocks:\n"
+               "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
+               "\t num bundles per pre/post block:\n"
+               "\t\t mean: %.1f \t std: %.1f \t total: %lu\n"
+               "\t memory usage: TOTAL: %f MB\n"
+               "\t\t synapse IDs (inside bundles):\n"
+               "\t\t\t %f MB \t (size: %lu [total_num_synapses])\n"
+               "\t\t delay_by_pre (unique delay values for all pre/post blocks):\n"
+               "\t\t\t %f MB \t (size: %lu)\n"
+               "\t\t bundle sizes:\n"
+               "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
+               "\t\t ptrs to bundles:\n"
+               "\t\t\t %f MB \t (size: %lu [num_bundles])\n"
+               "\t\t num bundles per pre/post block:\n"
+               "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n"
+               "\t\t ptrs to delays per pre/post block:\n"
+               "\t\t\t %f MB \t (size: %lu [num pre/post blocks])\n",
+               mean_num_synapses, std_num_synapses, sum_num_synapses,
+               mean_num_unique_elements, std_num_unique_elements, sum_num_unique_elements,
+               MB_total_synapses_init,
+               MB_sum_memory_synapse_IDs, sum_num_synapses,
+               MB_sum_memory_delay_by_pre_id, sum_num_unique_elements,
+               MB_memory_size_by_bundle_id, num_bundle_ids,
+               MB_memory_synapses_bundle_ptrs, num_bundle_ids,
+               MB_memory_unique_delay_size_by_pre, num_pre_post_blocks,
+               MB_memory_unique_delay_by_pre_ptrs, num_pre_post_blocks);
+    }
+    {% endif %}
 
     CudaCheckMemory("BEFORE EVENTSPACES");
 
