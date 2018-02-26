@@ -3,8 +3,9 @@
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <set>
-#include "code_objects/{{codeobj_name}}.h"
 #include <iostream>
+#include <ctime>
+#include "code_objects/{{codeobj_name}}.h"
 #include "brianlib/cuda_utils.h"
 {% set pathobj = owner.name %}
 
@@ -75,6 +76,8 @@ __global__ void _run_{{codeobj_name}}_kernel(
 void _run_{{pathobj}}_initialise_queue()
 {
 	using namespace brian;
+
+    std::clock_t start_timer = std::clock();
 
     const double to_MB = 1.0 / (1024.0 * 1024.0);
 
@@ -212,7 +215,7 @@ void _run_{{pathobj}}_initialise_queue()
     size_t memory_unique_delay_size_by_pre = 0;  // num_pre_post_blocks are copied
     size_t memory_unique_delay_by_pre_ptrs = 0;  // num_pre_post_blocks are copied
 
-    printf("AFTER INIT ALL HOST VARIABLES");
+    printf("AFTER INIT ALL HOST VARIABLES\n");
     CudaCheckMemory(used_device_memory);
 
     {% if not no_or_const_delay_mode %}
@@ -223,7 +226,7 @@ void _run_{{pathobj}}_initialise_queue()
         // copy this bundle to device
         CudaSafeCall( cudaMalloc((void**)&d_synapse_bundle, memory_synapse_IDs) );
 
-        printf("AFTER ALLOC SYNAPSES IDs");
+        printf("AFTER ALLOC SYNAPSES IDs\n");
         CudaCheckMemory(used_device_memory);
         std::cout << "Allocated memory for synapseIDs: " << memory_synapse_IDs * to_MB << " MB" << std::endl;
     }
@@ -368,7 +371,7 @@ void _run_{{pathobj}}_initialise_queue()
         assert(sum_num_synapses == syn_N);
         assert(sum_memory_synapse_IDs = memory_synapse_IDs);
 
-        printf("AFTER CONN MATRIX");
+        printf("AFTER CONN MATRIX\n");
         CudaCheckMemory(used_device_memory);
 
         unsigned int *d_unique_delays;
@@ -380,7 +383,7 @@ void _run_{{pathobj}}_initialise_queue()
         long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
         sum_num_unique_elements = 0;
 
-        printf("AFTER ALLOCATING UNIQUE DELAY BY PRE");
+        printf("AFTER ALLOCATING UNIQUE DELAY BY PRE\n");
         CudaCheckMemory(used_device_memory);
         std::cout << "Allocated memory for unique_delay_values: " << sum_memory_delay_by_pre_id * to_MB << " MB" << std::endl;
 
@@ -445,7 +448,7 @@ void _run_{{pathobj}}_initialise_queue()
 		delete [] h_synapses_by_bundle_id_by_pre;
 
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
-        printf("AFTER 2nd CONN MATRIX LOOP");
+        printf("AFTER 2nd CONN MATRIX LOOP\n");
         CudaCheckMemory(used_device_memory);
 
 		// nemo bundle stuff info prints
@@ -460,7 +463,7 @@ void _run_{{pathobj}}_initialise_queue()
         size_t memory_size = sizeof(unsigned int) * num_bundle_ids;
         CudaSafeCall( cudaMalloc((void**)&d_size_by_bundle_id, memory_size) );
         memory_size_by_bundle_id += memory_size;
-        printf("AFTER ALLOCATING SIZE_BY_BUNDLE_ID");
+        printf("AFTER ALLOCATING SIZE_BY_BUNDLE_ID\n");
         CudaCheckMemory(used_device_memory);
         std::cout << "Allocated memory for size_by_bundle_id: " << memory_size * to_MB << " MB" << std::endl;
         }
@@ -726,9 +729,11 @@ void _run_{{pathobj}}_initialise_queue()
 		exit(status);
 	}
 
-    printf("TOTAL OF INIT FUNCTION");
+    printf("TOTAL OF INIT FUNCTION\n");
     CudaCheckMemory(used_device_memory_start);
 
+    double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+    std::cout << "INFO: {{pathobj}} initialisation took " <<  time_passed << "s." << std::endl;
 }
 
 {% endmacro %}
