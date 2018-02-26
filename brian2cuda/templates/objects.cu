@@ -80,6 +80,7 @@ bool brian::{{S.name}}_multiple_pre_post = false;
 // {{path.name}}
 __device__ unsigned int* brian::{{path.name}}_size_by_pre;
 __device__ unsigned int* brian::{{path.name}}_size_by_bundle_id;
+__device__ unsigned int* brian::{{path.name}}_global_bundle_id_start_idx_by_pre;
 unsigned int brian::{{path.name}}_max_bundle_size = 0;
 unsigned int brian::{{path.name}}_mean_bundle_size = 0;
 unsigned int brian::{{path.name}}_max_size = 0;
@@ -556,6 +557,7 @@ extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
 extern __device__ unsigned int* {{path.name}}_size_by_pre;
 extern __device__ unsigned int* {{path.name}}_size_by_bundle_id;
+extern __device__ unsigned int* {{path.name}}_global_bundle_id_start_idx_by_pre;
 extern unsigned int {{path.name}}_max_bundle_size;
 extern unsigned int {{path.name}}_mean_bundle_size;
 extern unsigned int {{path.name}}_max_size;
