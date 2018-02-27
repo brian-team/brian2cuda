@@ -359,6 +359,8 @@ void _run_{{pathobj}}_initialise_queue()
 					num_synapses = h_unique_delay_start_idx_by_pre_id[i][bundle_idx + 1] - synapses_start_idx;
 				//h_size_by_bundle_id_by_pre[i].push_back(num_synapses);
 				h_size_by_bundle_id.push_back(num_synapses);
+				if (num_synapses > {{pathobj}}_max_bundle_size)
+					{{pathobj}}_max_bundle_size = num_synapses;
 				int32_t* synapse_bundle = new int32_t[num_synapses];
 				// TODO: don't copy synapses to synapse_bundle, just cudaMemcpy it directly to the device with
 				// CudaSafeCall( cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
@@ -443,7 +445,7 @@ void _run_{{pathobj}}_initialise_queue()
 				sum_num_unique_elements += num_unique_elements;
             }  // end if(num_elements < 0)
 		}
-		long unsigned int num_bundle_ids = sum_num_unique_elements;
+		num_bundle_ids = sum_num_unique_elements;
 		// floor(mean(h_size_by_bundle_id))
 		{{pathobj}}_mean_bundle_size = sum_num_synapses / num_bundle_ids;
 		//delete [] h_size_by_bundle_id_by_pre;

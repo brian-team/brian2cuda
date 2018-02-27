@@ -130,24 +130,18 @@ num_loops = 1;
 {% elif synaptic_effects == "target" %}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
-// if no bundles: num_threads = 1
-num_threads_per_bundle = 1;
 num_loops = 1;
-if ({{pathway.name}}_scalar_delay)
-{
-	if ({{owner.name}}_multiple_pre_post)
-		num_threads = 1;
-	else
+num_threads = 1;
+if (!{{owner.name}}_multiple_pre_post){
+	if ({{pathway.name}}_scalar_delay)
 		num_threads = max_threads_per_block;
+	else  // heterogeneous delays
+		num_threads = {{pathway.name}}_max_bundle_size;
 }
-else  // heterogeneous delays
-{
-	num_threads = {{pathway.name}}_max_num_bundles;
-	if (num_threads > max_threads_per_block)
-	{
-		num_threads = max_threads_per_block;
-	}
-}
+if (num_threads > max_threads_per_block)
+	num_threads = max_threads_per_block;
+// num_threads_per_bundle only used for heterogeneous delays
+num_threads_per_bundle = num_threads;
 {% elif synaptic_effects == "source" %}
 // Synaptic effects modify source group variables.
 num_blocks = 1;
