@@ -25,6 +25,7 @@ __all__.extend(['AdaptationOscillation',
                 'BrunelHakimModelScalarDelayNoSelfConnections',
                 'BrunelHakimModelScalarDelayShort',
                 'BrunelHakimModelHeterogeneousDelay',
+                'BrunelHakimModelHeterogeneousDelayBundleSize1',
                 'CUBA',
                 'COBAHH',
                 'STDPEventDriven',
@@ -489,6 +490,7 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
     tags = ["Neurons", "Synapses"]
     n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
     n_label = 'Num neurons'
+    dt = 0.1*ms
 
     # configuration options
     duration = 1*second
@@ -517,7 +519,13 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
         conn.connect('rand()<sparseness')
         conn.delay = "delta * 2 * rand()"
 
+        defaultclock.dt = self.dt
+
         self.timed_run(self.duration)
+
+
+class BrunelHakimModelHeterogeneousDelayBundleSize1(BrunelHakimModelHeterogeneousDelay):
+    dt = 0.01*ms
 
 class ThresholderOnly(SpeedTest):
     category = "Neurons only"
@@ -556,7 +564,7 @@ class ThresholderOnlyPoissonLowRate(ThresholderOnly, SpeedTest):
     threshold_condition = 'rand() < rate*dt'
 
 
-class SynapsesOnlyHeterogeneousDelays(object):
+class SynapsesOnlyHeterogeneousDelays(SpeedTest):
     category = "Synapses only with heterogeneous delays"
     tags = ["Synapses"]
     n_range = [10, 100, 1000, 10000, 100000, 1000000]
