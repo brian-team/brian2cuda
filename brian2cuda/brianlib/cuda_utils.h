@@ -3,7 +3,7 @@
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
-// Define this to make kernel calls block CPU execution
+// Define this to synchronize device before checking errors
 //#define BRIAN2CUDA_ERROR_CHECK_BLOCKING
 
 // Define this to turn on memory checking
@@ -11,24 +11,27 @@
 // Define this to synchronize device before checking memory
 //#define BRIAN2CUDA_MEMORY_CHECK_BLOCKING
 
+
 // partly adapted from https://gist.github.com/ashwin/2652488
-#define CudaSafeCall(err)       __cudaSafeCall(err, __FILE__, __LINE__)
-#define CudaCheckError()        __cudaCheckError(__FILE__, __LINE__)
-#define CudaCheckMemory(param)  __cudaCheckMemory(param, __FILE__, __LINE__)
+#define CUDA_SAFE_CALL(err)  __cudaSafeCall(err, __FILE__, __LINE__)
+#define CUDA_CHECK_ERROR()   __cudaCheckError(__FILE__, __LINE__)
+#define CUDA_CHECK_MEMORY()  __cudaCheckMemory(__FILE__, __LINE__)
+
 
 inline void __cudaSafeCall(cudaError err, const char *file, const int line)
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "cudaSafeCall() failed at %s:%i : %s\n",
+        fprintf(stderr, "ERROR: CUDA_SAFE_CALL() failed at %s:%i : %s\n",
                 file, line, cudaGetErrorString(err));
-        exit( -1 );
+        exit(-1);
     }
 #endif
 
     return;
 }
+
 
 inline void __cudaCheckError(const char *file, const int line)
 {
@@ -36,7 +39,7 @@ inline void __cudaCheckError(const char *file, const int line)
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed at %s:%i : %s\n",
                 file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -46,7 +49,7 @@ inline void __cudaCheckError(const char *file, const int line)
     err = cudaDeviceSynchronize();
     if(cudaSuccess != err)
     {
-        fprintf(stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
+        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() with sync failed at %s:%i : %s\n",
                 file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -56,52 +59,29 @@ inline void __cudaCheckError(const char *file, const int line)
     return;
 }
 
-#endif
 
-
-// Report cuda device memory usage
-inline void __cudaCheckMemory(const char *msg, const char *file, const int line)
+// Report device memory usage. The memory diff is reported with respect to the
+// global brian::used_device_memory as reference, which was set in the last
+// __cudaCheckMemory call.
+inline void __cudaCheckMemory(const char *file, const int line)
 {
 #ifdef BRIAN2CUDA_MEMORY_CHECK
 #ifdef BRIAN2CUDA_MEMORY_CHECK_BLOCKING
     cudaDeviceSynchronize();
 #endif
     const double to_MB = 1.0 / (1024.0 * 1024.0);
-    size_t avail;
-    size_t total;
+    size_t avail, total, used, diff;
     cudaMemGetInfo(&avail, &total);
-    size_t used = total - avail;
-    printf("INFO: cuda device memory usage in %s:%i (%s)\n"
-           "\t used:  \t %f MB\n"
-           "\t avail: \t %f MB\n"
-           "\t total: \t %f MB\n",
-           file, line, msg,
-           double(used) * to_MB,
-           double(avail) * to_MB,
-           double(total) * to_MB);
-#endif
-}
-
-
-// In this version the memory difference is always reported with respect to
-// some reference memory, e.g. from a previous cudaMemGetInfo call
-inline void __cudaCheckMemory(size_t &reference_memory, const char *file, const int line)
-{
-#ifdef BRIAN2CUDA_MEMORY_CHECK
-#ifdef BRIAN2CUDA_MEMORY_CHECK_BLOCKING
-    cudaDeviceSynchronize();
-#endif
-    const double to_MB = 1.0 / (1024.0 * 1024.0);
-    size_t avail;
-    size_t total;
-    cudaMemGetInfo(&avail, &total);
-    size_t used = total - avail;
-    size_t diff = used - reference_memory;
+    used = total - avail;
+    diff = used - brian::used_device_memory;
+    // print memory information only if device memory usage changed
+    // NOTE: Device memory is allocated in chunks. When allocating only little
+    // memory, the memory usage reported by cudaMemGetInfo might not change if
+    // the previously allocated chunk has enough free memory to be used for the
+    // newly requested allocation.
     if (diff > 0)
     {
-        if (reference_memory == 0)
-            diff = NAN;
-        printf("INFO: cuda device memory usage in %s:%i\n"
+        fprintf(stdout, "INFO: cuda device memory usage in %s:%i\n"
                "\t used:  \t %f MB\n"
                "\t avail: \t %f MB\n"
                "\t total: \t %f MB\n"
@@ -111,7 +91,9 @@ inline void __cudaCheckMemory(size_t &reference_memory, const char *file, const 
                double(avail) * to_MB,
                double(total) * to_MB,
                double(diff) * to_MB, diff);
-        reference_memory = used;
+        brian::used_device_memory = used;
     }
 #endif
 }
+
+#endif

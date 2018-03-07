@@ -75,13 +75,12 @@ void _run_{{pathobj}}_initialise_queue()
 {
 	using namespace brian;
 
-    std::clock_t start_timer = std::clock();
+	std::clock_t start_timer = std::clock();
 
-    const double to_MB = 1.0 / (1024.0 * 1024.0);
+	const double to_MB = 1.0 / (1024.0 * 1024.0);
 
-    size_t used_device_memory, used_device_memory_start = 0;
-    CudaCheckMemory(used_device_memory);
-    used_device_memory_start = used_device_memory;
+	CUDA_CHECK_MEMORY();
+	size_t used_device_memory_start = used_device_memory;
 
 	{# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %DEVICE_PARAMETERS% #}
 	unsigned int syn_N = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
@@ -227,16 +226,11 @@ void _run_{{pathobj}}_initialise_queue()
     size_t memory_unique_delay_size_by_pre = 0;  // num_pre_post_blocks are copied
     size_t memory_unique_delay_by_pre_ptrs = 0;  // num_pre_post_blocks are copied
 
-    printf("AFTER INIT ALL HOST VARIABLES\n");
-    CudaCheckMemory(used_device_memory);
-
 	// we need to allocate memory for synapse IDs independent of delay mode
     int32_t* d_synapse_ids;
     size_t memory_synapse_ids = sizeof(int32_t) * syn_N;
-	CudaSafeCall( cudaMalloc((void**)&d_synapse_ids, memory_synapse_ids) );
+	CUDA_SAFE_CALL( cudaMalloc((void**)&d_synapse_ids, memory_synapse_ids) );
 
-	printf("AFTER ALLOC SYNAPSES IDs\n");
-	CudaCheckMemory(used_device_memory);
 	std::cout << "Allocated memory for synapseIDs: " << memory_synapse_ids * to_MB << " MB" << std::endl;
 
 	int size_connectivity_matrix = 0;
@@ -257,7 +251,7 @@ void _run_{{pathobj}}_initialise_queue()
 			temp_size_by_pre_id[i] = num_elements;
 
 			temp_synapses_by_pre_id[i] = d_synapse_ids + sum_num_elements;
-			CudaSafeCall( cudaMemcpy(temp_synapses_by_pre_id[i],
+			CUDA_SAFE_CALL( cudaMemcpy(temp_synapses_by_pre_id[i],
 						thrust::raw_pointer_cast(&(h_synapses_by_pre_id[i][0])),
 						sizeof(unsigned int)*num_elements,
 						cudaMemcpyHostToDevice) );
@@ -363,7 +357,7 @@ void _run_{{pathobj}}_initialise_queue()
 					{{pathobj}}_max_bundle_size = num_synapses;
 				int32_t* synapse_bundle = new int32_t[num_synapses];
 				// TODO: don't copy synapses to synapse_bundle, just cudaMemcpy it directly to the device with
-				// CudaSafeCall( cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
+				// CUDA_SAFE_CALL( cudaMemcpy(d_..., h_synapses_by_pre_id[i] + synapses_start_idx, ...)
 				for (int j = 0; j < num_synapses; j++)
 				{
 					synapse_bundle[j] = h_synapses_by_pre_id[i][synapses_start_idx + j];
@@ -371,7 +365,7 @@ void _run_{{pathobj}}_initialise_queue()
 				// copy this bundle to device
                 int32_t* d_this_bundle = d_synapse_ids + sum_num_synapses;
 				size_t memory_size = sizeof(int32_t) * num_synapses;
-				CudaSafeCall( cudaMemcpy(d_this_bundle, synapse_bundle, memory_size, cudaMemcpyHostToDevice) );
+				CUDA_SAFE_CALL( cudaMemcpy(d_this_bundle, synapse_bundle, memory_size, cudaMemcpyHostToDevice) );
 				//h_synapses_by_bundle_id_by_pre[i].push_back(d_this_bundle);
 				h_synapses_by_bundle_id.push_back(d_this_bundle);
 				delete [] synapse_bundle;
@@ -398,13 +392,13 @@ void _run_{{pathobj}}_initialise_queue()
 		//copy temp arrays to device
 		// DENIS: TODO: rename those temp1... variables AND: why sizeof(int32_t*) and not sizeof(unsigned int*) for last 3 cpys? typo? --> CHANGED!
 		unsigned int* temp;
-		CudaSafeCall( cudaMalloc((void**)&temp, sizeof(unsigned int)*num_pre_post_blocks) );
-		CudaSafeCall( cudaMemcpy(temp, temp_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
-		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_size_by_pre, &temp, sizeof(unsigned int*)) );
+		CUDA_SAFE_CALL( cudaMalloc((void**)&temp, sizeof(unsigned int)*num_pre_post_blocks) );
+		CUDA_SAFE_CALL( cudaMemcpy(temp, temp_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_size_by_pre, &temp, sizeof(unsigned int*)) );
 		int32_t* temp2;
-		CudaSafeCall( cudaMalloc((void**)&temp2, sizeof(int32_t*)*num_pre_post_blocks) );
-		CudaSafeCall( cudaMemcpy(temp2, temp_synapses_by_pre_id, sizeof(int32_t*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
-		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_pre, &temp2, sizeof(int32_t**)) );
+		CUDA_SAFE_CALL( cudaMalloc((void**)&temp2, sizeof(int32_t*)*num_pre_post_blocks) );
+		CUDA_SAFE_CALL( cudaMemcpy(temp2, temp_synapses_by_pre_id, sizeof(int32_t*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_pre, &temp2, sizeof(int32_t**)) );
 	}
 	{% if not no_or_const_delay_mode %}
 	else  // not scalar_delay
@@ -414,19 +408,17 @@ void _run_{{pathobj}}_initialise_queue()
         assert(sum_memory_synapse_ids = memory_synapse_ids);
 
         printf("AFTER CONN MATRIX\n");
-        CudaCheckMemory(used_device_memory);
 
         unsigned int *d_unique_delays;
         {
         size_t memory_size = sizeof(unsigned int) * sum_num_unique_elements;
-        CudaSafeCall( cudaMalloc((void**)&d_unique_delays, memory_size) );
+        CUDA_SAFE_CALL( cudaMalloc((void**)&d_unique_delays, memory_size) );
         sum_memory_delay_by_pre_id += memory_size;
         }
         long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
         sum_num_unique_elements = 0;
 
         printf("AFTER ALLOCATING UNIQUE DELAY BY PRE\n");
-        CudaCheckMemory(used_device_memory);
         std::cout << "Allocated memory for unique_delay_values: " << sum_memory_delay_by_pre_id * to_MB << " MB" << std::endl;
 
 		for(int i = 0; i < num_pre_post_blocks; i++)  // loop through connectivity matrix again
@@ -438,7 +430,7 @@ void _run_{{pathobj}}_initialise_queue()
             if(num_elements > 0)
             {
 				temp_unique_delay_by_pre_id[i] = d_unique_delays + sum_num_unique_elements;
-				CudaSafeCall( cudaMemcpy(temp_unique_delay_by_pre_id[i],
+				CUDA_SAFE_CALL( cudaMemcpy(temp_unique_delay_by_pre_id[i],
 					thrust::raw_pointer_cast(&(h_unique_delay_by_pre_id[i][0])),
 					sizeof(unsigned int)*num_unique_elements,
 					cudaMemcpyHostToDevice) );
@@ -453,7 +445,6 @@ void _run_{{pathobj}}_initialise_queue()
 
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
         printf("AFTER 2nd CONN MATRIX LOOP\n");
-        CudaCheckMemory(used_device_memory);
 
 		// nemo bundle stuff info prints
 		printf("INFO used bundle IDS %u, unused bundle IDs %u, would have unused bundle IDs with set %u, max(num_bundles) %u, delay_set.size() %u, \n",
@@ -465,28 +456,26 @@ void _run_{{pathobj}}_initialise_queue()
 
         {
         size_t memory_size = sizeof(unsigned int) * num_bundle_ids;
-        CudaSafeCall( cudaMalloc((void**)&d_size_by_bundle_id, memory_size) );
+        CUDA_SAFE_CALL( cudaMalloc((void**)&d_size_by_bundle_id, memory_size) );
         memory_size_by_bundle_id += memory_size;
         printf("AFTER ALLOCATING SIZE_BY_BUNDLE_ID\n");
-        CudaCheckMemory(used_device_memory);
         std::cout << "Allocated memory for size_by_bundle_id: " << memory_size * to_MB << " MB" << std::endl;
-        //CudaSafeCall( cudaMemcpy(d_size_by_bundle_id, h_size_by_bundle_id,
-        CudaSafeCall( cudaMemcpy(d_size_by_bundle_id, thrust::raw_pointer_cast(&h_size_by_bundle_id[0]),
+        //CUDA_SAFE_CALL( cudaMemcpy(d_size_by_bundle_id, h_size_by_bundle_id,
+        CUDA_SAFE_CALL( cudaMemcpy(d_size_by_bundle_id, thrust::raw_pointer_cast(&h_size_by_bundle_id[0]),
                 memory_size, cudaMemcpyHostToDevice) );
-        CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_size_by_bundle_id, &d_size_by_bundle_id, sizeof(unsigned int*)) );
+        CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_size_by_bundle_id, &d_size_by_bundle_id, sizeof(unsigned int*)) );
         }
 
         {
         int32_t* d_synapses_by_bundle_id;
         size_t memory_size = sizeof(int32_t*) * num_bundle_ids;
-        CudaSafeCall( cudaMalloc((void**)&d_synapses_by_bundle_id, memory_size) );
+        CUDA_SAFE_CALL( cudaMalloc((void**)&d_synapses_by_bundle_id, memory_size) );
         memory_synapses_bundle_ptrs += memory_size;
-        CudaCheckMemory("AFTER ALLOCATING BUNDLE POINTERS");
         std::cout << "Allocated memory for bundle ptrs: " << memory_size * to_MB << " MB" << std::endl;
-        //CudaSafeCall( cudaMemcpy(d_synapses_by_bundle_id, h_synapses_by_bundle_id,
-        CudaSafeCall( cudaMemcpy(d_synapses_by_bundle_id, thrust::raw_pointer_cast(&(h_synapses_by_bundle_id[0])),
+        //CUDA_SAFE_CALL( cudaMemcpy(d_synapses_by_bundle_id, h_synapses_by_bundle_id,
+        CUDA_SAFE_CALL( cudaMemcpy(d_synapses_by_bundle_id, thrust::raw_pointer_cast(&(h_synapses_by_bundle_id[0])),
                 sizeof(int32_t*) * num_bundle_ids, cudaMemcpyHostToDevice) );
-        CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**)) );
+        CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_synapses_id_by_bundle_id, &d_synapses_by_bundle_id, sizeof(int32_t**)) );
         }
 
         {
@@ -510,32 +499,25 @@ void _run_{{pathobj}}_initialise_queue()
 		unsigned int* temp7;
         {
         size_t memory_size = sizeof(unsigned int)*num_pre_post_blocks;
-		CudaSafeCall( cudaMalloc((void**)&temp7, memory_size) );
+		CUDA_SAFE_CALL( cudaMalloc((void**)&temp7, memory_size) );
         memory_unique_delay_size_by_pre += memory_size;
-        CudaCheckMemory("AFTER ALLOCATING NUM UNIQUE DELAYS PER PRE/POST BLOCK");
         std::cout << "Allocated memory for unique_delay_size_by_pre: " << memory_size * to_MB << " MB" << std::endl;
         }
 
-        CudaCheckMemory("E");
-
-		CudaSafeCall( cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
-		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*)) );
-
-        CudaCheckMemory("F");
+		CUDA_SAFE_CALL( cudaMemcpy(temp7, temp_unique_delay_size_by_pre_id, sizeof(unsigned int)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_unique_delay_size_by_pre, &temp7, sizeof(unsigned int*)) );
 
 		unsigned int* temp6;
         {
         size_t memory_size = sizeof(unsigned int*)*num_pre_post_blocks;
-		CudaSafeCall( cudaMalloc((void**)&temp6, memory_size) );
+		CUDA_SAFE_CALL( cudaMalloc((void**)&temp6, memory_size) );
         memory_unique_delay_by_pre_ptrs += memory_size;
-        CudaCheckMemory("AFTER ALLOCATING UNIQUE DELAY PTRS");
         std::cout << "Allocated memory for unique_delay_by_pre ptrs: " << memory_size * to_MB << " MB" << std::endl;
         }
 
-		CudaSafeCall( cudaMemcpy(temp6, temp_unique_delay_by_pre_id, sizeof(unsigned int*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
-		CudaSafeCall( cudaMemcpyToSymbol({{pathobj}}_unique_delay_by_pre, &temp6, sizeof(unsigned int**)) );
+		CUDA_SAFE_CALL( cudaMemcpy(temp6, temp_unique_delay_by_pre_id, sizeof(unsigned int*)*num_pre_post_blocks, cudaMemcpyHostToDevice) );
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol({{pathobj}}_unique_delay_by_pre, &temp6, sizeof(unsigned int**)) );
 
-        CudaCheckMemory("G");
 	}
 	{% endif %}
 
@@ -591,8 +573,6 @@ void _run_{{pathobj}}_initialise_queue()
                MB_memory_unique_delay_by_pre_ptrs, num_pre_post_blocks);
     }
     {% endif %}
-
-    CudaCheckMemory("BEFORE EVENTSPACES");
 
 	// Create circular eventspaces in no_or_const_delay_mode
 	{% if not no_or_const_delay_mode %}
@@ -672,8 +652,6 @@ void _run_{{pathobj}}_initialise_queue()
                funcAttrib.constSizeBytes);
     }
 
-    CudaCheckMemory("BEFORE KERNEL");
-
 	_run_{{codeobj_name}}_kernel<<<num_blocks, num_threads>>>(
 		source_N,
 		num_parallel_blocks,
@@ -726,11 +704,16 @@ void _run_{{pathobj}}_initialise_queue()
 		exit(status);
 	}
 
-    printf("TOTAL OF INIT FUNCTION\n");
-    CudaCheckMemory(used_device_memory_start);
-
-    double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-    std::cout << "INFO: {{pathobj}} initialisation took " <<  time_passed << "s." << std::endl;
+	CUDA_CHECK_MEMORY();
+	double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+	std::cout << "INFO: {{pathobj}} initialisation took " <<  time_passed << "s";
+	if (used_device_memory > used_device_memory_start)
+		double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
+		std::cout << " and used " << tot_memory_MB << "MB of device memory.";
+	else if (used_device_memory < used_device_memory_start)
+		double tot_memory_MB = (used_device_memory_start - used_device_memory) * to_MB;
+		std::cout << " and freed " << tot_memory_MB << "MB of device memory.";
+	std::cout << std::endl;
 }
 
 {% endmacro %}

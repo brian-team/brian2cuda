@@ -3,6 +3,7 @@
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
+#include "brianlib/cuda_utils.h"
 #include "network.h"
 #include <stdint.h>
 #include <iostream>
@@ -13,6 +14,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <curand.h>
+
+size_t brian::used_device_memory = 0;
 
 //////////////// clocks ///////////////////
 {% for clock in clocks | sort(attribute='name') %}
@@ -154,6 +157,11 @@ void _init_arrays()
 {
 	using namespace brian;
 
+	std::clock_t start_timer = std::clock();
+
+	CUDA_CHECK_MEMORY();
+	size_t used_device_memory_start = used_device_memory;
+
 	cudaDeviceProp props;
 	cudaGetDeviceProperties(&props, 0);
 	
@@ -267,6 +275,15 @@ void _init_arrays()
 	cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 	{% endfor %}
+
+	CUDA_CHECK_MEMORY();
+	const double to_MB = 1.0 / (1024.0 * 1024.0);
+	double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
+	double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+	std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
+	if (tot_memory_MB > 0)
+		std::cout << " and used " << tot_memory_MB << "MB of device memory.";
+	std::cout << std::endl;
 }
 
 void _load_arrays()
@@ -497,6 +514,8 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include <curand.h>
 
 namespace brian {
+
+extern size_t used_device_memory;
 
 //////////////// clocks ///////////////////
 {% for clock in clocks %}

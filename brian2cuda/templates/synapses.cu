@@ -31,7 +31,9 @@ kernel_{{codeobj_name}}(
 
 	unsigned int tid = threadIdx.x;
 	unsigned int bid = blockIdx.x + bid_offset;
-	//TODO: do we need _idx here? if now, get also rid of scoping after scalar code
+	//TODO: do we need _idx here? if no, get also rid of scoping after scalar code
+	// scalar_code can depend on _idx (e.g. if the state update depends on a
+	// subexpression that is the same for all synapses, ?)
 	unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
 	unsigned int _vectorisation_idx = _idx;
 	%KERNEL_VARIABLES%

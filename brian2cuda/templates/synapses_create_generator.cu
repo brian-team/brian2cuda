@@ -5,6 +5,7 @@
 #include<iostream>
 #include<curand.h>
 #include<brianlib/curand_buffer.h>
+#include "brianlib/cuda_utils.h"
 #include<map>
 {% endblock %}
 
@@ -27,9 +28,21 @@
 {% endblock %}
 
 {% block profiling_start %}
+std::clock_t start_timer = std::clock();
+
+CUDA_CHECK_MEMORY();
+size_t used_device_memory_start = used_device_memory;
 {% endblock %}
 
 {% block profiling_stop %}
+CUDA_CHECK_MEMORY();
+const double to_MB = 1.0 / (1024.0 * 1024.0);
+double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
+double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+std::cout << "INFO: {{owner.name}} creation took " <<  time_passed << "s";
+if (tot_memory_MB > 0)
+    std::cout << " and used " << tot_memory_MB << "MB of memory.";
+std::cout << std::endl;
 {% endblock %}
 
 {% block extra_maincode %}
