@@ -24,5 +24,20 @@ def test_rand():
     assert_raises(AssertionError, assert_equal, mon.v[:, -2], mon.v[:, -1])
 
 
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_devices)
+def test_random_number_generation_with_multiple_runs():
+
+    set_device('cuda_standalone', directory=None, build_on_run=False)
+    G = NeuronGroup(1000, 'dv/dt = rand() : second')
+    mon = StateMonitor(G, 'v', record=True)
+
+    run(1*defaultclock.dt)
+    run(2*defaultclock.dt)
+    device.build(direct_call=False, **device.build_options)
+
+    assert_raises(AssertionError, assert_equal, mon.v[:, -1], 0)
+    assert_raises(AssertionError, assert_equal, mon.v[:, -2], mon.v[:, -1])
+
 if __name__ == '__main__':
-    test_rand()
+    test_random_number_generation_with_multiple_runs()
