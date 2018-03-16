@@ -732,6 +732,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                'and "device.activate()". Note that you '
                                'will have to set build options (e.g. the '
                                'directory) and defaultclock.dt again.')
+        # TODO: remove this when #83 is fixed
+        if not self.build_on_run:
+            run_count = 0
+            for func, args in self.main_queue:
+                if func == 'run_network':
+                    run_count += 1
+            if run_count > 1:
+                logger.warn("Multiple run statements are currently error prone. "
+                            "See #83, #85, #86.")
+
         renames = {'project_dir': 'directory',
                    'compile_project': 'compile',
                    'run_project': 'run'}

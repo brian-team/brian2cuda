@@ -106,10 +106,7 @@ void _run_{{pathobj}}_initialise_queue()
 
 	// pre neuron IDs, post neuron IDs and delays for all synapses (sorted by synapse IDs)
 	//TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
-	{% if no_or_const_delay_mode %}
-	// delay (on host) was potentially set in main and needs to be copied to device for later use
-	dev{{_dynamic_delay}} = {{_dynamic_delay}};
-	{% else %}
+	{% if not no_or_const_delay_mode %}
 	// delay (on device) was set in group_variable_set_conditional and needs to be copied to host
 	{{_dynamic_delay}} = dev{{_dynamic_delay}};
 	{% endif %}
@@ -173,6 +170,12 @@ void _run_{{pathobj}}_initialise_queue()
 	if (scalar_delay)
 		{{owner.name}}_delay = max_delay;
 	{% endif %}
+	// Delete delay (in sec) on device, we don't need it
+	// TODO: don't copy these delays to the device in first place, see #83
+	dev{{_dynamic_delay}}.clear();
+	dev{{_dynamic_delay}}.shrink_to_fit();
+	CUDA_CHECK_MEMORY();
+	size_t used_device_memory_after_dealloc = used_device_memory;
 
 	///////////////////////////////////////
 	// Create arrays for device pointers //
@@ -707,12 +710,14 @@ void _run_{{pathobj}}_initialise_queue()
 	CUDA_CHECK_MEMORY();
 	double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
 	std::cout << "INFO: {{pathobj}} initialisation took " <<  time_passed << "s";
-	if (used_device_memory > used_device_memory_start)
-		double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
-		std::cout << " and used " << tot_memory_MB << "MB of device memory.";
-	else if (used_device_memory < used_device_memory_start)
-		double tot_memory_MB = (used_device_memory_start - used_device_memory) * to_MB;
-		std::cout << " and freed " << tot_memory_MB << "MB of device memory.";
+	if (used_device_memory_after_dealloc < used_device_memory_start){
+		size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
+		std::cout << ", freed " << freed_bytes * to_MB << "MB";
+	}
+	if (used_device_memory > used_device_memory_start){
+		size_t used_bytes = used_device_memory - used_device_memory_start;
+		std::cout << " and used " << used_bytes * to_MB << "MB of device memory.";
+	}
 	std::cout << std::endl;
 }
 
