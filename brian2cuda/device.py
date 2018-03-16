@@ -247,7 +247,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         self.eventspace_arrays = {}
         for var, varname in self.arrays.iteritems():
-            if varname.endswith('space'):  # get all eventspace variables
+            if var.name.endswith('space'):  # get all eventspace variables
                 self.eventspace_arrays[var] = varname
         for var in self.eventspace_arrays.iterkeys():
             del self.arrays[var]
