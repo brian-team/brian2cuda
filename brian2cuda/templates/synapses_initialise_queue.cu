@@ -120,10 +120,7 @@ void _run_{{pathobj}}_initialise_queue()
 	{% if not no_or_const_delay_mode %}
 	thrust::host_vector<unsigned int>* h_delay_by_pre_id = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
 	// nemo bundle stuff
-	//// this is one vector of host pointers per right_offset (since we don't know how many bundles we will have per right_offset)
-	//thrust::host_vector<int32_t*>* h_synapses_by_bundle_id_by_pre = new thrust::host_vector<int32_t*>[num_pre_post_blocks];
-	//thrust::host_vector<unsigned int>* h_size_by_bundle_id_by_pre = new thrust::host_vector<unsigned int>[num_pre_post_blocks];
-	// this is a vector of host pointers (since we don't know how many bundles we will have in total)
+	// this is a vector of host pointers (since we don't know yet how many bundles we will have in total)
 	thrust::host_vector<int32_t*> h_synapses_by_bundle_id;
 	thrust::host_vector<unsigned int> h_size_by_bundle_id;
 	// start index for local bundle_idx per right_offset
@@ -354,7 +351,6 @@ void _run_{{pathobj}}_initialise_queue()
 					num_synapses = num_elements - synapses_start_idx;
 				else
 					num_synapses = h_unique_delay_start_idx_by_pre_id[i][bundle_idx + 1] - synapses_start_idx;
-				//h_size_by_bundle_id_by_pre[i].push_back(num_synapses);
 				h_size_by_bundle_id.push_back(num_synapses);
 				if (num_synapses > {{pathobj}}_max_bundle_size)
 					{{pathobj}}_max_bundle_size = num_synapses;
@@ -369,7 +365,6 @@ void _run_{{pathobj}}_initialise_queue()
                 int32_t* d_this_bundle = d_synapse_ids + sum_num_synapses;
 				size_t memory_size = sizeof(int32_t) * num_synapses;
 				CUDA_SAFE_CALL( cudaMemcpy(d_this_bundle, synapse_bundle, memory_size, cudaMemcpyHostToDevice) );
-				//h_synapses_by_bundle_id_by_pre[i].push_back(d_this_bundle);
 				h_synapses_by_bundle_id.push_back(d_this_bundle);
 				delete [] synapse_bundle;
 
@@ -443,8 +438,6 @@ void _run_{{pathobj}}_initialise_queue()
 		num_bundle_ids = sum_num_unique_elements;
 		// floor(mean(h_size_by_bundle_id))
 		{{pathobj}}_mean_bundle_size = sum_num_synapses / num_bundle_ids;
-		//delete [] h_size_by_bundle_id_by_pre;
-		//delete [] h_synapses_by_bundle_id_by_pre;
 
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
         printf("AFTER 2nd CONN MATRIX LOOP\n");
@@ -491,8 +484,6 @@ void _run_{{pathobj}}_initialise_queue()
 	    		sizeof(unsigned int*));
         }
 
-        //delete [] h_synapses_by_bundle_id;
-        //delete [] h_size_by_bundle_id;
     }  // end if (!scalar_delay)
     {% endif %}{# not no_or_const_delay_mode #}
 
