@@ -38,6 +38,10 @@ _run_{{codeobj_name}}_push_kernel(
 
 	using namespace brian;
 
+    {% if not bundle_mode %}
+	// TODO: check if static shared memory is faster / makes any difference
+	extern __shared__ char shared_mem[];
+    {% endif %}
 	int bid = blockIdx.x;
 	int tid = threadIdx.x;
 
@@ -50,7 +54,12 @@ _run_{{codeobj_name}}_push_kernel(
     // push to spikequeue if spiking_neuron is in sources of current SynapticPathway
     if({{owner.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{owner.name}}.spikes_stop)
     {
-        {{owner.name}}.queue->push(
+        {% if bundle_mode %}
+        {{owner.name}}.queue->push_bundles(
+        {% else %}
+        {{owner.name}}.queue->push_synapses(
+            shared_mem,
+        {% endif %}
             post_neuron_bid,
             tid,
             _num_threads,
@@ -104,9 +113,24 @@ void _run_{{codeobj_name}}()
 		}
 
 	    static int num_threads, num_blocks;
+        static size_t needed_shared_memory;
 	    static bool first_run = true;
 	    if (first_run)
 	    {
+
+            {% if not bundle_mode %}
+            /* We are copying next_delay_start_idx and the atomic offset (both
+             * size = num_unique_delays) into shared memory. Since
+             * num_unique_delays varies for different combinations of pre
+             * neuron and bid, we allocate for max(num_unique_delays). And +1
+             * per block for copying size_before_resize into shared memory when
+             * we need to use the outer loop.
+             */
+		    needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(unsigned int);
+		    assert (needed_shared_memory <= max_shared_mem_size);
+            {% else %}{# bundle_mode #}
+            needed_shared_memory = 0;
+            {% endif %}{# not bundle_mode #}
 
 		    // We don't need more then max(num_synapses) threads per block.
 		    num_threads = {{owner.name}}_max_size;
@@ -118,7 +142,8 @@ void _run_{{codeobj_name}}()
 	    	// calculate theoretical occupancy
 	    	int max_active_blocks;
 	    	cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-					_run_{{codeobj_name}}_push_kernel, num_threads, 0);
+					_run_{{codeobj_name}}_push_kernel, num_threads,
+                    needed_shared_memory);
 
 	    	float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
 	    	                  (float)(max_threads_per_sm / num_threads_per_warp);
@@ -169,7 +194,7 @@ void _run_{{codeobj_name}}()
 		{
 			num_blocks = num_parallel_blocks * num_spiking_neurons;
 
-			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads>>>(
+			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
 					num_parallel_blocks,
 					num_blocks,
 					num_threads,

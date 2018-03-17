@@ -18,7 +18,9 @@ kernel_{{codeobj_name}}(
 	unsigned int bid_offset,
 	unsigned int timestep,
 	unsigned int THREADS_PER_BLOCK,
+	{% if bundle_mode %}
 	unsigned int threads_per_bundle,
+	{% endif %}
 	int32_t* eventspace,
 	unsigned int neurongroup_size,
 	%DEVICE_PARAMETERS%
@@ -82,13 +84,14 @@ kernel_{{codeobj_name}}(
 	else  // heterogeneous delay mode
 	{
         cudaVector<int32_t>* synapses_queue;
-        {{pathway.name}}.queue->peek(
-                &synapses_queue);
+        {{pathway.name}}.queue->peek(&synapses_queue);
 
-        int num_bundles = synapses_queue[bid].size();
+        int queue_size = synapses_queue[bid].size();
+
+        {% if bundle_mode %}
         // use a fixed number of threads per bundle, i runs through all those threads of all bundles
         // for threads_per_bundle == 1, we have one thread per bundle (parallel)
-        for (int i = tid; i < num_bundles*threads_per_bundle; i+=THREADS_PER_BLOCK)
+        for (int i = tid; i < queue_size*threads_per_bundle; i+=THREADS_PER_BLOCK)
         {
             // bundle_idx runs through all bundles
             unsigned int bundle_idx = i / threads_per_bundle;
@@ -104,8 +107,17 @@ kernel_{{codeobj_name}}(
             // if threads_per_bundle == 1, this is serial
             for (int j = syn_in_bundle_idx; j < bundle_size; j+=threads_per_bundle)
             {
-
                 int32_t _idx = synapse_bundle[j];
+
+        {% else %}{# no bundle_mode #}
+
+        // use one thread per synapse
+        for(int j = tid; j < queue_size; j+=THREADS_PER_BLOCK)
+        {
+            int32_t _idx = synapses_queue[bid].at(j);
+            {
+
+        {% endif %}{# bundle_mode #}
 
                 {{vector_code|autoindent}}
             }
@@ -122,13 +134,17 @@ static unsigned int num_loops;
 {% endblock %}
 
 {% block prepare_kernel_inner %}
+{#######################################################################}
 {% if synaptic_effects == "synapse" %}
 // Synaptic effects modify only synapse variables.
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
 // TODO: effect of mean instead of max?
+{% if bundle_mode %}
 num_threads_per_bundle = {{pathway.name}}_max_bundle_size;
+{% endif %}
 num_loops = 1;
+
 {% elif synaptic_effects == "target" %}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
@@ -137,20 +153,33 @@ num_threads = 1;
 if (!{{owner.name}}_multiple_pre_post){
 	if ({{pathway.name}}_scalar_delay)
 		num_threads = max_threads_per_block;
+    {% if bundle_mode %}
 	else  // heterogeneous delays
 		num_threads = {{pathway.name}}_max_bundle_size;
+    {% endif %}
 }
 if (num_threads > max_threads_per_block)
 	num_threads = max_threads_per_block;
+{% if bundle_mode %}
 // num_threads_per_bundle only used for heterogeneous delays
 num_threads_per_bundle = num_threads;
+{% endif %}
+
 {% elif synaptic_effects == "source" %}
 // Synaptic effects modify source group variables.
 num_blocks = 1;
 num_threads = 1;
+{% if bundle_mode %}
 num_threads_per_bundle = 1;
-num_loops = num_parallel_blocks;
 {% endif %}
+num_loops = num_parallel_blocks;
+
+{% else %}
+printf("ERROR: got unknown 'synaptic_effects' mode ({{synaptic_effects}})\n");
+_dealloc_arrays();
+exit(1);
+{% endif %}
+{#######################################################################}
 {% endblock prepare_kernel_inner %}
 
 {% block extra_info_msg %}
@@ -163,7 +192,6 @@ else if ({{pathway.name}}_max_size <= 0)
 {% block kernel_call %}
 {% set eventspace_variable = pathway.variables[pathway.eventspace_name] %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-// TODO add INFO print when we have 0 synapses
 if ({{pathway.name}}_max_size > 0)
 {
 	// only call kernel if we have synapses (otherwise we skipped the push kernel)
@@ -173,21 +201,16 @@ if ({{pathway.name}}_max_size > 0)
 			bid_offset,
 			{{owner.clock.name}}.timestep[0],
 			num_threads,
+			{% if bundle_mode %}
 			num_threads_per_bundle,
+			{% endif %}
 			dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
 			_num_{{_eventspace}}-1,
 			%HOST_PARAMETERS%
 		);
 	}
 
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
+	CUDA_CHECK_ERROR();
 }
 {% endblock kernel_call %}
 

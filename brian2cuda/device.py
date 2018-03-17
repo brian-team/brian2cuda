@@ -129,7 +129,19 @@ prefs.register_preferences(
                                            'CURAND_ORDERING_PSEUDO_BEST',
                                            'CURAND_ORDERING_PSEUDO_SEEDED',
                                            'CURAND_ORDERING_QUASI_DEFAULT'],
-        default=False)  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+        default=False),  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
+
+    push_synapse_bundles=BrianPreference(
+        docs='''If True, synaptic events are propagated by pushing bundles of
+        synapse IDs with same delays into the corresponding delay queue. If
+        False, each synapse of a spiking neuron is pushed in the corresponding
+        queue individually. For very small bundle sizes (number of synapses
+        with same delay, connected to a single neuron), pushing single Synapses
+        can be faster. This option only has effect for `Synapses` objects ith
+        heterogenous delays.''',
+        validator=lambda v: isinstance(v, bool),
+        #default=True)
+        default=True)
 )
 
 
@@ -178,6 +190,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             template_kwds = {}
         if hasattr(self, 'profile'):
             template_kwds['profile'] = self.profile
+        template_kwds['bundle_mode'] = prefs["devices.cuda_standalone.push_synapse_bundles"]
         no_or_const_delay_mode = False
         if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
