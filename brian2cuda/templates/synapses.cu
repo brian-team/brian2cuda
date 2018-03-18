@@ -65,10 +65,10 @@ kernel_{{codeobj_name}}(
 	                        // apply effects if event neuron is in sources of current SynapticPathway
 	                        if({{pathway.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{pathway.name}}.spikes_stop)
 	                        {
-	                                unsigned int right_offset = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
-	                                int size = {{pathway.name}}_size_by_pre[right_offset];
-	                                int32_t* propagating_synapses = {{pathway.name}}_synapses_id_by_pre[right_offset];
-	                                for(int j = tid; j < size; j+=THREADS_PER_BLOCK)
+	                                unsigned int pre_post_block_id = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
+	                                int num_synapses = {{pathway.name}}_num_synapses_by_pre[pre_post_block_id];
+	                                int32_t* propagating_synapses = {{pathway.name}}_synapse_ids_by_pre[pre_post_block_id];
+	                                for(int j = tid; j < num_synapses; j+=THREADS_PER_BLOCK)
 	                                {
 						// _idx is the synapse id
 	                                        int32_t _idx = propagating_synapses[j];
@@ -99,8 +99,8 @@ kernel_{{codeobj_name}}(
             unsigned int syn_in_bundle_idx = i % threads_per_bundle;
 
             unsigned int bundle_id = synapses_queue[bid].at(bundle_idx);
-            unsigned int bundle_size = {{pathway.name}}_size_by_bundle_id[bundle_id];
-            int32_t* synapse_bundle = {{pathway.name}}_synapses_id_by_bundle_id[bundle_id];
+            unsigned int bundle_size = {{pathway.name}}_num_synapses_by_bundle[bundle_id];
+            int32_t* synapse_bundle = {{pathway.name}}_synapse_ids_by_bundle[bundle_id];
             assert(synapse_bundle);  // check this is not a NULL ptr (unused bundle_id)
 
             // loop through synapses of this bundle with all available threads_per_bundle

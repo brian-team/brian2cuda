@@ -13,18 +13,18 @@
 
 
 // partly adapted from https://gist.github.com/ashwin/2652488
-#define CUDA_SAFE_CALL(err)  __cudaSafeCall(err, __FILE__, __LINE__)
-#define CUDA_CHECK_ERROR()   __cudaCheckError(__FILE__, __LINE__)
-#define CUDA_CHECK_MEMORY()  __cudaCheckMemory(__FILE__, __LINE__)
+#define CUDA_SAFE_CALL(err)  _cudaSafeCall(err, __FILE__, __LINE__, #err)
+#define CUDA_CHECK_ERROR()   _cudaCheckError(__FILE__, __LINE__)
+#define CUDA_CHECK_MEMORY()  _cudaCheckMemory(__FILE__, __LINE__)
 
 
-inline void __cudaSafeCall(cudaError err, const char *file, const int line)
+inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_SAFE_CALL() failed at %s:%i : %s\n",
-                file, line, cudaGetErrorString(err));
+        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
+                call, file, line, cudaGetErrorString(err));
         exit(-1);
     }
 #endif
@@ -33,7 +33,7 @@ inline void __cudaSafeCall(cudaError err, const char *file, const int line)
 }
 
 
-inline void __cudaCheckError(const char *file, const int line)
+inline void _cudaCheckError(const char *file, const int line)
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK
     cudaError err = cudaGetLastError();
@@ -62,8 +62,8 @@ inline void __cudaCheckError(const char *file, const int line)
 
 // Report device memory usage. The memory diff is reported with respect to the
 // global brian::used_device_memory as reference, which was set in the last
-// __cudaCheckMemory call.
-inline void __cudaCheckMemory(const char *file, const int line)
+// _cudaCheckMemory call.
+inline void _cudaCheckMemory(const char *file, const int line)
 {
 #ifdef BRIAN2CUDA_MEMORY_CHECK
 #ifdef BRIAN2CUDA_MEMORY_CHECK_BLOCKING
