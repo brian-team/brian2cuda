@@ -75,6 +75,8 @@
 		_reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 				dev{{_eventspace}}[current_idx{{_eventspace}}]
 			);
+
+		CUDA_CHECK_ERROR("_reset_{{codeobj_name}}");
 	{% endif %}	
 {% endblock extra_kernel_call %}
 
@@ -82,6 +84,8 @@
 	{% if not extra_threshold_kernel %}
 		{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 		// reset eventspace counter to 0
-		cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t));
-	{% endif %}
+	CUDA_SAFE_CALL(
+			cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t))
+			);
+{% endif %}
 {% endblock extra_maincode %}

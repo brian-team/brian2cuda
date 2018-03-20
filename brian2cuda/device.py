@@ -324,8 +324,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                 if is_dynamic:
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
-                line = "cudaMemcpy({pointer_arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice);".format(
-                           arrayname=arrayname, size_str=size_str, pointer_arrayname=pointer_arrayname, 
+                line = '''
+                CUDA_SAFE_CALL(
+                        cudaMemcpy({pointer_arrayname}, &{arrayname}[0],
+                                sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice)
+                        );
+                '''.format(arrayname=arrayname, size_str=size_str, pointer_arrayname=pointer_arrayname,
                            value=CPPNodeRenderer().render_expr(repr(value)))
                 main_lines.extend([line])
             elif func=='set_by_single_value':
@@ -335,7 +339,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 code = '''
                 {arrayname}[{item}] = {value};
-                cudaMemcpy(&{pointer_arrayname}[{item}], &{arrayname}[{item}], sizeof({arrayname}[0]), cudaMemcpyHostToDevice);
+                CUDA_SAFE_CALL(
+                        cudaMemcpy(&{pointer_arrayname}[{item}], &{arrayname}[{item}],
+                                sizeof({arrayname}[0]), cudaMemcpyHostToDevice)
+                        );
                 '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
                 main_lines.extend([code])
             elif func=='set_by_array':
@@ -354,7 +361,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 main_lines.extend(code.split('\n'))
                 line = '''
-                cudaMemcpy({pointer_arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice);
+                CUDA_SAFE_CALL(
+                        cudaMemcpy({pointer_arrayname}, &{arrayname}[0],
+                                sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice)
+                        );
                 '''.format(pointer_arrayname=pointer_arrayname, staticarrayname=staticarrayname, size_str=size, arrayname=arrayname)
                 main_lines.extend([line])
             elif func=='set_array_by_array':
@@ -364,7 +374,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 {{
                     {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
                 }}
-                cudaMemcpy(dev{arrayname}, &{arrayname}[0], sizeof({arrayname}[0])*_num_{arrayname}, cudaMemcpyHostToDevice);
+                CUDA_SAFE_CALL(
+                        cudaMemcpy(dev{arrayname}, &{arrayname}[0],
+                                sizeof({arrayname}[0])*_num_{arrayname}, cudaMemcpyHostToDevice)
+                        );
                 '''.format(arrayname=arrayname, staticarrayname_index=staticarrayname_index,
                            staticarrayname_value=staticarrayname_value)
                 main_lines.extend(code.split('\n'))
@@ -459,11 +472,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code_snippet='''
                         //genenerate an array of random numbers on the device
                         {dtype}* dev_array_randn;
-                        cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
-                        if(!dev_array_randn)
-                        {{
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.randn_calls});
-                        }}
+                        CUDA_SAFE_CALL(
+                                cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls})
+                                );
                         curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
                                    curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
@@ -477,11 +488,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code_snippet = '''
                         //genenerate an array of random numbers on the device
                         {dtype}* dev_array_rand;
-                        cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
-                        if(!dev_array_rand)
-                        {{
-                            printf("ERROR while allocating device memory with size %ld\\n", sizeof({dtype})*{number_elements}*{codeobj.rand_calls});
-                        }}
+                        CUDA_SAFE_CALL(
+                                cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls})
+                                );
                         curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
                                    curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
@@ -965,14 +974,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
 
         if True:#self.profile and self.profile != 'blocking':  # self.profile == True
-            run_lines.append('cudaProfilerStart();')
+            run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
                                                                                               duration=float(duration),
                                                                                               report_call=report_call,
                                                                                               report_period=float(report_period)))
         if True:#self.profile and self.profile != 'blocking':  # self.profile == True
-            run_lines.append('cudaDeviceSynchronize();')
-            run_lines.append('cudaProfilerStop();')
+            run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
+            run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')
         self.main_queue.append(('run_network', (net, run_lines)))
 
         # Manually set the cache for the clocks, simulation scripts might

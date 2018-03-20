@@ -1,5 +1,6 @@
 {% macro cu_file() %}
 #include<stdlib.h>
+#include "brianlib/cuda_utils.h"
 #include "objects.h"
 #include<ctime>
 

@@ -83,4 +83,6 @@ __global__ void kernel_{{codeobj_name}}(
 			syn_N,
 			%HOST_PARAMETERS%
 		);
+
+	CUDA_ERROR_CHECK("kernel_{{codeobj_name}}");
 {% endblock %}

@@ -4,6 +4,7 @@
 #include <time.h>
 #include "run.h"
 #include "brianlib/common_math.h"
+#include "brianlib/cuda_utils.h"
 #include "rand.h"
 
 {% for codeobj in code_objects %}
@@ -27,11 +28,17 @@ int main(int argc, char **argv)
 	const std::clock_t _start_time2 = std::clock();
 
 	cudaDeviceProp props;
-	cudaGetDeviceProperties(&props, 0);
+	CUDA_SAFE_CALL(
+			cudaGetDeviceProperties(&props, 0)
+			);
 	size_t limit = {{gpu_heap_size}} * 1024 * 1024;
-	cudaDeviceSetLimit(cudaLimitMallocHeapSize, limit);
-	cudaDeviceSynchronize();
-	
+	CUDA_SAFE_CALL(
+			cudaDeviceSetLimit(cudaLimitMallocHeapSize, limit)
+			);
+	CUDA_SAFE_CALL(
+			cudaDeviceSynchronize()
+			);
+
 	const double _run_time2 = (double)(std::clock() -_start_time2)/CLOCKS_PER_SEC;
 	printf("INFO: setting cudaDevice stuff took %f seconds\n", _run_time2);
 

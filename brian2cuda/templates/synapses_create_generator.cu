@@ -250,8 +250,10 @@ std::cout << std::endl;
 	dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
 	dev{{_dynamic__synaptic_pre}} = {{_dynamic__synaptic_pre}};
 	dev{{_dynamic__synaptic_post}} = {{_dynamic__synaptic_post}};
-	cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
-			{{get_array_name(variables['N'], access_data=False)}},
-			sizeof({{c_data_type(variables['N'].dtype)}}),
-			cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(
+			cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
+				{{get_array_name(variables['N'], access_data=False)}},
+				sizeof({{c_data_type(variables['N'].dtype)}}),
+				cudaMemcpyHostToDevice)
+			);
 {% endblock extra_maincode %}

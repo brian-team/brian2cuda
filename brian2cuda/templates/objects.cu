@@ -163,8 +163,10 @@ void _init_arrays()
 	size_t used_device_memory_start = used_device_memory;
 
 	cudaDeviceProp props;
-	cudaGetDeviceProperties(&props, 0);
-	
+	CUDA_SAFE_CALL(
+			cudaGetDeviceProperties(&props, 0)
+			);
+
 
 	{% if num_parallel_blocks %}
 	num_parallel_blocks = {{num_parallel_blocks}};
@@ -176,7 +178,7 @@ void _init_arrays()
 	max_threads_per_sm = props.maxThreadsPerMultiProcessor;
 	max_shared_mem_size = props.sharedMemPerBlock;
 	num_threads_per_warp = props.warpSize;
-	
+
 	curandCreateGenerator(&curand_generator, {{curand_generator_type}});
 	{% if curand_generator_ordering %}
 	curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
@@ -196,17 +198,26 @@ void _init_arrays()
 			{{path.source.start}},
 			{{path.source.stop}}
 			);
+	CUDA_CHECK_ERROR("{{path.name}}_init");
 	{% endfor %}
 	{% endfor %}
 
 	{% if profile and profile != 'blocking' %}
 	// Create cudaEvents for profiling
 	{% for codeobj in active_objects %}
-	cudaEventCreate(&{{codeobj}}_timer_start);
-	cudaEventCreate(&{{codeobj}}_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventCreate(&{{codeobj}}_timer_start)
+			);
+	CUDA_SAFE_CALL(
+			cudaEventCreate(&{{codeobj}}_timer_stop)
+			);
 	{% endfor %}
-	cudaEventCreate(&random_number_generation_timer_start);
-	cudaEventCreate(&random_number_generation_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventCreate(&random_number_generation_timer_start)
+			);
+	CUDA_SAFE_CALL(
+			cudaEventCreate(&random_number_generation_timer_stop)
+			);
 	{% endif %}
 
     // Arrays initialized to 0
@@ -215,13 +226,13 @@ void _init_arrays()
 			{% set varname = array_specs[var] %}
 			{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 			for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
-			cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-			if(!dev{{varname}})
-			{
-				printf("ERROR while allocating {{varname}} on device with size %ld\n", sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-			}
-			cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice);
-		
+			CUDA_SAFE_CALL(
+					cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+					);
+			CUDA_SAFE_CALL(
+					cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
+					);
+
 		{% endif %}
 		{% if (var in dynamic_array_specs) %}
 			{% set varname = array_specs[var] %}
@@ -232,7 +243,7 @@ void _init_arrays()
 				_dynamic{{varname}}[i] = 0;
 				dev_dynamic{{varname}}[i] = 0;
 			}
-		
+
 		{% endif %}
 	{% endfor %}
 
@@ -241,12 +252,13 @@ void _init_arrays()
 	{% set varname = array_specs[var] %}
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
-	cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-	if(!dev{{varname}})
-	{
-		printf("ERROR while allocating {{varname}} on device with size %ld\n", sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
-	}
-	cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(
+			cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+			);
+
+	CUDA_SAFE_CALL(
+			cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
+			);
 
 	{% endfor %}
 
@@ -257,12 +269,12 @@ void _init_arrays()
 	dev{{name}}.resize({{N}});
 	{% else %}
 	{{name}} = new {{dtype_spec}}[{{N}}];
-	cudaMalloc((void**)&dev{{name}}, sizeof({{dtype_spec}})*{{N}});
-	if(!dev{{name}})
-	{
-		printf("ERROR while allocating {{name}} on device with size %ld\n", sizeof({{dtype_spec}})*{{N}});
-	}
-	cudaMemcpyToSymbol(d{{name}}, &dev{{name}}, sizeof({{dtype_spec}}*));
+	CUDA_SAFE_CALL(
+			cudaMalloc((void**)&dev{{name}}, sizeof({{dtype_spec}})*{{N}})
+			);
+	CUDA_SAFE_CALL(
+			cudaMemcpyToSymbol(d{{name}}, &dev{{name}}, sizeof({{dtype_spec}}*))
+			);
 	{% endif %}
 	{% endfor %}
 
@@ -272,7 +284,9 @@ void _init_arrays()
 
 	// eventspace_arrays
 	{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-	cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}});
+	CUDA_SAFE_CALL(
+			cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+			);
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
 	{% endfor %}
 
@@ -305,7 +319,9 @@ void _load_arrays()
 		std::cout << "Error opening static array {{name}}." << endl;
 	}
 	{% if not (name in dynamic_array_specs.values()) %}
-	cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(
+			cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice)
+			);
 	{% else %}
     for(int i=0; i<{{N}}; i++)
     {
@@ -313,7 +329,7 @@ void _load_arrays()
     }
 	{% endif %}
 	{% endfor %}
-}	
+}
 
 void _write_arrays()
 {
@@ -321,7 +337,9 @@ void _write_arrays()
 
 	{% for var, varname in array_specs | dictsort(by='value') %}
 	{% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs or var in static_array_specs) %}
-	cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost);
+	CUDA_SAFE_CALL(
+			cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
+			);
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
@@ -421,23 +439,36 @@ void _dealloc_arrays()
 	{% if profile and profile != 'blocking' %}
 	// Destroy cudaEvents for profiling
 	{% for codeobj in active_objects %}
-	cudaEventDestroy({{codeobj}}_timer_start);
-	cudaEventDestroy({{codeobj}}_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventDestroy({{codeobj}}_timer_start)
+			);
+	CUDA_SAFE_CALL(
+			cudaEventDestroy({{codeobj}}_timer_stop)
+			);
 	{% endfor %}
-	cudaEventDestroy(random_number_generation_timer_start);
-	cudaEventDestroy(random_number_generation_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventDestroy(random_number_generation_timer_start)
+			);
+	CUDA_SAFE_CALL(
+			cudaEventDestroy(random_number_generation_timer_stop)
+			);
 	{% endif %}
 
 	{% for co in codeobj_with_rand | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_rand_allocator);
+	CUDA_SAFE_CALL(
+			cudaFree(dev_{{co.name}}_rand_allocator)
+			);
 	{% endfor %}
 	{% for co in codeobj_with_randn | sort(attribute='name') %}
-	cudaFree(dev_{{co.name}}_randn_allocator);
+	CUDA_SAFE_CALL(
+			cudaFree(dev_{{co.name}}_randn_allocator)
+			);
 	{% endfor %}
 
 	{% for S in synapses | sort(attribute='name') %}
 	{% for path in S._pathways | sort(attribute='name') %}
 	{{path.name}}_destroy<<<1,1>>>();
+	CUDA_CHECK_ERROR("{{path.name}}_destroy");
 	{% endfor %}
 	{% endfor %}
 
@@ -457,7 +488,9 @@ void _dealloc_arrays()
 	}
 	if(dev{{varname}}!=0)
 	{
-		cudaFree(dev{{varname}});
+		CUDA_SAFE_CALL(
+				cudaFree(dev{{varname}})
+				);
 		dev{{varname}} = 0;
 	}
 	{% endif %}

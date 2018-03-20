@@ -8,6 +8,7 @@
 #include "code_objects/{{codeobj_name}}.h"
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
+#include "brianlib/cuda_utils.h"
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
@@ -74,7 +75,9 @@ void _run_{{codeobj_name}}()
 	{% if profile and profile == 'blocking'%}
 	{{codeobj_name}}_timer_start = std::clock();
 	{% elif profile %}
-	cudaEventRecord({{codeobj_name}}_timer_start);
+	CUDA_SAFE_CALL(
+			cudaEventRecord({{codeobj_name}}_timer_start)
+			);
 	{% endif %}
 
 	///// CONSTANTS /////
@@ -96,21 +99,16 @@ void _run_{{codeobj_name}}()
 
 		// get the number of spiking neurons
 		int32_t num_spiking_neurons;
-		cudaMemcpy(&num_spiking_neurons,
-				dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
-				sizeof(int32_t), cudaMemcpyDeviceToHost);
+		CUDA_SAFE_CALL(
+				cudaMemcpy(&num_spiking_neurons,
+					dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
+					sizeof(int32_t), cudaMemcpyDeviceToHost)
+				);
 
 		// advance spike queues
 		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 
-		cudaError_t status = cudaGetLastError();
-		if (status != cudaSuccess)
-		{
-			printf("ERROR launching _run_{{codeobj_name}}_advance_kernel in %s:%d %s\n",
-					__FILE__, __LINE__, cudaGetErrorString(status));
-			_dealloc_arrays();
-			exit(status);
-		}
+		CUDA_CHECK_ERROR("_run_{{codeobj_name}}_advance_kernel");
 
 	    static int num_threads, num_blocks;
         static size_t needed_shared_memory;
@@ -141,9 +139,11 @@ void _run_{{codeobj_name}}()
 
 	    	// calculate theoretical occupancy
 	    	int max_active_blocks;
-	    	cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-					_run_{{codeobj_name}}_push_kernel, num_threads,
-                    needed_shared_memory);
+			CUDA_SAFE_CALL(
+					cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+						_run_{{codeobj_name}}_push_kernel, num_threads,
+						needed_shared_memory)
+					);
 
 	    	float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
 	    	                  (float)(max_threads_per_sm / num_threads_per_warp);
@@ -151,7 +151,9 @@ void _run_{{codeobj_name}}()
             // check if we have enough ressources to call kernel with given
             // number of blocks and threads
 	    	struct cudaFuncAttributes funcAttrib;
-	    	cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_push_kernel);
+			CUDA_SAFE_CALL(
+					cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_push_kernel)
+					);
 	    	if (num_threads > funcAttrib.maxThreadsPerBlock)
 	    	{
 	    		// use the max num_threads before launch failure
@@ -200,22 +202,19 @@ void _run_{{codeobj_name}}()
 					num_threads,
 					dev{{_eventspace}}[current_idx{{_eventspace}}]);
 
-			status = cudaGetLastError();
-			if (status != cudaSuccess)
-			{
-				printf("ERROR launching _run_{{codeobj_name}}_push_kernel in %s:%d %s\n",
-						__FILE__, __LINE__, cudaGetErrorString(status));
-				_dealloc_arrays();
-				exit(status);
-			}
+			CUDA_CHECK_ERROR("_run_{{codeobj_name}}_push_kernel");
 		}
 	}
 
 	{% if profile and profile == 'blocking'%}
-	cudaDeviceSynchronize();
+	CUDA_SAFE_CALL(
+            cudaDeviceSynchronize()
+            );
 	{{codeobj_name}}_timer_stop = std::clock();
 	{% elif profile %}
-	cudaEventRecord({{codeobj_name}}_timer_stop);
+	CUDA_SAFE_CALL(
+            cudaEventRecord({{codeobj_name}}_timer_stop)
+            );
 	{% endif %}
 }
 {% endmacro %}

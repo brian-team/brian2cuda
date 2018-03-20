@@ -77,7 +77,9 @@ void _run_{{codeobj_name}}()
 	{% if profile and profile == 'blocking'%}
 	{{codeobj_name}}_timer_start = std::clock();
 	{% elif profile %}
-	cudaEventRecord({{codeobj_name}}_timer_start);
+	CUDA_SAFE_CALL(
+			cudaEventRecord({{codeobj_name}}_timer_start)
+			);
 	{% endif %}
 	{% endblock %}
 
@@ -105,8 +107,10 @@ void _run_{{codeobj_name}}()
 		int min_num_threads; // The minimum grid size needed to achieve the
 							 // maximum occupancy for a full device launch
 
-		cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
-				kernel_{{codeobj_name}}, 0, 0);  // last args: dynamicSMemSize, blockSizeLimit
+		CUDA_SAFE_CALL(
+				cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
+					kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
+				);
 
 		// Round up according to array size
 		num_blocks = (_N + num_threads - 1) / num_threads;
@@ -123,8 +127,10 @@ void _run_{{codeobj_name}}()
 		{% block occupancy %}
 		// calculate theoretical occupancy
 		int max_active_blocks;
-		cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-				kernel_{{codeobj_name}}, num_threads, 0);
+		CUDA_SAFE_CALL(
+				cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+					kernel_{{codeobj_name}}, num_threads, 0)
+				);
 
 		float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
 		                  (float)(max_threads_per_sm / num_threads_per_warp);
@@ -134,7 +140,9 @@ void _run_{{codeobj_name}}()
         // check if we have enough ressources to call kernel with given number
         // of blocks and threads
 		struct cudaFuncAttributes funcAttrib;
-		cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
+		CUDA_SAFE_CALL(
+				cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}})
+				);
 		if (num_threads > funcAttrib.maxThreadsPerBlock)
 		{
 			// use the max num_threads before launch failure
@@ -188,22 +196,19 @@ void _run_{{codeobj_name}}()
 			%HOST_PARAMETERS%
 		);
 
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
+	CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 	{% endblock kernel_call %}
 
 	{% block profiling_stop %}
 	{% if profile and profile == 'blocking'%}
-	cudaDeviceSynchronize();
+	CUDA_SAFE_CALL(
+			cudaDeviceSynchronize()
+			);
 	{{codeobj_name}}_timer_stop = std::clock();
 	{% elif profile %}
-	cudaEventRecord({{codeobj_name}}_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventRecord({{codeobj_name}}_timer_stop)
+			);
 	{% endif %}
 	{% endblock %}
 }

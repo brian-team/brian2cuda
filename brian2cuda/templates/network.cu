@@ -1,5 +1,6 @@
 {% macro cu_file() %}
 
+#include "brianlib/cuda_utils.h"
 #include "objects.h"
 #include "network.h"
 #include <stdlib.h>
@@ -98,12 +99,14 @@ void Network::run(const double duration, void (*report_func)(const double, const
                         *(profiling_infos[i]) += (double)(*cuda_events[i].second - *cuda_events[i].first)/CLOCKS_PER_SEC;
                         {% else %}
                         cudaError_t kernel_status = cudaEventQuery(*cuda_events[i].second);
-			if (kernel_status == cudaSuccess)
-			{
+                        if (kernel_status == cudaSuccess)
+                        {
                             float elapsed_gpu_time;
-                            cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second);
+                            CUDA_SAFE_CALL(
+                                    cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second)
+                                    );
                             *(profiling_infos[i]) += elapsed_gpu_time / 1000;
-			}
+                        }
                         else if (kernel_status == cudaErrorNotReady)
                         {
                             printf("WARNING kernels in %i. active codeobject took longer than one clock cycle. "
@@ -113,7 +116,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
                         }
                         else
                         {
-		            printf("ERROR caught in %s:%d %s\n", __FILE__, __LINE__, cudaGetErrorString(kernel_status));
+                            printf("ERROR caught in %s:%d %s\n", __FILE__, __LINE__, cudaGetErrorString(kernel_status));
                         }
 			{% endif %}
                     }
@@ -176,7 +179,9 @@ void Network::run(const double duration, void (*report_func)(const double, const
             if (kernel_status == cudaSuccess)
             {
                 float elapsed_gpu_time;
-                cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second);
+                CUDA_SAFE_CALL(
+                        cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second)
+                        );
                 *(profiling_infos[i]) += elapsed_gpu_time / 1000;
             }
             else if (kernel_status == cudaErrorNotReady)

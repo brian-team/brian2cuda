@@ -210,7 +210,7 @@ if ({{pathway.name}}_max_size > 0)
 		);
 	}
 
-	CUDA_CHECK_ERROR();
+	CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 }
 {% endblock kernel_call %}
 

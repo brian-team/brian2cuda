@@ -3,6 +3,7 @@
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
+#include "brianlib/cuda_utils.h"
 #include "network.h"
 #include <curand.h>
 #include <ctime>
@@ -14,7 +15,9 @@ void _run_random_number_generation()
 	{% if profile and profile == 'blocking'%}
 	random_number_generation_timer_start = std::clock();
 	{% elif profile %}
-	cudaEventRecord(random_number_generation_timer_start);
+	CUDA_SAFE_CALL(
+			cudaEventRecord(random_number_generation_timer_start)
+			);
 	{% endif %}
 
 	// how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
@@ -43,7 +46,9 @@ void _run_random_number_generation()
 		// check that we have enough memory available
 		size_t free_byte ;
 		size_t total_byte ;
-		cudaMemGetInfo(&free_byte, &total_byte);
+		CUDA_SAFE_CALL(
+				cudaMemGetInfo(&free_byte, &total_byte)
+				);
 		size_t num_free_floats = free_byte / sizeof(randomNumber_t);
 
 
@@ -88,7 +93,9 @@ void _run_random_number_generation()
 		}
 		printf("INFO generating %i rand every %i clock cycles for {{co.name}}\n", num_per_gen_rand_{{co.name}}, rand_interval_{{co.name}});
 
-		cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(randomNumber_t)*num_per_gen_rand_{{co.name}});
+		CUDA_SAFE_CALL(
+				cudaMalloc((void**)&dev_{{co.name}}_rand_allocator, sizeof(randomNumber_t)*num_per_gen_rand_{{co.name}})
+				);
 		{% endfor %}
 
 
@@ -133,7 +140,9 @@ void _run_random_number_generation()
 		}
 		printf("INFO generating %i randn every %i clock cycles for {{co.name}}\n", num_per_gen_randn_{{co.name}}, randn_interval_{{co.name}});
 
-		cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(randomNumber_t)*num_per_gen_randn_{{co.name}});
+		CUDA_SAFE_CALL(
+				cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(randomNumber_t)*num_per_gen_randn_{{co.name}})
+				);
 		{% endfor %}
 
 		first_run = false;
@@ -181,10 +190,14 @@ void _run_random_number_generation()
 	{% endfor %}
 
 	{% if profile and profile == 'blocking'%}
-	cudaDeviceSynchronize();
+	CUDA_SAFE_CALL(
+			cudaDeviceSynchronize()
+			);
 	random_number_generation_timer_stop = std::clock();
 	{% elif profile %}
-	cudaEventRecord(random_number_generation_timer_stop);
+	CUDA_SAFE_CALL(
+			cudaEventRecord(random_number_generation_timer_stop)
+			);
 	{% endif %}
 }
 {% endmacro %}

@@ -3,6 +3,7 @@
 #include<math.h>
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
+#include "brianlib/cuda_utils.h"
 #include<stdint.h>
 #include<iostream>
 #include<fstream>
@@ -80,16 +81,20 @@ void _run_{{codeobj_name}}()
 		int min_num_threads; // The minimum grid size needed to achieve the
 							 // maximum occupancy for a full device launch
 
-		cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
-				kernel_{{codeobj_name}}, 0, 0);  // last args: dynamicSMemSize, blockSizeLimit
+		CUDA_SAFE_CALL(
+				cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
+					kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
+				);
 
 		// Round up according to array size
 		num_blocks = (_N + num_threads - 1) / num_threads;
 
 		// calculate theoretical occupancy
 		int max_active_blocks;
-		cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-				kernel_{{codeobj_name}}, num_threads, 0);
+		CUDA_SAFE_CALL(
+				cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+					kernel_{{codeobj_name}}, num_threads, 0)
+				);
 
 		float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
 		                  (float)(max_threads_per_sm / num_threads_per_warp);
@@ -106,7 +111,9 @@ void _run_{{codeobj_name}}()
         // check if we have enough ressources to call kernel with given number
         // of blocks and threads
 		struct cudaFuncAttributes funcAttrib;
-		cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}});
+		CUDA_SAFE_CALL(
+				cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}})
+				);
 		if (num_threads > funcAttrib.maxThreadsPerBlock)
 		{
 			// use the max num_threads before launch failure
@@ -146,20 +153,14 @@ void _run_{{codeobj_name}}()
 		%HOST_PARAMETERS%
 	);
 
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
-
+	CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 	{% for var in variables.itervalues() %}
 	{# We want to copy only those variables that were potentially modified in aboves kernel call. #}
 	{% if var is not callable and var.array and not var.constant and not var.dynamic %}
 	{% set varname = get_array_name(var, access_data=False) %}
-	cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost);
+	CUDA_SAFE_CALL(
+			cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
+			);
 	{% endif %}
 	{% endfor %}
 }

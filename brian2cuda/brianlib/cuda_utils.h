@@ -1,5 +1,6 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
+#include <stdio.h>
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
@@ -13,9 +14,9 @@
 
 
 // partly adapted from https://gist.github.com/ashwin/2652488
-#define CUDA_SAFE_CALL(err)  _cudaSafeCall(err, __FILE__, __LINE__, #err)
-#define CUDA_CHECK_ERROR()   _cudaCheckError(__FILE__, __LINE__)
-#define CUDA_CHECK_MEMORY()  _cudaCheckMemory(__FILE__, __LINE__)
+#define CUDA_SAFE_CALL(err)     _cudaSafeCall(err, __FILE__, __LINE__, #err)
+#define CUDA_CHECK_ERROR(msg)   _cudaCheckError(__FILE__, __LINE__, #msg)
+#define CUDA_CHECK_MEMORY()     _cudaCheckMemory(__FILE__, __LINE__)
 
 
 inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")
@@ -33,7 +34,7 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
 }
 
 
-inline void _cudaCheckError(const char *file, const int line)
+inline void _cudaCheckError(const char *file, const int line, const char *msg)
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK
     cudaError err = cudaGetLastError();
@@ -44,13 +45,14 @@ inline void _cudaCheckError(const char *file, const int line)
         exit(-1);
     }
 
+#else
 #ifdef BRIAN2CUDA_ERROR_CHECK_BLOCKING
     // More careful checking. However, this will affect performance.
     err = cudaDeviceSynchronize();
     if(cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() with sync failed at %s:%i : %s\n",
-                file, line, cudaGetErrorString(err));
+        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
+                msg, file, line, cudaGetErrorString(err));
         exit(-1);
     }
 #endif

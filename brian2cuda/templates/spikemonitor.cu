@@ -13,14 +13,7 @@
 {% block prepare_kernel_inner %}
 _run_{{codeobj_name}}_init<<<1,1>>>();
 
-cudaError_t status = cudaGetLastError();
-if (status != cudaSuccess)
-{
-	printf("ERROR launching _run_{{codeobj_name}}_init in %s:%d %s\n",
-			__FILE__, __LINE__, cudaGetErrorString(status));
-	_dealloc_arrays();
-	exit(status);
-}
+CUDA_CHECK_ERROR("_run_{{codeobj_name}}_init");
 num_blocks = 1;
 num_threads = 1;
 {% endblock prepare_kernel_inner %}
@@ -33,14 +26,7 @@ kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
 		// HOST_PARAMETERS
 		%HOST_PARAMETERS%);
 
-cudaError_t status = cudaGetLastError();
-if (status != cudaSuccess)
-{
-	printf("ERROR launching kernel_{{codeobj_name}} in %s:%d %s\n",
-			__FILE__, __LINE__, cudaGetErrorString(status));
-	_dealloc_arrays();
-	exit(status);
-}
+CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 {% endblock %}
 
 
@@ -198,7 +184,9 @@ void _copyToHost_{{codeobj_name}}()
 	unsigned int host_num_events;
 	unsigned int* dev_num_events;
 
-	cudaMalloc((void**)&dev_num_events, sizeof(unsigned int));
+	CUDA_SAFE_CALL(
+			cudaMalloc((void**)&dev_num_events, sizeof(unsigned int))
+			);
 
 	// CONSTANTS
 	%CONSTANTS%
@@ -209,16 +197,11 @@ void _copyToHost_{{codeobj_name}}()
 		%HOST_PARAMETERS%
 		);
 
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching _count_{{codeobj_name}}_kernel in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
+	CUDA_CHECK_ERROR("_count_{{codeobj_name}}_kernel");
 
-	cudaMemcpy(&host_num_events, dev_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+	CUDA_SAFE_CALL(
+			cudaMemcpy(&host_num_events, dev_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost)
+			);
 
 	// resize monitor device vectors
 	{% for varname, var in record_variables.items() %}
@@ -232,14 +215,7 @@ void _copyToHost_{{codeobj_name}}()
 		0  {# dummy, becaus loop ends with comma #}
 		);
 
-	status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching _copy_{{codeobj_name}}_kernel in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
+	CUDA_CHECK_ERROR("_copy_{{codeobj_name}}_kernel");
 }
 
 void _debugmsg_{{codeobj_name}}()
@@ -256,16 +232,8 @@ void _debugmsg_{{codeobj_name}}()
 			// HOST_PARAMETERS
 			%HOST_PARAMETERS%
 			);
-	{
-	cudaError_t status = cudaGetLastError();
-	if (status != cudaSuccess)
-	{
-		printf("ERROR launching _debugmsg_{{codeobj_name}} in %s:%d %s\n",
-				__FILE__, __LINE__, cudaGetErrorString(status));
-		_dealloc_arrays();
-		exit(status);
-	}
-	}
+
+	CUDA_CHECK_ERROR("_run_debugmsg_{{codeobj_name}}_kernel");
 }
 {% endblock %}
 
