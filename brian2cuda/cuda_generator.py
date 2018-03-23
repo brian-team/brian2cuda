@@ -73,22 +73,22 @@ _universal_support_code = deindent(mod_support_code)+'''
 class CUDACodeGenerator(CodeGenerator):
     '''
     C++ language with CUDA library
-    
+
     CUDA code templates should provide Jinja2 macros with the following names:
-    
+
     ``main``
         The main loop.
     ``support_code``
         The support code (function definitions, etc.), compiled in a separate
         file.
-        
+
     For user-defined functions, there are two keys to provide:
-    
+
     ``support_code``
         The function definition which will be added to the support code.
     ``hashdefine_code``
         The ``#define`` code added to the main loop.
-        
+
     See `TimedArray` for an example of these keys.
     '''
 
@@ -101,7 +101,7 @@ class CUDACodeGenerator(CodeGenerator):
         self.c_data_type = c_data_type
         self.warned_integral_convertion = False
         self.previous_convertion_pref = None
-        
+
     @property
     def restrict(self):
         return prefs['codegen.generators.cpp.restrict_keyword'] + ' '
@@ -176,7 +176,7 @@ class CUDACodeGenerator(CodeGenerator):
         if len(comment):
             code += ' // ' + comment
         return code
-    
+
     def translate_to_read_arrays(self, statements):
         read, write, indices, conditional_write_vars = self.arrays_helper(statements)
         lines = []
@@ -248,7 +248,7 @@ class CUDACodeGenerator(CodeGenerator):
         lines += statement_lines
         # write arrays
         lines += self.translate_to_write_arrays(statements)
-        code = '\n'.join(lines)                
+        code = '\n'.join(lines)
         # Check if 64bit integer types occur in the same line as a default function.
         # We can't get the arguments of the function call directly with regex due to
         # possibly nested paranthesis inside function paranthesis.

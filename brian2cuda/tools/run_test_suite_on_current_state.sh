@@ -16,8 +16,8 @@ LOG_FILE="$DIR/logfile_tests_$1_$TIME.txt"
 
 # deletes the temp directory
 function cleanup {
-	rm -rf "$WORK_DIR"
-	echo "Deleted temp working directory $WORK_DIR"
+    rm -rf "$WORK_DIR"
+    echo "Deleted temp working directory $WORK_DIR"
 }
 
 # register the cleanup function to be called on the EXIT signal
@@ -25,9 +25,9 @@ trap cleanup EXIT
 
 if [ -z "$3" ]
 then
-	J=12
+    J=12
 else
-	J=$3
+    J=$3
 fi
 
 source activate dev_b2c

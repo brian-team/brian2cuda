@@ -6,7 +6,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
 This example is modified from ``synapses_STDP.py`` and writes a standalone
 C++ project in the directory ``STDP_standalone``.
 
-This version includes two further modifications: 
+This version includes two further modifications:
 traces in neurons and multiple pre- _and_ postsynaptic neurons (s.t. no. synpases is N).
 '''
 import matplotlib
@@ -38,7 +38,7 @@ dApre *= gmax
 input_poisson = PoissonGroup(N_neuron, rates=F)
 # auxiliary input neurongroup to allow for (presynaptic) neuronal traces (state variable A here)
 input_neurons = NeuronGroup(N_neuron, '''dA/dt = -A / taupre : 1
-                                  v : volt''', 
+                                  v : volt''',
                             threshold='v > vt', reset = 'v = vr; A += dApre')
 input_neurons.v = vr
 # auxiliary input synapse where each poisson cell connects to exactly one neuron
@@ -47,7 +47,7 @@ S_input.connect('i==j')
 
 output_neuron = NeuronGroup(N_neuron, '''dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
                                   dge/dt = -ge / taue : 1
-                                  dA/dt = -A / taupost : 1''', 
+                                  dA/dt = -A / taupost : 1''',
                             threshold='v > vt', reset='v = vr; A += dApost')
 
 S = Synapses(input_neurons, output_neuron,

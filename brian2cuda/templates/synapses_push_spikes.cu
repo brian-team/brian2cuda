@@ -17,10 +17,10 @@
 
 __global__ void _run_{{codeobj_name}}_advance_kernel()
 {
-	using namespace brian;
-	unsigned int tid = threadIdx.x;
-	{{owner.name}}.queue->advance(
-		tid);
+    using namespace brian;
+    unsigned int tid = threadIdx.x;
+    {{owner.name}}.queue->advance(
+        tid);
 }
 
 __global__ void
@@ -29,22 +29,22 @@ __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 _run_{{codeobj_name}}_push_kernel(
     unsigned int num_parallel_blocks,
-	unsigned int _num_blocks,
-	unsigned int _num_threads,
-	int32_t* {{_eventspace}})
+    unsigned int _num_blocks,
+    unsigned int _num_threads,
+    int32_t* {{_eventspace}})
 {
-	// apperently this is not always true and that is why _num_threads is passed as function argument
-	// if this assert never fails, we could remove the _num_threads form the argument list
-	assert(blockDim.x == _num_threads);
+    // apperently this is not always true and that is why _num_threads is passed as function argument
+    // if this assert never fails, we could remove the _num_threads form the argument list
+    assert(blockDim.x == _num_threads);
 
-	using namespace brian;
+    using namespace brian;
 
     {% if not bundle_mode %}
-	// TODO: check if static shared memory is faster / makes any difference
-	extern __shared__ char shared_mem[];
+    // TODO: check if static shared memory is faster / makes any difference
+    extern __shared__ char shared_mem[];
     {% endif %}
-	int bid = blockIdx.x;
-	int tid = threadIdx.x;
+    int bid = blockIdx.x;
+    int tid = threadIdx.x;
 
     int post_neuron_bid = bid % num_parallel_blocks;
     int pre_neuron_idx = bid / num_parallel_blocks;
@@ -70,51 +70,51 @@ _run_{{codeobj_name}}_push_kernel(
 
 void _run_{{codeobj_name}}()
 {
-	using namespace brian;
+    using namespace brian;
 
-	{% if profile and profile == 'blocking'%}
-	{{codeobj_name}}_timer_start = std::clock();
-	{% elif profile %}
-	CUDA_SAFE_CALL(
-			cudaEventRecord({{codeobj_name}}_timer_start)
-			);
-	{% endif %}
+    {% if profile and profile == 'blocking'%}
+    {{codeobj_name}}_timer_start = std::clock();
+    {% elif profile %}
+    CUDA_SAFE_CALL(
+            cudaEventRecord({{codeobj_name}}_timer_start)
+            );
+    {% endif %}
 
-	///// CONSTANTS /////
-	%CONSTANTS%
+    ///// CONSTANTS /////
+    %CONSTANTS%
 
-	{% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-	if ({{owner.name}}_scalar_delay)
-	{
-		//TODO: check int / unsigned int of all vars here and in objects pathway
-		unsigned int num_eventspaces = dev{{_eventspace}}.size();
-		{{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
+    {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+    if ({{owner.name}}_scalar_delay)
+    {
+        //TODO: check int / unsigned int of all vars here and in objects pathway
+        unsigned int num_eventspaces = dev{{_eventspace}}.size();
+        {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
 
-		//////////////////////////////////////////////
-		//// No pushing in no_or_const_delay_mode ////
-		//////////////////////////////////////////////
-	}
-	else if ({{owner.name}}_max_size > 0)
-	{
+        //////////////////////////////////////////////
+        //// No pushing in no_or_const_delay_mode ////
+        //////////////////////////////////////////////
+    }
+    else if ({{owner.name}}_max_size > 0)
+    {
 
-		// get the number of spiking neurons
-		int32_t num_spiking_neurons;
-		CUDA_SAFE_CALL(
-				cudaMemcpy(&num_spiking_neurons,
-					dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
-					sizeof(int32_t), cudaMemcpyDeviceToHost)
-				);
+        // get the number of spiking neurons
+        int32_t num_spiking_neurons;
+        CUDA_SAFE_CALL(
+                cudaMemcpy(&num_spiking_neurons,
+                    dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
+                    sizeof(int32_t), cudaMemcpyDeviceToHost)
+                );
 
-		// advance spike queues
-		_run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
+        // advance spike queues
+        _run_{{codeobj_name}}_advance_kernel<<<1, num_parallel_blocks>>>();
 
-		CUDA_CHECK_ERROR("_run_{{codeobj_name}}_advance_kernel");
+        CUDA_CHECK_ERROR("_run_{{codeobj_name}}_advance_kernel");
 
-	    static int num_threads, num_blocks;
+        static int num_threads, num_blocks;
         static size_t needed_shared_memory;
-	    static bool first_run = true;
-	    if (first_run)
-	    {
+        static bool first_run = true;
+        if (first_run)
+        {
 
             {% if not bundle_mode %}
             /* We are copying next_delay_start_idx and the atomic offset (both
@@ -124,41 +124,41 @@ void _run_{{codeobj_name}}()
              * per block for copying size_before_resize into shared memory when
              * we need to use the outer loop.
              */
-		    needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(unsigned int);
-		    assert (needed_shared_memory <= max_shared_mem_size);
+            needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(unsigned int);
+            assert (needed_shared_memory <= max_shared_mem_size);
             {% else %}{# bundle_mode #}
             needed_shared_memory = 0;
             {% endif %}{# not bundle_mode #}
 
-		    // We don't need more then max(num_synapses) threads per block.
-		    num_threads = {{owner.name}}_max_size;
-		    if (num_threads > max_threads_per_block)
-		    {
-		    	num_threads = max_threads_per_block;
-		    }
+            // We don't need more then max(num_synapses) threads per block.
+            num_threads = {{owner.name}}_max_size;
+            if (num_threads > max_threads_per_block)
+            {
+                num_threads = max_threads_per_block;
+            }
 
-	    	// calculate theoretical occupancy
-	    	int max_active_blocks;
-			CUDA_SAFE_CALL(
-					cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-						_run_{{codeobj_name}}_push_kernel, num_threads,
-						needed_shared_memory)
-					);
+            // calculate theoretical occupancy
+            int max_active_blocks;
+            CUDA_SAFE_CALL(
+                    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+                        _run_{{codeobj_name}}_push_kernel, num_threads,
+                        needed_shared_memory)
+                    );
 
-	    	float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
-	    	                  (float)(max_threads_per_sm / num_threads_per_warp);
+            float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
+                              (float)(max_threads_per_sm / num_threads_per_warp);
 
             // check if we have enough ressources to call kernel with given
             // number of blocks and threads
-	    	struct cudaFuncAttributes funcAttrib;
-			CUDA_SAFE_CALL(
-					cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_push_kernel)
-					);
-	    	if (num_threads > funcAttrib.maxThreadsPerBlock)
-	    	{
-	    		// use the max num_threads before launch failure
-	    		num_threads = funcAttrib.maxThreadsPerBlock;
-	    		printf("WARNING Not enough ressources available to call "
+            struct cudaFuncAttributes funcAttrib;
+            CUDA_SAFE_CALL(
+                    cudaFuncGetAttributes(&funcAttrib, _run_{{codeobj_name}}_push_kernel)
+                    );
+            if (num_threads > funcAttrib.maxThreadsPerBlock)
+            {
+                // use the max num_threads before launch failure
+                num_threads = funcAttrib.maxThreadsPerBlock;
+                printf("WARNING Not enough ressources available to call "
                        "_run_{{codeobj_name}}_push_kernel "
                        "with maximum possible threads per block (%u). "
                        "Reducing num_threads to %u. (Kernel needs %i "
@@ -169,9 +169,9 @@ void _run_{{codeobj_name}}()
                        max_threads_per_block, num_threads, funcAttrib.numRegs,
                        funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                        funcAttrib.constSizeBytes);
-	    	}
-	    	else
-	    	{
+            }
+            else
+            {
                 printf("INFO _run_{{codeobj_name}}_push_kernel\n"
                        "\t%u blocks per spiking neuron\n"
                        "\t%u threads\n"
@@ -187,35 +187,35 @@ void _run_{{codeobj_name}}()
                        num_parallel_blocks, num_threads, funcAttrib.numRegs,
                        funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                        funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
-	    	}
-	    	first_run = false;
-	    }
+            }
+            first_run = false;
+        }
 
 
-		if (num_spiking_neurons > 0)
-		{
-			num_blocks = num_parallel_blocks * num_spiking_neurons;
+        if (num_spiking_neurons > 0)
+        {
+            num_blocks = num_parallel_blocks * num_spiking_neurons;
 
-			_run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
-					num_parallel_blocks,
-					num_blocks,
-					num_threads,
-					dev{{_eventspace}}[current_idx{{_eventspace}}]);
+            _run_{{codeobj_name}}_push_kernel<<<num_blocks, num_threads, needed_shared_memory>>>(
+                    num_parallel_blocks,
+                    num_blocks,
+                    num_threads,
+                    dev{{_eventspace}}[current_idx{{_eventspace}}]);
 
-			CUDA_CHECK_ERROR("_run_{{codeobj_name}}_push_kernel");
-		}
-	}
+            CUDA_CHECK_ERROR("_run_{{codeobj_name}}_push_kernel");
+        }
+    }
 
-	{% if profile and profile == 'blocking'%}
-	CUDA_SAFE_CALL(
+    {% if profile and profile == 'blocking'%}
+    CUDA_SAFE_CALL(
             cudaDeviceSynchronize()
             );
-	{{codeobj_name}}_timer_stop = std::clock();
-	{% elif profile %}
-	CUDA_SAFE_CALL(
+    {{codeobj_name}}_timer_stop = std::clock();
+    {% elif profile %}
+    CUDA_SAFE_CALL(
             cudaEventRecord({{codeobj_name}}_timer_stop)
             );
-	{% endif %}
+    {% endif %}
 }
 {% endmacro %}
 

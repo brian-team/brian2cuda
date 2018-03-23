@@ -61,44 +61,44 @@ int rngOnDevice(size_t N, size_t max_bs)
 
     for (bs=1; bs<=max_bs; bs*=10)  // how many random numbers per curand call
     {
-    	/* Set seed */
-    	CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen,
-    	            1234ULL));
+        /* Set seed */
+        CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen,
+                    1234ULL));
 
-    	/* Reset offset */
-    	CURAND_CALL(curandSetGeneratorOffset(gen, 0ULL));
+        /* Reset offset */
+        CURAND_CALL(curandSetGeneratorOffset(gen, 0ULL));
 
-    	size_t start = std::clock();
+        size_t start = std::clock();
 
-    	for(i=0; i<N; i+=bs)
-    	{
-    		/* Generate bs size_types on device */
-    		CURAND_CALL(CURAND_GENERATE(gen, devData+i, bs));
+        for(i=0; i<N; i+=bs)
+        {
+            /* Generate bs size_types on device */
+            CURAND_CALL(CURAND_GENERATE(gen, devData+i, bs));
 
-    		/* Copy device memory to host */
-    		CUDA_CALL(cudaMemcpy(hostData+i, devData+i, bs * sizeof(size_type), cudaMemcpyDeviceToHost));
-    	}
+            /* Copy device memory to host */
+            CUDA_CALL(cudaMemcpy(hostData+i, devData+i, bs * sizeof(size_type), cudaMemcpyDeviceToHost));
+        }
 
 
-    	size_t stop = std::clock();
-    	std::cout << "[" << (stop - start)/double(CLOCKS_PER_SEC)*1000 << ", " << bs << "]," << std::endl;
+        size_t stop = std::clock();
+        std::cout << "[" << (stop - start)/double(CLOCKS_PER_SEC)*1000 << ", " << bs << "]," << std::endl;
 
-    	if (bs==1)
-    	{
-    		// copy results
-    		for (i=0; i<N; i++)
-    		{
-    			compareData[i] = hostData[i];
-    		}
-    	}
-    	else
-    	{
-    		// check results
-    		for (i=0; i<N; i++)
-    		{
-    			assert (hostData[i] == compareData[i]);
-    		}
-    	}
+        if (bs==1)
+        {
+            // copy results
+            for (i=0; i<N; i++)
+            {
+                compareData[i] = hostData[i];
+            }
+        }
+        else
+        {
+            // check results
+            for (i=0; i<N; i++)
+            {
+                assert (hostData[i] == compareData[i]);
+            }
+        }
 
     }  // for bs
 
@@ -132,40 +132,40 @@ int rngOnHost(size_t N, size_t max_bs)
 
     for (bs=1; bs<=max_bs; bs*=10)  // how many random numbers per curand call
     {
-    	/* Set seed */
-    	CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen,
-    	            1234ULL));
+        /* Set seed */
+        CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen,
+                    1234ULL));
 
-    	/* Reset offset */
-    	CURAND_CALL(curandSetGeneratorOffset(gen, 0ULL));
+        /* Reset offset */
+        CURAND_CALL(curandSetGeneratorOffset(gen, 0ULL));
 
-    	size_t start = std::clock();
+        size_t start = std::clock();
 
-    	for(i=0; i<N; i+=bs)
-    	{
-    		/* Generate bs size_types on host */
-    		CURAND_CALL(CURAND_GENERATE(gen, hostData+i, bs));
-    	}
+        for(i=0; i<N; i+=bs)
+        {
+            /* Generate bs size_types on host */
+            CURAND_CALL(CURAND_GENERATE(gen, hostData+i, bs));
+        }
 
-    	size_t stop = std::clock();
-    	std::cout << "[" << (stop - start)/double(CLOCKS_PER_SEC)*1000 << ", " << bs << "]," << std::endl;
+        size_t stop = std::clock();
+        std::cout << "[" << (stop - start)/double(CLOCKS_PER_SEC)*1000 << ", " << bs << "]," << std::endl;
 
-    	if (bs==1)
-    	{
-    		// copy results
-    		for (i=0; i<N; i++)
-    		{
-    			compareData[i] = hostData[i];
-    		}
-    	}
-    	else
-    	{
-    		// check results
-    		for (i=0; i<N; i++)
-    		{
-    			assert(hostData[i] == compareData[i]);
-    		}
-    	}
+        if (bs==1)
+        {
+            // copy results
+            for (i=0; i<N; i++)
+            {
+                compareData[i] = hostData[i];
+            }
+        }
+        else
+        {
+            // check results
+            for (i=0; i<N; i++)
+            {
+                assert(hostData[i] == compareData[i]);
+            }
+        }
 
     }  // for bs
 
@@ -177,16 +177,16 @@ int rngOnHost(size_t N, size_t max_bs)
 
 int main(int argc, char *argv[])
 {
-	size_t N_max = 1000000;
+    size_t N_max = 1000000;
 
-	for (size_t N=1; N<=N_max; N*=10)
-	{
-		std::cout << std::endl;
-    	std::cout << "Total number of random numbers to create is N = " << N << std::endl << std::endl;
+    for (size_t N=1; N<=N_max; N*=10)
+    {
+        std::cout << std::endl;
+        std::cout << "Total number of random numbers to create is N = " << N << std::endl << std::endl;
 
-    	rngOnHost(N, N_max);
-    	rngOnDevice(N, N_max);
-	}
+        rngOnHost(N, N_max);
+        rngOnDevice(N, N_max);
+    }
 
     return EXIT_SUCCESS;
 }

@@ -6,29 +6,29 @@
 #include<math.h>
 
 namespace {
-	inline int fround(double x)
-	{
-		return (int)(x+0.5);
-	};
+    inline int fround(double x)
+    {
+        return (int)(x+0.5);
+    };
 };
 
 class Clock
 {
 public:
-	double epsilon;
-	double *dt;
-	uint64_t *timestep;
-	double *t;
-	uint64_t i_end;
-	Clock(double _epsilon=1e-14) : epsilon(_epsilon) { i_end = 0;};
+    double epsilon;
+    double *dt;
+    uint64_t *timestep;
+    double *t;
+    uint64_t i_end;
+    Clock(double _epsilon=1e-14) : epsilon(_epsilon) { i_end = 0;};
     inline void tick()
     {
         timestep[0] += 1;
         t[0] = timestep[0] * dt[0];
     }
-	inline bool running() { return timestep[0]<i_end; };
-	void set_interval(double start, double end)
-	{
+    inline bool running() { return timestep[0]<i_end; };
+    void set_interval(double start, double end)
+    {
         int i_start = fround(start/dt[0]);
         double t_start = i_start*dt[0];
         if(t_start==start || fabs(t_start-start)<=epsilon*fabs(t_start))
@@ -44,7 +44,7 @@ public:
         {
             i_end = (int)ceil(end/dt[0]);
         }
-	}
+    }
 };
 
 #endif

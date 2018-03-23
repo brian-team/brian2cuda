@@ -14,28 +14,28 @@
 
 void brian_start()
 {
-	_init_arrays();
-	_load_arrays();
-	srand((unsigned int)time(NULL));
+    _init_arrays();
+    _load_arrays();
+    srand((unsigned int)time(NULL));
 
-	// Initialize clocks (link timestep and dt to the respective arrays)
-    	{% for clock in clocks | sort(attribute='name') %}
-    	brian::{{clock.name}}.timestep = brian::{{array_specs[clock.variables['timestep']]}};
-    	brian::{{clock.name}}.dt = brian::{{array_specs[clock.variables['dt']]}};
-    	brian::{{clock.name}}.t = brian::{{array_specs[clock.variables['t']]}};
-    	{% endfor %}
+    // Initialize clocks (link timestep and dt to the respective arrays)
+    {% for clock in clocks | sort(attribute='name') %}
+    brian::{{clock.name}}.timestep = brian::{{array_specs[clock.variables['timestep']]}};
+    brian::{{clock.name}}.dt = brian::{{array_specs[clock.variables['dt']]}};
+    brian::{{clock.name}}.t = brian::{{array_specs[clock.variables['t']]}};
+    {% endfor %}
 }
 
 void brian_end()
 {
-	_write_arrays();
-	_dealloc_arrays();
+    _write_arrays();
+    _dealloc_arrays();
 }
 
 {% for name, lines in run_funcs.items() | sort(attribute='name') %}
 void {{name}}()
 {
-	using namespace brian;
+    using namespace brian;
 
     {{lines|autoindent}}
 }

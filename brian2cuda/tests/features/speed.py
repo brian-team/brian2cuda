@@ -37,9 +37,9 @@ __all__.extend(['AdaptationOscillation',
                 'VogelsWithSynapticDynamic'
                ])
 
-        
+
 class AdaptationOscillation(SpeedTest):
-    
+
     category = "Full examples"
     name = "Adaptation oscillation"
     tags = ["Neurons", "Synapses"]
@@ -48,7 +48,7 @@ class AdaptationOscillation(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N_neurons = self.n
         sparsity = 0.05 # each neuron receives approx. N_neurons*sparsity connections => 0: uncoupled network
@@ -63,7 +63,7 @@ class AdaptationOscillation(SpeedTest):
         # input noise:
         input_mean = 0.14 * mV/ms
         input_std = 0.07 * mV/ms**.5
-        
+
         # brian neuron model specification
         eqs_neurons = '''
         dv/dt = (-v-w)/tau_v + input_mean + input_std*xi : volt (unless refractory)
@@ -73,22 +73,22 @@ class AdaptationOscillation(SpeedTest):
         v = v_r
         w = w+dw
         '''
-        
-        neurons = NeuronGroup(N_neurons, 
-                              eqs_neurons, 
+
+        neurons = NeuronGroup(N_neurons,
+                              eqs_neurons,
                               reset=reset_neurons,
-                              threshold='v > v_t', 
+                              threshold='v > v_t',
                               refractory='Tref')
-        
+
         # random initialization of neuron state values
-        neurons.v = 'rand()*v_t' 
+        neurons.v = 'rand()*v_t'
         neurons.w = 'rand()*10*dw'
-        
+
         synapses = Synapses(neurons, neurons, 'c: volt', on_pre='v += c')
         synapses.connect('i!=j', p=sparsity)
-        synapses.c[:] = 'syn_weight' 
-        synapses.delay[:] = 'syn_delay' 
-        
+        synapses.c[:] = 'syn_weight'
+        synapses.delay[:] = 'syn_delay'
+
         self.timed_run(self.duration)
 
 class BrunelHakimNeuronsOnly(SpeedTest):
@@ -1070,7 +1070,7 @@ class STDPMultiPostNeuronalTraces(SpeedTest):
 
 
 class Vogels(SpeedTest):
-    
+
     category = "Full examples"
     name = "Vogels et al 2011 (event-driven synapses)"
     tags = ["Neurons", "Synapses"]
@@ -1079,11 +1079,11 @@ class Vogels(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         NE = int(0.8 * N)           # Number of excitatory cells
-        NI = NE/4          # Number of inhibitory cells 
+        NI = NE/4          # Number of inhibitory cells
         tau_ampa = 5.0*ms   # Glutamatergic synaptic time constant
         tau_gaba = 10.0*ms  # GABAergic synaptic time constant
         epsilon = 0.02      # Sparseness of synaptic connections
@@ -1095,23 +1095,23 @@ class Vogels(SpeedTest):
         memc = 200.0*pfarad  # Membrane capacitance
         bgcurrent = 200*pA   # External current
         eta = 0
-        
+
         eqs_neurons='''
         dv/dt=(-gl*(v-el)-(g_ampa*v+g_gaba*(v-er))+bgcurrent)/memc : volt (unless refractory)
         dg_ampa/dt = -g_ampa/tau_ampa : siemens
         dg_gaba/dt = -g_gaba/tau_gaba : siemens
         '''
-        
+
         neurons = NeuronGroup(NE+NI, model=eqs_neurons, threshold='v > vt',
                               reset='v=el', refractory=5*ms)
         Pe = neurons[:NE]
         Pi = neurons[NE:]
-        
+
         con_e = Synapses(Pe, neurons, on_pre='g_ampa += 0.3*nS')
         con_e.connect('rand()<epsilon')
         con_ii = Synapses(Pi, Pi, on_pre='g_gaba += 3*nS')
         con_ii.connect('rand()<epsilon')
-        
+
         eqs_stdp_inhib = '''
         w : 1
         dApre/dt=-Apre/tau_stdp : 1 (event-driven)
@@ -1119,7 +1119,7 @@ class Vogels(SpeedTest):
         '''
         alpha = 3*Hz*tau_stdp*2  # Target rate parameter
         gmax = 100               # Maximum inhibitory weight
-        
+
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
                           on_pre='''Apre += 1.
                                  w = clip(w+(Apost-alpha)*eta, 0, gmax)
@@ -1131,9 +1131,9 @@ class Vogels(SpeedTest):
         con_ie.connect('rand()<epsilon')
         con_ie.w = 1e-10
         self.timed_run(self.duration)
-        
+
 class VogelsWithSynapticDynamic(SpeedTest):
-    
+
     category = "Full examples"
     name = "Vogels et al 2011 (not event-driven synapses)"
     tags = ["Neurons", "Synapses"]
@@ -1142,11 +1142,11 @@ class VogelsWithSynapticDynamic(SpeedTest):
 
     # configuration options
     duration = 1*second
-    
+
     def run(self):
         N = self.n
         NE = int(0.8 * N)           # Number of excitatory cells
-        NI = NE/4          # Number of inhibitory cells 
+        NI = NE/4          # Number of inhibitory cells
         tau_ampa = 5.0*ms   # Glutamatergic synaptic time constant
         tau_gaba = 10.0*ms  # GABAergic synaptic time constant
         epsilon = 0.02      # Sparseness of synaptic connections
@@ -1158,23 +1158,23 @@ class VogelsWithSynapticDynamic(SpeedTest):
         memc = 200.0*pfarad  # Membrane capacitance
         bgcurrent = 200*pA   # External current
         eta = 0
-        
+
         eqs_neurons='''
         dv/dt=(-gl*(v-el)-(g_ampa*v+g_gaba*(v-er))+bgcurrent)/memc : volt (unless refractory)
         dg_ampa/dt = -g_ampa/tau_ampa : siemens
         dg_gaba/dt = -g_gaba/tau_gaba : siemens
         '''
-        
+
         neurons = NeuronGroup(NE+NI, model=eqs_neurons, threshold='v > vt',
                               reset='v=el', refractory=5*ms)
         Pe = neurons[:NE]
         Pi = neurons[NE:]
-        
+
         con_e = Synapses(Pe, neurons, on_pre='g_ampa += 0.3*nS')
         con_e.connect('rand()<epsilon')
         con_ii = Synapses(Pi, Pi, on_pre='g_gaba += 3*nS')
         con_ii.connect('rand()<epsilon')
-        
+
         eqs_stdp_inhib = '''
         w : 1
         dA_pre/dt=-A_pre/tau_stdp : 1
@@ -1182,7 +1182,7 @@ class VogelsWithSynapticDynamic(SpeedTest):
         '''
         alpha = 3*Hz*tau_stdp*2  # Target rate parameter
         gmax = 100               # Maximum inhibitory weight
-        
+
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
                           on_pre='''A_pre += 1.
                                  w = clip(w+(A_post-alpha)*eta, 0, gmax)
@@ -1194,8 +1194,8 @@ class VogelsWithSynapticDynamic(SpeedTest):
         con_ie.connect('rand()<epsilon')
         con_ie.w = 1e-10
         self.timed_run(self.duration)
-        
-        
+
+
 
 
 

@@ -44,7 +44,7 @@ def create_readme(result_dir, description=''):
         name = os.path.splitext(os.path.basename(plot_file))[0].split('_')[2]
         test_names.add(name)
     test_names = sorted(test_names)
-    
+
     result_md = []
     for name in test_names:
         plots_md = []
@@ -65,13 +65,13 @@ def create_readme(result_dir, description=''):
                                 plots='\n'.join(plots_md),
                                 nvprof='\n'.join(profile_md))
         result_md.append(md)
-    
+
     date_md = '.'.join(os.path.basename(result_dir).split('_')[1:4][::-1])
     git_log = check_output('git log -1'.split()).decode()
     readme_md = readme_tmpl.format(date=date_md, description=description, git_log=git_log,
                                    results='\n***\n'.join(result_md))
-    
-    
+
+
     with open(result_dir + "/README.md", "w") as readme_file:
         readme_file.write(readme_md)
 

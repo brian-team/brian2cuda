@@ -109,19 +109,19 @@ unsigned int brian::num_threads_per_warp;
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
 __global__ void {{path.name}}_init(
-				unsigned int Nsource,
-				unsigned int Ntarget,
-				double* delays,
-				int32_t* sources,
-				int32_t* targets,
-				double dt,
-				int32_t start,
-				int32_t stop
-		)
+                unsigned int Nsource,
+                unsigned int Ntarget,
+                double* delays,
+                int32_t* sources,
+                int32_t* targets,
+                double dt,
+                int32_t start,
+                int32_t stop
+        )
 {
-	using namespace brian;
+    using namespace brian;
 
-	{{path.name}}.init(Nsource, Ntarget, delays, sources, targets, dt, start, stop);
+    {{path.name}}.init(Nsource, Ntarget, delays, sources, targets, dt, start, stop);
 }
 {% endfor %}
 {% endfor %}
@@ -155,367 +155,367 @@ __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 
 void _init_arrays()
 {
-	using namespace brian;
+    using namespace brian;
 
-	std::clock_t start_timer = std::clock();
+    std::clock_t start_timer = std::clock();
 
-	CUDA_CHECK_MEMORY();
-	size_t used_device_memory_start = used_device_memory;
+    CUDA_CHECK_MEMORY();
+    size_t used_device_memory_start = used_device_memory;
 
-	cudaDeviceProp props;
-	CUDA_SAFE_CALL(
-			cudaGetDeviceProperties(&props, 0)
-			);
+    cudaDeviceProp props;
+    CUDA_SAFE_CALL(
+            cudaGetDeviceProperties(&props, 0)
+            );
 
 
-	{% if num_parallel_blocks %}
-	num_parallel_blocks = {{num_parallel_blocks}};
-	{% else %}
-	num_parallel_blocks = props.multiProcessorCount * {{sm_multiplier}};
-	{% endif %}
-	printf("objects cu num par blocks %d\n", num_parallel_blocks);
-	max_threads_per_block = props.maxThreadsPerBlock;
-	max_threads_per_sm = props.maxThreadsPerMultiProcessor;
-	max_shared_mem_size = props.sharedMemPerBlock;
-	num_threads_per_warp = props.warpSize;
+    {% if num_parallel_blocks %}
+    num_parallel_blocks = {{num_parallel_blocks}};
+    {% else %}
+    num_parallel_blocks = props.multiProcessorCount * {{sm_multiplier}};
+    {% endif %}
+    printf("objects cu num par blocks %d\n", num_parallel_blocks);
+    max_threads_per_block = props.maxThreadsPerBlock;
+    max_threads_per_sm = props.maxThreadsPerMultiProcessor;
+    max_shared_mem_size = props.sharedMemPerBlock;
+    num_threads_per_warp = props.warpSize;
 
-	curandCreateGenerator(&curand_generator, {{curand_generator_type}});
-	{% if curand_generator_ordering %}
-	curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
-	{% endif %}
-	// These random seeds might be overwritten in main.cu
-	curandSetPseudoRandomGeneratorSeed(curand_generator, time(0));
+    curandCreateGenerator(&curand_generator, {{curand_generator_type}});
+    {% if curand_generator_ordering %}
+    curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
+    {% endif %}
+    // These random seeds might be overwritten in main.cu
+    curandSetPseudoRandomGeneratorSeed(curand_generator, time(0));
 
-	{% for S in synapses | sort(attribute='name') %}
-	{% for path in S._pathways | sort(attribute='name') %}
-	{{path.name}}_init<<<1,1>>>(
-			{{path.source|length}},
-			{{path.target|length}},
-			thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.variables['delay']]}}[0]),
-			thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_sources]}}[0]),
-			thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
-			0,	//was dt, maybe irrelevant?
-			{{path.source.start}},
-			{{path.source.stop}}
-			);
-	CUDA_CHECK_ERROR("{{path.name}}_init");
-	{% endfor %}
-	{% endfor %}
+    {% for S in synapses | sort(attribute='name') %}
+    {% for path in S._pathways | sort(attribute='name') %}
+    {{path.name}}_init<<<1,1>>>(
+            {{path.source|length}},
+            {{path.target|length}},
+            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.variables['delay']]}}[0]),
+            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_sources]}}[0]),
+            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
+            0,  //was dt, maybe irrelevant?
+            {{path.source.start}},
+            {{path.source.stop}}
+            );
+    CUDA_CHECK_ERROR("{{path.name}}_init");
+    {% endfor %}
+    {% endfor %}
 
-	{% if profile and profile != 'blocking' %}
-	// Create cudaEvents for profiling
-	{% for codeobj in active_objects %}
-	CUDA_SAFE_CALL(
-			cudaEventCreate(&{{codeobj}}_timer_start)
-			);
-	CUDA_SAFE_CALL(
-			cudaEventCreate(&{{codeobj}}_timer_stop)
-			);
-	{% endfor %}
-	CUDA_SAFE_CALL(
-			cudaEventCreate(&random_number_generation_timer_start)
-			);
-	CUDA_SAFE_CALL(
-			cudaEventCreate(&random_number_generation_timer_stop)
-			);
-	{% endif %}
+    {% if profile and profile != 'blocking' %}
+    // Create cudaEvents for profiling
+    {% for codeobj in active_objects %}
+    CUDA_SAFE_CALL(
+            cudaEventCreate(&{{codeobj}}_timer_start)
+            );
+    CUDA_SAFE_CALL(
+            cudaEventCreate(&{{codeobj}}_timer_stop)
+            );
+    {% endfor %}
+    CUDA_SAFE_CALL(
+            cudaEventCreate(&random_number_generation_timer_start)
+            );
+    CUDA_SAFE_CALL(
+            cudaEventCreate(&random_number_generation_timer_stop)
+            );
+    {% endif %}
 
     // Arrays initialized to 0
-	{% for var in zero_arrays | sort(attribute='name') %}
-		{% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
-			{% set varname = array_specs[var] %}
-			{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
-			for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
-			CUDA_SAFE_CALL(
-					cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
-					);
-			CUDA_SAFE_CALL(
-					cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
-					);
+    {% for var in zero_arrays | sort(attribute='name') %}
+        {% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
+            {% set varname = array_specs[var] %}
+            {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+            for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
+            CUDA_SAFE_CALL(
+                    cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+                    );
+            CUDA_SAFE_CALL(
+                    cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
+                    );
 
-		{% endif %}
-		{% if (var in dynamic_array_specs) %}
-			{% set varname = array_specs[var] %}
-			_dynamic{{varname}}.resize({{var.size}});
-			dev_dynamic{{varname}}.resize({{var.size}});
-		        for(int i=0; i<{{var.size}}; i++)
-			{
-				_dynamic{{varname}}[i] = 0;
-				dev_dynamic{{varname}}[i] = 0;
-			}
+        {% endif %}
+        {% if (var in dynamic_array_specs) %}
+            {% set varname = array_specs[var] %}
+            _dynamic{{varname}}.resize({{var.size}});
+            dev_dynamic{{varname}}.resize({{var.size}});
+                for(int i=0; i<{{var.size}}; i++)
+            {
+                _dynamic{{varname}}[i] = 0;
+                dev_dynamic{{varname}}[i] = 0;
+            }
 
-		{% endif %}
-	{% endfor %}
+        {% endif %}
+    {% endfor %}
 
-	// Arrays initialized to an "arange"
-	{% for var, start in arange_arrays %}
-	{% set varname = array_specs[var] %}
-	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
-	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
-	CUDA_SAFE_CALL(
-			cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
-			);
+    // Arrays initialized to an "arange"
+    {% for var, start in arange_arrays %}
+    {% set varname = array_specs[var] %}
+    {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+            );
 
-	CUDA_SAFE_CALL(
-			cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
-			);
+    CUDA_SAFE_CALL(
+            cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
+            );
 
-	{% endfor %}
+    {% endfor %}
 
-	// static arrays
-	{% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
-	{% if (name in dynamic_array_specs.values())  %}
-	{{name}}.resize({{N}});
-	dev{{name}}.resize({{N}});
-	{% else %}
-	{{name}} = new {{dtype_spec}}[{{N}}];
-	CUDA_SAFE_CALL(
-			cudaMalloc((void**)&dev{{name}}, sizeof({{dtype_spec}})*{{N}})
-			);
-	CUDA_SAFE_CALL(
-			cudaMemcpyToSymbol(d{{name}}, &dev{{name}}, sizeof({{dtype_spec}}*))
-			);
-	{% endif %}
-	{% endfor %}
+    // static arrays
+    {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
+    {% if (name in dynamic_array_specs.values())  %}
+    {{name}}.resize({{N}});
+    dev{{name}}.resize({{N}});
+    {% else %}
+    {{name}} = new {{dtype_spec}}[{{N}}];
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev{{name}}, sizeof({{dtype_spec}})*{{N}})
+            );
+    CUDA_SAFE_CALL(
+            cudaMemcpyToSymbol(d{{name}}, &dev{{name}}, sizeof({{dtype_spec}}*))
+            );
+    {% endif %}
+    {% endfor %}
 
-	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-	{{varname}} = new thrust::device_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
-	{% endfor %}
+    {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+    {{varname}} = new thrust::device_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
+    {% endfor %}
 
-	// eventspace_arrays
-	{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-	CUDA_SAFE_CALL(
-			cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
-			);
-	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
-	{% endfor %}
+    // eventspace_arrays
+    {% for var, varname in eventspace_arrays | dictsort(by='value') %}
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
+            );
+    {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    {% endfor %}
 
-	CUDA_CHECK_MEMORY();
-	const double to_MB = 1.0 / (1024.0 * 1024.0);
-	double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
-	double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-	std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
-	if (tot_memory_MB > 0)
-		std::cout << " and used " << tot_memory_MB << "MB of device memory.";
-	std::cout << std::endl;
+    CUDA_CHECK_MEMORY();
+    const double to_MB = 1.0 / (1024.0 * 1024.0);
+    double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
+    double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+    std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
+    if (tot_memory_MB > 0)
+        std::cout << " and used " << tot_memory_MB << "MB of device memory.";
+    std::cout << std::endl;
 }
 
 void _load_arrays()
 {
-	using namespace brian;
+    using namespace brian;
 
-	{% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
-	ifstream f{{name}};
-	f{{name}}.open("static_arrays/{{name}}", ios::in | ios::binary);
-	if(f{{name}}.is_open())
-	{
-	    {% if name in dynamic_array_specs.values() %}
-	    f{{name}}.read(reinterpret_cast<char*>(&{{name}}[0]), {{N}}*sizeof({{dtype_spec}}));
-	    {% else %}
-		f{{name}}.read(reinterpret_cast<char*>({{name}}), {{N}}*sizeof({{dtype_spec}}));
-		{% endif %}
-	} else
-	{
-		std::cout << "Error opening static array {{name}}." << endl;
-	}
-	{% if not (name in dynamic_array_specs.values()) %}
-	CUDA_SAFE_CALL(
-			cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice)
-			);
-	{% else %}
+    {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
+    ifstream f{{name}};
+    f{{name}}.open("static_arrays/{{name}}", ios::in | ios::binary);
+    if(f{{name}}.is_open())
+    {
+        {% if name in dynamic_array_specs.values() %}
+        f{{name}}.read(reinterpret_cast<char*>(&{{name}}[0]), {{N}}*sizeof({{dtype_spec}}));
+        {% else %}
+        f{{name}}.read(reinterpret_cast<char*>({{name}}), {{N}}*sizeof({{dtype_spec}}));
+        {% endif %}
+    } else
+    {
+        std::cout << "Error opening static array {{name}}." << endl;
+    }
+    {% if not (name in dynamic_array_specs.values()) %}
+    CUDA_SAFE_CALL(
+            cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice)
+            );
+    {% else %}
     for(int i=0; i<{{N}}; i++)
     {
         dev{{name}}[i] = {{name}}[i];
     }
-	{% endif %}
-	{% endfor %}
+    {% endif %}
+    {% endfor %}
 }
 
 void _write_arrays()
 {
-	using namespace brian;
+    using namespace brian;
 
-	{% for var, varname in array_specs | dictsort(by='value') %}
-	{% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs or var in static_array_specs) %}
-	CUDA_SAFE_CALL(
-			cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
-			);
-	ofstream outfile_{{varname}};
-	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
-	if(outfile_{{varname}}.is_open())
-	{
-		outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}), {{var.size}}*sizeof({{c_data_type(var.dtype)}}));
-		outfile_{{varname}}.close();
-	} else
-	{
-		std::cout << "Error writing output file for {{varname}}." << endl;
-	}
-	{% endif %}
-	{% endfor %}
+    {% for var, varname in array_specs | dictsort(by='value') %}
+    {% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs or var in static_array_specs) %}
+    CUDA_SAFE_CALL(
+            cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
+            );
+    ofstream outfile_{{varname}};
+    outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    if(outfile_{{varname}}.is_open())
+    {
+        outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}), {{var.size}}*sizeof({{c_data_type(var.dtype)}}));
+        outfile_{{varname}}.close();
+    } else
+    {
+        std::cout << "Error writing output file for {{varname}}." << endl;
+    }
+    {% endif %}
+    {% endfor %}
 
-	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-	{% if not var in multisynaptic_idx_vars and not var.name == 'delay' %}
-	{{varname}} = dev{{varname}};
-	{% endif %}
-	ofstream outfile_{{varname}};
-	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
-	if(outfile_{{varname}}.is_open())
-	{
-		outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
-		outfile_{{varname}}.close();
-	} else
-	{
-		std::cout << "Error writing output file for {{varname}}." << endl;
-	}
-	{% endfor %}
+    {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+    {% if not var in multisynaptic_idx_vars and not var.name == 'delay' %}
+    {{varname}} = dev{{varname}};
+    {% endif %}
+    ofstream outfile_{{varname}};
+    outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    if(outfile_{{varname}}.is_open())
+    {
+        outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
+        outfile_{{varname}}.close();
+    } else
+    {
+        std::cout << "Error writing output file for {{varname}}." << endl;
+    }
+    {% endfor %}
 
-	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-		ofstream outfile_{{varname}};
-		outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
-		if(outfile_{{varname}}.is_open())
-		{
-			thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
-	        for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
-	        {
-	        	temp_array{{varname}}[n] = {{varname}}[n];
-	        }
-	        for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
-	        {
-	        	for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
-	        	{
-		        	outfile_{{varname}}.write(reinterpret_cast<char*>(&temp_array{{varname}}[i][j]), sizeof({{c_data_type(var.dtype)}}));
-	        	}
-	        }
-	        outfile_{{varname}}.close();
-		} else
-		{
-			std::cout << "Error writing output file for {{varname}}." << endl;
-		}
-		{% endfor %}
+    {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+        ofstream outfile_{{varname}};
+        outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+        if(outfile_{{varname}}.is_open())
+        {
+            thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
+            for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
+            {
+                temp_array{{varname}}[n] = {{varname}}[n];
+            }
+            for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
+            {
+                for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
+                {
+                    outfile_{{varname}}.write(reinterpret_cast<char*>(&temp_array{{varname}}[i][j]), sizeof({{c_data_type(var.dtype)}}));
+                }
+            }
+            outfile_{{varname}}.close();
+        } else
+        {
+            std::cout << "Error writing output file for {{varname}}." << endl;
+        }
+    {% endfor %}
 
-	// Write profiling info to disk
-	ofstream outfile_profiling_info;
-	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
-	if(outfile_profiling_info.is_open())
-	{
-	{% for obj in active_objects %}
-	outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
-	{% endfor %}
-	outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
-	outfile_profiling_info.close();
-	} else
-	{
-	    std::cout << "Error writing profiling info to file." << std::endl;
-	}
+    // Write profiling info to disk
+    ofstream outfile_profiling_info;
+    outfile_profiling_info.open("results/profiling_info.txt", ios::out);
+    if(outfile_profiling_info.is_open())
+    {
+    {% for obj in active_objects %}
+    outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
+    {% endfor %}
+    outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
+    outfile_profiling_info.close();
+    } else
+    {
+        std::cout << "Error writing profiling info to file." << std::endl;
+    }
 
-	// Write last run info to disk
-	ofstream outfile_last_run_info;
-	outfile_last_run_info.open("results/last_run_info.txt", ios::out);
-	if(outfile_last_run_info.is_open())
-	{
-		outfile_last_run_info << (Network::_last_run_time) << " " << (Network::_last_run_completed_fraction) << std::endl;
-		outfile_last_run_info.close();
-	} else
-	{
-	    std::cout << "Error writing last run info to file." << std::endl;
-	}
+    // Write last run info to disk
+    ofstream outfile_last_run_info;
+    outfile_last_run_info.open("results/last_run_info.txt", ios::out);
+    if(outfile_last_run_info.is_open())
+    {
+        outfile_last_run_info << (Network::_last_run_time) << " " << (Network::_last_run_completed_fraction) << std::endl;
+        outfile_last_run_info.close();
+    } else
+    {
+        std::cout << "Error writing last run info to file." << std::endl;
+    }
 }
 
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
 __global__ void {{path.name}}_destroy()
 {
-	using namespace brian;
+    using namespace brian;
 
-	{{path.name}}.destroy();
+    {{path.name}}.destroy();
 }
 {% endfor %}
 {% endfor %}
 
 void _dealloc_arrays()
 {
-	using namespace brian;
+    using namespace brian;
 
-	{% if profile and profile != 'blocking' %}
-	// Destroy cudaEvents for profiling
-	{% for codeobj in active_objects %}
-	CUDA_SAFE_CALL(
-			cudaEventDestroy({{codeobj}}_timer_start)
-			);
-	CUDA_SAFE_CALL(
-			cudaEventDestroy({{codeobj}}_timer_stop)
-			);
-	{% endfor %}
-	CUDA_SAFE_CALL(
-			cudaEventDestroy(random_number_generation_timer_start)
-			);
-	CUDA_SAFE_CALL(
-			cudaEventDestroy(random_number_generation_timer_stop)
-			);
-	{% endif %}
+    {% if profile and profile != 'blocking' %}
+    // Destroy cudaEvents for profiling
+    {% for codeobj in active_objects %}
+    CUDA_SAFE_CALL(
+            cudaEventDestroy({{codeobj}}_timer_start)
+            );
+    CUDA_SAFE_CALL(
+            cudaEventDestroy({{codeobj}}_timer_stop)
+            );
+    {% endfor %}
+    CUDA_SAFE_CALL(
+            cudaEventDestroy(random_number_generation_timer_start)
+            );
+    CUDA_SAFE_CALL(
+            cudaEventDestroy(random_number_generation_timer_stop)
+            );
+    {% endif %}
 
-	{% for co in codeobj_with_rand | sort(attribute='name') %}
-	CUDA_SAFE_CALL(
-			cudaFree(dev_{{co.name}}_rand_allocator)
-			);
-	{% endfor %}
-	{% for co in codeobj_with_randn | sort(attribute='name') %}
-	CUDA_SAFE_CALL(
-			cudaFree(dev_{{co.name}}_randn_allocator)
-			);
-	{% endfor %}
+    {% for co in codeobj_with_rand | sort(attribute='name') %}
+    CUDA_SAFE_CALL(
+            cudaFree(dev_{{co.name}}_rand_allocator)
+            );
+    {% endfor %}
+    {% for co in codeobj_with_randn | sort(attribute='name') %}
+    CUDA_SAFE_CALL(
+            cudaFree(dev_{{co.name}}_randn_allocator)
+            );
+    {% endfor %}
 
-	{% for S in synapses | sort(attribute='name') %}
-	{% for path in S._pathways | sort(attribute='name') %}
-	{{path.name}}_destroy<<<1,1>>>();
-	CUDA_CHECK_ERROR("{{path.name}}_destroy");
-	{% endfor %}
-	{% endfor %}
+    {% for S in synapses | sort(attribute='name') %}
+    {% for path in S._pathways | sort(attribute='name') %}
+    {{path.name}}_destroy<<<1,1>>>();
+    CUDA_CHECK_ERROR("{{path.name}}_destroy");
+    {% endfor %}
+    {% endfor %}
 
-	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-	dev{{varname}}.clear();
-	thrust::device_vector<{{c_data_type(var.dtype)}}>().swap(dev{{varname}});
-	{{varname}}.clear();
-	thrust::host_vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
-	{% endfor %}
+    {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+    dev{{varname}}.clear();
+    thrust::device_vector<{{c_data_type(var.dtype)}}>().swap(dev{{varname}});
+    {{varname}}.clear();
+    thrust::host_vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
+    {% endfor %}
 
-	{% for var, varname in array_specs | dictsort(by='value') %}
-	{% if not var in dynamic_array_specs %}
-	if({{varname}}!=0)
-	{
-		delete [] {{varname}};
-		{{varname}} = 0;
-	}
-	if(dev{{varname}}!=0)
-	{
-		CUDA_SAFE_CALL(
-				cudaFree(dev{{varname}})
-				);
-		dev{{varname}} = 0;
-	}
-	{% endif %}
-	{% endfor %}
+    {% for var, varname in array_specs | dictsort(by='value') %}
+    {% if not var in dynamic_array_specs %}
+    if({{varname}}!=0)
+    {
+        delete [] {{varname}};
+        {{varname}} = 0;
+    }
+    if(dev{{varname}}!=0)
+    {
+        CUDA_SAFE_CALL(
+                cudaFree(dev{{varname}})
+                );
+        dev{{varname}} = 0;
+    }
+    {% endif %}
+    {% endfor %}
 
-	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-	for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
-	{
-		{{varname}}[i].clear();
-		thrust::device_vector<{{c_data_type(var.dtype)}}>().swap({{varname}}[i]);
-	}
-	addresses_monitor_{{varname}}.clear();
-	thrust::device_vector<{{c_data_type(var.dtype)}}*>().swap(addresses_monitor_{{varname}});
-	{% endfor %}
+    {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+    for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
+    {
+        {{varname}}[i].clear();
+        thrust::device_vector<{{c_data_type(var.dtype)}}>().swap({{varname}}[i]);
+    }
+    addresses_monitor_{{varname}}.clear();
+    thrust::device_vector<{{c_data_type(var.dtype)}}*>().swap(addresses_monitor_{{varname}});
+    {% endfor %}
 
-	// static arrays
-	{% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
-	{% if not (name in dynamic_array_specs.values()) %}
-	if({{name}}!=0)
-	{
-		delete [] {{name}};
-		{{name}} = 0;
-	}
-	{% endif %}
-	{% endfor %}
+    // static arrays
+    {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
+    {% if not (name in dynamic_array_specs.values()) %}
+    if({{name}}!=0)
+    {
+        delete [] {{name}};
+        {{name}} = 0;
+    }
+    {% endif %}
+    {% endfor %}
 
 }
 

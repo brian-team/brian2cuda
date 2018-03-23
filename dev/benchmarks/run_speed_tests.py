@@ -204,7 +204,7 @@ try:
                               verbose=True,
                               maximum_run_time=maximum_run_time#,
                               ## this needs modification of brian2 code
-                              #profile_only_active=True 
+                              #profile_only_active=True
                               #profile_only_active=False
                              )
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)

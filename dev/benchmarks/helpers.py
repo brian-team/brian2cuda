@@ -17,11 +17,11 @@ def configurations_to_dict(configurations):
         return configurations
     new_configurations = []
     for config in configurations:
-	new_config = dotdict()
-	new_config['name'] = config.name
-	new_config['classname'] = config.__name__
-	new_config['module'] = config.__module__
-	new_configurations.append(new_config)
+        new_config = dotdict()
+        new_config['name'] = config.name
+        new_config['classname'] = config.__name__
+        new_config['module'] = config.__module__
+        new_configurations.append(new_config)
     return new_configurations
 
 

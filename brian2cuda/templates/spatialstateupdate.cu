@@ -9,91 +9,91 @@
                   _invr0, _invrn} #}
 {% extends 'common_group.cu' %}
 {% block maincode %}
-	double *_gtot_all=(double *)malloc(N*sizeof(double));
-	double *c=(double *)calloc(N, sizeof(double));
-	double ai,bi,_m;
+    double *_gtot_all=(double *)malloc(N*sizeof(double));
+    double *c=(double *)calloc(N, sizeof(double));
+    double ai,bi,_m;
 
     int _vectorisation_idx = 1;
 
-	//// MAIN CODE ////////////
-	{{scalar_code|autoindent}}
+    //// MAIN CODE ////////////
+    {{scalar_code|autoindent}}
 
-	// Tridiagonal solving
-	// Pass 1
-	for(int i=0;i<N;i++)
-	{
-		const int _idx = i;
-	    _vectorisation_idx = _idx;
+    // Tridiagonal solving
+    // Pass 1
+    for(int i=0;i<N;i++)
+    {
+        const int _idx = i;
+        _vectorisation_idx = _idx;
 
-		{{vector_code|autoindent}}
-		_gtot_all[_idx]=_gtot;
+        {{vector_code|autoindent}}
+        _gtot_all[_idx]=_gtot;
 
-		{{v_star}}[i]=-({{Cm}}[i]/dt*{{v}}[i])-_I0; // RHS -> v_star (solution)
-		bi={{ab_star1}}[i]-_gtot_all[i]; // main diagonal
-		if (i<N-1)
-			c[i]={{ab_star0}}[i+1]; // superdiagonal
-		if (i>0)
-		{
-			ai={{ab_star2}}[i-1]; // subdiagonal
-			_m=1.0/(bi-ai*c[i-1]);
-			c[i]=c[i]*_m;
-			{{v_star}}[i]=({{v_star}}[i] - ai*{{v_star}}[i-1])*_m;
-		} else
-		{
-			c[0]=c[0]/bi;
-			{{v_star}}[0]={{v_star}}[0]/bi;
-		}
-	}
-	for(int i=N-2;i>=0;i--)
-	{
-		{{v_star}}[i]={{v_star}}[i] - c[i]*{{v_star}}[i+1];
+        {{v_star}}[i]=-({{Cm}}[i]/dt*{{v}}[i])-_I0; // RHS -> v_star (solution)
+        bi={{ab_star1}}[i]-_gtot_all[i]; // main diagonal
+        if (i<N-1)
+            c[i]={{ab_star0}}[i+1]; // superdiagonal
+        if (i>0)
+        {
+            ai={{ab_star2}}[i-1]; // subdiagonal
+            _m=1.0/(bi-ai*c[i-1]);
+            c[i]=c[i]*_m;
+            {{v_star}}[i]=({{v_star}}[i] - ai*{{v_star}}[i-1])*_m;
+        } else
+        {
+            c[0]=c[0]/bi;
+            {{v_star}}[0]={{v_star}}[0]/bi;
+        }
     }
-	// Pass 2
-	for(int i=0;i<N;i++)
-	{
-		{{u_plus}}[i]={{b_plus}}[i]; // RHS -> v_star (solution)
-		bi={{ab_plus1}}[i]-_gtot_all[i]; // main diagonal
-		if (i<N-1)
-			c[i]={{ab_plus0}}[i+1]; // superdiagonal
-		if (i>0)
-		{
-			ai={{ab_plus2}}[i-1]; // subdiagonal
-			_m=1.0/(bi-ai*c[i-1]);
-			c[i]=c[i]*_m;
-			{{u_plus}}[i]=({{u_plus}}[i] - ai*{{u_plus}}[i-1])*_m;
-		} else
-		{
-			c[0]=c[0]/bi;
-			{{u_plus}}[0]={{u_plus}}[0]/bi;
-		}
-	}
-	for(int i=N-2;i>=0;i--)
-		{{u_plus}}[i]={{u_plus}}[i] - c[i]*{{u_plus}}[i+1];
-	
-	// Pass 3
-	for(int i=0;i<N;i++)
-	{
-		{{u_minus}}[i]={{b_minus}}[i]; // RHS -> v_star (solution)
-		bi={{ab_minus1}}[i]-_gtot_all[i]; // main diagonal
-		if (i<N-1)
-			c[i]={{ab_minus0}}[i+1]; // superdiagonal
-		if (i>0)
-		{
-			ai={{ab_minus2}}[i-1]; // subdiagonal
-			_m=1.0/(bi-ai*c[i-1]);
-			c[i]=c[i]*_m;
-			{{u_minus}}[i]=({{u_minus}}[i] - ai*{{u_minus}}[i-1])*_m;
-		} else
-		{
-			c[0]=c[0]/bi;
-			{{u_minus}}[0]={{u_minus}}[0]/bi;
-		}
-	}
-	for(int i=N-2;i>=0;i--)
-		{{u_minus}}[i]={{u_minus}}[i] - c[i]*{{u_minus}}[i+1];
+    for(int i=N-2;i>=0;i--)
+    {
+        {{v_star}}[i]={{v_star}}[i] - c[i]*{{v_star}}[i+1];
+    }
+    // Pass 2
+    for(int i=0;i<N;i++)
+    {
+        {{u_plus}}[i]={{b_plus}}[i]; // RHS -> v_star (solution)
+        bi={{ab_plus1}}[i]-_gtot_all[i]; // main diagonal
+        if (i<N-1)
+            c[i]={{ab_plus0}}[i+1]; // superdiagonal
+        if (i>0)
+        {
+            ai={{ab_plus2}}[i-1]; // subdiagonal
+            _m=1.0/(bi-ai*c[i-1]);
+            c[i]=c[i]*_m;
+            {{u_plus}}[i]=({{u_plus}}[i] - ai*{{u_plus}}[i-1])*_m;
+        } else
+        {
+            c[0]=c[0]/bi;
+            {{u_plus}}[0]={{u_plus}}[0]/bi;
+        }
+    }
+    for(int i=N-2;i>=0;i--)
+        {{u_plus}}[i]={{u_plus}}[i] - c[i]*{{u_plus}}[i+1];
 
-	free(_gtot_all);
-	free(c);
+    // Pass 3
+    for(int i=0;i<N;i++)
+    {
+        {{u_minus}}[i]={{b_minus}}[i]; // RHS -> v_star (solution)
+        bi={{ab_minus1}}[i]-_gtot_all[i]; // main diagonal
+        if (i<N-1)
+            c[i]={{ab_minus0}}[i+1]; // superdiagonal
+        if (i>0)
+        {
+            ai={{ab_minus2}}[i-1]; // subdiagonal
+            _m=1.0/(bi-ai*c[i-1]);
+            c[i]=c[i]*_m;
+            {{u_minus}}[i]=({{u_minus}}[i] - ai*{{u_minus}}[i-1])*_m;
+        } else
+        {
+            c[0]=c[0]/bi;
+            {{u_minus}}[0]={{u_minus}}[0]/bi;
+        }
+    }
+    for(int i=N-2;i>=0;i--)
+        {{u_minus}}[i]={{u_minus}}[i] - c[i]*{{u_minus}}[i+1];
+
+    free(_gtot_all);
+    free(c);
 
     // Prepare matrix for solving the linear system
 

@@ -19,14 +19,14 @@ __all__ = ['CUDAStandaloneCodeObject']
 class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     '''
     CUDA standalone code object
-    
+
     The ``code`` should be a `~brian2.codegen.templates.MultiTemplate`
     object with two macros defined, ``main`` (for the main loop code) and
     ``support_code`` for any support code (e.g. function definitions).
     '''
     templater = Templater('brian2cuda', '.cu',
                           env_globals={'c_data_type': c_data_type,
-				       'constant_or_scalar': constant_or_scalar})
+                                       'constant_or_scalar': constant_or_scalar})
     generator_class = CUDACodeGenerator
     no_or_const_delay_mode = False
     serializing_form = "syn"

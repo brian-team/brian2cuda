@@ -89,8 +89,8 @@ void Network::run(const double duration, void (*report_func)(const double, const
                 codeobj_func func = objects[i].second;
                 if (func)  // code objects can be NULL in cases where we store just the clock
                 {
-                    {#  Since cudaEvents run asynchornously on the GPU, we calculate elapsed times
-                        for the codeobjects just before they are run again (which resets the events). #}
+                    {# Since cudaEvents run asynchornously on the GPU, we calculate elapsed times
+                       for the codeobjects just before they are run again (which resets the events). #}
                     {% if profile %}
                     // collect profiling infos from last execution of the current codeobject
                     if (!first_cycle)
@@ -118,9 +118,9 @@ void Network::run(const double duration, void (*report_func)(const double, const
                         {
                             printf("ERROR caught in %s:%d %s\n", __FILE__, __LINE__, cudaGetErrorString(kernel_status));
                         }
-			{% endif %}
+                        {% endif %}{# profile == 'blocking #}
                     }
-                    {% endif %}
+                    {% endif %}{# profile #}
                     // run codeobject
                     func();
                 }

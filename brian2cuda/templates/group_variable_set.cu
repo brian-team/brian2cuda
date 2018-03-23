@@ -1,19 +1,19 @@
 {% extends 'common_group.cu' %}
 
 {% block maincode %}
-	{# USES_VARIABLES { _group_idx } #}
-	///// block maincode /////
+    {# USES_VARIABLES { _group_idx } #}
+    ///// block maincode /////
 
-	///// scalar code /////
+    ///// scalar code /////
     {{scalar_code|autoindent}}
 
-	_idx = {{_group_idx}}[_vectorisation_idx];
-	_vectorisation_idx = _idx;
+    _idx = {{_group_idx}}[_vectorisation_idx];
+    _vectorisation_idx = _idx;
 
-	///// vector code /////
+    ///// vector code /////
     {{vector_code|autoindent}}
 
-	///// endblock maincode /////
+    ///// endblock maincode /////
 {% endblock %}
 
 {# _num_group_idx is defined in CONSTANTS, so we can't set _N before #}

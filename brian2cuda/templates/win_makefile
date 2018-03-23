@@ -7,7 +7,7 @@ clean:
 {% for base in source_bases %}
 {{base}}.obj:
 	nvcc {{compiler_flags}} -dc {{base}}.cu -o {{base}}.obj
-    
+
 {% endfor %}
 
 main.exe: {% for base in source_bases %}{{base}}.obj {% endfor %}
