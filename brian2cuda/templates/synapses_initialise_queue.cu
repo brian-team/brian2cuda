@@ -101,9 +101,11 @@ __global__ void _run_{{codeobj_name}}_kernel(
         {{pathobj}}_num_synapses_by_pre,
         {{pathobj}}_num_synapses_by_bundle,
         {{pathobj}}_num_unique_delays_by_pre,
+        {{pathobj}}_delay_by_bundle,
         {{pathobj}}_global_bundle_id_start_by_pre,
+        {{pathobj}}_synapses_offset_by_bundle,
+        {{pathobj}}_synapse_ids,
         {{pathobj}}_synapse_ids_by_pre,
-        {{pathobj}}_synapse_ids_by_bundle,
         {{pathobj}}_unique_delays_by_pre,
         {{pathobj}}_unique_delay_start_idcs_by_pre);
     {{pathobj}}.no_or_const_delay_mode = new_mode;
@@ -127,7 +129,7 @@ void _run_{{pathobj}}_initialise_queue()
     }
     else if (syn_N_check > UINT_MAX){
         printf("ERROR: There are more Synapses (%lu) than an unsigned int can "
-            "hold on this system (%lu).\n", syn_N_check, UINT_MAX);
+               "hold on this system (%u).\n", syn_N_check, UINT_MAX);
     }
     // total number of synapses
     unsigned int syn_N = (unsigned int)syn_N_check;
@@ -139,16 +141,6 @@ void _run_{{pathobj}}_initialise_queue()
     // number of neurons in target group
     unsigned int target_N = {{owner.target.N}};
 
-    // TODO
-    {# TODO: explain this somewhere #}
-    {# delay was set using Synapses object's delay attribute: `conn = Synapses(...); conn.delay = ...` #}
-    {# all delays have the same value, e.g. `conn.delay = 2*ms` or because of small jitter + rounding to dt #}
-    // synapse IDs and delays in connectivity matrix, projected to 1D arrays of vectors
-    // sorted first by pre neuron ID, then by cuda blocks (corresponding to groups of post neuron IDs)
-    // the index for one pre neuron ID and block ID is: ( pre_neuron_ID * num_blocks + block_ID )
-
-
-    // pre neuron IDs, post neuron IDs and delays for all synapses (sorted by synapse IDs)
     //TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
     {% if not no_or_const_delay_mode %}
     // delay (on device) was potentially set in group_variable_set_conditional and needs to be copied to host
@@ -165,24 +157,24 @@ void _run_{{pathobj}}_initialise_queue()
     unsigned int size_connectivity_matrix = 0;
 
     // statistics of number of synapses per (preID, postBlock) pair
-    long unsigned int sum_num_elements = 0;
+    unsigned int sum_num_elements = 0;
     unsigned int count_num_elements = 0;
     double mean_num_elements = 0;
     double M2_num_elements = 0;
 
     {% if not no_or_const_delay_mode %}
     // statistics of number of unique delays per (preID, postBlock) pair
-    long unsigned int sum_num_unique_elements = 0;
+    unsigned int sum_num_unique_elements = 0;
     unsigned int count_num_unique_elements = 0;
     double mean_num_unique_elements = 0;
     double M2_num_unique_elements = 0;
 
     {% if bundle_mode %}
     // total number of bundles in all (preID, postBlock) pairs (not known yet)
-    long unsigned int num_bundle_ids = 0;
+    unsigned int num_bundle_ids = 0;
 
     // statistics of number of synapses per bundle
-    long unsigned int sum_bundle_sizes = 0;
+    unsigned int sum_bundle_sizes = 0;
     unsigned int count_bundle_sizes = 0;
     double mean_bundle_sizes = 0;
     double M2_bundle_sizes = 0;
@@ -193,30 +185,101 @@ void _run_{{pathobj}}_initialise_queue()
     ////////////////////////////////////
     // Create host arrays and vectors //
     ///////////////////////////////////
+    // TODO
+    {# TODO: explain this somewhere #}
+    {# delay was set using Synapses object's delay attribute: `conn = Synapses(...); conn.delay = ...` #}
+    {# all delays have the same value, e.g. `conn.delay = 2*ms` or because of small jitter + rounding to dt #}
+    // synapse IDs and delays in connectivity matrix, projected to 1D arrays of vectors
+    // sorted first by pre neuron ID, then by cuda blocks (corresponding to groups of post neuron IDs)
+    // the index for one pre neuron ID and block ID is: ( pre_neuron_ID * num_blocks + block_ID )
+
+    // pre neuron IDs, post neuron IDs and delays for all synapses (sorted by synapse IDs)
+
+    {# This template creates the connectivity matrix for this SynapticPathway
+     # ({{pathobj}}). Its form depends on the delay and for heterogeneous delays
+     # on the propagation mode.
+     #
+     # DELAY MODE
+     # When the delay is set using the `Synapses` constructors `delay` keyword
+     # (e.g. `syn = Synapses(..., delay=2*ms)`) or no delay is set at all, we
+     # are in "no_or_const_delay_mode" (template parameter). If the delay is
+     # set in the objects `delay` attribute (e.g.  `syn.delay = ...`), we are
+     # not. If we are not in "no_or_const_delay_mode", we can still have the
+     # same delay for all synapses, e.g. when `syn.delay = 2*ms` was given. But
+     # we can't differentiate it on Python side from e.g. `syn.delay =
+     # "rand()*ms", where each synapse gets a different delay. Therefore we
+     # check in this template if all delays have the same value after
+     # transforming them into integer multiples of the simulation time step. If
+     # so, we set `scalar_delay = true` (cpp variable).
+     #
+     # PROPAGATION MODE
+     # If we have `scalar_delay = false` (which implies we don't have
+     # "no_or_const_delay_mode"), the connectivity information stored on the
+     # device depends on the "bundle_mode" template variable. If True, we are
+     # pushing synapses bundle IDs when a neuron spikes. All synapses of a
+     # bundle habe the same (preID, postBlock, delay). All synapse IDs are
+     # stored in these bundles, where each bundle has a unique global bundle ID.
+     # If we have no "bundle_mode" or we have homogeneous delays, all synapses
+     # IDs are sorted by (preID, postBlock) pairs and per (preID, postBlock)
+     # sorted by their delay (if they have any).
+     #}
+
+    {#{% if not no_or_const_delay_mode and bundle_mode %}#}
+    /* BUNDLE MODE
+     * This SynapticPathway ({{pathobj}}) has heterogenously distributed delays
+     * for its synapses and propagates spike events by pushing bundles of
+     * synapse IDs. Each bundle is defined by a unqique tripled of (preID,
+     * postBlock, delay). preID is the presynaptic neuron ID, postBlock is a
+     * range of postsynaptic neurons and delay is a synaptic transmission delay.
+     * Each bundle has a global bundle ID.
+     * This method creates the following arrays in global memory:
+     * For each bundle:
+     *     array: all synapse IDs in that bundle
+     *     integer: number of synapseIDs in that bundlea
+     *     integer: delay of all synapses in that bundle
+     * For each (preID, postBlock) pair:
+        TODO
+     *     integer: global bundle start
+     */
+
+
+    /*
+     * consists of a two-dimensional array in device memory,
+     * storing synapse IDs for each pair of (preID, postBlock), where preID are
+     * all presynaptic neuron IDs and postBlock are all postsynaptic neuron IDs,
+     * split equally into `num_parallel_blocks` blocks (number of CUDA blocks
+     * run in parallel while pushing). The matrix is first sorted by pre neuron
+     * IDs and then by post neuron blocks.
+     *
+     * Depending on the delay
+     * mode,  and for heterogeneous delays on the spike propagation mode.      * If `scalar_delay` is `false`, the connectivity matrix depends on the
+     * propagation mode. I
+     * "no_or_const_delay_mode". In the latter case, it
+     */
 
     /* VARIABLE NAMING:
-       Not scalar variables are named after TYPE_NAME_STRUCTURE, whith:
-       STRUCTURE: the first dimensions structure (`by_pre`, `by_bundle` or none)
-         `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`, one
-                   for each pair of (preID, postBlock).
-         `by_bundle`: thrust::host_vector, size of total number of bundles,
-                      one for each delay value for each (preID, postBlock) pair.
-                      Different (preID, postBlock) pairs can have different sets
-                      of delay values -> each bundle gets a global bundleID
-         none: If no STRUCTURE given, it's a one dim array storing everything
-       TYPE: data type in STRUCTURE (`h`, `h_vec`, `h_ptr`, `d_ptr`), with
-             `h`: host value, `h_vec`: host vector, `h_ptr`: host pointer,
-             `d_ptr`: device pointer (pointing to device, stored in host memory)
-       NAME: the variable name
-
-       EXAMPLES:
-       `h_vec_delays_by_pre` - an array [size = num_pre_post_blocks] of host
-                               vectors, each storing delay values of a
-                               (preID, postBlock) pair
-       `h_num_synapses_by_bundle` - a host vector of integers specifying the
-                                    number of synapses in a bundle
-       `d_ptr_synapse_ids` - a device pointer to synapse IDs (all of them)
-    */
+     * Not scalar variables are named after TYPE_NAME_STRUCTURE, whith:
+     * STRUCTURE: the first dimensions structure (`by_pre`, `by_bundle` or none)
+     *   `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`, one
+     *             for each pair of (preID, postBlock).
+     *   `by_bundle`: thrust::host_vector, size of total number of bundles,
+     *                one for each delay value for each (preID, postBlock) pair.
+     *                Different (preID, postBlock) pairs can have different sets
+     *                of delay values -> each bundle gets a global bundleID
+     *   none: If no STRUCTURE given, it's a one dim array storing everything
+     * TYPE: data type in STRUCTURE (`h`, `h_vec`, `h_ptr`, `d_ptr`), with
+     *       `h`: host value, `h_vec`: host vector, `h_ptr`: host pointer,
+     *       `d_ptr`: device pointer (pointing to device, stored in host memory)
+     * NAME: the variable name
+     *
+     * EXAMPLES:
+     * `h_vec_delays_by_pre` - an array [size = num_pre_post_blocks] of host
+     *                         vectors, each storing delay values of a
+     *                         (preID, postBlock) pair
+     * `h_num_synapses_by_bundle` - a host vector of integers specifying the
+     *                              number of synapses in a bundle
+     * `d_ptr_synapse_ids` - a device pointer to synapse IDs (all of them)
+     */
 
     // synapse IDs for each (preID, postBlock) pair
     vector_t<int32_t>* h_vec_synapse_ids_by_pre = new vector_t<int32_t>[num_pre_post_blocks];
@@ -229,21 +292,22 @@ void _run_{{pathobj}}_initialise_queue()
     // delay for each synapse in `h_vec_synapse_ids_by_pre`,
     // only used to sort synapses by delay
     vector_t<unsigned int>* h_vec_delays_by_pre = new vector_t<unsigned int>[num_pre_post_blocks];
-    // array of unique delays [in integer multiples of dt] in device memory
-    unsigned int** d_ptr_unique_delays_by_pre;
-    // number of unique delays for each (preID, postBlock) pair
-    unsigned int* h_num_unique_delays_by_pre;
     // array of vectors with unique delays and start indices in synapses arrays
     vector_t<unsigned int>* h_vec_unique_delays_by_pre;
     vector_t<unsigned int>* h_vec_unique_delay_start_idcs_by_pre;
     {% if bundle_mode %}
-    // array of synapse IDs for each bundle in device memory
-    vector_t<int32_t*> d_ptr_synapse_ids_by_bundle;
+    // offset in array of all synapse IDs sorted by bundles (we are storing the
+    // offset as 32bit int instead of a 64bit pointer to the bundle start)
+    vector_t<unsigned int> h_synapses_offset_by_bundle;
     // number of synapses in each bundle
     vector_t<unsigned int> h_num_synapses_by_bundle;
-    // start of global bundle ID per (preID, postBlock) pair
-    unsigned int* h_global_bundle_id_start_by_pre = new unsigned int[num_pre_post_blocks];
+    // start of global bundle ID per (preID, postBlock) pair (+ total num bundles)
+    unsigned int* h_global_bundle_id_start_by_pre = new unsigned int[num_pre_post_blocks + 1];
     {% else %}{# not bundle_mode #}
+    // array of unique delays [in integer multiples of dt] in device memory
+    unsigned int** d_ptr_unique_delays_by_pre;
+    // number of unique delays for each (preID, postBlock) pair
+    unsigned int* h_num_unique_delays_by_pre;
     // array of start indices for synapses in `d_ptr_synapse_ids_by_pre` (sorted
     // by delays) with delay from `d_ptr_unique_delays_by_pre`
     unsigned int** d_ptr_unique_delay_start_idcs_by_pre;
@@ -325,10 +389,10 @@ void _run_{{pathobj}}_initialise_queue()
     // allocate memory only if the delays are not all the same
     if (!scalar_delay)
     {
-        h_num_unique_delays_by_pre = new unsigned int[num_pre_post_blocks];
-        d_ptr_unique_delays_by_pre =  new unsigned int*[num_pre_post_blocks];
         {% if not bundle_mode %}
+        d_ptr_unique_delays_by_pre =  new unsigned int*[num_pre_post_blocks];
         d_ptr_unique_delay_start_idcs_by_pre =  new unsigned int*[num_pre_post_blocks];
+        h_num_unique_delays_by_pre = new unsigned int[num_pre_post_blocks];
         {% endif %}
 
         h_vec_unique_delay_start_idcs_by_pre = new vector_t<unsigned int>[num_pre_post_blocks];
@@ -396,7 +460,6 @@ void _run_{{pathobj}}_initialise_queue()
 
             unsigned int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
             sum_num_unique_elements += num_unique_elements;
-            h_num_unique_delays_by_pre[i] = num_unique_elements;
 
             if (num_unique_elements > {{pathobj}}_max_num_unique_delays)
                 {{pathobj}}_max_num_unique_delays = num_unique_elements;
@@ -428,11 +491,13 @@ void _run_{{pathobj}}_initialise_queue()
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_this_bundle, h_this_bundle, memory_size, cudaMemcpyHostToDevice)
                         );
-                d_ptr_synapse_ids_by_bundle.push_back(d_this_bundle);
 
                 sum_bundle_sizes += num_synapses;
+                h_synapses_offset_by_bundle.push_back(sum_bundle_sizes);
                 updateMeanStd(count_bundle_sizes, mean_bundle_sizes, M2_bundle_sizes, num_synapses);
             }
+            {% else %}{# not bundle_mode #}
+            h_num_unique_delays_by_pre[i] = num_unique_elements;
             {% endif %}{# bundle_mode #}
 
             updateMeanStd(count_num_unique_elements, mean_num_unique_elements,
@@ -464,7 +529,6 @@ void _run_{{pathobj}}_initialise_queue()
     }  // end for loop through connectivity matrix
     printf("INFO connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
             size_connectivity_matrix, num_pre_post_blocks);
-
 
     {# If we have don't have heterogeneous delays, we just need to copy the
        synapse IDs and number of synapses per (preID, postBlock) to the device #}
@@ -527,7 +591,7 @@ void _run_{{pathobj}}_initialise_queue()
                     "unique delays", memory_unique_delays_by_pre,
                     sum_num_unique_elements));
 
-        long unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
+        unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
 
         // reset sum_num_unique_elements, we will use it to offset cudaMemcy correctly
         sum_num_unique_elements = 0;
@@ -540,13 +604,18 @@ void _run_{{pathobj}}_initialise_queue()
             if(num_elements > 0)
             {
                 // copy the unique delays to the device and store the device pointers
-                d_ptr_unique_delays_by_pre[i] = d_ptr_unique_delays + sum_num_unique_elements;
-                CUDA_SAFE_CALL( cudaMemcpy(d_ptr_unique_delays_by_pre[i],
-                    thrust::raw_pointer_cast(&(h_vec_unique_delays_by_pre[i][0])),
-                    sizeof(unsigned int)*num_unique_elements,
-                    cudaMemcpyHostToDevice) );
+                CUDA_SAFE_CALL(
+                        cudaMemcpy(d_ptr_unique_delays
+                                       + sum_num_unique_elements,
+                                   thrust::raw_pointer_cast(
+                                       &(h_vec_unique_delays_by_pre[i][0])),
+                                   sizeof(unsigned int)*num_unique_elements,
+                                   cudaMemcpyHostToDevice)
+                        );
 
                 {% if not bundle_mode %}
+                d_ptr_unique_delays_by_pre[i] = d_ptr_unique_delays + sum_num_unique_elements;
+
                 // copy the unique delays start indices to the device and
                 // store the device pointers
                 d_ptr_unique_delay_start_idcs_by_pre[i] = d_ptr_unique_delay_start_idcs + sum_num_unique_elements;
@@ -561,43 +630,61 @@ void _run_{{pathobj}}_initialise_queue()
         }
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
 
-        // copy the number of synapses and delays and the device pointers to device
+        {% if bundle_mode %}
+        num_bundle_ids = sum_num_unique_elements;
+
+        // add num_bundle_ids as last entry
+        h_global_bundle_id_start_by_pre[num_pre_post_blocks] = num_bundle_ids;
+
+        // floor(mean(h_num_synapses_by_bundle))
+        {{pathobj}}_mean_bundle_size = sum_bundle_sizes / num_bundle_ids;
+
+        // pointer to start of synapse IDs array
+        CUDA_SAFE_CALL(
+                cudaMemcpyToSymbol({{pathobj}}_synapse_ids, &d_ptr_synapse_ids,
+                                   sizeof(d_ptr_synapse_ids))
+                );
+
+        CUDA_SAFE_CALL(
+                cudaMemcpyToSymbol({{pathobj}}_delay_by_bundle,
+                                   &d_ptr_unique_delays,
+                                   sizeof(d_ptr_unique_delays))
+                );
+
+        // size by bundle
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
+                {{pathobj}}_num_synapses_by_bundle, num_bundle_ids,
+                "number of synapses per bundle");
+
+        // synapses offset by bundle
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                thrust::raw_pointer_cast(&h_synapses_offset_by_bundle[0]),
+                {{pathobj}}_synapses_offset_by_bundle, num_bundle_ids,
+                "synapses bundle offset");
+
+        // global bundle id start idx by pre
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                h_global_bundle_id_start_by_pre,
+                {{pathobj}}_global_bundle_id_start_by_pre,
+                num_pre_post_blocks + 1, "global bundle ID start");
+
+        {% else %}{# not bundle_mode #}
+        // unique delay
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                d_ptr_unique_delays_by_pre, {{pathobj}}_unique_delays_by_pre,
+                num_pre_post_blocks, "unique delay pointers");
 
         // unique delay size
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_unique_delays_by_pre,
                 {{pathobj}}_num_unique_delays_by_pre, num_pre_post_blocks,
                 "number of unique delays");
 
-        // unique delay
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_unique_delays_by_pre,
-                {{pathobj}}_unique_delays_by_pre, num_pre_post_blocks,
-                "unique delay pointers");
-
-        {% if bundle_mode %}
-        num_bundle_ids = sum_num_unique_elements;
-        // floor(mean(h_num_synapses_by_bundle))
-        {{pathobj}}_mean_bundle_size = sum_bundle_sizes / num_bundle_ids;
-
-        // size by bundle
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
-                {{pathobj}}_num_synapses_by_bundle, num_bundle_ids,
-                "number of synapses per bundle");
-
-        // synapses by bundle
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(thrust::raw_pointer_cast(&d_ptr_synapse_ids_by_bundle[0]),
-                {{pathobj}}_synapse_ids_by_bundle, num_bundle_ids,
-                "pointer to synapse bundles");
-
-        // global bundle id start idx by pre
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_global_bundle_id_start_by_pre,
-                {{pathobj}}_global_bundle_id_start_by_pre,
-                num_pre_post_blocks, "global bundle ID start");
-
-        {% else %}{# not bundle_mode #}
-        {# delay_start_idx, only in synapses_mode #}
         // unique delay start idx
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_unique_delay_start_idcs_by_pre,
-                {{pathobj}}_unique_delay_start_idcs_by_pre, num_pre_post_blocks,
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                d_ptr_unique_delay_start_idcs_by_pre,
+                {{pathobj}}_unique_delay_start_idcs_by_pre,
+                num_pre_post_blocks,
                 "pointers to unique delay start indices");
         {% endif %}{# bundle_mode #}
 
@@ -782,11 +869,11 @@ void _run_{{pathobj}}_initialise_queue()
     {
         delete [] h_vec_unique_delay_start_idcs_by_pre;
         delete [] h_vec_unique_delays_by_pre;
-        delete [] h_num_unique_delays_by_pre;
-        delete [] d_ptr_unique_delays_by_pre;
         {% if bundle_mode %}
         delete [] h_global_bundle_id_start_by_pre;
         {% else %}
+        delete [] d_ptr_unique_delays_by_pre;
+        delete [] h_num_unique_delays_by_pre;
         delete [] d_ptr_unique_delay_start_idcs_by_pre;
         {% endif %}
     }

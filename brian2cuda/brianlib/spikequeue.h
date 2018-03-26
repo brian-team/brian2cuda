@@ -39,9 +39,11 @@ public:
     unsigned int* num_synapses_by_pre;
     unsigned int* num_synapses_by_bundle;
     unsigned int* num_unique_delays_by_pre;
+    unsigned int* delay_by_bundle;
     unsigned int* global_bundle_id_start_by_pre;
+    unsigned int* synapses_offset_by_bundle;
+    DTYPE_int* synapse_ids;
     DTYPE_int** synapse_ids_by_pre;
-    DTYPE_int** synapse_ids_by_bundle;
     unsigned int** unique_delays_by_pre;
     unsigned int** unique_delay_start_idcs_by_pre;
 
@@ -80,9 +82,11 @@ public:
         unsigned int* _num_synapses_by_pre,
         unsigned int* _num_synapses_by_bundle,
         unsigned int* _num_unique_delays_by_pre,
+        unsigned int* _delay_by_bundle,
         unsigned int* _global_bundle_id_start_by_pre,
-        DTYPE_int** _synapses_by_pre,
-        DTYPE_int** _synapses_by_bundle,
+        unsigned int* _synapses_offset_by_bundle,
+        DTYPE_int* _synapse_ids,
+        DTYPE_int** _synapse_ids_by_pre,
         unsigned int** _unique_delays_by_pre,
         unsigned int** _unique_delay_start_idcs_by_pre
         )
@@ -103,9 +107,11 @@ public:
             num_synapses_by_pre = _num_synapses_by_pre;
             num_synapses_by_bundle = _num_synapses_by_bundle;
             num_unique_delays_by_pre = _num_unique_delays_by_pre;
+            delay_by_bundle = _delay_by_bundle;
             global_bundle_id_start_by_pre = _global_bundle_id_start_by_pre;
-            synapse_ids_by_pre = _synapses_by_pre;
-            synapse_ids_by_bundle = _synapses_by_bundle;
+            synapses_offset_by_bundle = _synapses_offset_by_bundle;
+            synapse_ids = _synapse_ids;
+            synapse_ids_by_pre = _synapse_ids_by_pre;
             unique_delays_by_pre = _unique_delays_by_pre;
             unique_delay_start_idcs_by_pre = _unique_delay_start_idcs_by_pre;
 
@@ -374,9 +380,10 @@ public:
         assert(blockDim.x == num_threads);
 
         unsigned int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
-        // num_unique_delays == num_bundles
-        unsigned int num_unique_delays = num_unique_delays_by_pre[pre_post_block_id];
         unsigned int global_bundle_id_start_idx = global_bundle_id_start_by_pre[pre_post_block_id];
+        // num_unique_delays == num_bundles
+        unsigned int num_unique_delays = global_bundle_id_start_by_pre[pre_post_block_id + 1]
+                                         - global_bundle_id_start_idx;
 
         // spiking_neuron_id should be in range [0,neuron_N]
         assert(spiking_neuron_id < neuron_N);
@@ -400,7 +407,7 @@ public:
                 //global_bundle_id = max_num_delays_per_block * pre_post_block_id + bundle_idx;
                 global_bundle_id = global_bundle_id_start_idx + bundle_idx;
 
-                unsigned int delay = unique_delays_by_pre[pre_post_block_id][bundle_idx];
+                unsigned int delay = delay_by_bundle[global_bundle_id];
                 // find the spike queue corresponding to this synapses delay
                 delay_queue = (current_offset + delay) % num_queues;
             }

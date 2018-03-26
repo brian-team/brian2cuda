@@ -103,8 +103,9 @@ kernel_{{codeobj_name}}(
 
                 unsigned int bundle_id = synapses_queue[bid].at(bundle_idx);
                 unsigned int bundle_size = {{pathway.name}}_num_synapses_by_bundle[bundle_id];
-                int32_t* synapse_bundle = {{pathway.name}}_synapse_ids_by_bundle[bundle_id];
-                assert(synapse_bundle);  // check this is not a NULL ptr (unused bundle_id)
+                unsigned int synapses_offset = {{pathway.name}}_synapses_offset_by_bundle[bundle_id];
+                int32_t* synapse_ids = {{pathway.name}}_synapse_ids;
+                int32_t* synapse_bundle = synapse_ids + synapses_offset;
 
                 // loop through synapses of this bundle with all available threads_per_bundle
                 // if threads_per_bundle == 1, this is serial
