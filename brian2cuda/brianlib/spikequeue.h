@@ -39,15 +39,14 @@ public:
     unsigned int* num_synapses_by_pre;
     unsigned int* num_synapses_by_bundle;
     unsigned int* num_unique_delays_by_pre;
-    unsigned int* delay_by_bundle;
+    unsigned int* unique_delays;
     unsigned int* global_bundle_id_start_by_pre;
     unsigned int* synapses_offset_by_bundle;
     DTYPE_int* synapse_ids;
     DTYPE_int** synapse_ids_by_pre;
-    unsigned int** unique_delays_by_pre;
-    unsigned int** unique_delay_start_idcs_by_pre;
-
-    unsigned int current_offset;
+    unsigned int* unique_delays_offset_by_pre;
+    unsigned int* unique_delay_start_idcs;
+    unsigned int current_offset;  // offset in circular queue structure
     unsigned int num_queues;
     //unsigned int max_num_delays_per_block;
     unsigned int num_blocks;
@@ -82,13 +81,13 @@ public:
         unsigned int* _num_synapses_by_pre,
         unsigned int* _num_synapses_by_bundle,
         unsigned int* _num_unique_delays_by_pre,
-        unsigned int* _delay_by_bundle,
+        unsigned int* _unique_delays,
         unsigned int* _global_bundle_id_start_by_pre,
         unsigned int* _synapses_offset_by_bundle,
         DTYPE_int* _synapse_ids,
         DTYPE_int** _synapse_ids_by_pre,
-        unsigned int** _unique_delays_by_pre,
-        unsigned int** _unique_delay_start_idcs_by_pre
+        unsigned int* _unique_delays_offset_by_pre,
+        unsigned int* _unique_delay_start_idcs
         )
     {
         if(tid == 0)
@@ -107,13 +106,13 @@ public:
             num_synapses_by_pre = _num_synapses_by_pre;
             num_synapses_by_bundle = _num_synapses_by_bundle;
             num_unique_delays_by_pre = _num_unique_delays_by_pre;
-            delay_by_bundle = _delay_by_bundle;
+            unique_delays = _unique_delays;
             global_bundle_id_start_by_pre = _global_bundle_id_start_by_pre;
             synapses_offset_by_bundle = _synapses_offset_by_bundle;
             synapse_ids = _synapse_ids;
             synapse_ids_by_pre = _synapse_ids_by_pre;
-            unique_delays_by_pre = _unique_delays_by_pre;
-            unique_delay_start_idcs_by_pre = _unique_delay_start_idcs_by_pre;
+            unique_delays_offset_by_pre = _unique_delays_offset_by_pre;
+            unique_delay_start_idcs = _unique_delay_start_idcs;
 
             synapses_queue = new cudaVector<DTYPE_int>*[num_queues];
             if(!synapses_queue)
@@ -156,13 +155,17 @@ public:
 
         assert(blockDim.x == num_threads);
 
+        // idx in the connectivity matrix for this (preID, postBlock) pair
         unsigned int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
         unsigned int num_synapses = num_synapses_by_pre[pre_post_block_id];
         unsigned int num_unique_delays = num_unique_delays_by_pre[pre_post_block_id];
+        // offset in unique_delays and unique_delay_start_idcs arrays (which
+        // store all delay data, first sorted by pre_post_block, then by delay)
+        unsigned int delay_offset = unique_delays_offset_by_pre[pre_post_block_id];
         // shared_mem is allocated in push_spikes
-        unsigned int* shared_mem_unique_delay_start_idcs_by_pre = (unsigned int*)_shared_mem;
+        unsigned int* shared_mem_unique_delay_start_idcs = (unsigned int*)_shared_mem;
         // shared memory for inter thread communication needs to be volatile
-        volatile unsigned int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idcs_by_pre + num_unique_delays;
+        volatile unsigned int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idcs + num_unique_delays;
         volatile unsigned int* shared_mem_last_cycle_size_before_resize = shared_mem_size_before_resize + num_unique_delays;
 
         // spiking_neuron_id should be in range [0,neuron_N]
@@ -171,7 +174,7 @@ public:
         // Copy to shared memory. If more entries then threads, loop.
         for (unsigned int i = tid; i < num_unique_delays; i += num_threads)
         {
-            shared_mem_unique_delay_start_idcs_by_pre[i] = unique_delay_start_idcs_by_pre[pre_post_block_id][i];
+            shared_mem_unique_delay_start_idcs[i] = unique_delay_start_idcs[delay_offset + i];
         }
         __syncthreads();
 
@@ -214,7 +217,7 @@ public:
                 for (unsigned int j = 1; j < num_unique_delays; j++)
                 {
                     delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
-                    next_delay_start_idx_in_synapses_id = shared_mem_unique_delay_start_idcs_by_pre[j];
+                    next_delay_start_idx_in_synapses_id = shared_mem_unique_delay_start_idcs[j];
                     if (next_delay_start_idx_in_synapses_id > syn)
                     {
                         idx_in_unique_delays = j-1;
@@ -243,8 +246,10 @@ public:
                 assert(delay_start_idx_in_synapses_id <= syn && syn < next_delay_start_idx_in_synapses_id);
 
                 // get the delay of the current synapse and the number of synapses with that delay
-                // TODO: is it faster to once make a coalesced copy of unique_delays_by_pre to shared memory? try!
-                delay = unique_delays_by_pre[pre_post_block_id][idx_in_unique_delays];
+                // TODO: is it faster to once make a coalesced copy of unique_delays_offset_by_pre to shared memory? try!
+                //delay = unique_delays_by_pre[pre_post_block_id][idx_in_unique_delays];
+                assert(unique_delays);
+                delay = unique_delays[delay_offset + idx_in_unique_delays];
                 delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;
 
                 // find the spike queue corresponding to this synapses delay
@@ -401,13 +406,11 @@ public:
             if (bundle_idx < num_unique_delays)
             {
                 // we have per pre_post_block_id (total of num_blocks * source_N) a
-            //// local bundle index going from 0 to max_num_delays_per_block for that
                 // local bundle index going from 0 to num_delays for that
                 // pre_post_block_id
-                //global_bundle_id = max_num_delays_per_block * pre_post_block_id + bundle_idx;
                 global_bundle_id = global_bundle_id_start_idx + bundle_idx;
 
-                unsigned int delay = delay_by_bundle[global_bundle_id];
+                unsigned int delay = unique_delays[global_bundle_id];
                 // find the spike queue corresponding to this synapses delay
                 delay_queue = (current_offset + delay) % num_queues;
             }
@@ -451,4 +454,3 @@ public:
         *(_synapses_queue) =  &(synapses_queue[current_offset][0]);
     }
 };
-

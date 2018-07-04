@@ -101,13 +101,13 @@ __global__ void _run_{{codeobj_name}}_kernel(
         {{pathobj}}_num_synapses_by_pre,
         {{pathobj}}_num_synapses_by_bundle,
         {{pathobj}}_num_unique_delays_by_pre,
-        {{pathobj}}_delay_by_bundle,
+        {{pathobj}}_unique_delays,
         {{pathobj}}_global_bundle_id_start_by_pre,
         {{pathobj}}_synapses_offset_by_bundle,
         {{pathobj}}_synapse_ids,
         {{pathobj}}_synapse_ids_by_pre,
-        {{pathobj}}_unique_delays_by_pre,
-        {{pathobj}}_unique_delay_start_idcs_by_pre);
+        {{pathobj}}_unique_delays_offset_by_pre,
+        {{pathobj}}_unique_delay_start_idcs);
     {{pathobj}}.no_or_const_delay_mode = new_mode;
 }
 
@@ -305,12 +305,12 @@ void _run_{{pathobj}}_initialise_queue()
     unsigned int* h_global_bundle_id_start_by_pre = new unsigned int[num_pre_post_blocks + 1];
     {% else %}{# not bundle_mode #}
     // array of unique delays [in integer multiples of dt] in device memory
-    unsigned int** d_ptr_unique_delays_by_pre;
+    unsigned int* h_unique_delays_offset_by_pre;
     // number of unique delays for each (preID, postBlock) pair
     unsigned int* h_num_unique_delays_by_pre;
     // array of start indices for synapses in `d_ptr_synapse_ids_by_pre` (sorted
-    // by delays) with delay from `d_ptr_unique_delays_by_pre`
-    unsigned int** d_ptr_unique_delay_start_idcs_by_pre;
+    // by delays) with delay from `h_unique_delays_offset_by_pre`
+    //unsigned int** d_ptr_unique_delay_start_idcs_by_pre;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
@@ -390,8 +390,8 @@ void _run_{{pathobj}}_initialise_queue()
     if (!scalar_delay)
     {
         {% if not bundle_mode %}
-        d_ptr_unique_delays_by_pre =  new unsigned int*[num_pre_post_blocks];
-        d_ptr_unique_delay_start_idcs_by_pre =  new unsigned int*[num_pre_post_blocks];
+        h_unique_delays_offset_by_pre =  new unsigned int[num_pre_post_blocks];
+        //d_ptr_unique_delay_start_idcs_by_pre =  new unsigned int*[num_pre_post_blocks];
         h_num_unique_delays_by_pre = new unsigned int[num_pre_post_blocks];
         {% endif %}
 
@@ -583,6 +583,8 @@ void _run_{{pathobj}}_initialise_queue()
                     sum_num_unique_elements));
         {% endif %}{# bundle_mode #}
 
+        // array of all unique delas, sorted first by pre_post_block and per
+        // pre_post_block by delay
         unsigned int *d_ptr_unique_delays;
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&d_ptr_unique_delays, memory_unique_delays_by_pre)
@@ -614,20 +616,22 @@ void _run_{{pathobj}}_initialise_queue()
                         );
 
                 {% if not bundle_mode %}
-                d_ptr_unique_delays_by_pre[i] = d_ptr_unique_delays + sum_num_unique_elements;
+                h_unique_delays_offset_by_pre[i] = sum_num_unique_elements;
 
                 // copy the unique delays start indices to the device and
                 // store the device pointers
-                d_ptr_unique_delay_start_idcs_by_pre[i] = d_ptr_unique_delay_start_idcs + sum_num_unique_elements;
-                CUDA_SAFE_CALL( cudaMemcpy(d_ptr_unique_delay_start_idcs_by_pre[i],
-                    thrust::raw_pointer_cast(&(h_vec_unique_delay_start_idcs_by_pre[i][0])),
-                    sizeof(unsigned int)*num_unique_elements,
-                    cudaMemcpyHostToDevice) );
+                //d_ptr_unique_delay_start_idcs_by_pre[i] = d_ptr_unique_delay_start_idcs + sum_num_unique_elements;
+                CUDA_SAFE_CALL(
+                        cudaMemcpy(d_ptr_unique_delay_start_idcs + sum_num_unique_elements,
+                                   thrust::raw_pointer_cast(&(h_vec_unique_delay_start_idcs_by_pre[i][0])),
+                                   sizeof(unsigned int)*num_unique_elements,
+                                   cudaMemcpyHostToDevice)
+                        );
                 {% endif %}{# not bundle_mode #}
 
                 sum_num_unique_elements += num_unique_elements;
             }  // end if(num_elements < 0)
-        }
+        }  // end second loop connectivity matrix
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
 
         {% if bundle_mode %}
@@ -645,8 +649,9 @@ void _run_{{pathobj}}_initialise_queue()
                                    sizeof(d_ptr_synapse_ids))
                 );
 
+        // pointer to start of unique delays array
         CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol({{pathobj}}_delay_by_bundle,
+                cudaMemcpyToSymbol({{pathobj}}_unique_delays,
                                    &d_ptr_unique_delays,
                                    sizeof(d_ptr_unique_delays))
                 );
@@ -670,22 +675,30 @@ void _run_{{pathobj}}_initialise_queue()
                 num_pre_post_blocks + 1, "global bundle ID start");
 
         {% else %}{# not bundle_mode #}
-        // unique delay
+        // pointer to start of unique delay start indices array
+        CUDA_SAFE_CALL(
+                cudaMemcpyToSymbol({{pathobj}}_unique_delay_start_idcs,
+                                   &d_ptr_unique_delay_start_idcs,
+                                   sizeof(d_ptr_unique_delay_start_idcs))
+                );
+
+        // unique delay offset
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
-                d_ptr_unique_delays_by_pre, {{pathobj}}_unique_delays_by_pre,
-                num_pre_post_blocks, "unique delay pointers");
+                h_unique_delays_offset_by_pre,
+                {{pathobj}}_unique_delays_offset_by_pre,
+                num_pre_post_blocks, "unique delays offset by pre");
 
         // unique delay size
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_unique_delays_by_pre,
                 {{pathobj}}_num_unique_delays_by_pre, num_pre_post_blocks,
                 "number of unique delays");
 
-        // unique delay start idx
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
-                d_ptr_unique_delay_start_idcs_by_pre,
-                {{pathobj}}_unique_delay_start_idcs_by_pre,
-                num_pre_post_blocks,
-                "pointers to unique delay start indices");
+//        // unique delay start idx
+//        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+//                d_ptr_unique_delay_start_idcs_by_pre,
+//                {{pathobj}}_unique_delay_start_idcs_by_pre,
+//                num_pre_post_blocks,
+//                "pointers to unique delay start indices");
         {% endif %}{# bundle_mode #}
 
     }  // end if (!scalar_delay)
@@ -746,7 +759,9 @@ void _run_{{pathobj}}_initialise_queue()
         << std_bundle_sizes << "\n"
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
-    << "\n\tmemory usage: TOTAL: " << total_memory_MB << " MB" << std::endl;
+    << "\n\tmemory usage: TOTAL: " << total_memory_MB << " MB (~"
+        << total_memory_MB / syn_N * 1024.0 * 1024.0  << " KB per synapses)"
+        << std::endl;
 
     for(auto const& tuple: memory_recorder){
         std::string name;
@@ -872,9 +887,9 @@ void _run_{{pathobj}}_initialise_queue()
         {% if bundle_mode %}
         delete [] h_global_bundle_id_start_by_pre;
         {% else %}
-        delete [] d_ptr_unique_delays_by_pre;
+        delete [] h_unique_delays_offset_by_pre;
         delete [] h_num_unique_delays_by_pre;
-        delete [] d_ptr_unique_delay_start_idcs_by_pre;
+        //delete [] d_ptr_unique_delay_start_idcs_by_pre;
         {% endif %}
     }
     {% endif %}
