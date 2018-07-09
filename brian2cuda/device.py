@@ -826,9 +826,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer = CUDAWriter(directory)
 
         logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
-        arange_arrays = sorted([(var, start)
-                                for var, start in self.arange_arrays.iteritems()],
-                               key=lambda (var, start): var.name)
 
         self.write_static_arrays(directory)
         self.find_synapses()
@@ -842,7 +839,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.generate_main_source(writer, main_includes)
         self.generate_codeobj_source(writer)
-        self.generate_objects_source(writer, arange_arrays, self.net_synapses, self.static_array_specs, self.networks)
+        self.generate_objects_source(writer, self.arange_arrays,
+                                     self.net_synapses,
+                                     self.static_array_specs,
+                                     self.networks)
         self.generate_network_source(writer)
         self.generate_synapses_classes_source(writer)
         self.generate_run_source(writer, run_includes)

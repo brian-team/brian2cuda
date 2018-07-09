@@ -537,3 +537,38 @@ rand_code = '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=rand_code,
                                                              name='_rand')
+
+
+timestep_code = '''
+// Adapted from npy_math.h and https://www.christophlassner.de/collection-of-msvc-gcc-compatibility-tricks.html
+#ifndef _BRIAN_REPLACE_ISINF_MSVC
+#define _BRIAN_REPLACE_ISINF_MSVC
+#if defined(_MSC_VER)
+#if _MSC_VER < 1900
+namespace std {
+    template <typename T>
+    __host__ __device__
+    bool isinf(const T &x)
+    {
+        return (!_finite(x))&&(!_isnan(x));
+    }
+}
+#endif
+#endif
+#endif
+__host__ __device__
+static inline int _timestep(double t, double dt)
+{
+    if (std::isinf(t))
+    {
+        if (t < 0)
+            return INT_MIN;
+        else
+            return INT_MAX;
+    }
+    return (int)((t + 1e-3*dt)/dt);
+}
+'''
+DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(CUDACodeGenerator,
+                                                                 code=timestep_code,
+                                                                 name='_timestep')

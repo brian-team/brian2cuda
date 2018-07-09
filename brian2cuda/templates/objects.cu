@@ -221,9 +221,16 @@ void _init_arrays()
     {% endif %}
 
     // Arrays initialized to 0
-    {% for var in zero_arrays | sort(attribute='name') %}
-        {% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
-            {% set varname = array_specs[var] %}
+    {% for var, varname in zero_arrays | sort(attribute='1') %}
+        {% if varname in dynamic_array_specs.values() %}
+            {{varname}}.resize({{var.size}});
+            dev{{varname}}.resize({{var.size}});
+            for(int i=0; i<{{var.size}}; i++)
+            {
+                {{varname}}[i] = 0;
+                dev{{varname}}[i] = 0;
+            }
+        {% elif not var in eventspace_arrays %}
             {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
             for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
             CUDA_SAFE_CALL(
@@ -232,24 +239,11 @@ void _init_arrays()
             CUDA_SAFE_CALL(
                     cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
                     );
-
-        {% endif %}
-        {% if (var in dynamic_array_specs) %}
-            {% set varname = array_specs[var] %}
-            _dynamic{{varname}}.resize({{var.size}});
-            dev_dynamic{{varname}}.resize({{var.size}});
-                for(int i=0; i<{{var.size}}; i++)
-            {
-                _dynamic{{varname}}[i] = 0;
-                dev_dynamic{{varname}}[i] = 0;
-            }
-
         {% endif %}
     {% endfor %}
 
     // Arrays initialized to an "arange"
-    {% for var, start in arange_arrays %}
-    {% set varname = array_specs[var] %}
+    {% for var, varname, start in arange_arrays | sort(attribute='1') %}
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
     for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
     CUDA_SAFE_CALL(
@@ -259,7 +253,6 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
             );
-
     {% endfor %}
 
     // static arrays
