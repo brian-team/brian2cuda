@@ -528,7 +528,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     else:
                         try:
                             if isinstance(v, DynamicArrayVariable):
-                                if v.dimensions == 1:
+                                if v.ndim == 1:
                                     dyn_array_name = self.dynamic_arrays[v]
                                     array_name = self.arrays[v]
                                     line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
