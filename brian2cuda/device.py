@@ -860,10 +860,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.run(directory, with_output, run_args)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=True, level=0, **kwds):
+                    namespace=None, profile=False, level=0, **kwds):
 
-        if not isinstance(profile, bool) or not profile:  # everything but True
-            raise TypeError("The profile argument has to be set in `set_device()`, not in `run()`")
+        if not isinstance(profile, bool) or profile:  # everything but False
+            raise TypeError("In 'cuda_standalone' mode, the profile argument "
+                            "has to be set in `set_device()`, not in `run()`")
 
         if 'profile' in self.build_options:
             profile = self.build_options.pop('profile')
