@@ -100,12 +100,17 @@ kernel_{{codeobj_name}}(
 
     ///// scalar_code /////
     {{scalar_code|autoindent}}
-    ///// vector_code /////
-    {{vector_code|autoindent}}
 
-    {% for varname, var in _recorded_variables | dictsort %}
-    {% set _recorded =  get_array_name(var, access_data=False) %}
-    monitor_{{varname}}[tid][current_iteration] = _to_record_{{varname}};
-    {% endfor %}
+    // need different scope here since scalar_code and vector_code can
+    // declare the same variables
+    {
+        ///// vector_code /////
+        {{vector_code|autoindent}}
+
+        {% for varname, var in _recorded_variables | dictsort %}
+        {% set _recorded =  get_array_name(var, access_data=False) %}
+        monitor_{{varname}}[tid][current_iteration] = _to_record_{{varname}};
+        {% endfor %}
+    }
 }
 {% endblock %}
