@@ -11,75 +11,55 @@ import brian2cuda
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
-def test_profile_blocking():
-    # Test that profiling info is not 0
-    set_device('cuda_standalone', profile='blocking', directory=None)
-
-    G = NeuronGroup(1, 'v:1', threshold='True')
-
-    run(defaultclock.dt)
-
-    prof_info = magic_network.profiling_info
-    assert any([prof_info[n][1] for n in range(len(prof_info))])
-
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_profile_True():
-    # Test that profiling info is not 0
-    set_device('cuda_standalone', profile=True, directory=None)
-
-    G = NeuronGroup(1, 'v:1', threshold='True')
-
-    run(defaultclock.dt)
-
-    prof_info = magic_network.profiling_info
-    assert any([prof_info[n][1] for n in range(len(prof_info))])
-
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_profile_False():
-    # Test that profiling info is 0
-    set_device('cuda_standalone', profile=False, directory=None)
-
-    G = NeuronGroup(1, 'v:1', threshold='True')
-
-    run(defaultclock.dt)
-
-    prof_info = magic_network.profiling_info
-    assert all([prof_info[n][1] for n in range(len(prof_info))])
-
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_profile_in_run_raises():
-    set_device('cuda_standalone', directory=None, build_on_run=False)
-
-    G = NeuronGroup(1, 'v:1', threshold='True')
-
-    assert_raises(TypeError, lambda: run(defaultclock.dt, profile=False))
-    assert_raises(TypeError, lambda: run(defaultclock.dt, profile='string'))
-    run(defaultclock.dt, profile=True)
-
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_profile_wrong_raises():
-    # Test that profiling info is not 0
-    set_device('cuda_standalone', profile='wrong', directory=None)
-
-    G = NeuronGroup(1, 'v:1', threshold='True')
-
-    # error raised in device.build()
-    assert_raises(TypeError, lambda: run(defaultclock.dt))
-
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_profile_build_raises():
-    # Test that profiling info is not 0
-    set_device('cuda_standalone', directory=None, build_on_run=False)
-    assert_raises(TypeError, lambda: device.build(profile=True))
-    assert_raises(TypeError, lambda: device.build(profile=False))
-    assert_raises(TypeError, lambda: device.build(profile='string'))
+def test_changing_profile_arg():
+    set_device('cuda_standalone', build_on_run=False)
+    G = NeuronGroup(10000, 'v : 1')
+    op1 = G.run_regularly('v = exp(-v)', name='op1')
+    op2 = G.run_regularly('v = exp(-v)', name='op2')
+    op3 = G.run_regularly('v = exp(-v)', name='op3')
+    op4 = G.run_regularly('v = exp(-v)', name='op4')
+    # Op 1 is active only during the first profiled run
+    # Op 2 is active during both profiled runs
+    # Op 3 is active only during the second profiled run
+    # Op 4 is never active (only during the unprofiled run)
+    op1.active = True
+    op2.active = True
+    op3.active = False
+    op4.active = False
+    run(100*defaultclock.dt, profile=True)
+    op1.active = True
+    op2.active = True
+    op3.active = True
+    op4.active = True
+    run(100*defaultclock.dt, profile=False)
+    op1.active = False
+    op2.active = True
+    op3.active = True
+    op4.active = False
+    run(100*defaultclock.dt, profile=True)
+    device.build(directory=None, with_output=False)
+    profiling_dict = dict(magic_network.profiling_info)
+    # Note that for now, C++ standalone creates a new CodeObject for every run,
+    # which is most of the time unnecessary (this is partly due to the way we
+    # handle constants: they are included as literals in the code but they can
+    # change between runs). Therefore, the profiling info is potentially
+    # difficult to interpret
+    assert len(profiling_dict) == 4  # 2 during first run, 2 during last run
+    # The two code objects that were executed during the first run
+    assert ('op1_codeobject' in profiling_dict and
+            profiling_dict['op1_codeobject'] > 0*second)
+    assert ('op2_codeobject' in profiling_dict and
+            profiling_dict['op2_codeobject'] > 0*second)
+    # Four code objects were executed during the second run, but no profiling
+    # information was saved
+    for name in ['op1_codeobject_1', 'op2_codeobject_1', 'op3_codeobject',
+                 'op4_codeobject']:
+        assert name not in profiling_dict
+    # Two code objects were exectued during the third run
+    assert ('op2_codeobject_2' in profiling_dict and
+            profiling_dict['op2_codeobject_2'] > 0*second)
+    assert ('op3_codeobject_1' in profiling_dict and
+            profiling_dict['op3_codeobject_1'] > 0*second)
 
 if __name__ == '__main__':
-    #test_profile_in_run_raises()
-    #test_profile_wrong_raises()
-    test_profile_build_raises()
+    test_changing_profile_arg()

@@ -283,7 +283,18 @@ def test_default_function_implementations():
     S36.connect(condition='sign(i+1)==1')
 
 
+    ### timestep
+    G38 = NeuronGroup(1, 'v: 1')
+    G38.v = 'timestep(0.1*ms, 0.001*ms)'
+
+    S38 = Synapses(G, G, 'w: 1')
+    S38.connect(condition='timestep(0.1*ms, 0.001*ms) == 100')
+
+
     run(0*ms)
+
+    assert_allclose([G38.v[0]], [100])
+    assert_allclose([S38.N[:]], [1])
 
     assert_allclose([G36.v[0]], [1])
     assert_allclose([S36.N[:]], [1])

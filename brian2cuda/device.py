@@ -177,7 +177,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def __init__(self):
         super(CUDAStandaloneDevice, self).__init__()
-        self.active_objects = set()
 
     def code_object_class(self, codeobj_class=None, fallback_pref=None):
         '''
@@ -207,8 +206,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     override_conditional_write=None):
         if template_kwds == None:
             template_kwds = {}
-        if hasattr(self, 'profile'):
-            template_kwds['profile'] = self.profile
+        template_kwds['profiled'] = self.enable_profiling
         template_kwds['bundle_mode'] = prefs["devices.cuda_standalone.push_synapse_bundles"]
         no_or_const_delay_mode = False
         if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
@@ -309,8 +307,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_float_type=prefs['devices.cuda_standalone.curand_float_type'],
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
-                        active_objects=self.active_objects,
-                        profile=self.profile)
+                        profiled_codeobjects=self.profiled_codeobjects)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -626,7 +623,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
-                                                           profile=self.profile,
+                                                           profiled=self.enable_profiling,
                                                            curand_float_type=prefs['devices.cuda_standalone.curand_float_type'])
         writer.write('rand.*', rand_tmp)
 
@@ -649,8 +646,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             maximum_run_time = float(maximum_run_time)
         network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
-                                                                 eventspace_arrays=self.eventspace_arrays,
-                                                                 profile=self.profile)
+                                                                 eventspace_arrays=self.eventspace_arrays)
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
@@ -662,9 +658,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         code_objects=self.code_objects.values(),
                                                         additional_headers=run_includes,
                                                         array_specs=self.arrays,
-                                                        clocks=self.clocks,
-                                                        profile=self.profile
-                                                        )
+                                                        clocks=self.clocks)
         writer.write('run.*', run_tmp)
 
     def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads, disable_asserts=False):
@@ -713,7 +707,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=True,
-              profile=None, with_output=True, disable_asserts=False,
+              with_output=True, disable_asserts=False,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
               run_args=None, direct_call=True, **kwds):
@@ -796,9 +790,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     msg += "Unknown keyword argument '%s'. " % kwd
             raise TypeError(msg)
 
-        if not profile is None:
-            raise TypeError("The profile argument has to be set in `set_device()`, not in `device.build()`.")
-
         if debug and disable_asserts:
             logger.warn("You have disabled asserts in debug mode. Are you sure this is what you wanted to do?")
 
@@ -861,27 +852,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
-
-        if not isinstance(profile, bool) or profile:  # everything but False
-            raise TypeError("In 'cuda_standalone' mode, the profile argument "
-                            "has to be set in `set_device()`, not in `run()`")
-
-        if 'profile' in self.build_options:
-            profile = self.build_options.pop('profile')
-            assert 'profile' not in self.build_options
-            if not isinstance(profile, bool) and not profile == 'blocking':
-                raise TypeError("Unknown profile argument in `set_device()`. Has to be bool or 'blocking'. "
-                                "Got {} ({})".format(profile, type(profile)))
-            self.profile = profile
-        else:
-            self.profile = False  # default
-
         ###################################################
         ### This part is copied from CPPStandaoneDevice ###
         ###################################################
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
                          '%s') % ', '.join(kwds.keys()))
+        # We store this as an instance variable for later access by the
+        # `code_object` method
+        self.enable_profiling = profile
+
         net._clocks = {obj.clock for obj in net.objects}
         t_end = net.t+duration
         for clock in net._clocks:
@@ -965,22 +945,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ### From here on the code differs from CPPStandaloneDevice ###
         ##############################################################
 
-        # For profiling variables we need a unique set of all active objects in the simulation over possibly multiple runs
-        self.active_objects.update([obj[1].name for obj in code_objects])
-
         # Generate the updaters
         run_lines = ['{net.name}.clear();'.format(net=net)]
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:
-            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_generation, &random_number_generation_timer_start, '
-                    '&random_number_generation_timer_stop, &random_number_generation_profiling_info);'.format(clock=clock, net=net))
+            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_generation);'.format(clock=clock, net=net))
 
         all_clocks = set()
         for clock, codeobj in code_objects:
-            run_lines.append('{net.name}.add(&{clock.name}, _run_{codeobj.name}, &{codeobj.name}_timer_start, '
-                             '&{codeobj.name}_timer_stop, &{codeobj.name}_profiling_info);'.format(clock=clock,
-                                                                                               net=net, codeobj=codeobj))
+            run_lines.append('{net.name}.add(&{clock.name}, _run_{codeobj.name});'.format(clock=clock,
+                                                                                          net=net, codeobj=codeobj))
             all_clocks.add(clock)
 
         # Under some rare circumstances (e.g. a NeuronGroup only defining a
@@ -991,17 +966,28 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # such clocks without a code function in the network.
         for clock in net._clocks:
             if clock not in all_clocks:
-                run_lines.append('{net.name}.add(&{clock.name}, NULL, NULL, NULL, NULL);'.format(clock=clock, net=net))
+                run_lines.append('{net.name}.add(&{clock.name}, NULL);'.format(clock=clock, net=net))
 
-        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
-            run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
+        # In our benchmark scripts we run one example `nvprof` run,
+        # which is informative especially when not running in profile
+        # mode. In order to have the `nvprof` call only profile the
+        # kernels which are run every timestep, we add
+        # `cudaProfilerStart()`, `cudaDeviceSynchronize()` and
+        # `cudaProfilerStop()`. But this might be confusing for anybody
+        # who runs `nvprof` on their generated code, since it will not
+        # report any profiling info about kernels, that initialise
+        # things only once in the beginning? Maybe get rid of it in a
+        # release version? (TODO)
+        run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
+        # run everything that is run on a clock
         run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
                                                                                               duration=float(duration),
                                                                                               report_call=report_call,
                                                                                               report_period=float(report_period)))
-        if True:#self.profile and self.profile != 'blocking':  # self.profile == True
-            run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
-            run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')
+        # nvprof stuff
+        run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
+        run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')
+
         self.main_queue.append(('run_network', (net, run_lines)))
 
         # Manually set the cache for the clocks, simulation scripts might
