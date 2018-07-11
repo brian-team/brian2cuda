@@ -1,6 +1,7 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
+#include "objects.h"
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
