@@ -204,8 +204,8 @@ def test_synaptic_effect_modes():
     S0.connect()
     # the on_post pathway serializes entirely in synaptic_effects == 'source' mode
     S1 = Synapses(group, neuron, on_post='v_post-=1')
-    S1.post.delay = 0*ms
     S1.connect()
+    S1.post.delay = 0*ms
     mon = SpikeMonitor(neuron, variables=['v'])
 
     run(2*defaultclock.dt)

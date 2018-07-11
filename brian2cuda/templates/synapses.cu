@@ -15,6 +15,8 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
+    {# TODO: we only need _N if we have random numbers per synapse, add a if test here #}
+    unsigned int _N,
     unsigned int bid_offset,
     unsigned int timestep,
     unsigned int THREADS_PER_BLOCK,
@@ -72,6 +74,7 @@ kernel_{{codeobj_name}}(
                         {
                             // _idx is the synapse id
                             int32_t _idx = propagating_synapses[j];
+                            _vectorisation_idx = j;
 
                             {{vector_code|autoindent}}
                         }
@@ -198,6 +201,7 @@ if ({{pathway.name}}_max_size > 0)
     for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
     {
         kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+            _N,
             bid_offset,
             {{owner.clock.name}}.timestep[0],
             num_threads,

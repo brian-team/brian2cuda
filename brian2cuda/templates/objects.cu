@@ -126,19 +126,12 @@ __global__ void {{path.name}}_init(
 {% endfor %}
 {% endfor %}
 
-// timers for profiling
-{% for codeobj in active_objects %}
-timer_type brian::{{codeobj}}_timer_start;
-timer_type brian::{{codeobj}}_timer_stop;
-{% endfor %}
-timer_type brian::random_number_generation_timer_start;
-timer_type brian::random_number_generation_timer_stop;
-
-// profiling infos
-{% for codeobj in active_objects %}
+{% if profiled_codeobjects is defined %}
+// Profiling information for each code object
+{% for codeobj in profiled_codeobjects | sort %}
 double brian::{{codeobj}}_profiling_info = 0.0;
 {% endfor %}
-double brian::random_number_generation_profiling_info = 0.0;
+{% endif %}
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::curand_generator;
@@ -202,28 +195,17 @@ void _init_arrays()
     {% endfor %}
     {% endfor %}
 
-    {% if profile and profile != 'blocking' %}
-    // Create cudaEvents for profiling
-    {% for codeobj in active_objects %}
-    CUDA_SAFE_CALL(
-            cudaEventCreate(&{{codeobj}}_timer_start)
-            );
-    CUDA_SAFE_CALL(
-            cudaEventCreate(&{{codeobj}}_timer_stop)
-            );
-    {% endfor %}
-    CUDA_SAFE_CALL(
-            cudaEventCreate(&random_number_generation_timer_start)
-            );
-    CUDA_SAFE_CALL(
-            cudaEventCreate(&random_number_generation_timer_stop)
-            );
-    {% endif %}
-
     // Arrays initialized to 0
-    {% for var in zero_arrays | sort(attribute='name') %}
-        {% if not (var in dynamic_array_specs or var in eventspace_arrays) %}
-            {% set varname = array_specs[var] %}
+    {% for var, varname in zero_arrays | sort(attribute='1') %}
+        {% if varname in dynamic_array_specs.values() %}
+            {{varname}}.resize({{var.size}});
+            dev{{varname}}.resize({{var.size}});
+            for(int i=0; i<{{var.size}}; i++)
+            {
+                {{varname}}[i] = 0;
+                dev{{varname}}[i] = 0;
+            }
+        {% elif not var in eventspace_arrays %}
             {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
             for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
             CUDA_SAFE_CALL(
@@ -232,24 +214,11 @@ void _init_arrays()
             CUDA_SAFE_CALL(
                     cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
                     );
-
-        {% endif %}
-        {% if (var in dynamic_array_specs) %}
-            {% set varname = array_specs[var] %}
-            _dynamic{{varname}}.resize({{var.size}});
-            dev_dynamic{{varname}}.resize({{var.size}});
-                for(int i=0; i<{{var.size}}; i++)
-            {
-                _dynamic{{varname}}[i] = 0;
-                dev_dynamic{{varname}}[i] = 0;
-            }
-
         {% endif %}
     {% endfor %}
 
     // Arrays initialized to an "arange"
-    {% for var, start in arange_arrays %}
-    {% set varname = array_specs[var] %}
+    {% for var, varname, start in arange_arrays | sort(attribute='1') %}
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
     for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
     CUDA_SAFE_CALL(
@@ -259,7 +228,6 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{varname}}, {{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyHostToDevice)
             );
-
     {% endfor %}
 
     // static arrays
@@ -393,21 +361,21 @@ void _write_arrays()
         }
     {% endfor %}
 
+    {% if profiled_codeobjects is defined and profiled_codeobjects %}
     // Write profiling info to disk
     ofstream outfile_profiling_info;
     outfile_profiling_info.open("results/profiling_info.txt", ios::out);
     if(outfile_profiling_info.is_open())
     {
-    {% for obj in active_objects %}
-    outfile_profiling_info << "{{obj}}\t" << {{obj}}_profiling_info << std::endl;
+    {% for codeobj in profiled_codeobjects | sort %}
+    outfile_profiling_info << "{{codeobj}}\t" << {{codeobj}}_profiling_info << std::endl;
     {% endfor %}
-    outfile_profiling_info << "random_number_generation\t" << random_number_generation_profiling_info << std::endl;
     outfile_profiling_info.close();
     } else
     {
         std::cout << "Error writing profiling info to file." << std::endl;
     }
-
+    {% endif %}
     // Write last run info to disk
     ofstream outfile_last_run_info;
     outfile_last_run_info.open("results/last_run_info.txt", ios::out);
@@ -435,24 +403,6 @@ __global__ void {{path.name}}_destroy()
 void _dealloc_arrays()
 {
     using namespace brian;
-
-    {% if profile and profile != 'blocking' %}
-    // Destroy cudaEvents for profiling
-    {% for codeobj in active_objects %}
-    CUDA_SAFE_CALL(
-            cudaEventDestroy({{codeobj}}_timer_start)
-            );
-    CUDA_SAFE_CALL(
-            cudaEventDestroy({{codeobj}}_timer_stop)
-            );
-    {% endfor %}
-    CUDA_SAFE_CALL(
-            cudaEventDestroy(random_number_generation_timer_start)
-            );
-    CUDA_SAFE_CALL(
-            cudaEventDestroy(random_number_generation_timer_stop)
-            );
-    {% endif %}
 
     {% for co in codeobj_with_rand | sort(attribute='name') %}
     CUDA_SAFE_CALL(
@@ -527,11 +477,6 @@ void _dealloc_arrays()
 #include <ctime>
 // typedefs need to be outside the include guards to
 // be visible to all files including objects.h
-{% if not profile or profile == 'blocking' %}
-typedef std::clock_t timer_type;
-{% else %}
-typedef cudaEvent_t timer_type;
-{% endif %}
 typedef {{curand_float_type}} randomNumber_t;  // random number type
 
 #ifndef _BRIAN_OBJECTS_H
@@ -626,19 +571,12 @@ extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 
-// timers for profiling
-{% for codeobj in active_objects %}
-extern timer_type {{codeobj}}_timer_start;
-extern timer_type {{codeobj}}_timer_stop;
-{% endfor %}
-extern timer_type random_number_generation_timer_start;
-extern timer_type random_number_generation_timer_stop;
-
-// profiling infos
-{% for codeobj in active_objects %}
+{% if profiled_codeobjects is defined %}
+// Profiling information for each code object
+{% for codeobj in profiled_codeobjects | sort %}
 extern double {{codeobj}}_profiling_info;
 {% endfor %}
-extern double random_number_generation_profiling_info;
+{% endif %}
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t curand_generator;

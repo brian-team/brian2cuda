@@ -23,20 +23,15 @@ Network::Network()
 void Network::clear()
 {
     objects.clear();
-    cuda_events.clear();
-    profiling_infos.clear();
 }
 
-void Network::add(Clock *clock, codeobj_func func, timer_type *timer_start, timer_type *timer_stop, double *profiling_time)
+void Network::add(Clock *clock, codeobj_func func)
 {
 #if defined(_MSC_VER) && (_MSC_VER>=1700)
     objects.push_back(std::make_pair(std::move(clock), std::move(func)));
-    cuda_events.push_back(std::make_pair(std::move(timer_start), std::move(timer_stop)));
 #else
     objects.push_back(std::make_pair(clock, func));
-    cuda_events.push_back(std::make_pair(timer_start, timer_stop));
 #endif
-    profiling_infos.push_back(profiling_time);
 }
 
 void Network::run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period)
@@ -62,10 +57,6 @@ void Network::run(const double duration, void (*report_func)(const double, const
     double elapsed_realtime;
     bool did_break_early = false;
 
-    {% if profile %}
-    assert(profiling_infos.size() == objects.size());
-    bool first_cycle = true;
-    {% endif %}
     while(clock && clock->running())
     {
         t = clock->t[0];
@@ -89,39 +80,6 @@ void Network::run(const double duration, void (*report_func)(const double, const
                 codeobj_func func = objects[i].second;
                 if (func)  // code objects can be NULL in cases where we store just the clock
                 {
-                    {# Since cudaEvents run asynchornously on the GPU, we calculate elapsed times
-                       for the codeobjects just before they are run again (which resets the events). #}
-                    {% if profile %}
-                    // collect profiling infos from last execution of the current codeobject
-                    if (!first_cycle)
-                    {
-                        {% if profile == 'blocking' %}
-                        *(profiling_infos[i]) += (double)(*cuda_events[i].second - *cuda_events[i].first)/CLOCKS_PER_SEC;
-                        {% else %}
-                        cudaError_t kernel_status = cudaEventQuery(*cuda_events[i].second);
-                        if (kernel_status == cudaSuccess)
-                        {
-                            float elapsed_gpu_time;
-                            CUDA_SAFE_CALL(
-                                    cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second)
-                                    );
-                            *(profiling_infos[i]) += elapsed_gpu_time / 1000;
-                        }
-                        else if (kernel_status == cudaErrorNotReady)
-                        {
-                            printf("WARNING kernels in %i. active codeobject took longer than one clock cycle. "
-                                    "Can't take into account GPU time spend in this kernel call. If this warning appears "
-                                    "often, the profiling results will be unreliable. Consider using the "
-                                    "profile='blocking' option in network_run().\n", i);
-                        }
-                        else
-                        {
-                            printf("ERROR caught in %s:%d %s\n", __FILE__, __LINE__, cudaGetErrorString(kernel_status));
-                        }
-                        {% endif %}{# profile == 'blocking #}
-                    }
-                    {% endif %}{# profile #}
-                    // run codeobject
                     func();
                 }
             }
@@ -146,9 +104,6 @@ void Network::run(const double duration, void (*report_func)(const double, const
         }
         {% endif %}
 
-        {% if profile %}
-        first_cycle = false;
-        {% endif %}
     }
 
     if(!did_break_early) t = t_end;
@@ -164,41 +119,6 @@ void Network::run(const double duration, void (*report_func)(const double, const
     {
         report_func(elapsed_realtime, 1.0, t_start, duration);
     }
-
-    {% if profile %}
-    // Add profiled times from last cycle
-    for(int i=0; i<objects.size(); i++)
-    {
-        codeobj_func func = objects[i].second;
-        if (func)  // func can be NULL
-        {
-            {% if profile == 'blocking' %}
-            *(profiling_infos[i]) += (double)(*cuda_events[i].second - *cuda_events[i].first)/CLOCKS_PER_SEC;
-            {% else %}
-            cudaError_t kernel_status = cudaEventQuery(*cuda_events[i].second);
-            if (kernel_status == cudaSuccess)
-            {
-                float elapsed_gpu_time;
-                CUDA_SAFE_CALL(
-                        cudaEventElapsedTime(&elapsed_gpu_time, *cuda_events[i].first, *cuda_events[i].second)
-                        );
-                *(profiling_infos[i]) += elapsed_gpu_time / 1000;
-            }
-            else if (kernel_status == cudaErrorNotReady)
-            {
-                printf("WARNING kernels in %i. active codeobject took longer than one clock cycle. "
-                        "Can't take into account GPU time spend in this kernel call. If this warning appears "
-                        "often, the profiling results will be unreliable. Consider using the "
-                        "profile='blocking' option in network_run().\n", i);
-            }
-            else
-            {
-                printf("ERROR caught in %s:%d %s\n", __FILE__, __LINE__, cudaGetErrorString(kernel_status));
-            }
-            {% endif %}
-        }
-    }
-    {% endif %}
 }
 
 void Network::compute_clocks()
@@ -263,12 +183,10 @@ public:
     double t;
     static double _last_run_time;
     static double _last_run_completed_fraction;
-    std::vector< std::pair< timer_type*, timer_type* > > cuda_events;
-    std::vector< double* > profiling_infos;
 
     Network();
     void clear();
-    void add(Clock *clock, codeobj_func func, timer_type* timer_start, timer_type *timer_stop, double *profiling_time);
+    void add(Clock *clock, codeobj_func func);
     void run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period);
 };
 

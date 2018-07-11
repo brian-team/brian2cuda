@@ -15,8 +15,7 @@ set_device("cuda_standalone")
 ```
 
 ### Installation
-The Brian2 version with which this implementation is working is stored in a submodule in `frozen_repos/brian` (currently Brian2 commit [fadc6a0aeb90d1b4d343470628457d8561536f67
-](https://github.com/brian-team/brian2/tree/fadc6a0aeb90d1b4d343470628457d8561536f67)).
+The Brian2 version with which this implementation is working is stored in a submodule in `frozen_repos/brian` (currently brian-team/brian2@320a5f6b36e2aa5dfe7e6b22bd46c3652ad9cc99).
 
 After cloning you can initialise the submodule by running this command from inside this repository:
 

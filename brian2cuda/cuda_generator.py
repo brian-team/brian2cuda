@@ -362,7 +362,7 @@ class CUDACodeGenerator(CodeGenerator):
                 pointer_name = self.get_array_name(var)
                 if pointer_name in handled_pointers:
                     continue
-                if getattr(var, 'dimensions', 1) > 1:
+                if getattr(var, 'ndim', 1) > 1:
                     continue  # multidimensional (dynamic) arrays have to be treated differently
                 line = self.c_data_type(var.dtype) + ' * ' + self.restrict + pointer_name + ' = ' + array_name + ';'
                 lines.append(line)
@@ -537,3 +537,40 @@ rand_code = '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=rand_code,
                                                              name='_rand')
+
+
+timestep_code = '''
+// Adapted from npy_math.h and https://www.christophlassner.de/collection-of-msvc-gcc-compatibility-tricks.html
+#ifndef _BRIAN_REPLACE_ISINF_MSVC
+#define _BRIAN_REPLACE_ISINF_MSVC
+#if defined(_MSC_VER)
+#if _MSC_VER < 1900
+namespace std {
+    template <typename T>
+    __host__ __device__
+    bool isinf(const T &x)
+    {
+        return (!_finite(x))&&(!_isnan(x));
+    }
+}
+#endif
+#endif
+#endif
+__host__ __device__
+static inline int _timestep(double t, double dt)
+{
+    // maximum 32bit integer divided by 2
+    const int _infinity_int = 1073741823;
+    if (std::isinf(t))
+    {
+        if (t < 0)
+            return -_infinity_int;
+        else
+            return _infinity_int;
+    }
+    return (int)((t + 1e-3*dt)/dt);
+}
+'''
+DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(CUDACodeGenerator,
+                                                                 code=timestep_code,
+                                                                 name='_timestep')

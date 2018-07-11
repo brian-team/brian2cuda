@@ -12,14 +12,6 @@ void _run_random_number_generation()
 {
     using namespace brian;
 
-    {% if profile and profile == 'blocking'%}
-    random_number_generation_timer_start = std::clock();
-    {% elif profile %}
-    CUDA_SAFE_CALL(
-            cudaEventRecord(random_number_generation_timer_start)
-            );
-    {% endif %}
-
     // how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
     static double mb_per_obj = 50;  // MB per codeobject and rand / randn
     static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(randomNumber_t);
@@ -53,8 +45,13 @@ void _run_random_number_generation()
 
 
         {% for co in codeobj_with_rand | sort(attribute='name') %}
+        {% if co.template_name == 'synapses' %}
+        {% set N = '_array_' + co.owner.name + '_N[0]' %}
+        {% else %}
+        {% set N = co.owner._N %}
+        {% endif %}
         // Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
-        num_per_cycle_rand_{{co.name}} = {{co.owner._N}} * {{co.rand_calls}};
+        num_per_cycle_rand_{{co.name}} = {{N}} * {{co.rand_calls}};
         rand_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_rand_{{co.name}});
         num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * rand_interval_{{co.name}};
         idx_rand_{{co.name}} = rand_interval_{{co.name}};
@@ -100,8 +97,13 @@ void _run_random_number_generation()
 
 
         {% for co in codeobj_with_randn | sort(attribute='name') %}
+        {% if co.template_name == 'synapses' %}
+        {% set N = '_array_' + co.owner.name + '_N[0]' %}
+        {% else %}
+        {% set N = co.owner._N %}
+        {% endif %}
         // Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
-        num_per_cycle_randn_{{co.name}} = {{co.owner._N}} * {{co.randn_calls}};
+        num_per_cycle_randn_{{co.name}} = {{N}} * {{co.randn_calls}};
         randn_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_randn_{{co.name}});
         num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * randn_interval_{{co.name}};
         idx_randn_{{co.name}} = randn_interval_{{co.name}};
@@ -188,17 +190,6 @@ void _run_random_number_generation()
     }
     assert(dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}});
     {% endfor %}
-
-    {% if profile and profile == 'blocking'%}
-    CUDA_SAFE_CALL(
-            cudaDeviceSynchronize()
-            );
-    random_number_generation_timer_stop = std::clock();
-    {% elif profile %}
-    CUDA_SAFE_CALL(
-            cudaEventRecord(random_number_generation_timer_stop)
-            );
-    {% endif %}
 }
 {% endmacro %}
 
