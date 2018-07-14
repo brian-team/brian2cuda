@@ -492,8 +492,8 @@ void _run_{{pathobj}}_initialise_queue()
                         cudaMemcpy(d_this_bundle, h_this_bundle, memory_size, cudaMemcpyHostToDevice)
                         );
 
-                sum_bundle_sizes += num_synapses;
                 h_synapses_offset_by_bundle.push_back(sum_bundle_sizes);
+                sum_bundle_sizes += num_synapses;
                 updateMeanStd(count_bundle_sizes, mean_bundle_sizes, M2_bundle_sizes, num_synapses);
             }
             {% else %}{# not bundle_mode #}
