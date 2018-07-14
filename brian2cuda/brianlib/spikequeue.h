@@ -246,8 +246,6 @@ public:
                 assert(delay_start_idx_in_synapses_id <= syn && syn < next_delay_start_idx_in_synapses_id);
 
                 // get the delay of the current synapse and the number of synapses with that delay
-                // TODO: is it faster to once make a coalesced copy of unique_delays_offset_by_pre to shared memory? try!
-                //delay = unique_delays_by_pre[pre_post_block_id][idx_in_unique_delays];
                 assert(unique_delays);
                 delay = unique_delays[delay_offset + idx_in_unique_delays];
                 delay_occurrence = next_delay_start_idx_in_synapses_id - delay_start_idx_in_synapses_id;

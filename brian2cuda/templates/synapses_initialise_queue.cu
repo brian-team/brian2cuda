@@ -1,3 +1,33 @@
+{# TEMPLATE INFO
+ # This template creates the connectivity matrix for this SynapticPathway
+ # ({{pathobj}}). Its form depends on the delay and for heterogeneous delays
+ # on the propagation mode.
+ #
+ # DELAY MODE
+ # When the delay is set using the `Synapses` constructors `delay` keyword
+ # (e.g. `syn = Synapses(..., delay=2*ms)`) or no delay is set at all, we
+ # are in "no_or_const_delay_mode" (template parameter). If the delay is
+ # set in the objects `delay` attribute (e.g.  `syn.delay = ...`), we are
+ # not. If we are not in "no_or_const_delay_mode", we can still have the
+ # same delay for all synapses, e.g. when `syn.delay = 2*ms` was given. But
+ # we can't differentiate it on Python side from e.g. `syn.delay =
+ # "rand()*ms", where each synapse gets a different delay. Therefore we
+ # check in this template if all delays have the same value after
+ # transforming them into integer multiples of the simulation time step. If
+ # so, we set `scalar_delay = true` (cpp variable).
+ #
+ # PROPAGATION MODE
+ # If we have `scalar_delay = false` (which implies we don't have
+ # "no_or_const_delay_mode"), the connectivity information stored on the
+ # device depends on the "bundle_mode" template variable. If True, we are
+ # pushing synapse bundle IDs when a neuron spikes. All synapses of a
+ # bundle habe the same (preID, postBlock, delay). All synapse IDs are
+ # stored in these bundles, where each bundle has a unique global bundle ID.
+ # If we have no "bundle_mode" or we have homogeneous delays, all synapses
+ # IDs are sorted by (preID, postBlock) pairs and per (preID, postBlock)
+ # sorted by their delay (if they have any).
+ #}
+
 {% macro cu_file() %}
 {# USES_VARIABLES { delay } #}
 #include <thrust/sort.h>
@@ -182,88 +212,17 @@ void _run_{{pathobj}}_initialise_queue()
 
     {% endif %}{# no_or_const_delay_mode #}
 
-    ////////////////////////////////////
-    // Create host arrays and vectors //
-    ///////////////////////////////////
-    // TODO
-    {# TODO: explain this somewhere #}
-    {# delay was set using Synapses object's delay attribute: `conn = Synapses(...); conn.delay = ...` #}
-    {# all delays have the same value, e.g. `conn.delay = 2*ms` or because of small jitter + rounding to dt #}
-    // synapse IDs and delays in connectivity matrix, projected to 1D arrays of vectors
-    // sorted first by pre neuron ID, then by cuda blocks (corresponding to groups of post neuron IDs)
-    // the index for one pre neuron ID and block ID is: ( pre_neuron_ID * num_blocks + block_ID )
-
-    // pre neuron IDs, post neuron IDs and delays for all synapses (sorted by synapse IDs)
-
-    {# This template creates the connectivity matrix for this SynapticPathway
-     # ({{pathobj}}). Its form depends on the delay and for heterogeneous delays
-     # on the propagation mode.
-     #
-     # DELAY MODE
-     # When the delay is set using the `Synapses` constructors `delay` keyword
-     # (e.g. `syn = Synapses(..., delay=2*ms)`) or no delay is set at all, we
-     # are in "no_or_const_delay_mode" (template parameter). If the delay is
-     # set in the objects `delay` attribute (e.g.  `syn.delay = ...`), we are
-     # not. If we are not in "no_or_const_delay_mode", we can still have the
-     # same delay for all synapses, e.g. when `syn.delay = 2*ms` was given. But
-     # we can't differentiate it on Python side from e.g. `syn.delay =
-     # "rand()*ms", where each synapse gets a different delay. Therefore we
-     # check in this template if all delays have the same value after
-     # transforming them into integer multiples of the simulation time step. If
-     # so, we set `scalar_delay = true` (cpp variable).
-     #
-     # PROPAGATION MODE
-     # If we have `scalar_delay = false` (which implies we don't have
-     # "no_or_const_delay_mode"), the connectivity information stored on the
-     # device depends on the "bundle_mode" template variable. If True, we are
-     # pushing synapses bundle IDs when a neuron spikes. All synapses of a
-     # bundle habe the same (preID, postBlock, delay). All synapse IDs are
-     # stored in these bundles, where each bundle has a unique global bundle ID.
-     # If we have no "bundle_mode" or we have homogeneous delays, all synapses
-     # IDs are sorted by (preID, postBlock) pairs and per (preID, postBlock)
-     # sorted by their delay (if they have any).
-     #}
-
-    {#{% if not no_or_const_delay_mode and bundle_mode %}#}
-    /* BUNDLE MODE
-     * This SynapticPathway ({{pathobj}}) has heterogenously distributed delays
-     * for its synapses and propagates spike events by pushing bundles of
-     * synapse IDs. Each bundle is defined by a unqique tripled of (preID,
-     * postBlock, delay). preID is the presynaptic neuron ID, postBlock is a
-     * range of postsynaptic neurons and delay is a synaptic transmission delay.
-     * Each bundle has a global bundle ID.
-     * This method creates the following arrays in global memory:
-     * For each bundle:
-     *     array: all synapse IDs in that bundle
-     *     integer: number of synapseIDs in that bundlea
-     *     integer: delay of all synapses in that bundle
-     * For each (preID, postBlock) pair:
-        TODO
-     *     integer: global bundle start
-     */
-
-
-    /*
-     * consists of a two-dimensional array in device memory,
-     * storing synapse IDs for each pair of (preID, postBlock), where preID are
-     * all presynaptic neuron IDs and postBlock are all postsynaptic neuron IDs,
-     * split equally into `num_parallel_blocks` blocks (number of CUDA blocks
-     * run in parallel while pushing). The matrix is first sorted by pre neuron
-     * IDs and then by post neuron blocks.
-     *
-     * Depending on the delay
-     * mode,  and for heterogeneous delays on the spike propagation mode.      * If `scalar_delay` is `false`, the connectivity matrix depends on the
-     * propagation mode. I
-     * "no_or_const_delay_mode". In the latter case, it
-     */
+    ////////////////////////////////////////////////////////
+    // Create array and vector variables (in host memory) //
+    ////////////////////////////////////////////////////////
 
     /* VARIABLE NAMING:
-     * Not scalar variables are named after TYPE_NAME_STRUCTURE, whith:
-     * STRUCTURE: the first dimensions structure (`by_pre`, `by_bundle` or none)
-     *   `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`, one
-     *             for each pair of (preID, postBlock).
+     * Not scalar variables are named after TYPE_NAME_STRUCTURE, with:
+     * STRUCTURE: the first array dimensions structure (`by_pre`, `by_bundle` or none)
+     *   `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`,
+     *             which is the number of (preID, postBlock) pairs.
      *   `by_bundle`: thrust::host_vector, size of total number of bundles,
-     *                one for each delay value for each (preID, postBlock) pair.
+     *                which is one for each delay in each (preID, postBlock) pair.
      *                Different (preID, postBlock) pairs can have different sets
      *                of delay values -> each bundle gets a global bundleID
      *   none: If no STRUCTURE given, it's a one dim array storing everything
@@ -308,9 +267,6 @@ void _run_{{pathobj}}_initialise_queue()
     unsigned int* h_unique_delays_offset_by_pre;
     // number of unique delays for each (preID, postBlock) pair
     unsigned int* h_num_unique_delays_by_pre;
-    // array of start indices for synapses in `d_ptr_synapse_ids_by_pre` (sorted
-    // by delays) with delay from `h_unique_delays_offset_by_pre`
-    //unsigned int** d_ptr_unique_delay_start_idcs_by_pre;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
@@ -370,9 +326,9 @@ void _run_{{pathobj}}_initialise_queue()
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_after_dealloc = used_device_memory;
 
-    ////////////////////////////////////////////////////////
-    // Memory allocations which depends on the delay mode //
-    ////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////
+    // Memory allocations which depend on the delay mode //
+    ///////////////////////////////////////////////////////
 
     {# We only NOT need size/synapses_by_pre if we are in bundle mode with
         heterogeneous delays.
@@ -391,7 +347,6 @@ void _run_{{pathobj}}_initialise_queue()
     {
         {% if not bundle_mode %}
         h_unique_delays_offset_by_pre =  new unsigned int[num_pre_post_blocks];
-        //d_ptr_unique_delay_start_idcs_by_pre =  new unsigned int*[num_pre_post_blocks];
         h_num_unique_delays_by_pre = new unsigned int[num_pre_post_blocks];
         {% endif %}
 
@@ -618,9 +573,7 @@ void _run_{{pathobj}}_initialise_queue()
                 {% if not bundle_mode %}
                 h_unique_delays_offset_by_pre[i] = sum_num_unique_elements;
 
-                // copy the unique delays start indices to the device and
-                // store the device pointers
-                //d_ptr_unique_delay_start_idcs_by_pre[i] = d_ptr_unique_delay_start_idcs + sum_num_unique_elements;
+                // copy the unique delays start indices to the device
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_ptr_unique_delay_start_idcs + sum_num_unique_elements,
                                    thrust::raw_pointer_cast(&(h_vec_unique_delay_start_idcs_by_pre[i][0])),
@@ -692,13 +645,6 @@ void _run_{{pathobj}}_initialise_queue()
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_unique_delays_by_pre,
                 {{pathobj}}_num_unique_delays_by_pre, num_pre_post_blocks,
                 "number of unique delays");
-
-//        // unique delay start idx
-//        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
-//                d_ptr_unique_delay_start_idcs_by_pre,
-//                {{pathobj}}_unique_delay_start_idcs_by_pre,
-//                num_pre_post_blocks,
-//                "pointers to unique delay start indices");
         {% endif %}{# bundle_mode #}
 
     }  // end if (!scalar_delay)
@@ -760,7 +706,7 @@ void _run_{{pathobj}}_initialise_queue()
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
     << "\n\tmemory usage: TOTAL: " << total_memory_MB << " MB (~"
-        << total_memory_MB / syn_N * 1024.0 * 1024.0  << " KB per synapses)"
+        << total_memory_MB / syn_N * 1024.0 * 1024.0  << " byte per synapse)"
         << std::endl;
 
     for(auto const& tuple: memory_recorder){
@@ -889,7 +835,6 @@ void _run_{{pathobj}}_initialise_queue()
         {% else %}
         delete [] h_unique_delays_offset_by_pre;
         delete [] h_num_unique_delays_by_pre;
-        //delete [] d_ptr_unique_delay_start_idcs_by_pre;
         {% endif %}
     }
     {% endif %}
