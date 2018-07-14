@@ -22,6 +22,7 @@ from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.utils.filetools import copy_directory, ensure_directory
+from brian2.utils.stringtools import get_identifiers
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
@@ -176,6 +177,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     '''
 
     def __init__(self):
+        # list of pre/post ID arrays that are not needed in device memory
+        self.delete_synaptic_pre = {}
+        self.delete_synaptic_post = {}
         super(CUDAStandaloneDevice, self).__init__()
 
     def code_object_class(self, codeobj_class=None, fallback_pref=None):
@@ -201,6 +205,37 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         else:
             return codeobj_class
 
+    def get_array_read_write(self, abstract_code, variables):
+        ##################################################################
+        # This code is copied from CodeGenerator.translate() and
+        # CodeGenerator.array_read_write() and should give us a set of
+        # variables to which will be written or from which will be read in
+        # `vector_code`
+        ##################################################################
+        vector_statements = {}
+        for ac_name, ac_code in abstract_code.iteritems():
+            statements = make_statements(ac_code,
+                                         variables,
+                                         prefs['core.default_float_dtype'],
+                                         optimise=True,
+                                         blockname=ac_name)
+            _, vector_statements[ac_name] = statements
+        read = set()
+        write = set()
+        for statements in vector_statements.itervalues():
+            for stmt in statements:
+                ids = get_identifiers(stmt.expr)
+                # if the operation is inplace this counts as a read.
+                if stmt.inplace:
+                    ids.add(stmt.var)
+                read = read.union(ids)
+                write.add(stmt.var)
+        read = set(varname for varname, var in variables.items()
+                   if isinstance(var, ArrayVariable) and varname in read)
+        write = set(varname for varname, var in variables.items()
+                    if isinstance(var, ArrayVariable) and varname in write)
+        return read, write
+
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
@@ -214,24 +249,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if template_name == "synapses":
-            ##################################################################
-            # This code is copied from CodeGenerator.translate() and CodeGenerator.array_read_write()
-            # and should give us a set of variables to which will be written in `vector_code`
-            vector_statements = {}
-            for ac_name, ac_code in abstract_code.iteritems():
-                statements = make_statements(ac_code,
-                                             variables,
-                                             prefs['core.default_float_dtype'],
-                                             optimise=True,
-                                             blockname=ac_name)
-                _, vector_statements[ac_name] = statements
-            write = set()
-            for statements in vector_statements.itervalues():
-                for stmt in statements:
-                    write.add(stmt.var)
-            write = set(varname for varname, var in variables.items()
-                        if isinstance(var, ArrayVariable) and varname in write)
-            ##################################################################
+            print("TEMPLATE NAME", template_name)
+            print('name', name)
+            print('owner', owner)
+            print('owner.name', owner.name)
+            read, write = self.get_array_read_write(abstract_code, variables)
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
             for varname in variables.iterkeys():
@@ -247,6 +269,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             template_kwds["synaptic_effects"] = synaptic_effects
             print('debug syn effect mdoe ', synaptic_effects)
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
+            # check if pre/post IDs are needed per synapse (which is the case
+            # only if presynapic/postsynapitc variables are used in synapses code)
+            # These will be deleted on the device in `run_lines` (see below)
+            read_write = read.union(write)
+            synaptic_pre_array_name = self.get_array_name(owner.variables['_synaptic_pre'], False)
+            synaptic_post_array_name = self.get_array_name(owner.variables['_synaptic_post'], False)
+            if synaptic_pre_array_name not in self.delete_synaptic_pre.iterkeys():
+                self.delete_synaptic_pre[synaptic_pre_array_name] = True
+            if synaptic_post_array_name not in self.delete_synaptic_post.iterkeys():
+                self.delete_synaptic_post[synaptic_post_array_name] = True
+            for varname in variables.iterkeys():
+                if varname in read_write:
+                    idx = variable_indices[varname]
+                    if idx == '_presynaptic_idx':
+                        self.delete_synaptic_pre[synaptic_pre_array_name] = False
+                    if idx == '_postsynaptic_idx':
+                        self.delete_synaptic_post[synaptic_post_array_name] = False
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
@@ -945,8 +984,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ### From here on the code differs from CPPStandaloneDevice ###
         ##############################################################
 
+        # these are not really `run_lines`, but they need to be called after
+        # synapses_initialise_queue codeobjects, therefore just before the
+        # network creation, so I put them here
+        run_lines = []
+        for arrname, boolean in self.delete_synaptic_pre.iteritems():
+            if boolean:
+                lines = '''
+                dev{synaptic_pre}.clear();
+                dev{synaptic_pre}.shrink_to_fit();
+                '''.format(synaptic_pre=arrname)
+                run_lines.append(lines)
+        for arrname, boolean in self.delete_synaptic_post.iteritems():
+            if boolean:
+                lines = '''
+                dev{synaptic_post}.clear();
+                dev{synaptic_post}.shrink_to_fit();
+                '''.format(synaptic_post=arrname)
+                run_lines.append(lines)
+
         # Generate the updaters
-        run_lines = ['{net.name}.clear();'.format(net=net)]
+        run_lines.append('{net.name}.clear();'.format(net=net))
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:

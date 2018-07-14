@@ -324,7 +324,7 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {% if not var in multisynaptic_idx_vars and not var.name == 'delay' %}
+    {% if not var in multisynaptic_idx_vars and not var.name in ['delay', '_synaptic_pre', '_synaptic_post'] %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};
