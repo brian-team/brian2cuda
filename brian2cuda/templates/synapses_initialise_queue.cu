@@ -51,7 +51,7 @@ namespace {
     // vector_t<T> is an alias for thrust:host_vector<T>
     template <typename T> using vector_t = thrust::host_vector<T>;
     // tuple type typedef
-    typedef std::tuple<std::string, size_t, unsigned int> tuple_t;
+    typedef std::tuple<std::string, size_t, int> tuple_t;
 
     std::vector<tuple_t> memory_recorder;
 
@@ -60,7 +60,7 @@ namespace {
     // mean accumulates the mean of the entire dataset
     // M2 aggregates the squared distance from the mean
     // count aggregates the number of samples seen so far
-    inline void updateMeanStd(unsigned int &count, double &mean, double& M2, double newValue){
+    inline void updateMeanStd(int &count, double &mean, double& M2, double newValue){
         count += 1;
         double delta = newValue - mean;
         mean += delta / count;
@@ -69,7 +69,7 @@ namespace {
     }
 
     // get std from aggregated M2 value
-    double getStd(unsigned int count, double M2){
+    double getStd(int count, double M2){
         if (count < 2){
             return NAN;
         }
@@ -86,7 +86,7 @@ namespace {
     // NOTE: T can be a pointer variable itself (when copying 2D arrays)
     template <typename T>
     inline void _copyHostArrayToDeviceSymbol(const T *host_array, T *&device_symbol,
-            unsigned int num_elements, const char* name, const char* file,
+            int num_elements, const char* name, const char* file,
             const int line){
         T *d_ptr_tmp;
         size_t bytes = sizeof(T) * num_elements;
@@ -108,12 +108,12 @@ namespace {
 
 
 __global__ void _run_{{codeobj_name}}_kernel(
-    unsigned int _source_N,
-    unsigned int _num_blocks,
-    unsigned int _num_threads,
+    int _source_N,
+    int _num_blocks,
+    int _num_threads,
     double _dt,
-    unsigned int _syn_N,
-    unsigned int num_queues,
+    int _syn_N,
+    int num_queues,
     bool new_mode)
 {
     using namespace brian;
@@ -153,23 +153,23 @@ void _run_{{pathobj}}_initialise_queue()
     size_t used_device_memory_start = used_device_memory;
 
     {# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %DEVICE_PARAMETERS% #}
-    uint64_t syn_N_check = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
+    int64_t syn_N_check = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
     if (syn_N_check == 0){
         return;
     }
-    else if (syn_N_check > UINT_MAX){
-        printf("ERROR: There are more Synapses (%lu) than an unsigned int can "
-               "hold on this system (%u).\n", syn_N_check, UINT_MAX);
+    else if (syn_N_check > INT_MAX){
+        printf("ERROR: There are more Synapses (%lu) than an int can "
+               "hold on this system (%u).\n", syn_N_check, INT_MAX);
     }
     // total number of synapses
-    unsigned int syn_N = (unsigned int)syn_N_check;
+    int syn_N = (int)syn_N_check;
 
     // simulation time step
     double dt = {{owner.clock.name}}.dt[0];
     // number of neurons in source group
-    unsigned int source_N = {{owner.source.N}};
+    int source_N = {{owner.source.N}};
     // number of neurons in target group
-    unsigned int target_N = {{owner.target.N}};
+    int target_N = {{owner.target.N}};
 
     //TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
     {% if not no_or_const_delay_mode %}
@@ -182,30 +182,30 @@ void _run_{{pathobj}}_initialise_queue()
     //////////////////////
 
     // total number of (preID, postBlock) pairs
-    unsigned int num_pre_post_blocks = num_parallel_blocks * source_N;
+    int num_pre_post_blocks = num_parallel_blocks * source_N;
     // size of the connectivity matrix (equal number of synapses)
-    unsigned int size_connectivity_matrix = 0;
+    int size_connectivity_matrix = 0;
 
     // statistics of number of synapses per (preID, postBlock) pair
-    unsigned int sum_num_elements = 0;
-    unsigned int count_num_elements = 0;
+    int sum_num_elements = 0;
+    int count_num_elements = 0;
     double mean_num_elements = 0;
     double M2_num_elements = 0;
 
     {% if not no_or_const_delay_mode %}
     // statistics of number of unique delays per (preID, postBlock) pair
-    unsigned int sum_num_unique_elements = 0;
-    unsigned int count_num_unique_elements = 0;
+    int sum_num_unique_elements = 0;
+    int count_num_unique_elements = 0;
     double mean_num_unique_elements = 0;
     double M2_num_unique_elements = 0;
 
     {% if bundle_mode %}
     // total number of bundles in all (preID, postBlock) pairs (not known yet)
-    unsigned int num_bundle_ids = 0;
+    int num_bundle_ids = 0;
 
     // statistics of number of synapses per bundle
-    unsigned int sum_bundle_sizes = 0;
-    unsigned int count_bundle_sizes = 0;
+    int sum_bundle_sizes = 0;
+    int count_bundle_sizes = 0;
     double mean_bundle_sizes = 0;
     double M2_bundle_sizes = 0;
     {% endif %}{# bundle_mode #}
@@ -245,28 +245,28 @@ void _run_{{pathobj}}_initialise_queue()
     // array of synapse IDs in device memory for each (preID, postBlock) pair
     int32_t** d_ptr_synapse_ids_by_pre;
     // number of synapses for each (preID, postBlock) pair
-    unsigned int* h_num_synapses_by_pre;
+    int* h_num_synapses_by_pre;
 
     {% if not no_or_const_delay_mode %}
     // delay for each synapse in `h_vec_synapse_ids_by_pre`,
     // only used to sort synapses by delay
-    vector_t<unsigned int>* h_vec_delays_by_pre = new vector_t<unsigned int>[num_pre_post_blocks];
+    vector_t<int>* h_vec_delays_by_pre = new vector_t<int>[num_pre_post_blocks];
     // array of vectors with unique delays and start indices in synapses arrays
-    vector_t<unsigned int>* h_vec_unique_delays_by_pre;
-    vector_t<unsigned int>* h_vec_unique_delay_start_idcs_by_pre;
+    vector_t<int>* h_vec_unique_delays_by_pre;
+    vector_t<int>* h_vec_unique_delay_start_idcs_by_pre;
     {% if bundle_mode %}
     // offset in array of all synapse IDs sorted by bundles (we are storing the
     // offset as 32bit int instead of a 64bit pointer to the bundle start)
-    vector_t<unsigned int> h_synapses_offset_by_bundle;
+    vector_t<int> h_synapses_offset_by_bundle;
     // number of synapses in each bundle
-    vector_t<unsigned int> h_num_synapses_by_bundle;
+    vector_t<int> h_num_synapses_by_bundle;
     // start of global bundle ID per (preID, postBlock) pair (+ total num bundles)
-    unsigned int* h_global_bundle_id_start_by_pre = new unsigned int[num_pre_post_blocks + 1];
+    int* h_global_bundle_id_start_by_pre = new int[num_pre_post_blocks + 1];
     {% else %}{# not bundle_mode #}
     // array of unique delays [in integer multiples of dt] in device memory
-    unsigned int* h_unique_delays_offset_by_pre;
+    int* h_unique_delays_offset_by_pre;
     // number of unique delays for each (preID, postBlock) pair
-    unsigned int* h_num_unique_delays_by_pre;
+    int* h_num_unique_delays_by_pre;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
@@ -281,9 +281,9 @@ void _run_{{pathobj}}_initialise_queue()
 
 
     //fill vectors of connectivity matrix with synapse IDs and delays (in units of simulation time step)
-    unsigned int max_delay = (int)({{_dynamic_delay}}[0] / dt + 0.5);
+    int max_delay = (int)({{_dynamic_delay}}[0] / dt + 0.5);
     {% if not no_or_const_delay_mode %}
-    unsigned int min_delay = max_delay;
+    int min_delay = max_delay;
     {% endif %}
     for(int syn_id = 0; syn_id < syn_N; syn_id++)  // loop through all synapses
     {
@@ -293,7 +293,7 @@ void _run_{{pathobj}}_initialise_queue()
         int32_t post_neuron_id = {{get_array_name(owner.synapse_targets, access_data=False)}}[syn_id] - {{owner.target.start}};
 
         {% if not no_or_const_delay_mode %}
-        unsigned int delay = (int)({{_dynamic_delay}}[syn_id] / dt + 0.5);
+        int delay = (int)({{_dynamic_delay}}[syn_id] / dt + 0.5);
         if (delay > max_delay)
             max_delay = delay;
         if (delay < min_delay)
@@ -301,16 +301,16 @@ void _run_{{pathobj}}_initialise_queue()
         {% endif %}
 
         // each parallel executed cuda block gets an equal part of post neuron IDs
-        unsigned int post_block_id = (post_neuron_id * num_parallel_blocks) / target_N;
+        int post_block_id = (post_neuron_id * num_parallel_blocks) / target_N;
         // we store synapses for each pre neuron and post block
-        unsigned int pre_post_block_id = pre_neuron_id * num_parallel_blocks + post_block_id;
+        int pre_post_block_id = pre_neuron_id * num_parallel_blocks + post_block_id;
 
         h_vec_synapse_ids_by_pre[pre_post_block_id].push_back(syn_id);
         {% if not no_or_const_delay_mode %}
         h_vec_delays_by_pre[pre_post_block_id].push_back(delay);
         {% endif %}
     }
-    unsigned int num_queues = max_delay + 1;  // we also need a current step
+    int num_queues = max_delay + 1;  // we also need a current step
 
     {% if no_or_const_delay_mode %}
     {{owner.name}}_delay = max_delay;
@@ -337,7 +337,7 @@ void _run_{{pathobj}}_initialise_queue()
     if (scalar_delay)
     {% endif %}
     {
-        h_num_synapses_by_pre = new unsigned int[num_pre_post_blocks];
+        h_num_synapses_by_pre = new int[num_pre_post_blocks];
         d_ptr_synapse_ids_by_pre = new int32_t*[num_pre_post_blocks];
     }
 
@@ -346,16 +346,16 @@ void _run_{{pathobj}}_initialise_queue()
     if (!scalar_delay)
     {
         {% if not bundle_mode %}
-        h_unique_delays_offset_by_pre =  new unsigned int[num_pre_post_blocks];
-        h_num_unique_delays_by_pre = new unsigned int[num_pre_post_blocks];
+        h_unique_delays_offset_by_pre =  new int[num_pre_post_blocks];
+        h_num_unique_delays_by_pre = new int[num_pre_post_blocks];
         {% endif %}
 
-        h_vec_unique_delay_start_idcs_by_pre = new vector_t<unsigned int>[num_pre_post_blocks];
-        h_vec_unique_delays_by_pre = new vector_t<unsigned int>[num_pre_post_blocks];
+        h_vec_unique_delay_start_idcs_by_pre = new vector_t<int>[num_pre_post_blocks];
+        h_vec_unique_delays_by_pre = new vector_t<int>[num_pre_post_blocks];
 
     }
     {% if bundle_mode %}
-    unsigned int global_bundle_id_start = 0;
+    int global_bundle_id_start = 0;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
@@ -376,7 +376,7 @@ void _run_{{pathobj}}_initialise_queue()
             // reduce the delay arrays to unique delays and store the
             // start indices in the synapses array for each unique delay
 
-            typedef vector_t<unsigned int>::iterator itr;
+            typedef vector_t<int>::iterator itr;
 
             // sort synapses (values) and delays (keys) by delay
             thrust::sort_by_key(
@@ -413,7 +413,7 @@ void _run_{{pathobj}}_initialise_queue()
             // we don't need shrink_to_fit, swap takes care of that
             h_vec_unique_delays_by_pre[i].swap(h_vec_delays_by_pre[i]);
 
-            unsigned int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
+            int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
             sum_num_unique_elements += num_unique_elements;
 
             if (num_unique_elements > {{pathobj}}_max_num_unique_delays)
@@ -428,9 +428,9 @@ void _run_{{pathobj}}_initialise_queue()
             for (int bundle_idx = 0; bundle_idx < num_unique_elements; bundle_idx++)
             {
                 // find the start idx in the synapses array for this delay (bundle)
-                unsigned int synapses_start_idx = h_vec_unique_delay_start_idcs_by_pre[i][bundle_idx];
+                int synapses_start_idx = h_vec_unique_delay_start_idcs_by_pre[i][bundle_idx];
                 // find the number of synapses for this delay (bundle)
-                unsigned int num_synapses;
+                int num_synapses;
                 if (bundle_idx == num_unique_elements - 1)
                     num_synapses = num_elements - synapses_start_idx;
                 else
@@ -524,11 +524,11 @@ void _run_{{pathobj}}_initialise_queue()
     {
         // Since we now know the total number of unique delays over all
         // (preID, postBlock) pairs, we can allocate the device memory
-        size_t memory_unique_delays_by_pre = sizeof(unsigned int) * sum_num_unique_elements;
+        size_t memory_unique_delays_by_pre = sizeof(int) * sum_num_unique_elements;
         {% if bundle_mode %}
         assert(sum_bundle_sizes == syn_N);
         {% else %}{# not bundle_mode #}
-        unsigned int *d_ptr_unique_delay_start_idcs;
+        int *d_ptr_unique_delay_start_idcs;
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&d_ptr_unique_delay_start_idcs,
                     memory_unique_delays_by_pre)
@@ -540,7 +540,7 @@ void _run_{{pathobj}}_initialise_queue()
 
         // array of all unique delas, sorted first by pre_post_block and per
         // pre_post_block by delay
-        unsigned int *d_ptr_unique_delays;
+        int *d_ptr_unique_delays;
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&d_ptr_unique_delays, memory_unique_delays_by_pre)
                 );
@@ -548,15 +548,15 @@ void _run_{{pathobj}}_initialise_queue()
                     "unique delays", memory_unique_delays_by_pre,
                     sum_num_unique_elements));
 
-        unsigned int sum_num_unique_elements_bak = sum_num_unique_elements;
+        int sum_num_unique_elements_bak = sum_num_unique_elements;
 
         // reset sum_num_unique_elements, we will use it to offset cudaMemcy correctly
         sum_num_unique_elements = 0;
         for(int i = 0; i < num_pre_post_blocks; i++)  // loop through connectivity matrix again
         {
 
-            unsigned int num_elements = h_vec_synapse_ids_by_pre[i].size();
-            unsigned int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
+            int num_elements = h_vec_synapse_ids_by_pre[i].size();
+            int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
 
             if(num_elements > 0)
             {
@@ -566,7 +566,7 @@ void _run_{{pathobj}}_initialise_queue()
                                        + sum_num_unique_elements,
                                    thrust::raw_pointer_cast(
                                        &(h_vec_unique_delays_by_pre[i][0])),
-                                   sizeof(unsigned int)*num_unique_elements,
+                                   sizeof(int)*num_unique_elements,
                                    cudaMemcpyHostToDevice)
                         );
 
@@ -577,7 +577,7 @@ void _run_{{pathobj}}_initialise_queue()
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_ptr_unique_delay_start_idcs + sum_num_unique_elements,
                                    thrust::raw_pointer_cast(&(h_vec_unique_delay_start_idcs_by_pre[i][0])),
-                                   sizeof(unsigned int)*num_unique_elements,
+                                   sizeof(int)*num_unique_elements,
                                    cudaMemcpyHostToDevice)
                         );
                 {% endif %}{# not bundle_mode #}
@@ -712,7 +712,7 @@ void _run_{{pathobj}}_initialise_queue()
     for(auto const& tuple: memory_recorder){
         std::string name;
         size_t bytes;
-        unsigned int num_elements;
+        int num_elements;
         std::tie(name, bytes, num_elements) = tuple;
         double memory = bytes * to_MB;
         double fraction = memory / total_memory_MB * 100;
@@ -729,7 +729,7 @@ void _run_{{pathobj}}_initialise_queue()
     {
         {% set eventspace_variable = owner.variables[owner.eventspace_name] %}
         {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-        unsigned int num_spikespaces = dev{{_eventspace}}.size();
+        int num_spikespaces = dev{{_eventspace}}.size();
         if (num_queues > num_spikespaces)
         {
             for (int i = num_spikespaces; i < num_queues; i++)
@@ -758,12 +758,12 @@ void _run_{{pathobj}}_initialise_queue()
         }
     }
 
-    unsigned int num_threads = num_queues;
+    int num_threads = num_queues;
     if(num_threads >= max_threads_per_block)
     {
         num_threads = max_threads_per_block;
     }
-    unsigned int num_blocks = 1;
+    int num_blocks = 1;
 
     // check if we have enough ressources to call kernel with given number
     // of blocks and threads

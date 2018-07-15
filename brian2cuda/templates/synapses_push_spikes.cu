@@ -18,7 +18,7 @@
 __global__ void _run_{{codeobj_name}}_advance_kernel()
 {
     using namespace brian;
-    unsigned int tid = threadIdx.x;
+    int tid = threadIdx.x;
     {{owner.name}}.queue->advance(
         tid);
 }
@@ -28,9 +28,9 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 _run_{{codeobj_name}}_push_kernel(
-    unsigned int num_parallel_blocks,
-    unsigned int _num_blocks,
-    unsigned int _num_threads,
+    int num_parallel_blocks,
+    int _num_blocks,
+    int _num_threads,
     int32_t* {{_eventspace}})
 {
     // apperently this is not always true and that is why _num_threads is passed as function argument
@@ -82,8 +82,7 @@ void _run_{{codeobj_name}}()
     {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
     if ({{owner.name}}_scalar_delay)
     {
-        //TODO: check int / unsigned int of all vars here and in objects pathway
-        unsigned int num_eventspaces = dev{{_eventspace}}.size();
+        int num_eventspaces = dev{{_eventspace}}.size();
         {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
 
         //////////////////////////////////////////////
@@ -120,7 +119,7 @@ void _run_{{codeobj_name}}()
              * per block for copying size_before_resize into shared memory when
              * we need to use the outer loop.
              */
-            needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(unsigned int);
+            needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(int);
             assert (needed_shared_memory <= max_shared_mem_size);
             {% else %}{# bundle_mode #}
             needed_shared_memory = 0;

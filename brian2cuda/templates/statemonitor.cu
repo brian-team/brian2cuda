@@ -89,7 +89,7 @@ kernel_{{codeobj_name}}(
     %DEVICE_PARAMETERS%
     )
 {
-    unsigned int tid = threadIdx.x;
+    int tid = threadIdx.x;
     if(tid > _num_indices)
     {
         return;
