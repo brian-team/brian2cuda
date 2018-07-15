@@ -248,30 +248,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
                 no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
-        if template_name == "synapses":
-            print("TEMPLATE NAME", template_name)
-            print('name', name)
-            print('owner', owner)
-            print('owner.name', owner.name)
-            read, write = self.get_array_read_write(abstract_code, variables)
-            prepost = template_kwds['pathway'].prepost
-            synaptic_effects = "synapse"
-            for varname in variables.iterkeys():
-                if varname in write:
-                    idx = variable_indices[varname]
-                    if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
-                        # The SynapticPathways 'target' group variables are modified
-                        if synaptic_effects == "synapse":
-                            synaptic_effects = "target"
-                    if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
-                        # The SynapticPathways 'source' group variables are modified
-                        synaptic_effects = "source"
-            template_kwds["synaptic_effects"] = synaptic_effects
-            print('debug syn effect mdoe ', synaptic_effects)
-            logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
-            # check if pre/post IDs are needed per synapse (which is the case
+        if isinstance(owner, Synapses) and template_name in ['synapses', 'stateupdate']:
+            # Check if pre/post IDs are needed per synapse (which is the case
             # only if presynapic/postsynapitc variables are used in synapses code)
-            # These will be deleted on the device in `run_lines` (see below)
+            # If in at least one `synapses` template for the same Synapses
+            # object or in a `run_regularly` call (creates a `statupdate`) a
+            # pre/post IDs are needed, we don't delete them. These will be
+            # deleted on the device in `run_lines` (see below)
+            read, write = self.get_array_read_write(abstract_code, variables)
             read_write = read.union(write)
             synaptic_pre_array_name = self.get_array_name(owner.variables['_synaptic_pre'], False)
             synaptic_post_array_name = self.get_array_name(owner.variables['_synaptic_post'], False)
@@ -286,6 +270,22 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         self.delete_synaptic_pre[synaptic_pre_array_name] = False
                     if idx == '_postsynaptic_idx':
                         self.delete_synaptic_post[synaptic_post_array_name] = False
+        if template_name == "synapses":
+            prepost = template_kwds['pathway'].prepost
+            synaptic_effects = "synapse"
+            for varname in variables.iterkeys():
+                if varname in write:
+                    idx = variable_indices[varname]
+                    if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
+                        # The SynapticPathways 'target' group variables are modified
+                        if synaptic_effects == "synapse":
+                            synaptic_effects = "target"
+                    if (prepost == 'pre' and idx == '_presynaptic_idx') or (prepost == 'post' and idx == '_postsynaptic_idx'):
+                        # The SynapticPathways 'source' group variables are modified
+                        synaptic_effects = "source"
+            template_kwds["synaptic_effects"] = synaptic_effects
+            print('debug syn effect mode ', synaptic_effects)
+            logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
