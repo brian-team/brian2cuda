@@ -22,8 +22,8 @@ class CurandBuffer
  */
 {
 private:
-    unsigned int buffer_size;
-    unsigned int current_idx;
+    int buffer_size;
+    int current_idx;
     bool memory_allocated;
     randomNumber_t* host_data;
     randomNumber_t* dev_data;

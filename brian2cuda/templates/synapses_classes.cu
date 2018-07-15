@@ -28,8 +28,8 @@ public:
 
     // first and last index in source NeuronGroup corresponding to Subgroup in SynapticPathway
     // important for Subgroups created with syntax: NeuronGroup(N=4000,...)[:3200]
-    unsigned int spikes_start;
-    unsigned int spikes_stop;
+    int spikes_start;
+    int spikes_stop;
 
     scalar dt;
     CudaSpikeQueue<scalar>* queue;

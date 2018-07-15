@@ -17,7 +17,7 @@
     if (neuron_id != -1)
     {
         assert(neuron_id >= 0);
-        _idx = (unsigned int)neuron_id;
+        _idx = neuron_id;
 
         {{vector_code|autoindent}}
     }

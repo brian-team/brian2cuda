@@ -36,22 +36,22 @@ public:
 
     //our connectivity matrix with dimensions (num_blocks) * neuron_N
     //each element
-    unsigned int* num_synapses_by_pre;
-    unsigned int* num_synapses_by_bundle;
-    unsigned int* num_unique_delays_by_pre;
-    unsigned int* unique_delays;
-    unsigned int* global_bundle_id_start_by_pre;
-    unsigned int* synapses_offset_by_bundle;
+    int* num_synapses_by_pre;
+    int* num_synapses_by_bundle;
+    int* num_unique_delays_by_pre;
+    int* unique_delays;
+    int* global_bundle_id_start_by_pre;
+    int* synapses_offset_by_bundle;
     DTYPE_int* synapse_ids;
     DTYPE_int** synapse_ids_by_pre;
-    unsigned int* unique_delays_offset_by_pre;
-    unsigned int* unique_delay_start_idcs;
-    unsigned int current_offset;  // offset in circular queue structure
-    unsigned int num_queues;
-    //unsigned int max_num_delays_per_block;
-    unsigned int num_blocks;
-    unsigned int neuron_N; // number of neurons in source of SynapticPathway
-    unsigned int syn_N;
+    int* unique_delays_offset_by_pre;
+    int* unique_delay_start_idcs;
+    int current_offset;  // offset in circular queue structure
+    int num_queues;
+    //int max_num_delays_per_block;
+    int num_blocks;
+    int neuron_N; // number of neurons in source of SynapticPathway
+    int syn_N;
 
     // When we have 0 synapses, prepare() is not called in synapses_initialise_queue.cu
     // and for destroy() to still work, synapses_queue needs to be a null pointer
@@ -73,21 +73,21 @@ public:
     __device__ void prepare(
         int tid,
         int num_threads,
-        unsigned int _num_blocks,
+        int _num_blocks,
         scalar _dt,
-        unsigned int _neuron_N,
-        unsigned int _syn_N,
-        unsigned int _num_queues,
-        unsigned int* _num_synapses_by_pre,
-        unsigned int* _num_synapses_by_bundle,
-        unsigned int* _num_unique_delays_by_pre,
-        unsigned int* _unique_delays,
-        unsigned int* _global_bundle_id_start_by_pre,
-        unsigned int* _synapses_offset_by_bundle,
+        int _neuron_N,
+        int _syn_N,
+        int _num_queues,
+        int* _num_synapses_by_pre,
+        int* _num_synapses_by_bundle,
+        int* _num_unique_delays_by_pre,
+        int* _unique_delays,
+        int* _global_bundle_id_start_by_pre,
+        int* _synapses_offset_by_bundle,
         DTYPE_int* _synapse_ids,
         DTYPE_int** _synapse_ids_by_pre,
-        unsigned int* _unique_delays_offset_by_pre,
-        unsigned int* _unique_delay_start_idcs
+        int* _unique_delays_offset_by_pre,
+        int* _unique_delay_start_idcs
         )
     {
         if(tid == 0)
@@ -138,10 +138,10 @@ public:
 
     __device__ void push_synapses(
         char* _shared_mem,
-        unsigned int post_neuron_bid,
-        unsigned int tid,
-        unsigned int num_threads,
-        unsigned int spiking_neuron_id)
+        int post_neuron_bid,
+        int tid,
+        int num_threads,
+        int spiking_neuron_id)
     {
 
         // following arrays are in global device memory:
@@ -156,23 +156,23 @@ public:
         assert(blockDim.x == num_threads);
 
         // idx in the connectivity matrix for this (preID, postBlock) pair
-        unsigned int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
-        unsigned int num_synapses = num_synapses_by_pre[pre_post_block_id];
-        unsigned int num_unique_delays = num_unique_delays_by_pre[pre_post_block_id];
+        int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
+        int num_synapses = num_synapses_by_pre[pre_post_block_id];
+        int num_unique_delays = num_unique_delays_by_pre[pre_post_block_id];
         // offset in unique_delays and unique_delay_start_idcs arrays (which
         // store all delay data, first sorted by pre_post_block, then by delay)
-        unsigned int delay_offset = unique_delays_offset_by_pre[pre_post_block_id];
+        int delay_offset = unique_delays_offset_by_pre[pre_post_block_id];
         // shared_mem is allocated in push_spikes
-        unsigned int* shared_mem_unique_delay_start_idcs = (unsigned int*)_shared_mem;
+        int* shared_mem_unique_delay_start_idcs = (int*)_shared_mem;
         // shared memory for inter thread communication needs to be volatile
-        volatile unsigned int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idcs + num_unique_delays;
-        volatile unsigned int* shared_mem_last_cycle_size_before_resize = shared_mem_size_before_resize + num_unique_delays;
+        volatile int* shared_mem_size_before_resize = shared_mem_unique_delay_start_idcs + num_unique_delays;
+        volatile int* shared_mem_last_cycle_size_before_resize = shared_mem_size_before_resize + num_unique_delays;
 
         // spiking_neuron_id should be in range [0,neuron_N]
         assert(spiking_neuron_id < neuron_N);
 
         // Copy to shared memory. If more entries then threads, loop.
-        for (unsigned int i = tid; i < num_unique_delays; i += num_threads)
+        for (int i = tid; i < num_unique_delays; i += num_threads)
         {
             shared_mem_unique_delay_start_idcs[i] = unique_delay_start_idcs[delay_offset + i];
         }
@@ -181,8 +181,8 @@ public:
         // ( thread <-> synapse ) correspondence
         // If num_threads < num_synapses, loop.
         // syn is synapse number (not ID!)
-        unsigned int delay_previous_loop_cycle, size_before_resize;
-        for (unsigned int i = 0; i < num_synapses; i += num_threads)
+        int delay_previous_loop_cycle, size_before_resize;
+        for (int i = 0; i < num_synapses; i += num_threads)
         {
             ///////////////////////////////////////////////////////////////////////////////////////
             // Example values and code paths for each thread for given delays, num_threads=3, num_synapses=12:
@@ -205,16 +205,16 @@ public:
             ///////////////////////////////////////////////////////////////////////////////////////
 
             // start loop at 0 to make sure all threads are executing the same number of loops (for __syncthread())
-            unsigned int syn = i + tid;
+            int syn = i + tid;
             // declare variables which we will need after __syncthread() call
-            unsigned int delay_queue, delay_start_idx_in_synapses_id, delay, delay_occurrence, idx_in_unique_delays;
-            unsigned int next_delay_start_idx_in_synapses_id = 0;
+            int delay_queue, delay_start_idx_in_synapses_id, delay, delay_occurrence, idx_in_unique_delays;
+            int next_delay_start_idx_in_synapses_id = 0;
 
             if (syn < num_synapses)
             {
                 // find the starting index in synapse_id_by_pre for the delay corresponding
                 // to the current synapse and the starting index for the next delay
-                for (unsigned int j = 1; j < num_unique_delays; j++)
+                for (int j = 1; j < num_unique_delays; j++)
                 {
                     delay_start_idx_in_synapses_id = next_delay_start_idx_in_synapses_id;
                     next_delay_start_idx_in_synapses_id = shared_mem_unique_delay_start_idcs[j];
@@ -323,9 +323,9 @@ public:
                 delay_previous_loop_cycle = delay;
 
                 // PUSH INTO QUEUES
-                unsigned int syn_id = synapse_ids_by_pre[pre_post_block_id][syn];
+                int syn_id = synapse_ids_by_pre[pre_post_block_id][syn];
                 // find position in queue for syn
-                unsigned int idx_in_queue = size_before_resize + (syn - delay_start_idx_in_synapses_id);
+                int idx_in_queue = size_before_resize + (syn - delay_start_idx_in_synapses_id);
                 // each thread updates one value in queue
                 synapses_queue[delay_queue][post_neuron_bid].at(idx_in_queue) = syn_id;
 
@@ -365,10 +365,10 @@ public:
     } // end push_synapses()
 
     __device__ void push_bundles(
-        unsigned int post_neuron_bid,
-        unsigned int tid,
-        unsigned int num_threads,
-        unsigned int spiking_neuron_id)
+        int post_neuron_bid,
+        int tid,
+        int num_threads,
+        int spiking_neuron_id)
     {
 
         // following arrays are in global device memory:
@@ -382,10 +382,10 @@ public:
 
         assert(blockDim.x == num_threads);
 
-        unsigned int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
-        unsigned int global_bundle_id_start_idx = global_bundle_id_start_by_pre[pre_post_block_id];
+        int pre_post_block_id = spiking_neuron_id * num_blocks + post_neuron_bid;
+        int global_bundle_id_start_idx = global_bundle_id_start_by_pre[pre_post_block_id];
         // num_unique_delays == num_bundles
-        unsigned int num_unique_delays = global_bundle_id_start_by_pre[pre_post_block_id + 1]
+        int num_unique_delays = global_bundle_id_start_by_pre[pre_post_block_id + 1]
                                          - global_bundle_id_start_idx;
 
         // spiking_neuron_id should be in range [0,neuron_N]
@@ -395,12 +395,12 @@ public:
         // ( thread <-> synapse_bundle ) correspondence
         // If num_threads < num_unique_delays, loop.
         // bundle_idx is bundle number per block (not global bundle ID!)
-        for (unsigned int i = 0; i < num_unique_delays; i += num_threads)
+        for (int i = 0; i < num_unique_delays; i += num_threads)
         {
             // start loop at 0 to make sure all threads are executing the same number of loops (for __syncthread())
-            unsigned int bundle_idx = i + tid;
+            int bundle_idx = i + tid;
 
-            unsigned int global_bundle_id, delay_queue;
+            int global_bundle_id, delay_queue;
             if (bundle_idx < num_unique_delays)
             {
                 // we have per pre_post_block_id (total of num_blocks * source_N) a
@@ -408,7 +408,7 @@ public:
                 // pre_post_block_id
                 global_bundle_id = global_bundle_id_start_idx + bundle_idx;
 
-                unsigned int delay = unique_delays[global_bundle_id];
+                int delay = unique_delays[global_bundle_id];
                 // find the spike queue corresponding to this synapses delay
                 delay_queue = (current_offset + delay) % num_queues;
             }
@@ -437,7 +437,7 @@ public:
     } // end push_bundles()
 
     __device__ void advance(
-        unsigned int tid)
+        int tid)
     {
         assert(tid < num_blocks && current_offset < num_queues);
         synapses_queue[current_offset][tid].reset();

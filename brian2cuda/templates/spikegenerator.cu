@@ -4,7 +4,7 @@ int mem_per_thread(){
     return sizeof(int32_t);
 }
 
-__device__ unsigned int _last_element_checked = 0;
+__device__ int _last_element_checked = 0;
 {% endblock %}
 
 {% block kernel_call %}
@@ -29,8 +29,8 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
-    unsigned int _N,
-    unsigned int THREADS_PER_BLOCK,
+    int _N,
+    int THREADS_PER_BLOCK,
     double t,
     double dt,
     ///// DEVICE_PARAMETERS /////
@@ -40,10 +40,10 @@ kernel_{{codeobj_name}}(
     {# USES_VARIABLES { N } #}
     using namespace brian;
 
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
-    unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
-    unsigned int _vectorisation_idx = _idx;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
+    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _vectorisation_idx = _idx;
     ///// KERNEL_VARIABLES /////
     %KERNEL_VARIABLES%
 

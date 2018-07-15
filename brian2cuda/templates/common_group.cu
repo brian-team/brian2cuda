@@ -25,8 +25,8 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
-    unsigned int _N,
-    unsigned int THREADS_PER_BLOCK,
+    int _N,
+    int THREADS_PER_BLOCK,
     ///// DEVICE_PARAMETERS /////
     %DEVICE_PARAMETERS%
     )
@@ -34,10 +34,10 @@ kernel_{{codeobj_name}}(
     {# USES_VARIABLES { N } #}
     using namespace brian;
 
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
-    unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
-    unsigned int _vectorisation_idx = _idx;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
+    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _vectorisation_idx = _idx;
     ///// KERNEL_VARIABLES /////
     %KERNEL_VARIABLES%
 
