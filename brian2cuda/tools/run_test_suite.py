@@ -10,7 +10,7 @@ parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=st
                           "Only standalone targets. (default='cuda_standalone')"))
 parser.add_argument('--float-dtype', nargs='*', default=['float32', 'float64'],
                     choices=['float32', 'float64'], help=("The "
-                    "prefs['core.default_float_dtype'] for which tests should be run."))
+                    "prefs['core.default_float_dtype'] with which tests should be run."))
 parser.add_argument('--no-long-tests', action='store_false',
                     help="Set to not run long tests. By default they are run.")
 parser.add_argument('--no-reset-prefs', action='store_false',
