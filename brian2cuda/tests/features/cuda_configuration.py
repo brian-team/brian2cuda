@@ -163,10 +163,6 @@ class CUDAStandaloneConfigurationNoAssert(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone (asserts disabled)'
     device_kwargs = {'disable_asserts': True}
 
-class CUDAStandaloneConfigurationCurandDouble(CUDAStandaloneConfigurationBase):
-    name = 'CUDA standalone (curand_float_type = double)'
-    extra_prefs = {'devices.cuda_standalone.curand_float_type': 'double'}
-
 class CUDAStandaloneConfigurationNoCudaOccupancyAPI(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone (not using cuda occupancy API)'
     extra_prefs = {'devices.cuda_standalone.calc_occupancy': False}

@@ -41,8 +41,10 @@ __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
     int32_t current_iteration,
-    double* ratemonitor_rate,
-    double* ratemonitor_t,
+    {% set c_type = c_data_type(variables['rate'].dtype) %}
+    {{c_type}}* ratemonitor_rate,
+    {% set c_type = c_data_type(variables['t'].dtype) %}
+    {{c_type}}* ratemonitor_t,
     ///// DEVICE_PARAMETERS /////
     %DEVICE_PARAMETERS%
     )

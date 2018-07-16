@@ -33,8 +33,8 @@ prefs.register_preferences(
                 types is not type safe. And convertion from 64bit integral types to double precision (64bit)
                 floating-point types neither. In those cases the closest higher or lower (implementation
                 defined) representable value will be selected.''',
-            validator=lambda v: v in ['single_precision', 'double_precision'],
-            default='double_precision')
+            validator=lambda v: v in ['float32', 'float64'],
+            default='float64')
 )
 
 
@@ -258,7 +258,7 @@ class CUDACodeGenerator(CodeGenerator):
                 brian_funcs = re.search('_brian_(' + '|'.join(functions_C99) + ')', line)
                 if brian_funcs is not None:
                     for identifier in get_identifiers(line):
-                        if convertion_pref == 'double_precision':
+                        if convertion_pref == 'float64':
                             # 64bit integer to floating-point conversions are not type safe
                             int64_type = re.search(r'\bu?int64_t\s*{}\b'.format(identifier), code)
                             if int64_type is not None:
@@ -269,20 +269,20 @@ class CUDACodeGenerator(CodeGenerator):
                                             "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
                                             once=True)
                                 self.warned_integral_convertion = True
-                                self.previous_convertion_pref = 'double_precision'
-                        else:  # convertion_pref = 'single_precision'
+                                self.previous_convertion_pref = 'float64'
+                        else:  # convertion_pref = 'float32'
                             # 32bit and 64bit integer to floating-point conversions are not type safe
                             int32_64_type = re.search(r'\bu?int(32|64)_t\s*{}\b'.format(identifier), code)
                             if int32_64_type is not None:
                                 logger.warn("Detected code statement with default function and 32bit or 64bit integer type in the same line and the "
-                                            "preference for default_functions_integral_convertion is 'single_precision'. "
+                                            "preference for default_functions_integral_convertion is 'float32'. "
                                             "Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of "
                                             "integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
                                             "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
                                             "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
                                             once=True)
                                 self.warned_integral_convertion = True
-                                self.previous_convertion_pref = 'single_precision'
+                                self.previous_convertion_pref = 'float32'
         return stripped_deindented_lines(code)
 
     def denormals_to_zero_code(self):
@@ -374,10 +374,10 @@ class CUDACodeGenerator(CodeGenerator):
         support_code = ''
         hash_defines = ''
         # set convertion types for standard C99 functions in device code
-        if prefs.codegen.generators.cuda.default_functions_integral_convertion == 'double_precision':
+        if prefs.codegen.generators.cuda.default_functions_integral_convertion == 'float64':
             default_func_type = 'double'
             other_func_type = 'float'
-        else:  # 'single_precision'
+        else:  # 'float32'
             default_func_type = 'float'
             other_func_type = 'double'
         for varname, variable in self.variables.items():
