@@ -8,6 +8,9 @@ parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=st
                     choices=['cuda_standalone', 'genn', 'cpp_standalone'],
                     help=("Which codegeneration targets to use, can be multiple. "
                           "Only standalone targets. (default='cuda_standalone')"))
+parser.add_argument('--float-dtype', nargs='*', default=['float32', 'float64'],
+                    choices=['float32', 'float64'], help=("The "
+                    "prefs['core.default_float_dtype'] for which tests should be run."))
 parser.add_argument('--no-long-tests', action='store_false',
                     help="Set to not run long tests. By default they are run.")
 parser.add_argument('--no-reset-prefs', action='store_false',
@@ -26,6 +29,7 @@ args = parser.parse_args()
 import os
 from StringIO import StringIO
 import socket
+import numpy as np
 
 from brian2 import test, prefs
 import brian2cuda
@@ -55,18 +59,24 @@ if 'genn' in args.targets:
 if args.test_parallel is None:
     args.test_parallel = args.targets
 
+dtypes = []
+for dtype in args.float_dtype:
+    dtypes.append(getattr(np, dtype))
+
 for target in args.targets:
 
     test_in_parallel = []
     if target in args.test_parallel:
         test_in_parallel = [target]
 
-    test(codegen_targets=[],
-         long_tests=args.no_long_tests,
-         test_codegen_independent=False,
-         test_standalone=target,
-         reset_preferences=False,
-         fail_for_not_implemented=args.fail_not_implemented,
-         test_in_parallel=test_in_parallel,
-         extra_test_dirs=extra_test_dirs
-        )
+    for dtype in dtypes:
+        test(codegen_targets=[],
+             long_tests=args.no_long_tests,
+             test_codegen_independent=False,
+             test_standalone=target,
+             reset_preferences=False,
+             fail_for_not_implemented=args.fail_not_implemented,
+             test_in_parallel=test_in_parallel,
+             extra_test_dirs=extra_test_dirs,
+             float_dtype=dtype
+            )
