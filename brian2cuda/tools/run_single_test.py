@@ -12,7 +12,7 @@ parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=st
                     choices=['cuda_standalone', 'genn', 'cpp_standalone'],
                     help=("Which codegeneration targets to use, can be multiple. "
                           "Only standalone targets. (default=['cuda_standalone'])"))
-parser.add_argument('--float-dtype', nargs=1, default='float64', type=str,
+parser.add_argument('--float-dtype', nargs=1, default=['float64'], type=str,
                     choices=['float32', 'float64'], help=("The "
                     "prefs['core.default_float_dtype'] with which tests should be run."))
 parser.add_argument('--reset-prefs', action='store_true',
