@@ -63,6 +63,8 @@ dtypes = []
 for dtype in args.float_dtype:
     dtypes.append(getattr(np, dtype))
 
+stored_prefs = prefs.as_file
+
 for target in args.targets:
 
     test_in_parallel = []
@@ -80,3 +82,5 @@ for target in args.targets:
              extra_test_dirs=extra_test_dirs,
              float_dtype=dtype
             )
+
+        prefs.read_preference_file(StringIO(stored_prefs))

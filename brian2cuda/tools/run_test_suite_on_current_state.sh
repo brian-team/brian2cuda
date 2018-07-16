@@ -2,7 +2,8 @@
 # arguments:
 # $1: additional name for log_file
 # $2: commit hash or branch name to check out after cloning
-# $3: number of cores used for parallel compilation (make -j $3)
+# $3: float32 or float64 or both (default)
+# $4: number of cores used for parallel compilation (make -j $4)
 
 # the directory of the script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -23,11 +24,28 @@ function cleanup {
 # register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
 
-if [ -z "$3" ]
+if [ -z "$4" ]
 then
     J=12
 else
-    J=$3
+    J=$4
+fi
+
+if [ -z "$3" ]
+then
+    FLOAT_DTYPE="float64 float32"
+elif [ "$3" = "float32" ]
+then
+    FLOAT_DTYPE="float32"
+elif [ "$3" = "float64" ]
+then
+    FLOAT_DTYPE="float64"
+elif [ "$3" = "both" ]
+then
+    FLOAT_DTYPE="float64 float32"
+else
+    echo "ERROR, the third argument needs to be from {'float32'|'float64'|'both'}"
+    exit 1
 fi
 
 source activate dev_b2c
@@ -45,5 +63,5 @@ fi
 git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "LOG_FILE"
 git rev-parse HEAD 2>&1 | tee -a "LOG_FILE"
 cd "brian2cuda/tools"
-PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --float-dtype $FLOAT_DTYPE --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
 
