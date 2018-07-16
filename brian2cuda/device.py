@@ -266,9 +266,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for varname in variables.iterkeys():
                 if varname in read_write:
                     idx = variable_indices[varname]
-                    if idx == '_presynaptic_idx':
+                    if idx == '_presynaptic_idx' or varname == 'i':
                         self.delete_synaptic_pre[synaptic_pre_array_name] = False
-                    if idx == '_postsynaptic_idx':
+                    if idx == '_postsynaptic_idx' or varname == 'j':
                         self.delete_synaptic_post[synaptic_post_array_name] = False
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
