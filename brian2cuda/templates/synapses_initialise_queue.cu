@@ -29,7 +29,7 @@
  #}
 
 {% macro cu_file() %}
-{# USES_VARIABLES { delay } #}
+{# USES_VARIABLES { delay, _n_sources, _n_targets } #}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <iostream>
@@ -167,9 +167,9 @@ void _run_{{pathobj}}_initialise_queue()
     // simulation time step
     double dt = {{owner.clock.name}}.dt[0];
     // number of neurons in source group
-    int source_N = {{owner.source.N}};
+    int source_N = {{constant_or_scalar('_n_sources', variables['_n_sources'])}};
     // number of neurons in target group
-    int target_N = {{owner.target.N}};
+    int target_N = {{constant_or_scalar('_n_targets', variables['_n_targets'])}};
 
     //TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
     {% if not no_or_const_delay_mode %}
@@ -287,10 +287,10 @@ void _run_{{pathobj}}_initialise_queue()
     {% endif %}
     for(int syn_id = 0; syn_id < syn_N; syn_id++)  // loop through all synapses
     {
-        // pre/post_neuron_id are integers from 0 to Nsource/Ntarget (from corresponding SynapticPathway)
+        // pre/post_neuron_id are integers from 0 to the number of neurons in source/target group (from corresponding SynapticPathway)
         // this is relevant only when using Subgroups where they might be NOT equal to the idx in their NeuronGroup
-        int32_t pre_neuron_id = {{get_array_name(owner.synapse_sources, access_data=False)}}[syn_id] - {{owner.source.start}};
-        int32_t post_neuron_id = {{get_array_name(owner.synapse_targets, access_data=False)}}[syn_id] - {{owner.target.start}};
+        int32_t pre_neuron_id = {{get_array_name(owner.synapse_sources, access_data=False)}}[syn_id] - {{owner}}.spikes_start;
+        int32_t post_neuron_id = {{get_array_name(owner.synapse_targets, access_data=False)}}[syn_id] - {{owner}}.targets_start;
 
         {% if not no_or_const_delay_mode %}
         int delay = (int)({{_dynamic_delay}}[syn_id] / dt + 0.5);

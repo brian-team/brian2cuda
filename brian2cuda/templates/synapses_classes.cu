@@ -14,33 +14,40 @@
 class SynapticPathway
 {
 public:
-    // total number of neurons in source and target NeuronGroup / Subgroup
-    int Nsource;
-    int Ntarget;
-
     int32_t* dev_sources;
     int32_t* dev_targets;
 
     // first and last index in source NeuronGroup corresponding to Subgroup in SynapticPathway
     // important for Subgroups created with syntax: NeuronGroup(N=4000,...)[:3200]
-    int spikes_start;
-    int spikes_stop;
+    int32_t spikes_start;
+    int32_t spikes_stop;
+
+    // first and last index in target Group corresponding to Subgroup in SynapticPathway
+    // important for Subgroups created with syntax: NeuronGroup(N=4000,...)[:3200]
+    // We need these to be initialised in `objects.cu` for synapses to synapses to work,
+    // since our connectivity matrix (`synapses_initialise_queue` tempalte)
+    // needs access to the target group IDs, which we can't access at python
+    // runtime (before the network is run)
+    int32_t targets_start;
+    int32_t targets_stop;
+
 
     double dt;
     CudaSpikeQueue* queue;
     bool no_or_const_delay_mode;
 
     //our real constructor
-    __device__ void init(int _Nsource, int _Ntarget, int32_t* _sources,
-                int32_t* _targets, double _dt, int _spikes_start, int _spikes_stop)
+    __device__ void init(int32_t* _sources, int32_t* _targets, double _dt,
+            int32_t _spikes_start, int32_t _spikes_stop, int32_t _targets_start,
+            int32_t _targets_stop)
     {
-        Nsource = _Nsource;
-        Ntarget = _Ntarget;
         dev_sources = _sources;
         dev_targets = _targets;
         dt = _dt;
         spikes_start = _spikes_start;
         spikes_stop = _spikes_stop;
+        targets_start = _targets_start;
+        targets_stop = _targets_stop;
         queue = new CudaSpikeQueue;
     };
 

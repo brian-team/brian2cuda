@@ -110,18 +110,18 @@ int brian::num_threads_per_warp;
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
 __global__ void {{path.name}}_init(
-                int Nsource,
-                int Ntarget,
                 int32_t* sources,
                 int32_t* targets,
                 double dt,
-                int32_t start,
-                int32_t stop
+                int32_t source_start,
+                int32_t source_stop,
+                int32_t target_start,
+                int32_t target_stop
         )
 {
     using namespace brian;
 
-    {{path.name}}.init(Nsource, Ntarget, sources, targets, dt, start, stop);
+    {{path.name}}.init(sources, targets, dt, start, stop);
 }
 {% endfor %}
 {% endfor %}
@@ -188,7 +188,9 @@ void _init_arrays()
             thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
             0,  //was dt, maybe irrelevant?
             {{path.source.start}},
-            {{path.source.stop}}
+            {{path.source.stop}},
+            {{path.target.start}},
+            {{path.target.stop}}
             );
     CUDA_CHECK_ERROR("{{path.name}}_init");
     {% endfor %}
