@@ -1,4 +1,4 @@
-from nose import with_setup
+from nose import with_setup, SkipTest
 from nose.plugins.attrib import attr
 from numpy.testing.utils import assert_allclose, assert_raises
 
@@ -358,6 +358,9 @@ def test_default_function_implementations():
 @with_setup(teardown=reinit_devices)
 def test_default_function_convertion_preference():
 
+    if prefs.core.default_float_dtype is np.float32:
+        raise SkipTest('Need double precision for this test')
+
     set_device('cuda_standalone', directory=None)
 
     unrepresentable_int = 2**24 + 1  # can't be represented as 32bit float
@@ -377,7 +380,7 @@ def test_default_function_convertion_preference():
     run(0*ms)
 
     assert G.v[0] != unrepresentable_int, G.v[0]
-    assert G2.v[0] == unrepresentable_int, G.v2[0]
+    assert G2.v[0] == unrepresentable_int, '{} != {}'.format(G2.v[0], unrepresentable_int)
 
 
 @attr('cuda_standalone', 'standalone-only')
