@@ -69,13 +69,6 @@ prefs.register_preferences(
         validator=lambda v: isinstance(v, int) and v >= 0,
         default=128),
 
-    curand_float_type=BrianPreference(
-        docs='''
-        Floating point type of generated random numbers (float/double).
-        ''',
-        validator=lambda v: v in ['float', 'double'],
-        default='float'),
-
     launch_bounds=BrianPreference(
         docs='''
         Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
@@ -343,7 +336,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
                         curand_generator_ordering=curand_generator_ordering,
-                        curand_float_type=prefs['devices.cuda_standalone.curand_float_type'],
+                        curand_float_type=c_data_type(prefs['core.default_float_dtype']),
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects)
@@ -531,12 +524,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls})
                                 );
                         curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
-                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
-                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
+                                   curand_suffix='Double' if c_data_type(prefs['core.default_float_dtype'])=='double' else '')
                     additional_code.append(code_snippet)
-                    line = "{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
+                    line = "{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                     device_parameters_lines.append(line)
-                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                                           name=codeobj.name))
                     host_parameters_lines.append("dev_array_randn")
                 elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
@@ -547,12 +540,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls})
                                 );
                         curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
-                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=prefs['devices.cuda_standalone.curand_float_type'],
-                                   curand_suffix='Double' if prefs['devices.cuda_standalone.curand_float_type']=='double' else '')
+                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
+                                   curand_suffix='Double' if c_data_type(prefs['core.default_float_dtype'])=='double' else '')
                     additional_code.append(code_snippet)
-                    line = "{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'], name=codeobj.name)
+                    line = "{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                     device_parameters_lines.append(line)
-                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                                           name=codeobj.name))
                     host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
@@ -605,15 +598,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # TODO can we just include this in the k == '_python_rand' test above?
             if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* par_array_{name}_rand".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                device_parameters_lines.append("{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
-                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                   name=codeobj.name))
             if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* par_array_{name}_randn".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                device_parameters_lines.append("{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
-                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=prefs['devices.cuda_standalone.curand_float_type'],
+                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                   name=codeobj.name))
 
             # Sometimes an array is referred to by to different keys in our
@@ -663,7 +656,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
                                                            profiled=self.enable_profiling,
-                                                           curand_float_type=prefs['devices.cuda_standalone.curand_float_type'])
+                                                           curand_float_type=c_data_type(prefs['core.default_float_dtype']))
         writer.write('rand.*', rand_tmp)
 
     def copy_source_files(self, writer, directory):
