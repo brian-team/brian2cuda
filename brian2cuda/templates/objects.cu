@@ -81,38 +81,38 @@ int32_t {{S.name}}_source_stop_index;
 bool brian::{{S.name}}_multiple_pre_post = false;
 {% for path in S._pathways | sort(attribute='name') %}
 // {{path.name}}
-__device__ unsigned int* brian::{{path.name}}_num_synapses_by_pre;
-__device__ unsigned int* brian::{{path.name}}_num_synapses_by_bundle;
-__device__ unsigned int* brian::{{path.name}}_unique_delays;
-__device__ unsigned int* brian::{{path.name}}_synapses_offset_by_bundle;
-__device__ unsigned int* brian::{{path.name}}_global_bundle_id_start_by_pre;
-unsigned int brian::{{path.name}}_max_bundle_size = 0;
-unsigned int brian::{{path.name}}_mean_bundle_size = 0;
-unsigned int brian::{{path.name}}_max_size = 0;
-__device__ unsigned int* brian::{{path.name}}_num_unique_delays_by_pre;
-unsigned int brian::{{path.name}}_max_num_unique_delays = 0;
+__device__ int* brian::{{path.name}}_num_synapses_by_pre;
+__device__ int* brian::{{path.name}}_num_synapses_by_bundle;
+__device__ int* brian::{{path.name}}_unique_delays;
+__device__ int* brian::{{path.name}}_synapses_offset_by_bundle;
+__device__ int* brian::{{path.name}}_global_bundle_id_start_by_pre;
+int brian::{{path.name}}_max_bundle_size = 0;
+int brian::{{path.name}}_mean_bundle_size = 0;
+int brian::{{path.name}}_max_size = 0;
+__device__ int* brian::{{path.name}}_num_unique_delays_by_pre;
+int brian::{{path.name}}_max_num_unique_delays = 0;
 __device__ int32_t** brian::{{path.name}}_synapse_ids_by_pre;
 __device__ int32_t* brian::{{path.name}}_synapse_ids;
-__device__ unsigned int* brian::{{path.name}}_unique_delay_start_idcs;
-__device__ unsigned int* brian::{{path.name}}_unique_delays_offset_by_pre;
+__device__ int* brian::{{path.name}}_unique_delay_start_idcs;
+__device__ int* brian::{{path.name}}_unique_delays_offset_by_pre;
 __device__ SynapticPathway<double> brian::{{path.name}};
 int brian::{{path.name}}_eventspace_idx = 0;
-unsigned int brian::{{path.name}}_delay;
+int brian::{{path.name}}_delay;
 bool brian::{{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
 
-unsigned int brian::num_parallel_blocks;
-unsigned int brian::max_threads_per_block;
-unsigned int brian::max_threads_per_sm;
-unsigned int brian::max_shared_mem_size;
-unsigned int brian::num_threads_per_warp;
+int brian::num_parallel_blocks;
+int brian::max_threads_per_block;
+int brian::max_threads_per_sm;
+int brian::max_shared_mem_size;
+int brian::num_threads_per_warp;
 
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
 __global__ void {{path.name}}_init(
-                unsigned int Nsource,
-                unsigned int Ntarget,
+                int Nsource,
+                int Ntarget,
                 double* delays,
                 int32_t* sources,
                 int32_t* targets,
@@ -554,23 +554,23 @@ extern const int _num_{{name}};
 extern Synapses<double> {{S.name}};
 extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
-extern __device__ unsigned int* {{path.name}}_num_synapses_by_pre;
-extern __device__ unsigned int* {{path.name}}_num_synapses_by_bundle;
-extern __device__ unsigned int* {{path.name}}_unique_delays;
-extern __device__ unsigned int* {{path.name}}_synapses_offset_by_bundle;
-extern __device__ unsigned int* {{path.name}}_global_bundle_id_start_by_pre;
-extern unsigned int {{path.name}}_max_bundle_size;
-extern unsigned int {{path.name}}_mean_bundle_size;
-extern unsigned int {{path.name}}_max_size;
-extern __device__ unsigned int* {{path.name}}_num_unique_delays_by_pre;
-extern unsigned int {{path.name}}_max_num_unique_delays;
+extern __device__ int* {{path.name}}_num_synapses_by_pre;
+extern __device__ int* {{path.name}}_num_synapses_by_bundle;
+extern __device__ int* {{path.name}}_unique_delays;
+extern __device__ int* {{path.name}}_synapses_offset_by_bundle;
+extern __device__ int* {{path.name}}_global_bundle_id_start_by_pre;
+extern int {{path.name}}_max_bundle_size;
+extern int {{path.name}}_mean_bundle_size;
+extern int {{path.name}}_max_size;
+extern __device__ int* {{path.name}}_num_unique_delays_by_pre;
+extern int {{path.name}}_max_num_unique_delays;
 extern __device__ int32_t** {{path.name}}_synapse_ids_by_pre;
 extern __device__ int32_t* {{path.name}}_synapse_ids;
-extern __device__ unsigned int* {{path.name}}_unique_delay_start_idcs;
-extern __device__ unsigned int* {{path.name}}_unique_delays_offset_by_pre;
+extern __device__ int* {{path.name}}_unique_delay_start_idcs;
+extern __device__ int* {{path.name}}_unique_delays_offset_by_pre;
 extern __device__ SynapticPathway<double> {{path.name}};
 extern int {{path.name}}_eventspace_idx;
-extern unsigned int {{path.name}}_delay;
+extern int {{path.name}}_delay;
 extern bool {{path.name}}_scalar_delay;
 {% endfor %}
 {% endfor %}
@@ -597,11 +597,11 @@ extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 {% endfor %}
 
 //CUDA
-extern unsigned int num_parallel_blocks;
-extern unsigned int max_threads_per_block;
-extern unsigned int max_threads_per_sm;
-extern unsigned int max_shared_mem_size;
-extern unsigned int num_threads_per_warp;
+extern int num_parallel_blocks;
+extern int max_threads_per_block;
+extern int max_threads_per_sm;
+extern int max_shared_mem_size;
+extern int num_threads_per_warp;
 
 }
 

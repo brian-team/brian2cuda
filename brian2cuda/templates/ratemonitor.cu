@@ -11,12 +11,12 @@
 
 {% block extra_maincode %}
 int current_iteration = {{owner.clock.name}}.timestep[0];
-static unsigned int start_offset = current_iteration;
+static int start_offset = current_iteration;
 {% endblock %}
 
 {% block prepare_kernel_inner %}
 int num_iterations = {{owner.clock.name}}.i_end;
-unsigned int size_till_now = dev{{_dynamic_t}}.size();
+int size_till_now = dev{{_dynamic_t}}.size();
 dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
 dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
 num_threads = 1;
@@ -52,12 +52,12 @@ kernel_{{codeobj_name}}(
     ///// KERNEL_VARIABLES /////
     %KERNEL_VARIABLES%
 
-    unsigned int num_spikes = 0;
+    int num_spikes = 0;
 
     if (_num_spikespace-1 != _num_source_neurons)  // we have a subgroup
     {
         // TODO shouldn't this be 'i < _num_spikespace -1'?
-        for (unsigned int i=0; i < _num_spikespace; i++)
+        for (int i=0; i < _num_spikespace; i++)
         {
             const int spiking_neuron = {{_spikespace}}[i];
             if (spiking_neuron != -1)

@@ -81,7 +81,7 @@ std::cout << std::endl;
         {{scalar_code['create_cond']|autoindent}}
     ///// scalar_code['update_post'] /////
         {{scalar_code['update_post']|autoindent}}
-    unsigned int syn_id = 0;
+    int syn_id = 0;
 
     for(int _i = 0; _i < _N_pre; _i++)
     {

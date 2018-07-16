@@ -52,7 +52,7 @@
         {
             using namespace brian;
 
-            unsigned int _idx = blockIdx.x * blockDim.x + threadIdx.x;
+            int _idx = blockIdx.x * blockDim.x + threadIdx.x;
 
             if (_idx == 0)
             {

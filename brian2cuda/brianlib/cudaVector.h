@@ -11,7 +11,7 @@
 
 #define INITIAL_SIZE 1
 
-typedef unsigned int size_type;
+typedef int size_type;
 
 template <class scalar>
 class cudaVector

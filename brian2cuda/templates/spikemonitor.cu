@@ -43,20 +43,20 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
-    unsigned int neurongroup_N,
+    int neurongroup_N,
     int32_t* count,
     // DEVICE_PARAMETERS
     %DEVICE_PARAMETERS%
     )
 {
     using namespace brian;
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
 
     {# If there are no record_variables, we need to sum up the number of events at each kernel call #}
     {% if not record_variables %}
-    // TODO: fix int types, num_events and  cudaVector::size() are unsigned int but {{N}} is size32_t
-    unsigned int num_events = 0;
+    // TODO: fix int types, num_events and  cudaVector::size() are int but {{N}} is size32_t
+    int num_events = 0;
     {% endif %}
 
     // KERNEL_VARIABLES
@@ -66,7 +66,7 @@ kernel_{{codeobj_name}}(
     {{scalar_code|autoindent}}
 
     // using not parallel spikespace: filled from left with all spiking neuron IDs, -1 ends the list
-    for(unsigned int i = 0; i < neurongroup_N; i++)
+    for(int i = 0; i < neurongroup_N; i++)
     {
         {% set _eventspace = get_array_name(eventspace_variable) %}
         int32_t spiking_neuron = {{_eventspace}}[i];
@@ -119,14 +119,14 @@ __global__ void _run_debugmsg_{{codeobj_name}}_kernel(
 }
 
 __global__ void _count_{{codeobj_name}}_kernel(
-    unsigned int* dev_num_events,
+    int* dev_num_events,
     // DEVICE_PARAMETERS
     %DEVICE_PARAMETERS%
 )
 {
     using namespace brian;
-    // TODO: fix int types, num_events and  cudaVector::size() are unsigned int but {{N}} is size32_t
-    unsigned int num_events;
+    // TODO: fix int types, num_events and  cudaVector::size() are int but {{N}} is size32_t
+    int num_events;
 
     // KERNEL_VARIABLES
     %KERNEL_VARIABLES%
@@ -148,11 +148,11 @@ __global__ void _copy_{{codeobj_name}}_kernel(
     {% for varname, var in record_variables.items() %}
     {{c_data_type(var.dtype)}}* dev_monitor_{{varname}},
     {% endfor %}
-    unsigned int dummy  {# loop ends with comma... #}
+    int dummy  {# loop ends with comma... #}
 )
 {
     using namespace brian;
-    unsigned int index = 0;
+    int index = 0;
 
     // copy monitors
     {% for varname, var in record_variables.items() %}
@@ -181,11 +181,11 @@ void _copyToHost_{{codeobj_name}}()
     //   Maybe use cudaVector as default for dynamic arrays, then we would not
     //   need monitor... at all. This would mean changing the copying in objects.cu
     //   for dynamic arrays (currently we just use thrust device to host vector).
-    unsigned int host_num_events;
-    unsigned int* dev_num_events;
+    int host_num_events;
+    int* dev_num_events;
 
     CUDA_SAFE_CALL(
-            cudaMalloc((void**)&dev_num_events, sizeof(unsigned int))
+            cudaMalloc((void**)&dev_num_events, sizeof(int))
             );
 
     // CONSTANTS
@@ -200,7 +200,7 @@ void _copyToHost_{{codeobj_name}}()
     CUDA_CHECK_ERROR("_count_{{codeobj_name}}_kernel");
 
     CUDA_SAFE_CALL(
-            cudaMemcpy(&host_num_events, dev_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost)
+            cudaMemcpy(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost)
             );
 
     // resize monitor device vectors

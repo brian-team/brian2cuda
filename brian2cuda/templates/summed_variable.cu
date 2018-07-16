@@ -20,9 +20,9 @@ __device__ double atomicAddDouble(double* address, double val)
 {% block kernel %}
 {# USES_VARIABLES { _synaptic_post, _synaptic_pre, N_post, N_pre } #}
 __global__ void kernel_{{codeobj_name}}(
-    unsigned int num_blocks_per_neuron,
-    unsigned int num_threads,
-    unsigned int syn_N,
+    int num_blocks_per_neuron,
+    int num_threads,
+    int syn_N,
     %DEVICE_PARAMETERS%
     )
 {
@@ -30,11 +30,11 @@ __global__ void kernel_{{codeobj_name}}(
     using namespace brian;
 
     extern __shared__ char shared_mem[];
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
-    unsigned int neuron_id = bid/num_blocks_per_neuron;
-    unsigned int num_block_for_neuron = bid % num_blocks_per_neuron;
-    unsigned int _idx = num_block_for_neuron*num_threads + tid;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
+    int neuron_id = bid/num_blocks_per_neuron;
+    int num_block_for_neuron = bid % num_blocks_per_neuron;
+    int _idx = num_block_for_neuron*num_threads + tid;
     double* shared_double_mem = (double*) shared_mem;
     %KERNEL_VARIABLES%
 
@@ -74,9 +74,9 @@ __global__ void kernel_{{codeobj_name}}(
 {% endblock %}
 
 {% block kernel_call %}
-    unsigned int syn_N = _num_postsynaptic_idx;
+    int syn_N = _num_postsynaptic_idx;
     int _num_blocks = num_blocks(syn_N) * N_post;
-    unsigned int _num_threads = num_threads(syn_N);
+    int _num_threads = num_threads(syn_N);
     kernel_{{codeobj_name}}<<<_num_blocks, _num_threads, _num_threads*MEM_PER_THREAD>>>(
             _num_blocks,
             _num_threads,

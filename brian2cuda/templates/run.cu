@@ -16,7 +16,7 @@ void brian_start()
 {
     _init_arrays();
     _load_arrays();
-    srand((unsigned int)time(NULL));
+    srand(time(NULL));
 
     // Initialize clocks (link timestep and dt to the respective arrays)
     {% for clock in clocks | sort(attribute='name') %}

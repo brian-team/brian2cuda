@@ -16,15 +16,15 @@ __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 kernel_{{codeobj_name}}(
     {# TODO: we only need _N if we have random numbers per synapse, add a if test here #}
-    unsigned int _N,
-    unsigned int bid_offset,
-    unsigned int timestep,
-    unsigned int THREADS_PER_BLOCK,
+    int _N,
+    int bid_offset,
+    int timestep,
+    int THREADS_PER_BLOCK,
     {% if bundle_mode %}
-    unsigned int threads_per_bundle,
+    int threads_per_bundle,
     {% endif %}
     int32_t* eventspace,
-    unsigned int neurongroup_size,
+    int neurongroup_size,
     %DEVICE_PARAMETERS%
     )
 {
@@ -33,13 +33,13 @@ kernel_{{codeobj_name}}(
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x + bid_offset;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x + bid_offset;
     //TODO: do we need _idx here? if no, get also rid of scoping after scalar code
     // scalar_code can depend on _idx (e.g. if the state update depends on a
     // subexpression that is the same for all synapses, ?)
-    unsigned int _idx = bid * THREADS_PER_BLOCK + tid;
-    unsigned int _vectorisation_idx = _idx;
+    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _vectorisation_idx = _idx;
     %KERNEL_VARIABLES%
     {% block additional_variables %}
     {% endblock %}
@@ -67,7 +67,7 @@ kernel_{{codeobj_name}}(
                     // apply effects if event neuron is in sources of current SynapticPathway
                     if({{pathway.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{pathway.name}}.spikes_stop)
                     {
-                        unsigned int pre_post_block_id = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
+                        int pre_post_block_id = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
                         int num_synapses = {{pathway.name}}_num_synapses_by_pre[pre_post_block_id];
                         int32_t* propagating_synapses = {{pathway.name}}_synapse_ids_by_pre[pre_post_block_id];
                         for(int j = tid; j < num_synapses; j+=THREADS_PER_BLOCK)
@@ -97,13 +97,13 @@ kernel_{{codeobj_name}}(
             for (int i = tid; i < queue_size*threads_per_bundle; i+=THREADS_PER_BLOCK)
             {
                 // bundle_idx runs through all bundles
-                unsigned int bundle_idx = i / threads_per_bundle;
+                int bundle_idx = i / threads_per_bundle;
                 // syn_in_bundle_idx runs through all threads in a single bundle
-                unsigned int syn_in_bundle_idx = i % threads_per_bundle;
+                int syn_in_bundle_idx = i % threads_per_bundle;
 
-                unsigned int bundle_id = synapses_queue[bid].at(bundle_idx);
-                unsigned int bundle_size = {{pathway.name}}_num_synapses_by_bundle[bundle_id];
-                unsigned int synapses_offset = {{pathway.name}}_synapses_offset_by_bundle[bundle_id];
+                int bundle_id = synapses_queue[bid].at(bundle_idx);
+                int bundle_size = {{pathway.name}}_num_synapses_by_bundle[bundle_id];
+                int synapses_offset = {{pathway.name}}_synapses_offset_by_bundle[bundle_id];
                 int32_t* synapse_ids = {{pathway.name}}_synapse_ids;
                 int32_t* synapse_bundle = synapse_ids + synapses_offset;
 
@@ -133,8 +133,8 @@ kernel_{{codeobj_name}}(
 {% endblock %}
 
 {% block extra_maincode %}
-static unsigned int num_threads_per_bundle;
-static unsigned int num_loops;
+static int num_threads_per_bundle;
+static int num_loops;
 {% endblock %}
 
 {% block prepare_kernel_inner %}
@@ -199,7 +199,7 @@ else if ({{pathway.name}}_max_size <= 0)
 if ({{pathway.name}}_max_size > 0)
 {
     // only call kernel if we have synapses (otherwise we skipped the push kernel)
-    for(unsigned int bid_offset = 0; bid_offset < num_loops; bid_offset++)
+    for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
     {
         kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
