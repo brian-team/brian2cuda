@@ -75,7 +75,6 @@ const int brian::_num_{{name}} = {{N}};
 //////////////// synapses /////////////////
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
-Synapses<double> brian::{{S.name}}({{S.source|length}}, {{S.target|length}});
 int32_t {{S.name}}_source_start_index;
 int32_t {{S.name}}_source_stop_index;
 bool brian::{{S.name}}_multiple_pre_post = false;
@@ -95,7 +94,7 @@ __device__ int32_t** brian::{{path.name}}_synapse_ids_by_pre;
 __device__ int32_t* brian::{{path.name}}_synapse_ids;
 __device__ int* brian::{{path.name}}_unique_delay_start_idcs;
 __device__ int* brian::{{path.name}}_unique_delays_offset_by_pre;
-__device__ SynapticPathway<double> brian::{{path.name}};
+__device__ SynapticPathway brian::{{path.name}};
 int brian::{{path.name}}_eventspace_idx = 0;
 int brian::{{path.name}}_delay;
 bool brian::{{path.name}}_scalar_delay;
@@ -113,7 +112,6 @@ int brian::num_threads_per_warp;
 __global__ void {{path.name}}_init(
                 int Nsource,
                 int Ntarget,
-                double* delays,
                 int32_t* sources,
                 int32_t* targets,
                 double dt,
@@ -123,7 +121,7 @@ __global__ void {{path.name}}_init(
 {
     using namespace brian;
 
-    {{path.name}}.init(Nsource, Ntarget, delays, sources, targets, dt, start, stop);
+    {{path.name}}.init(Nsource, Ntarget, sources, targets, dt, start, stop);
 }
 {% endfor %}
 {% endfor %}
@@ -186,7 +184,6 @@ void _init_arrays()
     {{path.name}}_init<<<1,1>>>(
             {{path.source|length}},
             {{path.target|length}},
-            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.variables['delay']]}}[0]),
             thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_sources]}}[0]),
             thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
             0,  //was dt, maybe irrelevant?
@@ -551,7 +548,6 @@ extern const int _num_{{name}};
 //////////////// synapses /////////////////
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
-extern Synapses<double> {{S.name}};
 extern bool {{S.name}}_multiple_pre_post;
 {% for path in S._pathways | sort(attribute='name') %}
 extern __device__ int* {{path.name}}_num_synapses_by_pre;
@@ -568,7 +564,7 @@ extern __device__ int32_t** {{path.name}}_synapse_ids_by_pre;
 extern __device__ int32_t* {{path.name}}_synapse_ids;
 extern __device__ int* {{path.name}}_unique_delay_start_idcs;
 extern __device__ int* {{path.name}}_unique_delays_offset_by_pre;
-extern __device__ SynapticPathway<double> {{path.name}};
+extern __device__ SynapticPathway {{path.name}};
 extern int {{path.name}}_eventspace_idx;
 extern int {{path.name}}_delay;
 extern bool {{path.name}}_scalar_delay;

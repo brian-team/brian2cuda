@@ -14,7 +14,6 @@ using namespace std;
 //      variables (delays, dt) are assumed to use the same data type
 typedef int32_t DTYPE_int;
 
-template <class scalar>
 class CudaSpikeQueue
 {
 private:
@@ -74,7 +73,7 @@ public:
         int tid,
         int num_threads,
         int _num_blocks,
-        scalar _dt,
+        double _dt,
         int _neuron_N,
         int _syn_N,
         int _num_queues,
