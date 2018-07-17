@@ -525,7 +525,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 );
                         curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
-                                   curand_suffix='Double' if prefs['core.default_float_dtype']=='float64' else '')
+                                   curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                     additional_code.append(code_snippet)
                     line = "{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                     device_parameters_lines.append(line)
@@ -541,7 +541,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 );
                         curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
                         '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
-                                   curand_suffix='Double' if prefs['core.default_float_dtype']=='float64' else '')
+                                   curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                     additional_code.append(code_snippet)
                     line = "{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                     device_parameters_lines.append(line)

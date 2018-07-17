@@ -1,6 +1,7 @@
 from nose import with_setup, SkipTest
 from nose.plugins.attrib import attr
 from numpy.testing.utils import assert_allclose, assert_raises
+import numpy as np
 
 from brian2 import *
 from brian2.utils.logger import catch_logs
@@ -365,13 +366,13 @@ def test_default_function_convertion_preference():
 
     unrepresentable_int = 2**24 + 1  # can't be represented as 32bit float
 
-    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'float32'
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = np.float32
     G = NeuronGroup(1, 'v: 1')
     G.variables.add_array('myarr', dtype=np.int32, size=1)
     G.variables['myarr'].set_value(unrepresentable_int)
     G.v = 'floor(myarr)'.format(unrepresentable_int)
 
-    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'float64'
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = np.float64
     G2 = NeuronGroup(1, 'v: 1')
     G2.variables.add_array('myarr', dtype=np.int32, size=1)
     G2.variables['myarr'].set_value(unrepresentable_int)
@@ -417,7 +418,7 @@ def test_default_function_convertion_warnings():
         G4.variables.add_array('myarr', dtype=np.uint32, size=1)
         G4.v = 'arcsin(i*myarr)'
 
-    prefs.codegen.generators.cuda.default_functions_integral_convertion = 'float32'
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = np.float32
 
     BrianLogger._log_messages.clear()
     with catch_logs() as logs5:
