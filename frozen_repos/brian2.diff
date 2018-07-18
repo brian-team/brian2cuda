@@ -11,24 +11,34 @@ index e57fd61..3528356 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/synapses/synapses.py b/brian2/synapses/synapses.py
-index e6dfd6b..263db4a 100644
+index e1bb8d8..a8ace8b 100644
 --- a/brian2/synapses/synapses.py
 +++ b/brian2/synapses/synapses.py
-@@ -732,8 +732,11 @@ def __init__(self, source, target=None, model=None, on_pre=None,
+@@ -281,7 +281,8 @@ def update_abstract_code(self, run_namespace=None, level=0):
+             self.abstract_code = ''
+ 
+         self.abstract_code += self.code + '\n'
+-        self.abstract_code += 'lastupdate = t\n'
++        if self.synapses.need_lastupdate:
++            self.abstract_code += 'lastupdate = t\n'
+ 
+     @device_override('synaptic_pathway_before_run')
+     def before_run(self, run_namespace):
+@@ -737,8 +738,11 @@ def __init__(self, source, target=None, model=None, on_pre=None,
                  raise SyntaxError('"%s" is a reserved name that cannot be '
                                    'used as a variable name.' % name)
  
 -        # Add the lastupdate variable, needed for event-driven updates
 -        model = model + Equations('lastupdate : second')
 +        # Check if a `lastupdate` variable is needed
-+        need_lastupdate = self._check_lastupdate(model, on_pre, on_post)
-+        if need_lastupdate:
++        self.need_lastupdate = self._check_lastupdate(model, on_pre, on_post)
++        if self.need_lastupdate:
 +            model = model + Equations('lastupdate : second')
 +
          # Add the "multisynaptic index", if desired
          self.multisynaptic_index = multisynaptic_index
          if multisynaptic_index is not None:
-@@ -923,6 +926,29 @@ def __getitem__(self, item):
+@@ -928,6 +932,29 @@ def __getitem__(self, item):
          indices = self.indices[item]
          return SynapticSubgroup(self, indices)
  
@@ -376,10 +386,10 @@ index 75f3410..66e8084 100644
  
  if __name__ == '__main__':
 diff --git a/brian2/tests/test_synapses.py b/brian2/tests/test_synapses.py
-index 494200f..a7f1a41 100644
+index 9063e3d..26d8530 100644
 --- a/brian2/tests/test_synapses.py
 +++ b/brian2/tests/test_synapses.py
-@@ -1480,7 +1480,7 @@ def test_pre_post_variables():
+@@ -1481,7 +1481,7 @@ def test_pre_post_variables():
      for var in ['v_pre', 'v', 'v_post', 'w', 'w_post', 'x',
                  'N_pre', 'N_post', 'N_incoming', 'N_outgoing',
                  'i', 'j',
@@ -388,7 +398,7 @@ index 494200f..a7f1a41 100644
          assert var in S.variables
      # Check that postsynaptic variables without suffix refer to the correct
      # variable
-@@ -1494,6 +1494,27 @@ def test_pre_post_variables():
+@@ -1495,6 +1495,27 @@ def test_pre_post_variables():
  
  
  @attr('codegen-independent')
@@ -416,7 +426,7 @@ index 494200f..a7f1a41 100644
  def test_variables_by_owner():
      # Test the `variables_by_owner` convenience function
      G = NeuronGroup(10, 'v : 1')
-@@ -2433,6 +2454,7 @@ def test_synapse_generator_range_noint():
+@@ -2434,6 +2455,7 @@ def test_synapse_generator_range_noint():
      test_delays_pathways_subgroups()
      test_pre_before_post()
      test_pre_post_simple()
