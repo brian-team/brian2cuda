@@ -15,17 +15,21 @@ from brian2.core.core_preferences import default_float_dtype_validator, dtype_re
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 
-logger = get_logger('brian2.codegen.generators.cuda_generator')
-
 __all__ = ['CUDACodeGenerator',
            'c_data_type'
            ]
+
+logger = get_logger('brian2.codegen.generators.cuda_generator')
+
+class VectorisationError(Exception):
+    pass
 
 
 # Preferences
 prefs.register_preferences(
     'codegen.generators.cuda',
     'CUDA codegen preferences',
+
     default_functions_integral_convertion=BrianPreference(
         docs='''The floating point precision to which integral types will be converted when
         passed as arguments to default functions that have no integral type overload in device
@@ -36,9 +40,85 @@ prefs.register_preferences(
         defined) representable value will be selected.''',
         validator=default_float_dtype_validator,
         representor=dtype_repr,
-        default=np.float64)
+        default=np.float64),
+
+    use_atomics=BrianPreference(
+        docs='''Weather to try to use atomic operations for synaptic effect
+        application. Since this avoids race conditions, effect application can
+        be parallelised.''',
+        validator=lambda v: isinstance(v, bool),
+        default=True)
 )
 
+_universal_support_code = ''
+
+#TODO: Check from python side the CC and CUDA runtime version and only add
+# atomics which don't have hardware implementations
+# (see genn/lib/src/generateRunner.cc and genn-team/genn#93).
+# For Python side information see e.g.
+# https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#file-cuda_check-py
+
+#            (arg_dtype, int_dtype, name in type cast function)
+overloads = [('int', 'int', 'int'),
+             ('float', 'int', 'int'),
+             ('double', 'unsigned long long int', 'longlong')]
+atomicAdd_hw = ['int']
+if True:  # CC >= 2.0, TODO: check for it
+    atomicAdd_hw.append('float')
+if False:  # CC >= 6.0 TODO for it AND runtime version (see genn #93)
+    atomicAdd_hw.appen('double')
+atomic_support_code = ''
+for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
+    for arg_dtype, int_dtype, val_type_cast in overloads:
+        if op_name == 'Add' and arg_dtype in atomicAdd_hw:
+            # hardware implementations for atomicAdd exist
+            atomic_support_code += '''
+            inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
+            {{
+                // hardware implementation
+                return atomic{op_name}(address, val);
+            }}
+            '''.format(arg_dtype=arg_dtype, op_name=op_name)
+        elif arg_dtype == 'int':
+            atomic_support_code += '''
+            inline __device__ int _brian_atomic{op_name}(int* address, int val)
+            {{
+                // software implementation
+                int old = *address, assumed;
+
+                do {{
+                    assumed = old;
+                    old = atomicCAS(address, assumed, val {op} assumed);
+                }} while (assumed != old);
+
+                return old;
+            }}
+            '''.format(op_name=op_name, op=op)
+        else:
+            # in the software implementation, we treat all data as integer types
+            # (since atomicCAS is only define
+            # and use atomicCAS to swap the memory with our our desired value
+            atomic_support_code += '''
+            inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
+            {{
+                // software implementation
+                {int_dtype}* address_as_int = ({int_dtype}*)address;
+                {int_dtype} old = *address_as_int, assumed;
+
+                do {{
+                    assumed = old;
+                    old = atomicCAS(address_as_int, assumed,
+                                    __{arg_dtype}_as_{val_type_cast}(val {op}
+                                           __{val_type_cast}_as_{arg_dtype}(assumed)));
+
+                // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+                }} while (assumed != old);
+
+                return __{val_type_cast}_as_{arg_dtype}(old);
+            }}
+            '''.format(arg_dtype=arg_dtype, int_dtype=int_dtype,
+                       val_type_cast=val_type_cast, op_name=op_name, op=op)
+_universal_support_code += deindent(atomic_support_code)
 
 # CUDA does not support modulo arithmetics for long double. Since we can't give a warning, we let the
 # compilation fail, which gives an error message of type
@@ -63,13 +143,16 @@ for ix, xtype in enumerate(typestrs):
         }}
         '''.format(hightype=hightype, xtype=xtype, ytype=ytype, expr=expr)
 
-_universal_support_code = deindent(mod_support_code)+'''
+_universal_support_code += deindent(mod_support_code)
+
+pow_support_code = '''
 #ifdef _MSC_VER
 #define _brian_pow(x, y) (pow((double)(x), (y)))
 #else
 #define _brian_pow(x, y) (pow((x), (y)))
 #endif
 '''
+_universal_support_code += pow_support_code
 
 class CUDACodeGenerator(CodeGenerator):
     '''
@@ -95,6 +178,7 @@ class CUDACodeGenerator(CodeGenerator):
 
     class_name = 'cuda'
 
+    _use_atomics_vectorisation = True # allow this to be off for testing only
     universal_support_code = _universal_support_code
 
     def __init__(self, *args, **kwds):
@@ -102,6 +186,7 @@ class CUDACodeGenerator(CodeGenerator):
         self.c_data_type = c_data_type
         self.warned_integral_convertion = False
         self.previous_convertion_pref = None
+        self.uses_atomics = False
 
     @property
     def restrict(self):
@@ -178,8 +263,7 @@ class CUDACodeGenerator(CodeGenerator):
             code += ' // ' + comment
         return code
 
-    def translate_to_read_arrays(self, statements):
-        read, write, indices, conditional_write_vars = self.arrays_helper(statements)
+    def translate_to_read_arrays(self, statements, read, write, indices):
         lines = []
         # index and read arrays (index arrays first)
         for varname in itertools.chain(indices, read):
@@ -198,8 +282,7 @@ class CUDACodeGenerator(CodeGenerator):
             lines.append(line)
         return lines
 
-    def translate_to_declarations(self, statements):
-        read, write, indices, conditional_write_vars = self.arrays_helper(statements)
+    def translate_to_declarations(self, statements, read, write, indices):
         lines = []
         # simply declare variables that will be written but not read
         for varname in write:
@@ -207,25 +290,31 @@ class CUDACodeGenerator(CodeGenerator):
                 var = self.variables[varname]
                 line = self.c_data_type(var.dtype) + ' ' + varname + ';'
                 lines.append(line)
+        if len(lines):
+            print("CUDA FOUND DECLARATION", lines)
         return lines
 
-    def translate_to_statements(self, statements):
-        read, write, indices, conditional_write_vars = self.arrays_helper(statements)
+    def conditional_write(self, line, statement, conditional_write_vars):
+        lines = []
+        if statement.var in conditional_write_vars:
+            subs = {}
+            condvar = conditional_write_vars[statement.var]
+            lines.append('if(%s)' % condvar)
+            lines.append('    ' + line)
+        else:
+            lines.append(line)
+        return lines
+
+    def translate_to_statements(self, statements, conditional_write_vars):
         lines = []
         # the actual code
         for stmt in statements:
             line = self.translate_statement(stmt)
-            if stmt.var in conditional_write_vars:
-                subs = {}
-                condvar = conditional_write_vars[stmt.var]
-                lines.append('if(%s)' % condvar)
-                lines.append('    '+line)
-            else:
-                lines.append(line)
+            lines.extend(self.conditional_write(line, stmt,
+                                                conditional_write_vars))
         return lines
 
-    def translate_to_write_arrays(self, statements):
-        read, write, indices, conditional_write_vars = self.arrays_helper(statements)
+    def translate_to_write_arrays(self, statements, write):
         lines = []
         # write arrays
         for varname in write:
@@ -235,24 +324,52 @@ class CUDACodeGenerator(CodeGenerator):
             lines.append(line)
         return lines
 
-    def translate_one_statement_sequence(self, statements, scalar=False):
+    def translate_one_statement_sequence(self, statements, scalar=False,
+                                         use_atomics=False):
         # This function is refactored into four functions which perform the
         # four necessary operations. It's done like this so that code
         # deriving from this class can overwrite specific parts.
-        lines = []
-        # index and read arrays (index arrays first)
-        lines += self.translate_to_read_arrays(statements)
-        # simply declare variables that will be written but not read
-        lines += self.translate_to_declarations(statements)
-        # the actual code
-        statement_lines = self.translate_to_statements(statements)
-        lines += statement_lines
-        # write arrays
-        lines += self.translate_to_write_arrays(statements)
+        all_unique = not self.has_repeated_indices(statements)
+
+        read, write, indices, conditional_write_vars = self.arrays_helper(statements)
+        try:
+            # try to use atomics
+            if not use_atomics or scalar or all_unique:
+                raise VectorisationError
+            # more complex translations to deal with repeated indices, which
+            # could lead to race conditions when applied in parallel
+            lines = self.vectorise_code(statements)
+            self.uses_atomics = True
+            print("USING ATOMICS")
+        except VectorisationError:
+            # don't use atomics
+            lines = []
+            # index and read arrays (index arrays first)
+            lines += self.translate_to_read_arrays(statements, read, write,
+                                                   indices)
+            # simply declare variables that will be written but not read
+            lines += self.translate_to_declarations(statements, read, write,
+                                                    indices)
+            # the actual code
+            lines += self.translate_to_statements(statements,
+                                                  conditional_write_vars)
+            # write arrays
+            lines += self.translate_to_write_arrays(statements, write)
         code = '\n'.join(lines)
+
+        if True:#'v_post' in [st.var for st in statements]:
+            print "STATEMENTS", statements
+            print "scalar", scalar
+            print "used_atomics", self.uses_atomics
+            print "lines", lines
+            print "code", code
+            print
+
         # Check if 64bit integer types occur in the same line as a default function.
         # We can't get the arguments of the function call directly with regex due to
         # possibly nested paranthesis inside function paranthesis.
+        statement_lines = self.translate_to_statements(statements,
+                                                       conditional_write_vars)
         convertion_pref = prefs.codegen.generators.cuda.default_functions_integral_convertion
         # only check if there was no warning yet or if convertion preference has changed
         if not self.warned_integral_convertion or self.previous_convertion_pref != convertion_pref:
@@ -286,6 +403,119 @@ class CUDACodeGenerator(CodeGenerator):
                                 self.warned_integral_convertion = True
                                 self.previous_convertion_pref = np.float32
         return stripped_deindented_lines(code)
+
+    def atomics_vectorisation(self, statement, conditional_write_vars,
+                              used_variables):
+        if not self._use_atomics_vectorisation:
+            raise VectorisationError()
+        # Avoids circular import
+        from brian2.devices.device import device
+
+        # See https://github.com/brian-team/brian2/pull/531 for explanation
+        used = set(get_identifiers(statement.expr))
+        used = used.intersection(k for k in self.variables.keys()
+                                 if k in self.variable_indices
+                                 and self.variable_indices[k] != '_idx')
+        used_variables.update(used)
+        if statement.var in used_variables:
+            raise VectorisationError()
+
+        # TODO: why not self.translate_expression(statement.expr)?
+        expr = CPPNodeRenderer().render_expr(statement.expr)
+
+        if statement.op == ':=' or self.variable_indices[statement.var] == '_idx' or not statement.inplace:
+            if statement.op == ':=':
+                decl = self.c_data_type(statement.dtype) + ' '
+                op = '='
+                if statement.constant:
+                    decl = 'const ' + decl
+            else:
+                decl = ''
+                op = statement.op
+            line = '{decl}{var} {op} {expr};'.format(decl=decl,
+                                                     var=statement.var, op=op,
+                                                     expr=expr)
+            line = [line]
+        elif statement.inplace:
+            sign = ''
+            if statement.op == '+=':
+                atomic_op = '_brian_atomicAdd'
+            elif statement.op == '-=':
+                # CUDA has hardware implementations for float (and for CC>=6.0
+                # for double) only for atomicAdd, which is faster then our
+                # software implementation
+                atomic_op = '_brian_atomicAdd'
+                sign = '-'
+            elif statement.op == '*=':
+                atomic_op = '_brian_atomicMul'
+            elif statement.op == '/=':
+                atomic_op = '_brian_atomicDiv'
+            else:
+                # TODO: what other inplace operations are possible? Can we
+                # implement them with atomicCAS ?
+                print("IMPORTANT: found not atomic inplace operaton", statement.op)
+                raise VectorisationError()
+
+            line = '{atomic_op}(&{array_name}[{idx}], ({array_dtype}){sign}({expr}));'.format(
+                atomic_op=atomic_op,
+                array_name=self.get_array_name(self.variables[statement.var]),
+                idx=self.variable_indices[statement.var],
+                array_dtype=c_data_type(self.variables[statement.var].dtype),
+                sign=sign, expr=expr)
+            # this is now a list of 1 or 2 lines (potentially with if(...))
+            line = self.conditional_write(line, statement, conditional_write_vars)
+        else:
+            raise VectorisationError()
+
+        if len(statement.comment):
+            line[-1] += ' // ' + statement.comment
+
+        return line
+
+    def vectorise_code(self, statements):
+        try:
+            lines = []
+            used_variables = set()
+            for statement in statements:
+                lines.append('//  Abstract code:  {var} {op} {expr}'.format(var=statement.var,
+                                                                           op=statement.op,
+                                                                           expr=statement.expr))
+                # We treat every statement individually with its own read and write code
+                # to be on the safe side
+                read, write, indices, conditional_write_vars = self.arrays_helper([statement])
+                # We make sure that we only add code to `lines` after it went
+                # through completely
+                atomic_lines = []
+                # No need to load a variable if it is only in read because of
+                # the in-place operation
+                if (statement.inplace and
+                        self.variable_indices[statement.var] != '_idx' and
+                        statement.var not in get_identifiers(statement.expr)):
+                    read = read - {statement.var}
+                atomic_lines.extend(self.translate_to_read_arrays([statement],
+                                                                  read, write,
+                                                                  indices))
+                atomic_lines.extend(self.atomics_vectorisation(statement,
+                                                               conditional_write_vars,
+                                                               used_variables))
+                # Do not write back such values, the atomic functions have
+                # modified the underlying array already
+                if statement.inplace and self.variable_indices[statement.var] != '_idx':
+                    write = write - {statement.var}
+                atomic_lines.extend(self.translate_to_write_arrays([statement], write))
+                lines.extend(atomic_lines)
+        except VectorisationError:
+            # logg info here, since this means we tried, but failed to use atomics
+            if self._use_atomics_vectorisation:
+                # TODO this message needs to differentiate between effect application modes
+                logger.info("Failed to vectorise code, falling back serialized effect application: note that "
+                            "this will be very slow! Switch to another code generation target for "
+                            "best performance (e.g. cython or weave). First line is: "+str(statements[0]),
+                            once=True)
+            raise
+
+        return lines
+
 
     def denormals_to_zero_code(self):
         if self.flush_denormals:
@@ -418,6 +648,7 @@ class CUDACodeGenerator(CodeGenerator):
                     'support_code_lines': stripped_deindented_lines(support_code),
                     'hashdefine_lines': stripped_deindented_lines(hash_defines),
                     'denormals_code_lines': stripped_deindented_lines(self.denormals_to_zero_code()),
+                    'uses_atomics': self.uses_atomics
                     }
         keywords.update(template_kwds)
         return keywords

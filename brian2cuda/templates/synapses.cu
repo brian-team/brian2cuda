@@ -139,8 +139,12 @@ static int num_loops;
 
 {% block prepare_kernel_inner %}
 {#######################################################################}
-{% if synaptic_effects == "synapse" %}
+{% if uses_atomics or synaptic_effects == "synapse" %}
+{% if uses_atomics %}
+// We are using atomics, we can fully parallelise.
+{% else %}{# synaptic_effects == "synapse" #}
 // Synaptic effects modify only synapse variables.
+{% endif %}
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
 // TODO: effect of mean instead of max?
