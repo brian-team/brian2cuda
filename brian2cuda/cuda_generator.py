@@ -419,8 +419,7 @@ class CUDACodeGenerator(CodeGenerator):
         if statement.var in used_variables:
             raise VectorisationError()
 
-        # TODO: why not self.translate_expression(statement.expr)?
-        expr = CPPNodeRenderer().render_expr(statement.expr)
+        expr = self.translate_expression(statement.expr)
 
         if statement.op == ':=' or self.variable_indices[statement.var] == '_idx' or not statement.inplace:
             if statement.op == ':=':
