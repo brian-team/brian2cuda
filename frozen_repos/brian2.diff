@@ -1,8 +1,91 @@
+diff --git a/brian2/codegen/generators/base.py b/brian2/codegen/generators/base.py
+index f8c45da..226453f 100644
+--- a/brian2/codegen/generators/base.py
++++ b/brian2/codegen/generators/base.py
+@@ -100,10 +100,12 @@ def determine_keywords(self):
+         '''
+         raise NotImplementedError
+ 
+-    def translate_one_statement_sequence(self, statements, scalar=False):
++    def translate_one_statement_sequence(self, statements, scalar=False,
++                                         **additional_kwds):
+         raise NotImplementedError
+ 
+-    def translate_statement_sequence(self, scalar_statements, vector_statements):
++    def translate_statement_sequence(self, scalar_statements, vector_statements,
++                                     additional_kwds):
+         '''
+         Translate a sequence of `Statement` into the target language, taking
+         care to declare variables, etc. if necessary.
+@@ -117,9 +119,13 @@ def translate_statement_sequence(self, scalar_statements, vector_statements):
+         scalar_code = {}
+         vector_code = {}
+         for name, block in scalar_statements.iteritems():
+-            scalar_code[name] = self.translate_one_statement_sequence(block, scalar=True)
++            scalar_code[name] = self.translate_one_statement_sequence(block,
++                                                                      scalar=True,
++                                                                      **additional_kwds)
+         for name, block in vector_statements.iteritems():
+-            vector_code[name] = self.translate_one_statement_sequence(block, scalar=False)
++            vector_code[name] = self.translate_one_statement_sequence(block,
++                                                                      scalar=False,
++                                                                      **additional_kwds)
+ 
+         kwds = self.determine_keywords()
+ 
+@@ -215,9 +221,12 @@ def has_repeated_indices(self, statements):
+                          if index not in ('_idx', '0'))
+         return not all_unique
+ 
+-    def translate(self, code, dtype):
++    def translate(self, code, dtype, additional_kwds):
+         '''
+         Translates an abstract code block into the target language.
++
++        In additional_kwds, codeobject dependent parameters can be passed (for
++        devices that inherit from the CodeObject class).
+         '''
+         scalar_statements = {}
+         vector_statements = {}
+@@ -250,6 +259,7 @@ def translate(self, code, dtype):
+                              'matter. ' + error_msg))
+ 
+         translated = self.translate_statement_sequence(scalar_statements,
+-                                                       vector_statements)
++                                                       vector_statements,
++                                                       additional_kwds)
+ 
+         return translated
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index e57fd61..3528356 100644
+index e57fd61..9eb8a07 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -991,6 +991,7 @@ def run(self, directory, with_output, run_args):
+@@ -538,11 +538,15 @@ def code_object_class(self, codeobj_class=None, fallback_pref=None):
+ 
+     def code_object(self, owner, name, abstract_code, variables, template_name,
+                     variable_indices, codeobj_class=None, template_kwds=None,
+-                    override_conditional_write=None):
++                    override_conditional_write=None, translate_kwds=None):
+         if template_kwds is None:
+             template_kwds = dict()
+         else:
+             template_kwds = dict(template_kwds)
++        if translate_kwds is None:
++            translate_kwds = dict()
++        else:
++            translate_kwds = dict(translate_kwds)
+         template_kwds['user_headers'] = self.headers + prefs['codegen.cpp.headers']
+         template_kwds['profiled'] = self.enable_profiling
+         codeobj = super(CPPStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
+@@ -550,6 +554,7 @@ def code_object(self, owner, name, abstract_code, variables, template_name,
+                                                                codeobj_class=codeobj_class,
+                                                                template_kwds=template_kwds,
+                                                                override_conditional_write=override_conditional_write,
++                                                               translate_kwds=translate_kwds
+                                                                )
+         self.code_objects[codeobj.name] = codeobj
+         if self.enable_profiling:
+@@ -991,6 +996,7 @@ def run(self, directory, with_output, run_args):
                  with open('results/last_run_info.txt', 'r') as f:
                      last_run_info = f.read()
                  self._last_run_time, self._last_run_completed_fraction = map(float, last_run_info.split())
@@ -10,6 +93,40 @@ index e57fd61..3528356 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
+diff --git a/brian2/devices/device.py b/brian2/devices/device.py
+index 993c052..7a1eabe 100644
+--- a/brian2/devices/device.py
++++ b/brian2/devices/device.py
+@@ -269,7 +269,8 @@ def code_object_class(self, codeobj_class=None, fallback_pref='codegen.target'):
+ 
+     def code_object(self, owner, name, abstract_code, variables, template_name,
+                     variable_indices, codeobj_class=None,
+-                    template_kwds=None, override_conditional_write=None):
++                    template_kwds=None, override_conditional_write=None,
++                    translate_kwds=None):
+         name = find_name(name)
+         codeobj_class = self.code_object_class(codeobj_class)
+         template = getattr(codeobj_class.templater, template_name)
+@@ -288,6 +289,9 @@ def code_object(self, owner, name, abstract_code, variables, template_name,
+         else:
+             template_kwds = template_kwds.copy()
+ 
++        if translate_kwds is None:
++            translate_kwds = dict()
++
+         # Check that all functions are available
+         for varname, value in variables.iteritems():
+             if isinstance(value, Function):
+@@ -304,7 +308,8 @@ def code_object(self, owner, name, abstract_code, variables, template_name,
+         logger.diagnostic('%s abstract code:\n%s' % (name, indent(code_representation(abstract_code))))
+ 
+         scalar_code, vector_code, kwds = generator.translate(abstract_code,
+-                                                             dtype=prefs['core.default_float_dtype'])
++                                                             dtype=prefs['core.default_float_dtype'],
++                                                             additional_kwds=translate_kwds)
+         # Add the array names as keywords as well
+         for varname, var in variables.iteritems():
+             if isinstance(var, ArrayVariable):
 diff --git a/brian2/synapses/synapses.py b/brian2/synapses/synapses.py
 index e1bb8d8..a8ace8b 100644
 --- a/brian2/synapses/synapses.py
