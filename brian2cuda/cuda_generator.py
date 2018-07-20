@@ -263,7 +263,7 @@ class CUDACodeGenerator(CodeGenerator):
             code += ' // ' + comment
         return code
 
-    def translate_to_read_arrays(self, statements, read, write, indices):
+    def translate_to_read_arrays(self, read, write, indices):
         lines = []
         # index and read arrays (index arrays first)
         for varname in itertools.chain(indices, read):
@@ -314,7 +314,7 @@ class CUDACodeGenerator(CodeGenerator):
                                                 conditional_write_vars))
         return lines
 
-    def translate_to_write_arrays(self, statements, write):
+    def translate_to_write_arrays(self, write):
         lines = []
         # write arrays
         for varname in write:
@@ -345,8 +345,7 @@ class CUDACodeGenerator(CodeGenerator):
             # don't use atomics
             lines = []
             # index and read arrays (index arrays first)
-            lines += self.translate_to_read_arrays(statements, read, write,
-                                                   indices)
+            lines += self.translate_to_read_arrays(read, write, indices)
             # simply declare variables that will be written but not read
             lines += self.translate_to_declarations(statements, read, write,
                                                     indices)
@@ -354,7 +353,7 @@ class CUDACodeGenerator(CodeGenerator):
             lines += self.translate_to_statements(statements,
                                                   conditional_write_vars)
             # write arrays
-            lines += self.translate_to_write_arrays(statements, write)
+            lines += self.translate_to_write_arrays(write)
         code = '\n'.join(lines)
 
         if True:#'v_post' in [st.var for st in statements]:
@@ -474,36 +473,52 @@ class CUDACodeGenerator(CodeGenerator):
 
     def vectorise_code(self, statements):
         try:
-            lines = []
             used_variables = set()
-            for statement in statements:
-                lines.append('//  Abstract code:  {var} {op} {expr}'.format(var=statement.var,
-                                                                           op=statement.op,
-                                                                           expr=statement.expr))
+            all_read, all_write, all_indices, _ = self.arrays_helper(statements)
+            lines = []
+            # we are collecting all reads, which are not only loaded because
+            # of in-place atomic operations and all writes, which are not
+            # written to by atomics
+            collected_reads = set()
+            collected_writes = set()
+            atomic_lines = []
+            for stmt in statements:
+                lines.append('//  Abstract code:  {var} {op} {expr}'.format(var=stmt.var,
+                                                                            op=stmt.op,
+                                                                            expr=stmt.expr))
                 # We treat every statement individually with its own read and write code
                 # to be on the safe side
-                read, write, indices, conditional_write_vars = self.arrays_helper([statement])
-                # We make sure that we only add code to `lines` after it went
-                # through completely
-                atomic_lines = []
+                read, write, indices, conditional_write_vars = self.arrays_helper([stmt])
                 # No need to load a variable if it is only in read because of
-                # the in-place operation
-                if (statement.inplace and
-                        self.variable_indices[statement.var] != '_idx' and
-                        statement.var not in get_identifiers(statement.expr)):
-                    read = read - {statement.var}
-                atomic_lines.extend(self.translate_to_read_arrays([statement],
-                                                                  read, write,
-                                                                  indices))
-                atomic_lines.extend(self.atomics_vectorisation(statement,
+                # the in-place operation, but still lodad the index var, we
+                # need it for the atomics
+                if (stmt.inplace and
+                        self.variable_indices[stmt.var] != '_idx' and
+                        stmt.var not in get_identifiers(stmt.expr)):
+                    read = read - {stmt.var}
+                collected_reads = collected_reads.union(read)
+                atomic_lines.extend(self.atomics_vectorisation(stmt,
                                                                conditional_write_vars,
                                                                used_variables))
                 # Do not write back such values, the atomic functions have
                 # modified the underlying array already
-                if statement.inplace and self.variable_indices[statement.var] != '_idx':
-                    write = write - {statement.var}
-                atomic_lines.extend(self.translate_to_write_arrays([statement], write))
-                lines.extend(atomic_lines)
+                if stmt.inplace and self.variable_indices[stmt.var] != '_idx':
+                    write = write - {stmt.var}
+                collected_writes = collected_writes.union(write)
+
+            # we translate to read arrays altogether, otherwise we end up with
+            # multiple declarations for statement identifiers
+
+            # pass all_write here, since this determines the `const` keyword
+            # (otherwise the variables written to by atomics would be `const`)
+            # and all_indices, since we need those for the atomic calls
+            lines.extend(self.translate_to_read_arrays(collected_reads,
+                                                       all_write,
+                                                       all_indices))
+            # add the atomic operations and statements
+            lines.extend(atomic_lines)
+            # only write variables which are not written to by atomics
+            lines.extend(self.translate_to_write_arrays(collected_writes))
         except VectorisationError:
             # logg info here, since this means we tried, but failed to use atomics
             if self._use_atomics_vectorisation:
