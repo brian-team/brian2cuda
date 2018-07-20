@@ -282,7 +282,7 @@ class CUDACodeGenerator(CodeGenerator):
             lines.append(line)
         return lines
 
-    def translate_to_declarations(self, statements, read, write, indices):
+    def translate_to_declarations(self, read, write, indices):
         lines = []
         # simply declare variables that will be written but not read
         for varname in write:
@@ -347,8 +347,7 @@ class CUDACodeGenerator(CodeGenerator):
             # index and read arrays (index arrays first)
             lines += self.translate_to_read_arrays(read, write, indices)
             # simply declare variables that will be written but not read
-            lines += self.translate_to_declarations(statements, read, write,
-                                                    indices)
+            lines += self.translate_to_declarations(read, write, indices)
             # the actual code
             lines += self.translate_to_statements(statements,
                                                   conditional_write_vars)
@@ -514,6 +513,12 @@ class CUDACodeGenerator(CodeGenerator):
             lines.extend(self.translate_to_read_arrays(collected_reads,
                                                        all_write,
                                                        all_indices))
+            # we need to declare variables which will be written to but not
+            # read (e.g. in assigmenets like `v_post = 1`) and which are not
+            # used in atomics (hence we use `collected_writes`)
+            lines.extend(self.translate_to_declarations(all_read,
+                                                        collected_writes,
+                                                        all_indices))
             # add the atomic operations and statements
             lines.extend(atomic_lines)
             # only write variables which are not written to by atomics
