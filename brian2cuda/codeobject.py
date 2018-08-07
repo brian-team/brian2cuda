@@ -1,5 +1,10 @@
 '''
-Module implementing the CUDA "standalone" `CodeObject`
+Module implementing the CUDA "standalone" `CodeObject`. Brian2CUDA implements
+two different code objects. `CUDAStandaloneCodeObject` is the standard
+implementation, which does not use atomic operations but serialized synaptic
+effect application if race conditions are possible.
+`CUDAStandaloneAtomicsCodeObject` uses atomic operations which allows parallel
+effect applications even when race conditions are possible.
 '''
 from brian2.codegen.codeobject import CodeObject, constant_or_scalar
 from brian2.codegen.targets import codegen_targets
@@ -10,10 +15,11 @@ from brian2.core.functions import DEFAULT_FUNCTIONS
 from brian2.devices.device import get_device
 from brian2.core.preferences import prefs
 
-from brian2cuda.cuda_generator import (CUDACodeGenerator,
-                                                     c_data_type)
+from brian2cuda.cuda_generator import (CUDAAtomicsCodeGenerator,
+                                       CUDACodeGenerator, c_data_type)
 
-__all__ = ['CUDAStandaloneCodeObject']
+__all__ = ['CUDAStandaloneCodeObject',
+           'CUDAStandaloneAtomicsCodeObject']
 
 
 class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
@@ -40,7 +46,21 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     def run(self):
         get_device().main_queue.append(('run_code_object', (self,)))
 
+
+class CUDAStandaloneAtomicsCodeObject(CUDAStandaloneCodeObject):
+    '''
+    CUDA standalone code object which uses atomic operations for parallel
+    execution
+
+    The ``code`` should be a `~brian2.codegen.templates.MultiTemplate`
+    object with two macros defined, ``main`` (for the main loop code) and
+    ``support_code`` for any support code (e.g. function definitions).
+    '''
+    generator_class = CUDAAtomicsCodeGenerator
+
+
 codegen_targets.add(CUDAStandaloneCodeObject)
+codegen_targets.add(CUDAStandaloneAtomicsCodeObject)
 
 rand_code = '''
     #define _rand(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_rand[vectorisation_idx])

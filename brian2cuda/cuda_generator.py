@@ -16,6 +16,7 @@ from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 
 __all__ = ['CUDACodeGenerator',
+           'CUDAAtomicsCodeGenerator'
            'c_data_type'
            ]
 
@@ -178,7 +179,7 @@ class CUDACodeGenerator(CodeGenerator):
 
     class_name = 'cuda'
 
-    _use_atomics_vectorisation = True # allow this to be off for testing only
+    _use_atomics_vectorisation = False
     universal_support_code = _universal_support_code
 
     def __init__(self, *args, **kwds):
@@ -671,6 +672,11 @@ class CUDACodeGenerator(CodeGenerator):
                     }
         keywords.update(template_kwds)
         return keywords
+
+
+class CUDAAtomicsCodeGenerator(CUDACodeGenerator):
+
+    _use_atomics_vectorisation = True
 
 ################################################################################
 # Implement functions
