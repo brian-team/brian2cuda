@@ -22,7 +22,7 @@ __all__ = ['CUDACodeGenerator',
 
 logger = get_logger('brian2.codegen.generators.cuda_generator')
 
-class VectorisationError(Exception):
+class ParallelisationError(Exception):
     pass
 
 
@@ -66,8 +66,8 @@ overloads = [('int', 'int', 'int'),
 atomicAdd_hw = ['int']
 if True:  # CC >= 2.0, TODO: check for it
     atomicAdd_hw.append('float')
-if False:  # CC >= 6.0 TODO for it AND runtime version (see genn #93)
-    atomicAdd_hw.appen('double')
+if False:  # CC >= 6.0 TODO check for it AND runtime version (see genn #93)
+    atomicAdd_hw.append('double')
 atomic_support_code = ''
 for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
     for arg_dtype, int_dtype, val_type_cast in overloads:
@@ -179,7 +179,7 @@ class CUDACodeGenerator(CodeGenerator):
 
     class_name = 'cuda'
 
-    _use_atomics_vectorisation = False
+    _use_atomics = False
     universal_support_code = _universal_support_code
 
     def __init__(self, *args, **kwds):
@@ -291,8 +291,6 @@ class CUDACodeGenerator(CodeGenerator):
                 var = self.variables[varname]
                 line = self.c_data_type(var.dtype) + ' ' + varname + ';'
                 lines.append(line)
-        if len(lines):
-            print("CUDA FOUND DECLARATION", lines)
         return lines
 
     def conditional_write(self, line, statement, conditional_write_vars):
@@ -325,8 +323,7 @@ class CUDACodeGenerator(CodeGenerator):
             lines.append(line)
         return lines
 
-    def translate_one_statement_sequence(self, statements, scalar=False,
-                                         use_atomics=False):
+    def translate_one_statement_sequence(self, statements, scalar=False):
         # This function is refactored into four functions which perform the
         # four necessary operations. It's done like this so that code
         # deriving from this class can overwrite specific parts.
@@ -335,14 +332,13 @@ class CUDACodeGenerator(CodeGenerator):
         read, write, indices, conditional_write_vars = self.arrays_helper(statements)
         try:
             # try to use atomics
-            if not use_atomics or scalar or all_unique:
-                raise VectorisationError
+            if not self._use_atomics or scalar or all_unique:
+                raise ParallelisationError()
             # more complex translations to deal with repeated indices, which
             # could lead to race conditions when applied in parallel
-            lines = self.vectorise_code(statements)
+            lines = self.parallelise_code(statements)
             self.uses_atomics = True
-            print("USING ATOMICS")
-        except VectorisationError:
+        except ParallelisationError:
             # don't use atomics
             lines = []
             # index and read arrays (index arrays first)
@@ -355,14 +351,6 @@ class CUDACodeGenerator(CodeGenerator):
             # write arrays
             lines += self.translate_to_write_arrays(write)
         code = '\n'.join(lines)
-
-        if True:#'v_post' in [st.var for st in statements]:
-            print "STATEMENTS", statements
-            print "scalar", scalar
-            print "used_atomics", self.uses_atomics
-            print "lines", lines
-            print "code", code
-            print
 
         # Check if 64bit integer types occur in the same line as a default function.
         # We can't get the arguments of the function call directly with regex due to
@@ -403,10 +391,10 @@ class CUDACodeGenerator(CodeGenerator):
                                 self.previous_convertion_pref = np.float32
         return stripped_deindented_lines(code)
 
-    def atomics_vectorisation(self, statement, conditional_write_vars,
-                              used_variables):
-        if not self._use_atomics_vectorisation:
-            raise VectorisationError()
+    def atomics_parallelisation(self, statement, conditional_write_vars,
+                                used_variables):
+        if not self._use_atomics:
+            raise ParallelisationError()
         # Avoids circular import
         from brian2.devices.device import device
 
@@ -417,7 +405,7 @@ class CUDACodeGenerator(CodeGenerator):
                                  and self.variable_indices[k] != '_idx')
         used_variables.update(used)
         if statement.var in used_variables:
-            raise VectorisationError()
+            raise ParallelisationError()
 
         expr = self.translate_expression(statement.expr)
 
@@ -451,8 +439,9 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 # TODO: what other inplace operations are possible? Can we
                 # implement them with atomicCAS ?
-                print("IMPORTANT: found not atomic inplace operaton", statement.op)
-                raise VectorisationError()
+                logger.info("Atomic operation for operation {op} is not implemented."
+                            "".format(op=statement.op))
+                raise ParallelisationError()
 
             line = '{atomic_op}(&{array_name}[{idx}], ({array_dtype}){sign}({expr}));'.format(
                 atomic_op=atomic_op,
@@ -463,14 +452,14 @@ class CUDACodeGenerator(CodeGenerator):
             # this is now a list of 1 or 2 lines (potentially with if(...))
             line = self.conditional_write(line, statement, conditional_write_vars)
         else:
-            raise VectorisationError()
+            raise ParallelisationError()
 
         if len(statement.comment):
             line[-1] += ' // ' + statement.comment
 
         return line
 
-    def vectorise_code(self, statements):
+    def parallelise_code(self, statements):
         try:
             used_variables = set()
             all_read, all_write, all_indices, _ = self.arrays_helper(statements)
@@ -489,16 +478,16 @@ class CUDACodeGenerator(CodeGenerator):
                 # to be on the safe side
                 read, write, indices, conditional_write_vars = self.arrays_helper([stmt])
                 # No need to load a variable if it is only in read because of
-                # the in-place operation, but still lodad the index var, we
+                # the in-place operation, but still load the index var, we
                 # need it for the atomics
                 if (stmt.inplace and
                         self.variable_indices[stmt.var] != '_idx' and
                         stmt.var not in get_identifiers(stmt.expr)):
                     read = read - {stmt.var}
                 collected_reads = collected_reads.union(read)
-                atomic_lines.extend(self.atomics_vectorisation(stmt,
-                                                               conditional_write_vars,
-                                                               used_variables))
+                atomic_lines.extend(self.atomics_parallelisation(stmt,
+                                                                 conditional_write_vars,
+                                                                 used_variables))
                 # Do not write back such values, the atomic functions have
                 # modified the underlying array already
                 if stmt.inplace and self.variable_indices[stmt.var] != '_idx':
@@ -524,14 +513,14 @@ class CUDACodeGenerator(CodeGenerator):
             lines.extend(atomic_lines)
             # only write variables which are not written to by atomics
             lines.extend(self.translate_to_write_arrays(collected_writes))
-        except VectorisationError:
+        except ParallelisationError:
             # logg info here, since this means we tried, but failed to use atomics
-            if self._use_atomics_vectorisation:
-                # TODO this message needs to differentiate between effect application modes
-                logger.info("Failed to vectorise code, falling back serialized effect application: note that "
-                            "this will be very slow! Switch to another code generation target for "
-                            "best performance (e.g. cython or weave). First line is: "+str(statements[0]),
-                            once=True)
+            logger.info("Failed to parallelise code by using atomic operations. "
+                        "Falling back to serialized effect application. This "
+                        "might be slow. Switching to `cpp_standalone` might be "
+                        "faster. Code object name is {} and first line in "
+                        "abstract code is: {}".format(name, statements[0]),
+                        once=True)
             raise
 
         return lines
@@ -676,7 +665,7 @@ class CUDACodeGenerator(CodeGenerator):
 
 class CUDAAtomicsCodeGenerator(CUDACodeGenerator):
 
-    _use_atomics_vectorisation = True
+    _use_atomics = True
 
 ################################################################################
 # Implement functions
