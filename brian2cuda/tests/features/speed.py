@@ -416,7 +416,7 @@ class BrunelHakimModelScalarDelay(SpeedTest):
     category = "Full examples"
     name = "Brunel Hakim with scalar delay (1s)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 300000]#, 350000]#500000, 1000000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 300000, 393750]  #fail: 403125
     n_label = 'Num neurons'
 
     # configuration options
@@ -611,7 +611,7 @@ class CUBA(SpeedTest):
     category = "Full examples"
     name = "CUBA fixed connectivity"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000]
+    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3562500]  #fail: 3578125
     n_label = 'Num neurons'
 
     # configuration options
@@ -725,7 +725,7 @@ class COBAHH(SpeedTest):
     category = "Full examples"
     name = "COBAHH, constant connection probability, no Monitors"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 125000]  #fail: 131250
     n_label = 'Num neurons'
 
     # configuration options
@@ -795,7 +795,7 @@ class STDPEventDriven(SpeedTest):
     category = "Full examples"
     name = "STDP (event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000, 6542968]  #fail:6562500
     n_label = 'Num neurons'
 
     # configuration options
@@ -1074,7 +1074,7 @@ class Vogels(SpeedTest):
     category = "Full examples"
     name = "Vogels et al 2011 (event-driven synapses)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]  #pass: 106250, fail: 112500
     n_label = 'Num neurons'
 
     # configuration options
