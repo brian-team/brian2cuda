@@ -519,7 +519,7 @@ class CUDACodeGenerator(CodeGenerator):
                         "Falling back to serialized effect application. This "
                         "might be slow. Switching to `cpp_standalone` might be "
                         "faster. Code object name is {} and first line in "
-                        "abstract code is: {}".format(name, statements[0]),
+                        "abstract code is: {}".format(self.name, statements[0]),
                         once=True)
             raise
 
