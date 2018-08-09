@@ -9,7 +9,6 @@ import shlex
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 from brian2.core.preferences import prefs
-
 from brian2.utils.logger import get_logger
 
 logger = get_logger('brian2.devices.cuda_standalone.cuda_configuration')
@@ -49,10 +48,16 @@ class DynamicConfigCreator(object):
         # where we pretend this class is a Configuration class
         self.name = config_name
         self.git_commit = git_commit
-        self.prefs = prefs
         self.set_device_kwargs = set_device_kwargs
         self.stashed = None
         self.checked_out_feature = None
+
+        # make sure float_dtypes that were converted to strings (see below)
+        # are converted back into brian2.float... types
+        dtype_str = 'core.default_float_dtype'
+        if dtype_str in prefs and isinstance(prefs[dtype_str], str):
+            prefs[dtype_str] = getattr(brian2, prefs[dtype_str])
+        self.prefs = prefs
 
         if self.git_commit is not None:
             # check if config_name is a branch name
@@ -62,11 +67,15 @@ class DynamicConfigCreator(object):
                 raise ValueError("`git_commit` is not a valid branch or commit sha: {} {}".format(err, err.output))
             self.name += ' ({})'.format(commit_sha[:6])
 
+        # make sure printing np.float32 prints actually 'float32' and not '<type ...>'
+        print_prefs = prefs.copy()
+        if 'core.default_float_dtype' in prefs:
+            print_prefs['core.default_float_dtype'] = prefs['core.default_float_dtype'].__name__
         clsname = ("DynamicConfigCreator('{config_name}',"
                    "{d}{git_commit}{d},{prefs},{set_device_kwargs})".format(
                        config_name=config_name,
                        git_commit=git_commit,
-                       prefs=prefs,
+                       prefs=print_prefs,
                        set_device_kwargs=set_device_kwargs,
                        d="" if git_commit is None else "'"
                    ))
