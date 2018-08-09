@@ -283,12 +283,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             print('debug syn effect mode ', synaptic_effects)
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
             # use atomics if possible (except for `synapses` mode, where we cann parallelise without)
-            # if codeobj_class is None, the default from self.code_object_class() is chosen
-            if codeobj_class is None:
-                if prefs['codegen.generators.cuda.use_atomics'] and synaptic_effects != 'synapses':
-                    codeobj_class = CUDAStandaloneAtomicsCodeObject
-                    logger.debug("Using atomics in synaptic effect application of "
-                                 "Synapses object {syn}".format(syn=name))
+            # TODO: this overwrites if somebody sets a codeobject in the Synapses(..., codeobj_class=...)
+            if prefs['codegen.generators.cuda.use_atomics'] and synaptic_effects != 'synapses':
+                codeobj_class = CUDAStandaloneAtomicsCodeObject
+                logger.debug("Using atomics in synaptic effect application of "
+                             "Synapses object {syn}".format(syn=name))
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
