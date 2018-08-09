@@ -477,7 +477,7 @@ def test_default_function_convertion_warnings():
 
 
 
-@attr('cuda_standalone', 'standalone-only')
+@attr('long', 'cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_atomics_parallelisation():
     # Adapted from brian2.test_synapses:test_ufunc_at_vectorisation()
