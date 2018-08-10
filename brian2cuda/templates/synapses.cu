@@ -24,7 +24,11 @@ kernel_{{codeobj_name}}(
     int threads_per_bundle,
     {% endif %}
     int32_t* eventspace,
+    {% if uses_atomics %}
+    int num_spiking_neurons,
+    {% else %}
     int neurongroup_size,
+    {% endif %}
     %DEVICE_PARAMETERS%
     )
 {
@@ -49,25 +53,46 @@ kernel_{{codeobj_name}}(
     {  // _idx is defined in outer and inner scope (for `scalar_code`)
         if ({{pathway.name}}.no_or_const_delay_mode)
         {
+            // TODO: pass as kernel parameter instead?
+            int num_parallel_blocks = {{pathway.name}}.queue->num_blocks;
+            int32_t spikes_start = {{pathway.name}}.spikes_start;
+            int32_t spikes_stop = {{pathway.name}}.spikes_stop;
+
             // for the first delay timesteps the eventspace is not yet filled
             // note that num_queues is the number of eventspaces, num_queues-1 the delay in timesteps
             if (timestep >= {{pathway.name}}.queue->num_queues - 1)
             {
+                // `spiking_neuron_idx` runs through the eventspace
+                // `post_block_idx` runs through the post neuron blocks of the connectivity matrix
+                {% if uses_atomics %}
+                int spiking_neuron_idx = bid / num_parallel_blocks;
+                int post_block_idx = bid % num_parallel_blocks;
+                {% else %}
+                int post_block_idx = bid;
                 // loop through neurons in eventspace (indices of event neurons, rest -1)
-                for(int i = 0; i < neurongroup_size; i++)
+                for(int spiking_neuron_idx = 0;
+                        spiking_neuron_idx < neurongroup_size;
+                        spiking_neuron_idx++)
+                {% endif %}
                 {
-                    // spiking_neuron is index in NeuronGroup
-                    int32_t spiking_neuron = eventspace[i];
 
+                    // spiking_neuron is index in NeuronGroup
+                    int32_t spiking_neuron = eventspace[spiking_neuron_idx];
+
+                    {% if uses_atomics %}
+                    assert(spiking_neuron != -1);
+                    {% else %}
                     if(spiking_neuron == -1) // end of spiking neurons
                     {
-                        assert(i == eventspace[neurongroup_size]);
+                        assert(spiking_neuron_idx == eventspace[neurongroup_size]);
                         return;
                     }
+                    {% endif %}
+
                     // apply effects if event neuron is in sources of current SynapticPathway
-                    if({{pathway.name}}.spikes_start <= spiking_neuron && spiking_neuron < {{pathway.name}}.spikes_stop)
+                    if(spikes_start <= spiking_neuron && spiking_neuron < spikes_stop)
                     {
-                        int pre_post_block_id = (spiking_neuron - {{pathway.name}}.spikes_start) * {{pathway.name}}.queue->num_blocks + bid;
+                        int pre_post_block_id = (spiking_neuron - spikes_start) * num_parallel_blocks + post_block_idx;
                         int num_synapses = {{pathway.name}}_num_synapses_by_pre[pre_post_block_id];
                         int32_t* propagating_synapses = {{pathway.name}}_synapse_ids_by_pre[pre_post_block_id];
                         for(int j = tid; j < num_synapses; j+=THREADS_PER_BLOCK)
@@ -200,23 +225,48 @@ else if ({{pathway.name}}_max_size <= 0)
 {% block kernel_call %}
 {% set eventspace_variable = pathway.variables[pathway.eventspace_name] %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
+// only call kernel if we have synapses (otherwise we skipped the push kernel)
 if ({{pathway.name}}_max_size > 0)
 {
-    // only call kernel if we have synapses (otherwise we skipped the push kernel)
-    for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
+    {% if uses_atomics %}
+    int32_t num_spiking_neurons;
+    // we only need the number of spiking neurons if we parallelise effect
+    // application over spiking neurons in homogeneous delay mode
+    if ({{pathway.name}}_scalar_delay)
     {
-        kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-            _N,
-            bid_offset,
-            {{owner.clock.name}}.timestep[0],
-            num_threads,
-            {% if bundle_mode %}
-            num_threads_per_bundle,
-            {% endif %}
-            dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
-            _num_{{_eventspace}}-1,
-            %HOST_PARAMETERS%
-        );
+        if (defaultclock.timestep[0] >= {{pathway.name}}_delay - 1)
+        {
+            cudaMemcpy(&num_spiking_neurons,
+                    &dev{{_eventspace}}[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
+                    sizeof(int32_t), cudaMemcpyDeviceToHost);
+            num_blocks = num_parallel_blocks * num_spiking_neurons;
+            //TODO collect info abt mean, std of num spiking neurons per time
+            //step and print INFO at end of simulation
+        }
+    }
+    {% endif %}
+    // in homogenous delay mode with atomics we set `num_blocks` depending on
+    // the number of spiking neurons, which can be 0
+    if (num_blocks != 0) {
+        for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
+        {
+            kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+                _N,
+                bid_offset,
+                {{owner.clock.name}}.timestep[0],
+                num_threads,
+                {% if bundle_mode %}
+                num_threads_per_bundle,
+                {% endif %}
+                dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
+                {% if uses_atomics %}
+                num_spiking_neurons,
+                {% else %}
+                _num_{{_eventspace}}-1,
+                {% endif %}
+                %HOST_PARAMETERS%
+            );
+        }
     }
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");

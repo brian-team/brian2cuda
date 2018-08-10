@@ -23,8 +23,8 @@ public:
 
     // first and last index in source NeuronGroup corresponding to Subgroup in SynapticPathway
     // important for Subgroups created with syntax: NeuronGroup(N=4000,...)[:3200]
-    int spikes_start;
-    int spikes_stop;
+    int32_t spikes_start;
+    int32_t spikes_stop;
 
     double dt;
     CudaSpikeQueue* queue;
@@ -32,7 +32,8 @@ public:
 
     //our real constructor
     __device__ void init(int _Nsource, int _Ntarget, int32_t* _sources,
-                int32_t* _targets, double _dt, int _spikes_start, int _spikes_stop)
+                int32_t* _targets, double _dt, int32_t _spikes_start,
+                int32_t _spikes_stop)
     {
         Nsource = _Nsource;
         Ntarget = _Ntarget;
