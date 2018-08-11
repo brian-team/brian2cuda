@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 # pretty plots
-import seaborn
+import seaborn as sns
 
 import time
 import datetime
@@ -149,6 +149,8 @@ speed_tests = [# feature_test                     name                          
 
 configurations = [config[0] for config in configs]
 project_dirs = [config[1] for config in configs]
+
+sns.set_palette(sns.color_palette("hls", len(configurations)))
 
 # check if multiple Configurations with same project_dirs are specified
 last_idx = {}
