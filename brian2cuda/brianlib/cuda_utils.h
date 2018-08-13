@@ -1,6 +1,7 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
+#include <thrust/system_error.h>
 #include "objects.h"
 
 // Define this to turn on error checking
@@ -18,6 +19,8 @@
 #define CUDA_SAFE_CALL(err)     _cudaSafeCall(err, __FILE__, __LINE__, #err)
 #define CUDA_CHECK_ERROR(msg)   _cudaCheckError(__FILE__, __LINE__, #msg)
 #define CUDA_CHECK_MEMORY()     _cudaCheckMemory(__FILE__, __LINE__)
+#define THRUST_CHECK_ERROR(code)  { try {code;} \
+    catch(...) {_thrustCheckError(__FILE__, __LINE__, #code);} }
 
 
 inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")
@@ -97,6 +100,15 @@ inline void _cudaCheckMemory(const char *file, const int line)
         brian::used_device_memory = used;
     }
 #endif
+}
+
+
+inline void _thrustCheckError(const char *file, const int line,
+        const char *code)
+{
+    fprintf(stderr, "ERROR: THRUST_CHECK_ERROR() caught an exception from %s at %s:%i\n",
+            code, file, line);
+    throw;
 }
 
 #endif
