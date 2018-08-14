@@ -42,7 +42,7 @@ from brian2cuda.tests.features.speed import *
 from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
 from create_readme import create_readme
-from helpers import pickle_results
+from helpers import pickle_results, translate_pkl_to_csv
 
 suppress_brian2_logs()
 BrianLogger.log_level_diagnostic()
@@ -223,9 +223,10 @@ try:
         for n in get_fignums():
             close(n)
 
-        # pickel results object to disk
+        # pickel results object and csv file to disk
         pkl_file = os.path.join(data_dir, name + '.pkl' )
         pickle_results(res, pkl_file)
+        translate_pkl_to_csv(pkl_file)
 
         # save stdout log of last run (the other are deleted in run_speed_tests())
         for proj_dir in set(project_dirs):
