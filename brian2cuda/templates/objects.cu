@@ -198,7 +198,7 @@ void _init_arrays()
     {% for var, varname in zero_arrays | sort(attribute='1') %}
         {% if varname in dynamic_array_specs.values() %}
             {{varname}}.resize({{var.size}});
-            dev{{varname}}.resize({{var.size}});
+            THRUST_CHECK_ERROR(dev{{varname}}.resize({{var.size}}));
             for(int i=0; i<{{var.size}}; i++)
             {
                 {{varname}}[i] = 0;
@@ -233,7 +233,7 @@ void _init_arrays()
     {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
     {% if (name in dynamic_array_specs.values())  %}
     {{name}}.resize({{N}});
-    dev{{name}}.resize({{N}});
+    THRUST_CHECK_ERROR(dev{{name}}.resize({{N}}));
     {% else %}
     {{name}} = new {{dtype_spec}}[{{N}}];
     CUDA_SAFE_CALL(

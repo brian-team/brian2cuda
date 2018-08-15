@@ -205,7 +205,9 @@ void _copyToHost_{{codeobj_name}}()
 
     // resize monitor device vectors
     {% for varname, var in record_variables.items() %}
-    dev_dynamic_array_{{owner.name}}_{{varname}}.resize(host_num_events);
+    THRUST_CHECK_ERROR(
+            dev_dynamic_array_{{owner.name}}_{{varname}}.resize(host_num_events)
+            );
     {% endfor %}
 
     _copy_{{codeobj_name}}_kernel<<<1,1>>>(

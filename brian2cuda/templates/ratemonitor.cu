@@ -17,8 +17,12 @@ static int start_offset = current_iteration;
 {% block prepare_kernel_inner %}
 int num_iterations = {{owner.clock.name}}.i_end;
 int size_till_now = dev{{_dynamic_t}}.size();
-dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset);
-dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset);
+THRUST_CHECK_ERROR(
+        dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset)
+        );
+THRUST_CHECK_ERROR(
+        dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset)
+        );
 num_threads = 1;
 num_blocks = 1;
 {% endblock %}

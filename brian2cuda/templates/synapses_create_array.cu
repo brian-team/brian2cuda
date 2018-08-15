@@ -77,12 +77,16 @@ const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
 {% for variable in owner._registered_variables | sort(attribute='name') %}
     {% set varname = get_array_name(variable, access_data=False) %}
     {% if variable.name == 'delay' and no_or_const_delay_mode %}
-        dev{{varname}}.resize(1);
+        THRUST_CHECK_ERROR(
+                dev{{varname}}.resize(1)
+                );
         {# //TODO: do we actually need to resize varname? #}
         {{varname}}.resize(1);
     {% else %}
         {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
-        dev{{varname}}.resize(newsize);
+        THRUST_CHECK_ERROR(
+                dev{{varname}}.resize(newsize)
+                );
         {% endif %}
         {# //TODO: do we actually need to resize varname? #}
         {{varname}}.resize(newsize);

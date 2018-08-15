@@ -442,7 +442,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 array_name, new_size = args
                 main_lines.append('''
                     {array_name}.resize({new_size});
-                    dev{array_name}.resize({new_size});
+                    THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
                 '''.format(array_name=array_name, new_size=new_size))
             elif func=='insert_code':
                 main_lines.append(args)
