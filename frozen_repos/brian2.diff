@@ -11,7 +11,7 @@ index e57fd61..3528356 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/synapses/synapses.py b/brian2/synapses/synapses.py
-index e1bb8d8..a8ace8b 100644
+index e1bb8d8..e1b9adb 100644
 --- a/brian2/synapses/synapses.py
 +++ b/brian2/synapses/synapses.py
 @@ -281,7 +281,8 @@ def update_abstract_code(self, run_namespace=None, level=0):
@@ -38,13 +38,16 @@ index e1bb8d8..a8ace8b 100644
          # Add the "multisynaptic index", if desired
          self.multisynaptic_index = multisynaptic_index
          if multisynaptic_index is not None:
-@@ -928,6 +932,29 @@ def __getitem__(self, item):
+@@ -928,6 +932,32 @@ def __getitem__(self, item):
          indices = self.indices[item]
          return SynapticSubgroup(self, indices)
  
 +    def _check_lastupdate(self, model, on_pre, on_post):
 +        # check if `lastupdate` is used as identifier in synapse model equations
 +        if 'lastupdate' in model.identifiers:
++            return True
++        # removing lastupdate breaks GeNN (TODO)
++        if get_device().__class__.__name__ == 'GeNNDevice':
 +            return True
 +        # check if we have `event-driven` dynamics
 +        for eq in model.itervalues():
