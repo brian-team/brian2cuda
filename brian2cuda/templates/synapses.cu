@@ -191,6 +191,14 @@ if (!{{owner.name}}_multiple_pre_post){
         num_threads = {{pathway.name}}_max_bundle_size;
     {% endif %}
 }
+else {
+    printf("WARNING: Detected multiple synapses for same (pre, post) neuron "
+           "pair in Synapses object ``{{owner.name}}`` and no atomic operations are used. "
+           "Falling back to serialised effect application for SynapticPathway "
+           "``{{pathway.name}}``. This will be slow. You can avoid serialisation "
+           "by separating this Synapses object into multiple Synapses objects "
+           "with at most one connection between the same (pre, post) neuron pair.\n");
+}
 if (num_threads > max_threads_per_block)
     num_threads = max_threads_per_block;
 {% if bundle_mode %}
