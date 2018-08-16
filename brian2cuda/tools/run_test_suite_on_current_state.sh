@@ -63,7 +63,7 @@ git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "$LOG_FILE"
 git rev-parse HEAD 2>&1 | tee -a "$LOG_FILE"
 git submodule update --init frozen_repos/brian2 | tee -a "$LOG_FILE"
 cd frozen_repos/brian2
-git checkout "float32_support" | tee -a "$LOG_FILE"
+#git checkout "float32_support" | tee -a "$LOG_FILE"
 #echo "Checked out brian2 version:" | tee -a "$LOG_FILE"
 git rev-parse --abbrev-ref HEAD 2>&1 | tee -a "$LOG_FILE"
 git rev-parse HEAD 2>&1 | tee -a "$LOG_FILE"
