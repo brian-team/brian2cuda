@@ -26,8 +26,9 @@ __all__.extend(['AdaptationOscillation',
                 'BrunelHakimModelScalarDelayShort',
                 'BrunelHakimModelHeterogeneousDelay',
                 'BrunelHakimModelHeterogeneousDelayBundleSize1',
-                'CUBA',
-                'COBAHH',
+                'CUBAFixedConnectivityNoMonitor',
+                'COBAHHConstantConnectionProbability',
+                'COBAHHFixedConnectivityNoMonitor',
                 'STDPEventDriven',
                 'STDPNotEventDriven',
                 'STDPMultiPost',
@@ -43,7 +44,7 @@ class AdaptationOscillation(SpeedTest):
     category = "Full examples"
     name = "Adaptation oscillation"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 62500]  #fail: 68750
     n_label = 'Num neurons'
 
     # configuration options
@@ -488,7 +489,7 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
     category = "Full examples"
     name = "Brunel Hakim with heterogenous delays"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 218750]  #fail: 225000
     n_label = 'Num neurons'
     dt = 0.1*ms
 
@@ -595,21 +596,21 @@ class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDe
     name = "Dense, medium rate (1s duration)"
     rate = 10 * Hz
     p = 1.0
-    n_range = [10, 100, 1000, 10000, 100000, 200000]#500000, #40000]  # weave max CPU time should be about 4m
+    n_range = [10, 100, 1000, 10000, 100000, 200000, 462500]  #fail: 468750
 
 
 class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
     name = "Sparse, low rate (10s duration)"
     rate = 1 * Hz
     p = 0.2
-    n_range = [10, 100, 1000, 10000, 100000, 500000]  # weave max CPU time should be about 20s
+    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3281250]  #fail: 3312500
     duration = 10 * second
 
 
-class CUBA(SpeedTest):
+class CUBAFixedConnectivityNoMonitor(SpeedTest):
 
     category = "Full examples"
-    name = "CUBA fixed connectivity"
+    name = "CUBA fixed connectivity, no monitor"
     tags = ["Neurons", "Synapses"]
     n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3562500]  #fail: 3578125
     n_label = 'Num neurons'
@@ -650,12 +651,12 @@ class CUBA(SpeedTest):
         self.timed_run(self.duration)
 
 
-class COBAHHFixedConnectivity(SpeedTest):
+class COBAHHFixedConnectivityNoMonitor(SpeedTest):
 
     category = "Full examples"
     name = "COBAHH fixed connectivity, no Monitors"
     tags = ["Neurons", "Synapses"]
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000]
+    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3796875
     n_label = 'Num neurons'
 
     # configuration options
@@ -720,7 +721,7 @@ class COBAHHFixedConnectivity(SpeedTest):
         self.timed_run(self.duration)
 
 
-class COBAHH(SpeedTest):
+class COBAHHConstantConnectionProbability(SpeedTest):
 
     category = "Full examples"
     name = "COBAHH, constant connection probability, no Monitors"
@@ -844,7 +845,7 @@ class STDPNotEventDriven(SpeedTest):
     category = "Full examples"
     name = "STDP (not event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 500000, 1000000, 5000000, 6550000]  #fail: 6575000
     n_label = 'Num neurons'
 
     # configuration options
@@ -1137,7 +1138,7 @@ class VogelsWithSynapticDynamic(SpeedTest):
     category = "Full examples"
     name = "Vogels et al 2011 (not event-driven synapses)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 112500]  #fail: 118750
     n_label = 'Num neurons'
 
     # configuration options
@@ -1177,18 +1178,18 @@ class VogelsWithSynapticDynamic(SpeedTest):
 
         eqs_stdp_inhib = '''
         w : 1
-        dA_pre/dt=-A_pre/tau_stdp : 1
-        dA_post/dt=-A_post/tau_stdp : 1
+        dApre/dt=-Apre/tau_stdp : 1
+        dApost/dt=-Apost/tau_stdp : 1
         '''
         alpha = 3*Hz*tau_stdp*2  # Target rate parameter
         gmax = 100               # Maximum inhibitory weight
 
         con_ie = Synapses(Pi, Pe, model=eqs_stdp_inhib,
-                          on_pre='''A_pre += 1.
-                                 w = clip(w+(A_post-alpha)*eta, 0, gmax)
+                          on_pre='''Apre += 1.
+                                 w = clip(w+(Apost-alpha)*eta, 0, gmax)
                                  g_gaba += w*nS''',
-                          on_post='''A_post += 1.
-                                  w = clip(w+A_pre*eta, 0, gmax)
+                          on_post='''Apost += 1.
+                                  w = clip(w+Apre*eta, 0, gmax)
                                '''
                          )
         con_ie.connect('rand()<epsilon')
