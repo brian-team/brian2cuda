@@ -527,6 +527,7 @@ class BrunelHakimModelHeterogeneousDelay(SpeedTest):
 
 class BrunelHakimModelHeterogeneousDelayBundleSize1(BrunelHakimModelHeterogeneousDelay):
     dt = 0.01*ms
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 193750]  # fail: 2000000
 
 class ThresholderOnly(SpeedTest):
     category = "Neurons only"
