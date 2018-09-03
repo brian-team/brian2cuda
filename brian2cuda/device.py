@@ -63,7 +63,7 @@ prefs.register_preferences(
         docs='''
         Size of the heap (in MB) used by malloc() and free() device system calls, which
         are used in the `cudaVector` implementation. `cudaVectors` are used to
-        dynamically allocate device memory for `Spikemonitors` and the synapse
+        dynamically allocate device memory for `SpikeMonitors` and the synapse
         queues in the `CudaSpikeQueue` implementation for networks with
         heterogeneously distributed delays.
         ''',

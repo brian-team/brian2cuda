@@ -29,14 +29,14 @@ public:
         if(INITIAL_SIZE > 0)
         {
             m_data = (scalar*)malloc(sizeof(scalar) * INITIAL_SIZE);
-            if(m_data)
+            if(m_data != NULL)
             {
                 m_capacity = INITIAL_SIZE;
             }
             else
             {
                 printf("ERROR while creating cudaVector with size %d in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
-                assert(true);
+                assert(m_data != NULL);
             }
         }
     };
@@ -53,8 +53,7 @@ public:
 
     __device__ scalar& at(size_type index)
     {
-        //TODO: if size_type changes to be signed integer type, check for (index >= 0)
-        if (index >= m_size)
+        if (index < 0 || index >= m_size)
         {
             // TODO: check for proper exception throwing in cuda kernels
             printf("ERROR returning a reference to index %d in cudaVector::at() (size = %u)\n", index, m_size);
@@ -86,7 +85,7 @@ public:
         else
         {
             printf("ERROR invalid index %d, must be in range 0 - %d\n", pos, m_size);
-            assert(true);
+            assert(pos <= m_size);
         }
     };
 
@@ -125,7 +124,7 @@ public:
             //  m_data = new_data;
             //  m_capacity = new_capacity;
             //}
-            if (new_data)
+            if (new_data != NULL)
             {
                 memcpy(new_data, m_data, sizeof(scalar) * size());
                 free(m_data);
@@ -135,7 +134,7 @@ public:
             else
             {
                 printf("ERROR while allocating %d bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
-                assert(true);
+                assert(new_data != NULL);
             }
         }
         else
