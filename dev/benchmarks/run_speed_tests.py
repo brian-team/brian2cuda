@@ -227,7 +227,10 @@ try:
         # pickel results object and csv file to disk
         pkl_file = os.path.join(data_dir, name + '.pkl' )
         pickle_results(res, pkl_file)
-        translate_pkl_to_csv(pkl_file)
+        try:
+            translate_pkl_to_csv(pkl_file)
+        except KeyError as e:
+            print("ERROR tranlating {} to csv:\n\tKeyError: {}", pkl_file, e)
 
         # save stdout log of last run (the other are deleted in run_speed_tests())
         for proj_dir in set(project_dirs):
