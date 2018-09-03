@@ -587,6 +587,13 @@ void _run_{{pathobj}}_initialise_queue()
         }  // end second loop connectivity matrix
         assert(sum_num_unique_elements_bak == sum_num_unique_elements);
 
+        // pointer to start of unique delays array
+        CUDA_SAFE_CALL(
+                cudaMemcpyToSymbol({{pathobj}}_unique_delays,
+                                   &d_ptr_unique_delays,
+                                   sizeof(d_ptr_unique_delays))
+                );
+
         {% if bundle_mode %}
         num_bundle_ids = sum_num_unique_elements;
 
@@ -600,13 +607,6 @@ void _run_{{pathobj}}_initialise_queue()
         CUDA_SAFE_CALL(
                 cudaMemcpyToSymbol({{pathobj}}_synapse_ids, &d_ptr_synapse_ids,
                                    sizeof(d_ptr_synapse_ids))
-                );
-
-        // pointer to start of unique delays array
-        CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol({{pathobj}}_unique_delays,
-                                   &d_ptr_unique_delays,
-                                   sizeof(d_ptr_unique_delays))
                 );
 
         // size by bundle
