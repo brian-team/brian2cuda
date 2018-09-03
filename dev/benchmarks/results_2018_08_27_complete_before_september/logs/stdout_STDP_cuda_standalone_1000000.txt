@@ -1,0 +1,124 @@
+INFO: setting cudaDevice stuff took 0.360328 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.031676s
+INFO: synapses creation took 0.521811s
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	977 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 1000000, number of (pre neuron ID, post neuron block) pairs is 15000000
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 1000000
+	number of bundles: 0
+	number of pre/post blocks: 15000000
+	number of synapses over all pre/post blocks:
+		mean: 0.1	std: 0.2
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 175.5 MB (~184.0 byte per synapse)
+		65.2%	114.441 MB	pointers to synapse IDs [15000000]
+		32.6%	57.220 MB	number of synapses per pre/post block [15000000]
+		2.2%	3.815 MB	synapse IDs [1000000]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 6.896s
+INFO connectivity matrix has size 1000000, number of (pre neuron ID, post neuron block) pairs is 15
+INFO: synapse statistics and memory usage for synapses_post:
+	number of synapses: 1000000
+	number of bundles: 0
+	number of pre/post blocks: 15
+	number of synapses over all pre/post blocks:
+		mean: 66666.7	std: 0.5
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 3.8 MB (~4.0 byte per synapse)
+		100.0%	3.815 MB	synapse IDs [1000000]
+		0.0%	0.000 MB	pointers to synapse IDs [15]
+		0.0%	0.000 MB	number of synapses per pre/post block [15]
+INFO _run_synapses_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_post initialisation took 0.045s
+INFO generating 6000000 rand every 6 clock cycles for poissongroup_thresholder_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_poissongroup_thresholder_codeobject
+	977 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_post_codeobject
+	15 blocks
+	1024 threads
+	38 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.500 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+ERROR while allocating 33554428 bytes in cudaVector.h/reserve()
+ERROR while allocating 67108856 bytes in cudaVector.h/reserve()
+[many repitions of aboves ERROR]
+Number of synapses: 1000000
+Number of synapses: 1000000
+INFO: main_lines took 2363.176045 seconds
+Number of spikes: 4194303
+INFO: main function took 2371.452673 seconds

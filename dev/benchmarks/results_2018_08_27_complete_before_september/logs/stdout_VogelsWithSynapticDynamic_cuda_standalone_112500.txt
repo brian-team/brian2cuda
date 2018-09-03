@@ -1,0 +1,172 @@
+INFO: setting cudaDevice stuff took 0.360813 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.023043s
+INFO: synapses creation took 241.817s
+INFO: synapses_1 creation took 10.7619s
+INFO: synapses_2 creation took 47.0215s
+INFO connectivity matrix has size 10128718, number of (pre neuron ID, post neuron block) pairs is 337500
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 10128718
+	number of bundles: 0
+	number of pre/post blocks: 337500
+	number of synapses over all pre/post blocks:
+		mean: 30.0	std: 5.4
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 42.5 MB (~4.4 byte per synapse)
+		90.9%	38.638 MB	synapse IDs [10128718]
+		6.1%	2.575 MB	pointers to synapse IDs [337500]
+		3.0%	1.287 MB	number of synapses per pre/post block [337500]
+INFO _run_synapses_1_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 3.042s
+INFO connectivity matrix has size 40504287, number of (pre neuron ID, post neuron block) pairs is 337500
+INFO: synapse statistics and memory usage for synapses_2_pre:
+	number of synapses: 40504287
+	number of bundles: 0
+	number of pre/post blocks: 337500
+	number of synapses over all pre/post blocks:
+		mean: 120.0	std: 10.8
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 158.4 MB (~4.1 byte per synapse)
+		97.6%	154.512 MB	synapse IDs [40504287]
+		1.6%	2.575 MB	pointers to synapse IDs [337500]
+		0.8%	1.287 MB	number of synapses per pre/post block [337500]
+INFO _run_synapses_2_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_2_pre initialisation took 3.462s
+INFO connectivity matrix has size 202514526, number of (pre neuron ID, post neuron block) pairs is 1350000
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 202514526
+	number of bundles: 0
+	number of pre/post blocks: 1350000
+	number of synapses over all pre/post blocks:
+		mean: 150.0	std: 12.1
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 788.0 MB (~4.1 byte per synapse)
+		98.0%	772.532 MB	synapse IDs [202514526]
+		1.3%	10.300 MB	pointers to synapse IDs [1350000]
+		0.7%	5.150 MB	number of synapses per pre/post block [1350000]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 18.812s
+INFO connectivity matrix has size 40504287, number of (pre neuron ID, post neuron block) pairs is 1350000
+INFO: synapse statistics and memory usage for synapses_2_post:
+	number of synapses: 40504287
+	number of bundles: 0
+	number of pre/post blocks: 1350000
+	number of synapses over all pre/post blocks:
+		mean: 30.0	std: 5.4
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 170.0 MB (~4.4 byte per synapse)
+		90.9%	154.512 MB	synapse IDs [40504287]
+		6.1%	10.300 MB	pointers to synapse IDs [1350000]
+		3.0%	5.150 MB	number of synapses per pre/post block [1350000]
+INFO _run_synapses_2_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_2_post initialisation took 15.977s
+INFO kernel_neurongroup_stateupdater_codeobject
+	147 blocks
+	768 threads
+	40 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_synapses_2_stateupdater_codeobject
+	52740 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	110 blocks
+	1024 threads
+	15 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_1_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_2_pre_codeobject
+	15 blocks
+	1024 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_2_post_codeobject
+	15 blocks
+	1024 threads
+	26 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	110 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 40504287
+Number of synapses: 40504287
+Number of synapses: 202514526
+Number of synapses: 10128718
+INFO: main_lines took 648.708490 seconds
+INFO: main function took 655.243494 seconds

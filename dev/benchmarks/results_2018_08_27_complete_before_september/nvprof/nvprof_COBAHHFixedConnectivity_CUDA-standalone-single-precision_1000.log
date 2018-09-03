@@ -1,0 +1,23 @@
+==27070== NVPROF is profiling process 27070, command: ./main
+==27070== Profiling application: ./main
+==27070== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   42.34%  327.52ms     10000  32.751us  1.6320us  98.629ms  kernel_spikemonitor_codeobject(int, int*, double, int*, int*, int*, int, int*, double*, int, int*, int*)
+                   18.85%  145.79ms     10000  14.579us  13.536us  15.872us  kernel_neurongroup_stateupdater_codeobject(int, int, float*, float*, double*, char*, double*, float*, float*, float*, double, float*)
+                   14.84%  114.82ms      9521  12.060us  3.4880us  35.936us  kernel_synapses_pre_codeobject(int, int, int, int, int, int*, int, float*, int*, int, int*, int, int*)
+                   13.16%  101.81ms      9521  10.692us  3.5200us  33.248us  kernel_synapses_1_pre_codeobject(int, int, int, int, int, int*, int, int*, int, int*, int, float*, int*)
+                    5.24%  40.541ms     20000  2.0270us  1.9520us  2.5600us  [CUDA memcpy DtoH]
+                    3.45%  26.717ms     10000  2.6710us  2.1120us  2.9120us  kernel_neurongroup_thresholder_codeobject(int, int, int*, double, float*, double*, char*)
+                    2.11%  16.292ms     10000  1.6290us  1.5040us  1.8240us  _GLOBAL__N__69_tmpxft_000066b3_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_7f32e276::_reset_neurongroup_thresholder_codeobject(int*)
+                    0.01%  67.329us         1  67.329us  67.329us  67.329us  _run_spikemonitor_codeobject_init(void)
+      API calls:   47.77%  747.43ms     20000  37.371us  15.194us  98.652ms  cudaMemcpy
+                   44.45%  695.47ms     59043  11.779us  9.5820us  14.813ms  cudaLaunch
+                    5.82%  91.049ms    567546     160ns     137ns  333.66us  cudaSetupArgument
+                    1.03%  16.071ms     59043     272ns     182ns  317.39us  cudaConfigureCall
+                    0.93%  14.525ms     60001     242ns     181ns  373.79us  cudaGetLastError
+                    0.01%  136.43us         1  136.43us  136.43us  136.43us  cudaMemGetInfo
+                    0.00%  26.008us         7  3.7150us  3.0080us  5.0740us  cudaFuncGetAttributes
+                    0.00%  21.346us        26     821ns     587ns  2.0500us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  16.837us         1  16.837us  16.837us  16.837us  cudaDeviceSynchronize
+                    0.00%  4.0700us         8     508ns     354ns     991ns  cudaDeviceGetAttribute
+                    0.00%  2.5740us         2  1.2870us  1.1280us  1.4460us  cudaGetDevice

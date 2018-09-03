@@ -1,0 +1,116 @@
+INFO: setting cudaDevice stuff took 0.360594 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.129146s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	3464 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses creation took 189.388s
+INFO: synapses_1 creation took 44.9143s
+INFO connectivity matrix has size 56735962, number of (pre neuron ID, post neuron block) pairs is 53203125
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 56735962
+	number of bundles: 0
+	number of pre/post blocks: 53203125
+	number of synapses over all pre/post blocks:
+		mean: 1.1	std: 2.4
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 825.3 MB (~15.3 byte per synapse)
+		49.2%	405.908 MB	pointers to synapse IDs [53203125]
+		26.2%	216.431 MB	synapse IDs [56735962]
+		24.6%	202.954 MB	number of synapses per pre/post block [53203125]
+INFO _run_synapses_1_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 81.476s
+INFO connectivity matrix has size 226996364, number of (pre neuron ID, post neuron block) pairs is 53203125
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 226996364
+	number of bundles: 0
+	number of pre/post blocks: 53203125
+	number of synapses over all pre/post blocks:
+		mean: 4.3	std: 3.0
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 1474.8 MB (~6.8 byte per synapse)
+		58.7%	865.922 MB	synapse IDs [226996364]
+		27.5%	405.908 MB	pointers to synapse IDs [53203125]
+		13.8%	202.954 MB	number of synapses per pre/post block [53203125]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 297.645s
+INFO kernel_neurongroup_stateupdater_codeobject
+	6158 blocks
+	576 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.562 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	3464 blocks
+	1024 threads
+	15 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.000 theoretical occupancy
+INFO kernel_synapses_1_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	3464 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+ERROR while allocating 33554428 bytes in cudaVector.h/reserve()
+ERROR while allocating 67108856 bytes in cudaVector.h/reserve()
+[many repitions of aboves ERROR]
+Number of synapses: 226996364
+Number of synapses: 56735962
+INFO: main_lines took 4238.596572 seconds
+Number of spikes: 4194303
+INFO: main function took 4254.386238 seconds

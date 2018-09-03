@@ -1,0 +1,15 @@
+==27550== NVPROF is profiling process 27550, command: ./main
+==27550== Profiling application: ./main
+==27550== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:  100.00%  242.20ms    100000  2.4210us  2.2720us  4.0320us  kernel_neurongroup_stateupdater_codeobject(int, int, float*, double*)
+      API calls:   89.08%  1.05584s    100000  10.558us  9.7340us  11.726ms  cudaLaunch
+                    6.35%  75.314ms    400000     188ns     138ns  340.36us  cudaSetupArgument
+                    2.34%  27.694ms    100000     276ns     204ns  327.27us  cudaGetLastError
+                    2.22%  26.302ms    100000     263ns     214ns  13.182us  cudaConfigureCall
+                    0.01%  132.22us         1  132.22us  132.22us  132.22us  cudaMemGetInfo
+                    0.00%  19.468us         1  19.468us  19.468us  19.468us  cudaDeviceSynchronize
+                    0.00%  11.939us         2  5.9690us  3.1950us  8.7440us  cudaFuncGetAttributes
+                    0.00%  5.0250us         2  2.5120us     809ns  4.2160us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  3.2870us         4     821ns     410ns  1.8630us  cudaDeviceGetAttribute
+                    0.00%  1.6460us         1  1.6460us  1.6460us  1.6460us  cudaGetDevice

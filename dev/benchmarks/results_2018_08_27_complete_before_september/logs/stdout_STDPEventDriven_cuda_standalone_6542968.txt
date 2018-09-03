@@ -1,0 +1,112 @@
+INFO: setting cudaDevice stuff took 0.399942 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.074833s
+INFO: synapses creation took 4.26399s
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	6390 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 6542968, number of (pre neuron ID, post neuron block) pairs is 98144520
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 6542968
+	number of bundles: 0
+	number of pre/post blocks: 98144520
+	number of synapses over all pre/post blocks:
+		mean: 0.1	std: 0.2
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 1148.1 MB (~184.0 byte per synapse)
+		65.2%	748.783 MB	pointers to synapse IDs [98144520]
+		32.6%	374.392 MB	number of synapses per pre/post block [98144520]
+		2.2%	24.959 MB	synapse IDs [6542968]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 47.570s
+INFO connectivity matrix has size 6542968, number of (pre neuron ID, post neuron block) pairs is 15
+INFO: synapse statistics and memory usage for synapses_post:
+	number of synapses: 6542968
+	number of bundles: 0
+	number of pre/post blocks: 15
+	number of synapses over all pre/post blocks:
+		mean: 436197.9	std: 0.4
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 25.0 MB (~4.0 byte per synapse)
+		100.0%	24.959 MB	synapse IDs [6542968]
+		0.0%	0.000 MB	pointers to synapse IDs [15]
+		0.0%	0.000 MB	number of synapses per pre/post block [15]
+INFO _run_synapses_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_post initialisation took 0.280s
+INFO generating 6542968 rand every 1 clock cycles for poissongroup_thresholder_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_poissongroup_thresholder_codeobject
+	6390 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_post_codeobject
+	15 blocks
+	1024 threads
+	38 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.500 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 6542968
+Number of synapses: 6542968
+INFO: main_lines took 317.566226 seconds
+INFO: main function took 318.577611 seconds

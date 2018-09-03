@@ -1,0 +1,64 @@
+INFO: setting cudaDevice stuff took 0.186645 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.045535s
+INFO: synapses creation took 178.913s
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject
+	210219 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 215263970, number of (pre neuron ID, post neuron block) pairs is 4920
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 215263970
+	number of bundles: 201720
+	number of pre/post blocks: 4920
+	number of synapses over all pre/post blocks:
+		mean: 43752.8	std: 188.7
+	number of unique delays over all pre/post blocks:
+		mean: 41.0	std: 0.0
+	bundle size over all bundles:
+		mean: 1067.1	std: 122.2
+
+	memory usage: TOTAL: 823.5 MB (~4.0 byte per synapse)
+		99.7%	821.167 MB	synapse IDs [215263970]
+		0.1%	0.770 MB	unique delays [201720]
+		0.1%	0.770 MB	number of synapses per bundle [201720]
+		0.1%	0.770 MB	synapses bundle offset [201720]
+		0.0%	0.019 MB	global bundle ID start [4921]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	41 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 11.818s
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_synapses_pre_push_spikes_push_kernel
+	15 blocks per spiking neuron
+	1024 threads
+	40 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.500 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 215263970
+INFO: main_lines took 3803.064566 seconds
+INFO: main function took 3807.167503 seconds

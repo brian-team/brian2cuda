@@ -1,0 +1,17 @@
+==3339== NVPROF is profiling process 3339, command: ./main
+==3339== Profiling application: ./main
+==3339== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   75.33%  116.85ms     10000  11.685us  9.2160us  12.128us  kernel_neurongroup_stateupdater_codeobject(int, int, double*, double*, char*, double*, double*, double*, double*)
+                   15.13%  23.468ms     10000  2.3460us  2.0800us  2.8800us  kernel_neurongroup_thresholder_codeobject(int, int, int*, double, double*, double*, char*)
+                    9.54%  14.802ms     10000  1.4800us  1.4080us  1.8240us  _GLOBAL__N__69_tmpxft_00000c19_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_0e9058a7::_reset_neurongroup_thresholder_codeobject(int*)
+      API calls:   87.76%  303.83ms     30000  10.127us  8.9470us  8.2638ms  cudaLaunch
+                    8.63%  29.875ms    170000     175ns     142ns  325.88us  cudaSetupArgument
+                    1.83%  6.3322ms     30000     211ns     175ns     570ns  cudaGetLastError
+                    1.72%  5.9649ms     30000     198ns     155ns  4.7680us  cudaConfigureCall
+                    0.04%  133.05us         1  133.05us  133.05us  133.05us  cudaMemGetInfo
+                    0.01%  21.366us        35     610ns     556ns  1.2480us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.01%  19.453us         1  19.453us  19.453us  19.453us  cudaDeviceSynchronize
+                    0.00%  16.739us         4  4.1840us  3.0630us  6.0190us  cudaFuncGetAttributes
+                    0.00%  3.9380us         8     492ns     346ns  1.0140us  cudaDeviceGetAttribute
+                    0.00%  2.9010us         2  1.4500us  1.0480us  1.8530us  cudaGetDevice

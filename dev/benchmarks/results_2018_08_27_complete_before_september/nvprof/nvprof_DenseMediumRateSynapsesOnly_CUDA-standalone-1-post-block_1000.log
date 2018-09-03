@@ -1,0 +1,19 @@
+==19427== NVPROF is profiling process 19427, command: ./main
+==19427== Profiling application: ./main
+==19427== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   49.70%  51.333ms     10000  5.1330us  4.8960us  6.1760us  kernel_synapses_pre_codeobject(int, int, int, int, int, int*, int, int*, int, int*, int, double*, int*)
+                   19.82%  20.467ms     10000  2.0460us  2.0160us  2.6560us  [CUDA memcpy DtoH]
+                   16.78%  17.328ms     10000  1.7320us  1.6000us  2.0480us  kernel_neurongroup_thresholder_codeobject(int, int, int*)
+                   13.70%  14.149ms     10000  1.4140us  1.2800us  1.8880us  _GLOBAL__N__69_tmpxft_00004ac4_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_e0a5624b::_reset_neurongroup_thresholder_codeobject(int*)
+      API calls:   59.02%  352.00ms     30000  11.733us  9.6370us  9.1550ms  cudaLaunch
+                   33.42%  199.33ms     10000  19.933us  18.108us  37.000us  cudaMemcpy
+                    4.98%  29.728ms    170000     174ns     134ns  319.96us  cudaSetupArgument
+                    1.32%  7.8941ms     30000     263ns     216ns  5.6320us  cudaGetLastError
+                    1.22%  7.2782ms     30000     242ns     161ns  13.728us  cudaConfigureCall
+                    0.02%  132.12us         1  132.12us  132.12us  132.12us  cudaMemGetInfo
+                    0.00%  11.344us         3  3.7810us  3.0170us  4.5060us  cudaFuncGetAttributes
+                    0.00%  8.6340us         1  8.6340us  8.6340us  8.6340us  cudaDeviceSynchronize
+                    0.00%  6.8660us         3  2.2880us     698ns  4.4390us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  2.1490us         4     537ns     412ns     868ns  cudaDeviceGetAttribute
+                    0.00%  1.0910us         1  1.0910us  1.0910us  1.0910us  cudaGetDevice

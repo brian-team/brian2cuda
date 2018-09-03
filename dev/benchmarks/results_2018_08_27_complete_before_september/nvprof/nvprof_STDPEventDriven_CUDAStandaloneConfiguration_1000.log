@@ -1,0 +1,26 @@
+==13964== NVPROF is profiling process 13964, command: ./main
+==13964== Profiling application: ./main
+==13964== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   24.77%  67.664ms      7801  8.6730us  5.6010us  24.768us  kernel_synapses_pre_codeobject(int, int, int, int, int, int*, int, double*, int, double*, int, double*, int, int*, double*, double, double*, int, int*, int, int*, int)
+                   16.81%  45.907ms     10000  4.5900us  4.5120us  6.9760us  kernel_synapses_post_codeobject(int, int, int, int, int, int*, int, double*, int, double*, int, double*, int, double, double*, int, int*, int*, int)
+                   15.64%  42.721ms     10000  4.2720us  3.8400us  6.2080us  kernel_neurongroup_stateupdater_codeobject(int, int, double*, double*, double*)
+                    9.58%  26.159ms     10000  2.6150us  2.0800us  3.0080us  kernel_poissongroup_thresholder_codeobject(int, int, int*, double*, double*, double*)
+                    7.50%  20.496ms     10000  2.0490us  2.0160us  2.6240us  [CUDA memcpy DtoH]
+                    6.71%  18.338ms     10000  1.8330us  1.7600us  2.5600us  kernel_neurongroup_thresholder_codeobject(int, int, int*, double*)
+                    6.63%  18.100ms     10000  1.8090us  1.6960us  2.0800us  kernel_neurongroup_resetter_codeobject(int, int, double*, int*)
+                    6.09%  16.638ms     10000  1.6630us  1.5360us  1.9520us  _GLOBAL__N__69_tmpxft_000034dd_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_018c9cf5::_reset_neurongroup_thresholder_codeobject(int*)
+                    5.96%  16.282ms     10000  1.6280us  1.4080us  1.8880us  _GLOBAL__N__70_tmpxft_000034df_00000000_6_poissongroup_thresholder_codeobject_cpp1_ii_83740b5b::_reset_poissongroup_thresholder_codeobject(int*)
+                    0.31%  852.96us         2  426.48us  420.23us  432.74us  void gen_sequenced<curandStateXORWOW, double, int, __operator_&__(double curand_uniform_double_noargs<curandStateXORWOW>(curandStateXORWOW*, int))>(curandStateXORWOW*, double*, unsigned long, unsigned long, int)
+      API calls:   70.82%  849.43ms     77803  10.917us  8.9500us  9.2759ms  cudaLaunch
+                   17.61%  211.25ms     10000  21.124us  18.539us  412.66us  cudaMemcpy
+                    8.02%  96.177ms    571632     168ns     129ns  367.03us  cudaSetupArgument
+                    1.78%  21.297ms     80004     266ns     197ns  366.49us  cudaGetLastError
+                    1.74%  20.853ms     77803     268ns     190ns  538.58us  cudaConfigureCall
+                    0.02%  206.69us         1  206.69us  206.69us  206.69us  cudaMalloc
+                    0.01%  131.83us         1  131.83us  131.83us  131.83us  cudaMemGetInfo
+                    0.00%  48.126us        10  4.8120us  2.8880us  15.962us  cudaFuncGetAttributes
+                    0.00%  28.801us        41     702ns     565ns  1.8060us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  7.2270us         1  7.2270us  7.2270us  7.2270us  cudaDeviceSynchronize
+                    0.00%  6.8920us        16     430ns     343ns     819ns  cudaDeviceGetAttribute
+                    0.00%  3.9730us         4     993ns     742ns  1.5350us  cudaGetDevice

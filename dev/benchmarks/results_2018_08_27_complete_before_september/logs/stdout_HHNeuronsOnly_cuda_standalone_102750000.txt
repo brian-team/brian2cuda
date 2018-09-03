@@ -1,0 +1,28 @@
+INFO: setting cudaDevice stuff took 0.365620 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 3.43287s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	100342 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_neurongroup_stateupdater_codeobject
+	160547 blocks
+	640 threads
+	48 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.625 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	100342 blocks
+	1024 threads
+	15 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO: main_lines took 833.018689 seconds
+INFO: main function took 842.684753 seconds

@@ -1,0 +1,6 @@
+,CUDA standalone single precision,CUDA standalone 1 post block,CUDA standalone,C++ standalone,C++ standalone (OpenMP),GeNN_optimized
+1000,0.621062,0.545799,0.629758,0.672245,0.324757,nan
+10000,1.46871,0.744441,1.64407,7.71664,3.33608,nan
+20000,2.4627,1.16704,2.81518,17.7998,9.66502,nan
+50000,5.5545,3.41067,6.59531,65.9036,45.5843,nan
+62500,6.98509,4.88742,8.56731,97.3111,68.5697,nan

@@ -1,0 +1,47 @@
+INFO: setting cudaDevice stuff took 0.421833 seconds
+objects cu num par blocks 15
+INFO: _init_arrays() took 0.022965s
+INFO: synapses creation took 224.456s
+INFO connectivity matrix has size 298593750, number of (pre neuron ID, post neuron block) pairs is 8190
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 298593750
+	number of bundles: 0
+	number of pre/post blocks: 8190
+	number of synapses over all pre/post blocks:
+		mean: 36458.3	std: 0.5
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 1139.1 MB (~4.0 byte per synapse)
+		100.0%	1139.045 MB	synapse IDs [298593750]
+		0.0%	0.062 MB	pointers to synapse IDs [8190]
+		0.0%	0.031 MB	number of synapses per pre/post block [8190]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	56 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 42.271s
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	15 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 298593750
+INFO: main_lines took 636.402694 seconds
+INFO: main function took 644.532163 seconds
