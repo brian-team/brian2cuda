@@ -352,14 +352,14 @@ public:
                     // and the size_before_resize will be unchanged next loop cycle if the delay didn't change.
                     // in example marked as (b)
                     shared_mem_last_cycle_size_before_resize[0] = size_before_resize;
-
-                    if (num_synapses - i > num_threads)  // true if there is another loop cycle needed
-                    {
-                        // make sure shared_mem_last_cycle_size_before_resize is written for the next loop cycle
-                        __syncthreads();
-                    }
                 }
             } // end if
+
+            if (num_synapses - i > num_threads)  // true if there is another loop cycle needed
+            {
+                // make sure shared_mem_last_cycle_size_before_resize is written for the next loop cycle
+                __syncthreads();
+            }
         } // end for
     } // end push_synapses()
 
