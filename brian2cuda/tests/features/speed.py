@@ -85,10 +85,10 @@ class AdaptationOscillation(SpeedTest):
         neurons.v = 'rand()*v_t'
         neurons.w = 'rand()*10*dw'
 
-        synapses = Synapses(neurons, neurons, 'c: volt', on_pre='v += c')
+        synapses = Synapses(neurons, neurons, 'c: volt', on_pre='v += c',
+                            delay=syn_delay)
         synapses.connect('i!=j', p=sparsity)
         synapses.c[:] = 'syn_weight'
-        synapses.delay[:] = 'syn_delay'
 
         self.timed_run(self.duration)
 
