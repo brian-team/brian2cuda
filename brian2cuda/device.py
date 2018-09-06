@@ -178,15 +178,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def code_object_class(self, codeobj_class=None, fallback_pref=None):
         '''
-        Return `CodeObject` class (either `CPPStandaloneCodeObject` class or input)
+        Return `CodeObject` class (either `CUDAStandaloneCodeObject` class or input)
 
         Parameters
         ----------
         codeobj_class : a `CodeObject` class, optional
             If this is keyword is set to None or no arguments are given, this method will return
-            the default (`CPPStandaloneCodeObject` class).
+            the default (`CUDAStandaloneCodeObject` class).
         fallback_pref : str, optional
-            For the cpp_standalone device this option is ignored.
+            For the cuda_standalone device this option is ignored.
 
         Returns
         -------
@@ -326,7 +326,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for syn in synapses:
             if syn.multisynaptic_index is not None:
                 multisyn_vars.append(syn.variables[syn.multisynaptic_index])
-        arr_tmp = CUDAStandaloneCodeObject.templater.objects(
+        arr_tmp = self.code_object_class().templater.objects(
                         None, None,
                         array_specs=self.arrays,
                         dynamic_array_specs=self.dynamic_arrays,
@@ -472,13 +472,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
-        main_tmp = CUDAStandaloneCodeObject.templater.main(None, None,
-                                                          main_lines=main_lines,
-                                                          code_objects=self.code_objects.values(),
-                                                          report_func=self.report_func,
-                                                          dt=float(defaultclock.dt),
-                                                          additional_headers=main_includes,
-                                                          gpu_heap_size=prefs['devices.cuda_standalone.gpu_heap_size']
+        main_tmp = self.code_object_class().templater.main(None, None,
+                                                           main_lines=main_lines,
+                                                           code_objects=self.code_objects.values(),
+                                                           report_func=self.report_func,
+                                                           dt=float(defaultclock.dt),
+                                                           additional_headers=main_includes,
+                                                           gpu_heap_size=prefs['devices.cuda_standalone.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -660,7 +660,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_rand_source(self, writer):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
-        rand_tmp = CUDAStandaloneCodeObject.templater.rand(None, None,
+        rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
@@ -670,7 +670,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def copy_source_files(self, writer, directory):
         # Copy the brianlibdirectory
-        brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CUDAStandaloneCodeObject))[0],
+        brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(self.code_object_class()))[0],
                                     'brianlib')
         brianlib_files = copy_directory(brianlib_dir, os.path.join(directory, 'brianlib'))
         for file in brianlib_files:
@@ -685,17 +685,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
-        network_tmp = CUDAStandaloneCodeObject.templater.network(None, None,
+        network_tmp = self.code_object_class().templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
                                                                  eventspace_arrays=self.eventspace_arrays)
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
-        synapses_classes_tmp = CUDAStandaloneCodeObject.templater.synapses_classes(None, None)
+        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
     def generate_run_source(self, writer, run_includes):
-        run_tmp = CUDAStandaloneCodeObject.templater.run(None, None, run_funcs=self.runfuncs,
+        run_tmp = self.code_object_class().templater.run(None, None, run_funcs=self.runfuncs,
                                                         code_objects=self.code_objects.values(),
                                                         additional_headers=run_includes,
                                                         array_specs=self.arrays,
@@ -722,7 +722,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 openmp_flag = ''
             # Generate the visual studio makefile
             source_bases = [fname.replace('.cpp', '').replace('/', '\\') for fname in writer.source_files]
-            win_makefile_tmp = CUDAStandaloneCodeObject.templater.win_makefile(
+            win_makefile_tmp = self.code_object_class().templater.win_makefile(
                 None, None,
                 source_bases=source_bases,
                 cpp_compiler_flags=cpp_compiler_flags,
@@ -735,7 +735,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-            makefile_tmp = CUDAStandaloneCodeObject.templater.makefile(None, None,
+            makefile_tmp = self.code_object_class().templater.makefile(None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
                 cpp_compiler_flags=cpp_compiler_flags,
