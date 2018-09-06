@@ -32,6 +32,7 @@
 {# USES_VARIABLES { delay } #}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
+#include <thrust/unique.h>
 #include <iostream>
 #include <ctime>
 #include <limits.h>
