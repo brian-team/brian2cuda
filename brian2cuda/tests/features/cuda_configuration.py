@@ -31,10 +31,18 @@ class CUDAStandaloneConfigurationBase(Configuration):
         brian2.set_device('cuda_standalone', build_on_run=False,
                           **self.device_kwargs)
         if socket.gethostname() == 'elnath':
-            if prefs['devices.cpp_standalone.extra_make_args_unix'] == ['-j12']:
-                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
             prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
             prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
+        elif socket.gethostname() == 'sabik':
+            try:
+                dev_no = int(os.environ['CUDA_VISIBLE_DEVICES'])
+            except KeyError:
+                # uses first GPU by default
+                dev_no = 0
+            dev_no_to_cc = {0: '61', 1: '52'}
+            cc = dev_no_to_cc[dev_no]
+            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
 
     def after_run(self):
         if os.path.exists('cuda_standalone'):
