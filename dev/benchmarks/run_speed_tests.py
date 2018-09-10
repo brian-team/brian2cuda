@@ -123,6 +123,7 @@ speed_tests = [# feature_test                     name                          
                (STDP,                                           'STDP',                                         slice(None)         ),
                (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
                (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
+               (MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
 
                (VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
                (SparseMediumRateSynapsesOnly,                   'SparseMediumRateSynapsesOnly',                 slice(None)         ),
