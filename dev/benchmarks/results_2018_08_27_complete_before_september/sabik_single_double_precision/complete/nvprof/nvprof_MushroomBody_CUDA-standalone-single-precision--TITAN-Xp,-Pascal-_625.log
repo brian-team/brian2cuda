@@ -1,0 +1,27 @@
+==2004== NVPROF is profiling process 2004, command: ./main
+==2004== Profiling application: ./main
+==2004== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   59.52%  2.51132s     50500  49.729us  46.593us  68.610us  kernel_neurongroup_stateupdater_codeobject(int, int, char*, float*, double*, float*, float*, float*, float*)
+                   21.14%  891.85ms     50500  17.660us  17.344us  23.937us  kernel_neurongroup_1_stateupdater_codeobject(int, int, float*, char*, float*, float*, double*, float*, float*, float*)
+                    5.34%  225.17ms     50500  4.4580us  4.1600us  18.689us  kernel_spikegeneratorgroup_codeobject(int, int, double, double, int*, int, int*, int*, double*, int, double*, int*, int)
+                    3.45%  145.56ms    151500     960ns     896ns  9.9200us  [CUDA memcpy DtoH]
+                    3.44%  145.09ms     50500  2.8730us  2.6240us  20.672us  kernel_synapses_1_post_codeobject(int, int, int, int, int, int*, int, float*, int, double*, int, float*, int, int*, int, int*, float*, int, double)
+                    1.62%  68.334ms      6113  11.178us  4.4480us  61.602us  kernel_synapses_1_pre_codeobject(int, int, int, int, int, int*, int, float*, int, double*, int, float*, int, int*, int, double, int*, int, float*, int*, float*, int)
+                    1.52%  63.952ms     50500  1.2660us  1.1840us  10.368us  kernel_neurongroup_thresholder_codeobject(int, int, int*, double, float*, double*, char*)
+                    1.47%  61.882ms     50500  1.2250us  1.1200us  10.113us  kernel_neurongroup_1_thresholder_codeobject(int, int, int*, double, float*, double*, char*)
+                    1.11%  46.725ms     50500     925ns     800ns  9.6000us  _GLOBAL__N__69_tmpxft_000003f0_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_7f32e276::_reset_neurongroup_thresholder_codeobject(int*)
+                    1.11%  46.648ms     50500     923ns     832ns  9.8880us  _GLOBAL__N__71_tmpxft_000003dc_00000000_6_neurongroup_1_thresholder_codeobject_cpp1_ii_f3fd1e16::_reset_neurongroup_1_thresholder_codeobject(int*)
+                    0.19%  7.9356ms      1403  5.6560us  3.6480us  24.001us  kernel_synapses_2_pre_codeobject(int, int, int, int, int, int*, int, float*, int*, int, int*, int, int*)
+                    0.11%  4.6694ms       100  46.694us  41.985us  62.338us  kernel_synapses_pre_codeobject(int, int, int, int, int, int*, int, float*, int, int*, int, int*, int, float*, int*)
+      API calls:   57.72%  5.28979s    411616  12.851us  9.3610us  13.111ms  cudaLaunch
+                   31.31%  2.86947s    151500  18.940us  13.734us  64.438ms  cudaMemcpy
+                    7.98%  731.74ms   3537725     206ns     144ns  1.9367ms  cudaSetupArgument
+                    1.71%  156.71ms    555500     282ns     190ns  606.33us  cudaGetLastError
+                    1.27%  116.47ms    411616     282ns     194ns  569.26us  cudaConfigureCall
+                    0.00%  329.22us         1  329.22us  329.22us  329.22us  cudaMemGetInfo
+                    0.00%  64.536us        13  4.9640us  3.9090us  10.150us  cudaFuncGetAttributes
+                    0.00%  59.312us        63     941ns     742ns  2.9530us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  12.297us         1  12.297us  12.297us  12.297us  cudaDeviceSynchronize
+                    0.00%  11.729us        16     733ns     457ns  2.0700us  cudaDeviceGetAttribute
+                    0.00%  7.8470us         4  1.9610us     981ns  3.2930us  cudaGetDevice

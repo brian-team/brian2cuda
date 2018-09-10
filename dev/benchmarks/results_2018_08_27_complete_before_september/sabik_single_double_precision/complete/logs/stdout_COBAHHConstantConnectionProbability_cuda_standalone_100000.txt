@@ -1,0 +1,111 @@
+CUDA_VISIBLE_DEVICES is 0
+INFO: setting cudaDevice stuff took 0.566825 seconds
+objects cu num par blocks 30
+INFO: _init_arrays() took 0.023475s
+INFO: synapses creation took 212.108s
+INFO: synapses_1 creation took 50.4597s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	98 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject_1
+	98 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject_2
+	98 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 40010115, number of (pre neuron ID, post neuron block) pairs is 600000
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 40010115
+	number of bundles: 0
+	number of pre/post blocks: 600000
+	number of synapses over all pre/post blocks:
+		mean: 66.7	std: 8.1
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 159.5 MB (~4.2 byte per synapse)
+		95.7%	152.626 MB	synapse IDs [40010115]
+		2.9%	4.578 MB	pointers to synapse IDs [600000]
+		1.4%	2.289 MB	number of synapses per pre/post block [600000]
+INFO _run_synapses_1_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 6.155s
+INFO connectivity matrix has size 160002905, number of (pre neuron ID, post neuron block) pairs is 2400000
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 160002905
+	number of bundles: 0
+	number of pre/post blocks: 2400000
+	number of synapses over all pre/post blocks:
+		mean: 66.7	std: 8.1
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 637.8 MB (~4.2 byte per synapse)
+		95.7%	610.363 MB	synapse IDs [160002905]
+		2.9%	18.311 MB	pointers to synapse IDs [2400000]
+		1.4%	9.155 MB	number of synapses per pre/post block [2400000]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 23.672s
+INFO kernel_neurongroup_stateupdater_codeobject
+	157 blocks
+	640 threads
+	96 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.312 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	98 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_1_pre_codeobject
+	30 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	30 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 40010115
+Number of synapses: 160002905
+INFO: main_lines took 310.243199 seconds
+INFO: main function took 312.992121 seconds

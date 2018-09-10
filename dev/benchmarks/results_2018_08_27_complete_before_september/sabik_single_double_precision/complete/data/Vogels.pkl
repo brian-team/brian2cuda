@@ -1,0 +1,16 @@
+Äcbrian2.tests.features.base
+SpeedTestResults
+q)Åq}q(Ufull_resultsq}q((UGeNN_optimizedqU8Full examples: Vogels et al 2011 (event-driven synapses)M'U	OverheadsqtG@;Oag#(U"CUDA standalone (TITAN Xp, Pascal)qU8Full examples: Vogels et al 2011 (event-driven synapses)M'UAllq	tG@(ç∏∫«À(U3CUDA standalone single precision (TITAN Xp, Pascal)q
+U8Full examples: Vogels et al 2011 (event-driven synapses)M NhtG@;A [¿(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)M'h	tG@(}øHÀí(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)MËhtG?ı¡â7K∆®(hU8Full examples: Vogels et al 2011 (event-driven synapses)MËhtG?ˆ ê-‡(hU8Full examples: Vogels et al 2011 (event-driven synapses)M Nh	tG@:úÃÃÃÃÕ(hU8Full examples: Vogels et al 2011 (event-driven synapses)MËh	tG?Ÿ∏,+ÿ(hU8Full examples: Vogels et al 2011 (event-driven synapses)M'h	tG@;Oag#(hU8Full examples: Vogels et al 2011 (event-driven synapses)MP√htG@RåF‹]d(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)M'htG@(}øHÀí(hU8Full examples: Vogels et al 2011 (event-driven synapses)MËh	tG?ˆ ê-‡(hU8Full examples: Vogels et al 2011 (event-driven synapses)MP√htG@LÙ›/üæ(hU8Full examples: Vogels et al 2011 (event-driven synapses)MP√h	tG@RåF‹]d(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)MP√h	tG@Rë∫^5?}(hU8Full examples: Vogels et al 2011 (event-driven synapses)M NhtG@.2 Wßá(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)M Nh	tG@;A [¿(hU8Full examples: Vogels et al 2011 (event-driven synapses)MP√h	tG@LÙ›/üæ(hU8Full examples: Vogels et al 2011 (event-driven synapses)M'htG@(ç∏∫«À(hU8Full examples: Vogels et al 2011 (event-driven synapses)MËhtG?Ÿ∏,+ÿ(hU8Full examples: Vogels et al 2011 (event-driven synapses)M Nh	tG@.2 Wßá(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)MËh	tG?ı¡â7K∆®(h
+U8Full examples: Vogels et al 2011 (event-driven synapses)MP√htG@Rë∫^5?}(hU8Full examples: Vogels et al 2011 (event-driven synapses)M NhtG@:úÃÃÃÃÕuUspeed_testsq]qcbrian2cuda.tests.features.speed
+Vogels
+qaUconfigurationsq]q(chelpers
+dotdict
+q)Åq(U	classnameqU™DynamicConfigCreator('CUDA standalone (TITAN Xp, Pascal)',None,{'devices.cpp_standalone.run_environment_variables': {'LD_BIND_NOW': '1', 'CUDA_VISIBLE_DEVICES': '0'}},{})qUnameqhUmoduleqU,brian2cuda.tests.features.cuda_configurationqu}qbh)Åq(hU‚DynamicConfigCreator('CUDA standalone single precision (TITAN Xp, Pascal)',None,{'devices.cpp_standalone.run_environment_variables': {'LD_BIND_NOW': '1', 'CUDA_VISIBLE_DEVICES': '0'}, 'core.default_float_dtype': 'float32'},{})qhh
+hhu}qbh)Åq(hUGeNNConfigurationOptimizedqhhhUbrian2genn.correctness_testingqu}qbeub.

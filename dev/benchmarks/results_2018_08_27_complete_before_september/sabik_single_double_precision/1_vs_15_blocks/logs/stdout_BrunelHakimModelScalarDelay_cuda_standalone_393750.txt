@@ -1,0 +1,3 @@
+INFO: setting cudaDevice stuff took 0.216555 seconds
+objects cu num par blocks 1
+INFO: _init_arrays() took 0.023337s

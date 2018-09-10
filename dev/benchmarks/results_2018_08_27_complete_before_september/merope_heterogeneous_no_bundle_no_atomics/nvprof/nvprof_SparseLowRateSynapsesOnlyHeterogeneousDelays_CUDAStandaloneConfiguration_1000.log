@@ -1,0 +1,21 @@
+==9110== NVPROF is profiling process 9110, command: ./main
+==9110== Profiling application: ./main
+==9110== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   33.98%  750.69ms    100000  7.5060us  7.1360us  413.47us  _run_synapses_pre_push_spikes_push_kernel(int, int, int, int*)
+                   28.27%  624.63ms    100000  6.2460us  5.7600us  7.9680us  kernel_synapses_pre_codeobject(int, int, int, int, int, int*, int, int*, int, int*, int, double*, int*)
+                   13.15%  290.47ms    100000  2.9040us  2.8480us  3.5200us  _run_synapses_pre_push_spikes_advance_kernel(void)
+                    9.31%  205.76ms    100000  2.0570us  2.0160us  4.3840us  [CUDA memcpy DtoH]
+                    7.98%  176.38ms    100000  1.7630us  1.6640us  2.2400us  kernel_neurongroup_thresholder_codeobject(int, int, int*)
+                    7.31%  161.57ms    100000  1.6150us  1.4400us  2.2080us  _GLOBAL__N__69_tmpxft_000021ab_00000000_6_neurongroup_thresholder_codeobject_cpp1_ii_e0a5624b::_reset_neurongroup_thresholder_codeobject(int*)
+      API calls:   66.83%  5.40259s    500000  10.805us  8.8780us  9.6856ms  cudaLaunch
+                   26.06%  2.10657s    100000  21.065us  17.827us  25.199ms  cudaMemcpy
+                    4.12%  333.21ms   2100000     158ns     119ns  343.11us  cudaSetupArgument
+                    1.50%  121.44ms    500000     242ns     187ns  27.042us  cudaGetLastError
+                    1.49%  120.32ms    500000     240ns     163ns  29.668us  cudaConfigureCall
+                    0.00%  145.90us         1  145.90us  145.90us  145.90us  cudaMemGetInfo
+                    0.00%  17.589us         4  4.3970us  3.1120us  6.0940us  cudaFuncGetAttributes
+                    0.00%  10.487us         1  10.487us  10.487us  10.487us  cudaDeviceSynchronize
+                    0.00%  8.1620us         4  2.0400us     689ns  2.9370us  cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags
+                    0.00%  2.5220us         4     630ns     343ns  1.3260us  cudaDeviceGetAttribute
+                    0.00%  1.9130us         1  1.9130us  1.9130us  1.9130us  cudaGetDevice

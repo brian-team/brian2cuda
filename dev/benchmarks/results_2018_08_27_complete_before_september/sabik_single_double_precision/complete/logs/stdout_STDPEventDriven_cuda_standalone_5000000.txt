@@ -1,0 +1,113 @@
+CUDA_VISIBLE_DEVICES is 0
+INFO: setting cudaDevice stuff took 0.266157 seconds
+objects cu num par blocks 30
+INFO: _init_arrays() took 0.068075s
+INFO: synapses creation took 3.30463s
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	4883 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO connectivity matrix has size 5000000, number of (pre neuron ID, post neuron block) pairs is 150000000
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 5000000
+	number of bundles: 0
+	number of pre/post blocks: 150000000
+	number of synapses over all pre/post blocks:
+		mean: 0.0	std: 0.2
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 1735.7 MB (~364.0 byte per synapse)
+		65.9%	1144.409 MB	pointers to synapse IDs [150000000]
+		33.0%	572.205 MB	number of synapses per pre/post block [150000000]
+		1.1%	19.073 MB	synapse IDs [5000000]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 63.201s
+INFO connectivity matrix has size 5000000, number of (pre neuron ID, post neuron block) pairs is 30
+INFO: synapse statistics and memory usage for synapses_post:
+	number of synapses: 5000000
+	number of bundles: 0
+	number of pre/post blocks: 30
+	number of synapses over all pre/post blocks:
+		mean: 166666.7	std: 0.5
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 19.1 MB (~4.0 byte per synapse)
+		100.0%	19.073 MB	synapse IDs [5000000]
+		0.0%	0.000 MB	pointers to synapse IDs [30]
+		0.0%	0.000 MB	number of synapses per pre/post block [30]
+INFO _run_synapses_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	304 bytes user-allocated constant memory
+INFO: synapses_post initialisation took 0.461s
+INFO generating 10000000 rand every 2 clock cycles for poissongroup_thresholder_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	768 threads
+	35 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	0.750 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_poissongroup_thresholder_codeobject
+	4883 blocks
+	1024 threads
+	16 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	30 blocks
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_post_codeobject
+	30 blocks
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	304 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 5000000
+Number of synapses: 5000000
+INFO: main_lines took 249.399153 seconds
+INFO: main function took 250.150157 seconds

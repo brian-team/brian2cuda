@@ -1,0 +1,16 @@
+Äcbrian2.tests.features.base
+SpeedTestResults
+q)Åq}q(Ufull_resultsq}q((UGeNN_optimizedqU%Full examples: Adaptation oscillationMP√UAllqtG@”ÿY»…(hU%Full examples: Adaptation oscillationM NU	OverheadsqtG?Úÿﬁ®óc(U3CUDA standalone single precision (TITAN Xp, Pascal)q	U%Full examples: Adaptation oscillationMP√htG@∏?ëÊFÒ(hU%Full examples: Adaptation oscillationMËhtG?«%_5Ω@(U"CUDA standalone (TITAN Xp, Pascal)q
+U%Full examples: Adaptation oscillationM NhtG@B!BoÁ(hU%Full examples: Adaptation oscillationM'htG?‰√≤›7~(h
+U%Full examples: Adaptation oscillationMP√htG@ÅΩ•ú‡(h
+U%Full examples: Adaptation oscillationM'htG?ˆπwÖrõ(hU%Full examples: Adaptation oscillationM NhtG?Úÿﬁ®óc(h	U%Full examples: Adaptation oscillationMP√htG@∏?ëÊFÒ(h	U%Full examples: Adaptation oscillationM NhtG@y–¶v Ô(hU%Full examples: Adaptation oscillationM'htG?‰√≤›7~(h
+U%Full examples: Adaptation oscillationMËhtG?‚.¬ã*k(h	U%Full examples: Adaptation oscillationM'htG?ÙÎ[-M@%(hU%Full examples: Adaptation oscillationMP√htG@”ÿY»…(h
+U%Full examples: Adaptation oscillationM'htG?ˆπwÖrõ(h
+U%Full examples: Adaptation oscillationM NhtG@B!BoÁ(h	U%Full examples: Adaptation oscillationMËhtG?‚TGÒQÁ(h
+U%Full examples: Adaptation oscillationMËhtG?‚.¬ã*k(h	U%Full examples: Adaptation oscillationM NhtG@y–¶v Ô(hU%Full examples: Adaptation oscillationMËhtG?«%_5Ω@(h
+U%Full examples: Adaptation oscillationMP√htG@ÅΩ•ú‡(h	U%Full examples: Adaptation oscillationM'htG?ÙÎ[-M@%(h	U%Full examples: Adaptation oscillationMËhtG?‚TGÒQÁuUspeed_testsq]qcbrian2cuda.tests.features.speed
+AdaptationOscillation
+qaUconfigurationsq]q(chelpers
+dotdict
+q)Åq(U	classnameqU™DynamicConfigCreator('CUDA standalone (TITAN Xp, Pascal)',None,{'devices.cpp_standalone.run_environment_variables': {'LD_BIND_NOW': '1', 'CUDA_VISIBLE_DEVICES': '0'}},{})qUnameqh
+UmoduleqU,brian2cuda.tests.features.cuda_configurationqu}qbh)Åq(hU‚DynamicConfigCreator('CUDA standalone single precision (TITAN Xp, Pascal)',None,{'devices.cpp_standalone.run_environment_variables': {'LD_BIND_NOW': '1', 'CUDA_VISIBLE_DEVICES': '0'}, 'core.default_float_dtype': 'float32'},{})qhh	hhu}qbh)Åq(hUGeNNConfigurationOptimizedqhhhUbrian2genn.correctness_testingqu}qbeub.

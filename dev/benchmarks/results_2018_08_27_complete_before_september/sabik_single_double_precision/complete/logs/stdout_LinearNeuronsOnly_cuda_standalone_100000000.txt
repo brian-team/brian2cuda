@@ -1,0 +1,14 @@
+CUDA_VISIBLE_DEVICES is 0
+INFO: setting cudaDevice stuff took 0.449171 seconds
+objects cu num par blocks 30
+INFO: _init_arrays() took 1.07925s
+INFO kernel_neurongroup_stateupdater_codeobject
+	97657 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO: main_lines took 1028.521854 seconds
+INFO: main function took 1033.438899 seconds

@@ -1,0 +1,4 @@
+,"CUDA standalone (TITAN Xp, Pascal)","CUDA standalone single precision (TITAN Xp, Pascal)",GeNN_optimized
+1000,0.516221,0.537002,0.163844
+10000,2.68174,2.54205,0.908358
+100000,32.9481,26.5528,25.5234
