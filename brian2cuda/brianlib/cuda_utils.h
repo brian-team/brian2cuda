@@ -40,6 +40,16 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
 
 inline void _cudaCheckError(const char *file, const int line, const char *msg)
 {
+#ifdef BRIAN2CUDA_ERROR_CHECK_BLOCKING
+    // More careful checking. However, this will affect performance.
+    cudaError err = cudaDeviceSynchronize();
+    if(cudaSuccess != err)
+    {
+        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
+                msg, file, line, cudaGetErrorString(err));
+        exit(-1);
+    }
+#else
 #ifdef BRIAN2CUDA_ERROR_CHECK
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err)
@@ -49,16 +59,6 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
         exit(-1);
     }
 
-#else
-#ifdef BRIAN2CUDA_ERROR_CHECK_BLOCKING
-    // More careful checking. However, this will affect performance.
-    err = cudaDeviceSynchronize();
-    if(cudaSuccess != err)
-    {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
-                msg, file, line, cudaGetErrorString(err));
-        exit(-1);
-    }
 #endif
 #endif
 
