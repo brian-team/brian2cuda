@@ -17,8 +17,6 @@ parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=st
 parser.add_argument('--float-dtype', nargs=1, default=['float64'], type=str,
                     choices=['float32', 'float64'], help=("The "
                     "prefs['core.default_float_dtype'] with which tests should be run."))
-parser.add_argument('--reset-prefs', action='store_true',
-                    help="Weather to reset prefs between tests or not.")
 args = parser.parse_args()
 
 import sys
