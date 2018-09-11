@@ -4,10 +4,12 @@ Run brian2 test suite on standalone architectures
 
 import argparse
 parser = argparse.ArgumentParser(description='Run a subset from the brian2 testsuite on GPU.')
-parser.add_argument('test', nargs=1, type=str,
+parser.add_argument('test', nargs='*', type=str,
                     help=("Specify the test(s) to run. Has to be in the form of "
                           "package.tests.test_file:test_function "
-                          "(e.g. brian2.tests.test_base:test_names)"))
+                          "(e.g. brian2.tests.test_base:test_names) or "
+                          "package.tests.test_file to run all tests in a "
+                          "file."))
 parser.add_argument('--targets', nargs='*', default=['cuda_standalone'], type=str,
                     choices=['cuda_standalone', 'genn', 'cpp_standalone'],
                     help=("Which codegeneration targets to use, can be multiple. "
@@ -17,12 +19,11 @@ parser.add_argument('--float-dtype', nargs=1, default=['float64'], type=str,
                     "prefs['core.default_float_dtype'] with which tests should be run."))
 parser.add_argument('--reset-prefs', action='store_true',
                     help="Weather to reset prefs between tests or not.")
-parser.add_argument('--only-standalone', action='store_true',
-                    help=("Only run standalone-compatible tests"))
 args = parser.parse_args()
 
 import sys
 from brian2.devices.device import set_device
+from brian2.tests import make_argv
 from brian2 import prefs
 import nose
 import numpy as np
@@ -37,15 +38,10 @@ for target in args.targets:
     sys.stderr.write('Running test(s) {} for device {} with float type {} '
                      '...\n'.format(args.test[0], target, args.float_dtype[0]))
     set_device(target, directory=None, with_output=False)
-    argv = ['nosetests', args.test[0],
-            '-c=',  # no config file loading
-            '-I', '^hears\.py$',
-            '-I', '^\.',
-            '-I', '^_',
-            '--nologcapture',
-            '--exe']
 
-    if args.only_standalone:
-        extra_argv = ['-a', 'standalone-compatible']
+    argv = make_argv(args.test, 'standalone-compatible,!codegen-independent')
 
     success = nose.run(argv=argv)
+
+    if not success:
+        sys.exit(1)
