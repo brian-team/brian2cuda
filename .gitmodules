@@ -6,4 +6,4 @@
 	url = https://github.com/brian-team/brian2genn.git
 [submodule "frozen_repos/brian2"]
 	path = frozen_repos/brian2
-	url = https://github.com/denisalevi/brian2.git
+	url = https://github.com/brian-team/brian2.git
