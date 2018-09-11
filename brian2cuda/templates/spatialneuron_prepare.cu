@@ -23,6 +23,10 @@
 
 {% block extra_maincode %}
 
+{# needed to translate _array... to _ptr_array... #}}
+///// pointers_lines /////
+{{pointers_lines|autoindent}}
+
 // The following code is simply copied from spatialneuron_prepare.cpp
 // of the cpp_standalone device (except for copying to GPU memory at bottom of file)
 
@@ -70,9 +74,18 @@ for (int _counter=0; _counter<_num_starts; _counter++)
 }
 
 // Copy prepared arrays to GPU
-{% for varname in ['_invr', 'Ri', 'Cm', 'dt', 'area', 'r_length_1', 'r_length_2', '_ab_star0', '_ab_star1', '_ab_star2', '_starts', '_ends', '_invr0', '_invrn', '_b_plus', '_b_minus'] %}
-CUDA_SAFE_CALL(cudaMemcpy(dev{{get_array_name(variables[varname], access_data=True)}}, {{get_array_name(variables[varname], access_data=True)}}, sizeof({{c_data_type(variables[varname].dtype)}})*_num_{{get_array_name(variables[varname], access_data=True)}}, cudaMemcpyHostToDevice));
-{% endfor %}
+{% for var in ['_invr', 'Ri', 'Cm', 'dt', 'area', 'r_length_1',
+                   'r_length_2', '_ab_star0', '_ab_star1', '_ab_star2',
+                   '_starts', '_ends', '_invr0', '_invrn', '_b_plus',
+                   '_b_minus'] %}
+{% set varname = get_array_name(variables[var], access_data=False) %}
 
+// {{var}}
+CUDA_SAFE_CALL(
+        cudaMemcpy(dev{{varname}}, {{varname}},
+            sizeof({{c_data_type(variables[var].dtype)}})*_num_{{varname}},
+            cudaMemcpyHostToDevice)
+        );
+{% endfor %}
 
 {% endblock %}
