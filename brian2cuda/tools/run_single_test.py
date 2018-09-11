@@ -17,6 +17,8 @@ parser.add_argument('--float-dtype', nargs=1, default=['float64'], type=str,
                     "prefs['core.default_float_dtype'] with which tests should be run."))
 parser.add_argument('--reset-prefs', action='store_true',
                     help="Weather to reset prefs between tests or not.")
+parser.add_argument('--only-standalone', action='store_true',
+                    help=("Only run standalone-compatible tests"))
 args = parser.parse_args()
 
 import sys
@@ -40,8 +42,10 @@ for target in args.targets:
             '-I', '^hears\.py$',
             '-I', '^\.',
             '-I', '^_',
-            # Only run standalone tests
             '--nologcapture',
             '--exe']
+
+    if args.only_standalone:
+        extra_argv = ['-a', 'standalone-compatible']
 
     success = nose.run(argv=argv)
