@@ -64,7 +64,7 @@ neuron.I = 0*amp
 run(50*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
-device.build( directory=codefolder, compile = True, run = True, debug = True)
+device.build( directory=codefolder, compile = True, run = True, debug=False)
 
 # Calculation of velocity
 slope, intercept, r_value, p_value, std_err = stats.linregress(spikes.t/second,

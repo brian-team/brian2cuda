@@ -13,7 +13,7 @@ codefolder = os.path.join('code', name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
 set_device('cpp_standalone', directory=codefolder,
-           compile=True, run=True, debug=True)
+           compile=True, run=True, debug=False)
 
 # Morphology
 morpho = Soma(30*um)

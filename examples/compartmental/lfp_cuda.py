@@ -80,7 +80,7 @@ neuron.I = 0*amp
 run(100*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
-device.build( directory=codefolder, compile = True, run = True, debug = True)
+device.build( directory=codefolder, compile = True, run = True, debug=False)
 
 subplot(211)
 for i in range(10):

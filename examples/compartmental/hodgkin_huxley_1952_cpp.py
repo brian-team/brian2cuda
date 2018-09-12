@@ -58,7 +58,7 @@ neuron.I = 0*amp
 run(100*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
-device.build( directory=codefolder, compile = True, run = True, debug = True)
+device.build( directory=codefolder, compile = True, run = True, debug=False)
 
 for i in range(75, 125, 1):
     plot(cumsum(neuron.length)/cm, i+(1./60)*M.v[:, i*5]/mV, 'k')

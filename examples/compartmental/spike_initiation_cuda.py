@@ -61,7 +61,7 @@ neuron.I = 0*amp
 run(95*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
-device.build( directory=codefolder, compile = True, run = True, debug = True)
+device.build( directory=codefolder, compile = True, run = True, debug=False)
 
 plot(mon.t/ms, mon.v[0]/mV, 'r')
 plot(mon.t/ms, mon.v[20]/mV, 'g')
