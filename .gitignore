@@ -41,7 +41,8 @@ nosetests.xml
 /dev/benchmarks
 
 # ignore directories in example folder (generated code)
-/examples/*/*
+# TODO: we have now compartmental example folder not only code as subfolders
+#/examples/*/*
 
 # ignore project directories
 cuda_standalone/
