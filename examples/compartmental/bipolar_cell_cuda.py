@@ -1,7 +1,5 @@
 '''
-A pseudo MSO neuron, with two dendrites (fake geometry).
-There are synaptic inputs.
-Second method.
+A pseudo MSO neuron, with two dendrites and one axon (fake geometry).
 '''
 import os
 import matplotlib
@@ -14,55 +12,49 @@ name = os.path.basename(__file__).replace('.py', '')
 codefolder = os.path.join('code', name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device('cuda_standalone', directory=codefolder,
-           compile=True, run=True, debug=True)
+set_device('cuda_standalone', build_on_run=False) # multiple runs require this change (see below)
 
 # Morphology
 morpho = Soma(30*um)
+morpho.axon = Cylinder(diameter=1*um, length=300*um, n=100)
 morpho.L = Cylinder(diameter=1*um, length=100*um, n=50)
-morpho.R = Cylinder(diameter=1*um, length=100*um, n=50)
+morpho.R = Cylinder(diameter=1*um, length=150*um, n=50)
 
 # Passive channels
 gL = 1e-4*siemens/cm**2
 EL = -70*mV
-Es = 0*mV
-taus = 1*ms
 eqs='''
-Im = gL*(EL-v) : amp/meter**2
-Is = gs*(Es-v) : amp (point current)
-dgs/dt = -gs/taus : siemens
+Im = gL * (EL - v) : amp/meter**2
+I : amp (point current)
 '''
 
 neuron = SpatialNeuron(morphology=morpho, model=eqs,
                        Cm=1*uF/cm**2, Ri=100*ohm*cm, method='exponential_euler')
 neuron.v = EL
-
-# Regular inputs
-stimulation = NeuronGroup(2, 'dx/dt = 300*Hz : 1', threshold='x>1', reset='x=0',
-                          method='euler')
-stimulation.x = [0, 0.5] # Asynchronous
-
-# Synapses
-w = 20*nS
-S = Synapses(stimulation, neuron,on_pre='gs += w')
-S.connect(i=0, j=morpho.L[99.9*um])
-S.connect(i=1, j=morpho.R[99.9*um])
+neuron.I = 0*amp
 
 # Monitors
 mon_soma = StateMonitor(neuron, 'v', record=[0])
 mon_L = StateMonitor(neuron.L, 'v', record=True)
-mon_R = StateMonitor(neuron, 'v', record=morpho.R[99.9*um])
+mon_R = StateMonitor(neuron, 'v', record=morpho.R[75*um])
 
+run(1*ms)
+neuron.I[morpho.L[50*um]] = 0.2*nA  # injecting in the left dendrite
+run(5*ms)
+neuron.I = 0*amp
 run(50*ms, report='text')
+
+# cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
+device.build( directory=codefolder, compile = True, run = True, debug = True)
 
 subplot(211)
 plot(mon_L.t/ms, mon_soma[0].v/mV, 'k')
-plot(mon_L.t/ms, mon_L[morpho.L[99.9*um]].v/mV, 'r')
-plot(mon_L.t/ms, mon_R[morpho.R[99.9*um]].v/mV, 'b')
+plot(mon_L.t/ms, mon_L[morpho.L[50*um]].v/mV, 'r')
+plot(mon_L.t/ms, mon_R[morpho.R[75*um]].v/mV, 'b')
 ylabel('v (mV)')
 subplot(212)
-for i in [0, 5, 10, 15, 20, 25, 30, 35, 40, 45]:
-    plot(mon_L.t/ms, mon_L.v[i, :]/mV)
+for x in linspace(0*um, 100*um, 10, endpoint=False):
+    plot(mon_L.t/ms, mon_L[morpho.L[x]].v/mV)
 xlabel('Time (ms)')
 ylabel('v (mV)')
 #show()

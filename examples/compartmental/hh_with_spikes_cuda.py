@@ -7,13 +7,14 @@ import matplotlib
 matplotlib.use('Agg')
 
 from brian2 import *
+import brian2cuda # cuda_standalone device
 from scipy import stats
 
 name = os.path.basename(__file__).replace('.py', '')
 codefolder = os.path.join('code', name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device('cpp_standalone', build_on_run=False) # multiple runs require this change (see below)
+set_device('cuda_standalone', build_on_run=False) # multiple runs require this change (see below)
 
 defaultclock.dt = 0.01*ms
 

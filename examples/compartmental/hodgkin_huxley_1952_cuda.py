@@ -1,21 +1,18 @@
 '''
 Hodgkin-Huxley equations (1952).
-Spikes are recorded along the axon, and then velocity is calculated.
 '''
 import os
 import matplotlib
 matplotlib.use('Agg')
 
 from brian2 import *
-from scipy import stats
+import brian2cuda # cuda_standalone device
 
 name = os.path.basename(__file__).replace('.py', '')
 codefolder = os.path.join('code', name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device('cpp_standalone', build_on_run=False) # multiple runs require this change (see below)
-
-defaultclock.dt = 0.01*ms
+set_device('cuda_standalone', build_on_run=False) # multiple runs require this change (see below)
 
 morpho = Cylinder(length=10*cm, diameter=2*238*um, n=1000, type='axon')
 
@@ -44,47 +41,35 @@ betan = 0.125*exp(-v/(80*mV))/ms : Hz
 gNa : siemens/meter**2
 '''
 
-neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler", 
-                       refractory="m > 0.4", threshold="m > 0.5",
-                       Cm=1*uF/cm**2, Ri=35.4*ohm*cm)
+neuron = SpatialNeuron(morphology=morpho, model=eqs, Cm=1*uF/cm**2,
+                       Ri=35.4*ohm*cm, method="exponential_euler")
 neuron.v = 0*mV
 neuron.h = 1
 neuron.m = 0
 neuron.n = .5
-neuron.I = 0*amp
+neuron.I = 0
 neuron.gNa = gNa0
+neuron[5*cm:10*cm].gNa = 0*siemens/cm**2
 M = StateMonitor(neuron, 'v', record=True)
-spikes = SpikeMonitor(neuron)
 
 run(50*ms, report='text')
-neuron.I[0] = 1*uA # current injection at one end
+neuron.I[0] = 1*uA  # current injection at one end
 run(3*ms)
 neuron.I = 0*amp
-run(50*ms, report='text')
+run(100*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug = True)
 
-# Calculation of velocity
-slope, intercept, r_value, p_value, std_err = stats.linregress(spikes.t/second,
-                                                neuron.distance[spikes.i]/meter)
-print("Velocity = %.2f m/s" % slope)
-
-subplot(211)
-for i in range(10):
-    plot(M.t/ms, M.v.T[:, i*100]/mV)
-ylabel('v')
-subplot(212)
-plot(spikes.t/ms, spikes.i*neuron.length[0]/cm, '.k')
-plot(spikes.t/ms, (intercept+slope*(spikes.t/second))/cm, 'r')
-xlabel('Time (ms)')
-ylabel('Position (cm)')
+for i in range(75, 125, 1):
+    plot(cumsum(neuron.length)/cm, i+(1./60)*M.v[:, i*5]/mV, 'k')
+yticks([])
+ylabel('Time [major] v (mV) [minor]')
+xlabel('Position (cm)')
+axis('tight')
 #show()
 
 plotpath = os.path.join('plots', '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
-
-print('DEBUG: SAVING RESULTS NPZ FILE INTO PLOTS FOLDER')
-savez('plots/'+name+'_results.npz', time=spikes.t/ms, black=spikes.i*neuron.length[0]/cm, red=(intercept+slope*(spikes.t/second))/cm)

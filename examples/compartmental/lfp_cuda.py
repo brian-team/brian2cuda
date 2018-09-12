@@ -1,25 +1,26 @@
 '''
-Hodgkin-Huxley equations (1952).
-Spikes are recorded along the axon, and then velocity is calculated.
+Hodgkin-Huxley equations (1952)
+
+We calculate the extracellular field potential at various places.
 '''
 import os
 import matplotlib
 matplotlib.use('Agg')
 
 from brian2 import *
+import brian2cuda # cuda_standalone device
 from scipy import stats
 
 name = os.path.basename(__file__).replace('.py', '')
 codefolder = os.path.join('code', name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device('cpp_standalone', build_on_run=False) # multiple runs require this change (see below)
+set_device('cuda_standalone', build_on_run=False) # multiple runs require this change (see below)
 
 defaultclock.dt = 0.01*ms
+morpho = Cylinder(x=[0, 10]*cm, diameter=2*238*um, n=1000, type='axon')
 
-morpho = Cylinder(length=10*cm, diameter=2*238*um, n=1000, type='axon')
-
-El = 10.613*mV
+El = 10.613* mV
 ENa = 115*mV
 EK = -12*mV
 gl = 0.3*msiemens/cm**2
@@ -44,47 +45,55 @@ betan = 0.125*exp(-v/(80*mV))/ms : Hz
 gNa : siemens/meter**2
 '''
 
-neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler", 
-                       refractory="m > 0.4", threshold="m > 0.5",
-                       Cm=1*uF/cm**2, Ri=35.4*ohm*cm)
+neuron = SpatialNeuron(morphology=morpho, model=eqs, Cm=1*uF/cm**2,
+                       Ri=35.4*ohm*cm, method="exponential_euler")
 neuron.v = 0*mV
 neuron.h = 1
 neuron.m = 0
 neuron.n = .5
-neuron.I = 0*amp
+neuron.I = 0
 neuron.gNa = gNa0
+neuron[5*cm:10*cm].gNa = 0*siemens/cm**2
 M = StateMonitor(neuron, 'v', record=True)
-spikes = SpikeMonitor(neuron)
+
+# LFP recorder
+Ne = 5 # Number of electrodes
+sigma = 0.3*siemens/meter # Resistivity of extracellular field (0.3-0.4 S/m)
+lfp = NeuronGroup(Ne,model='''v : volt
+                              x : meter
+                              y : meter
+                              z : meter''')
+lfp.x = 7*cm # Off center (to be far from stimulating electrode)
+lfp.y = [1*mm, 2*mm, 4*mm, 8*mm, 16*mm]
+S = Synapses(neuron,lfp,model='''w : ohm*meter**2 (constant) # Weight in the LFP calculation
+                                 v_post = w*(Ic_pre-Im_pre) : volt (summed)''')
+S.summed_updaters['v_post'].when = 'after_groups'  # otherwise Ic has not yet been updated for the current time step.
+S.connect()
+S.w = 'area_pre/(4*pi*sigma)/((x_pre-x_post)**2+(y_pre-y_post)**2+(z_pre-z_post)**2)**.5'
+
+Mlfp = StateMonitor(lfp,'v',record=True)
 
 run(50*ms, report='text')
-neuron.I[0] = 1*uA # current injection at one end
+neuron.I[0] = 1*uA  # current injection at one end
 run(3*ms)
 neuron.I = 0*amp
-run(50*ms, report='text')
+run(100*ms, report='text')
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug = True)
 
-# Calculation of velocity
-slope, intercept, r_value, p_value, std_err = stats.linregress(spikes.t/second,
-                                                neuron.distance[spikes.i]/meter)
-print("Velocity = %.2f m/s" % slope)
-
 subplot(211)
 for i in range(10):
-    plot(M.t/ms, M.v.T[:, i*100]/mV)
-ylabel('v')
+    plot(M.t/ms,M.v[i*100]/mV)
+ylabel('$V_m$ (mV)')
 subplot(212)
-plot(spikes.t/ms, spikes.i*neuron.length[0]/cm, '.k')
-plot(spikes.t/ms, (intercept+slope*(spikes.t/second))/cm, 'r')
+for i in range(5):
+    plot(M.t/ms,Mlfp.v[i]/mV)
+ylabel('LFP (mV)')
 xlabel('Time (ms)')
-ylabel('Position (cm)')
 #show()
 
 plotpath = os.path.join('plots', '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
-
-print('DEBUG: SAVING RESULTS NPZ FILE INTO PLOTS FOLDER')
-savez('plots/'+name+'_results.npz', time=spikes.t/ms, black=spikes.i*neuron.length[0]/cm, red=(intercept+slope*(spikes.t/second))/cm)
