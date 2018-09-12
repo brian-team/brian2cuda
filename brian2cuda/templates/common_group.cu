@@ -62,6 +62,9 @@ kernel_{{codeobj_name}}(
     {
         ///// vector_code /////
         {{vector_code|autoindent}}
+
+        {% block extra_vector_code %}
+        {% endblock %}
     }
     {% endblock maincode_inner %}
     {% endblock maincode %}
@@ -134,7 +137,8 @@ void _run_{{codeobj_name}}()
 
 
         // check if we have enough ressources to call kernel with given number
-        // of blocks and threads
+        // of blocks and threads (can only occur for the else case above as for the
+        // first max. occupancy)
         struct cudaFuncAttributes funcAttrib;
         CUDA_SAFE_CALL(
                 cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}})
@@ -194,6 +198,9 @@ void _run_{{codeobj_name}}()
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
     {% endblock kernel_call %}
+
+    {% block extra_kernel_call_post %}
+    {% endblock %}
 
     {% block profiling_stop %}
     {% if profiled %}

@@ -23,7 +23,7 @@
 
 {% block extra_maincode %}
 
-{# needed to translate _array... to _ptr_array... #}}
+{# needed to translate _array... to _ptr_array... #}
 ///// pointers_lines /////
 {{pointers_lines|autoindent}}
 
