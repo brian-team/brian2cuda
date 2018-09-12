@@ -11,11 +11,12 @@ class RunTestCase(unittest.TestCase):
     A test case that simply executes a python script and notes the execution of
     the script in a file `examples_completed.txt`.
     '''
-    def __init__(self, filename, codegen_target, image_dir):
+    def __init__(self, filename, codegen_target, image_dir, prefs_dict):
         unittest.TestCase.__init__(self)
         self.filename = filename
         self.codegen_target = codegen_target
         self.image_dir = image_dir
+        self.prefs_dict = prefs_dict
 
     def id(self):
         # Remove the .py and pretend the dirname is a package and the filename
@@ -52,17 +53,17 @@ try:
     sub_str = "from brian2 import *\\n"
     if '{target}' == 'cpp_standalone':
         sub_str += "set_device('cpp_standalone', directory=None)"
-        fname_prefix = 'CPP.'
         print("Running with cpp_standalone")
     elif '{target}' == 'cuda_standalone':
         sub_str += ("import brian2cuda\\n"
-                    "set_device('cuda_standalone', directory=None)")
-        fname_prefix = 'CUDA.'
+                    "set_device('cuda_standalone', directory=None)\\n")
         print("Running with cuda_standalone")
+    for k, v in {prefs_dict}.items():
+        sub_str += "prefs['{{k}}'] = {{v}}\\n".format(k=k, v=v)
     with open(rel_fname, "rb") as f:
         file_str = f.read()
     # remove any set device
-    file_str = re.sub("set_device\\\(.*?\\)", '', file_str)
+    file_str = re.sub("set_device\\(.*?\\)", '', file_str)
     # import brian2cuda and set device
     file_str = re.sub("from brian2 import \*", sub_str, file_str)
     #print(file_str)
@@ -75,7 +76,6 @@ try:
         fname = os.path.relpath(fname, example_dir)
         fname = fname.replace('/', '.').replace('\\\\', '.')
         fname = fname.replace('.py', '.%d.png' % fignum)
-        fname = fname_prefix + fname
         fname = os.path.join('{image_dir}', fname)
         print(fname)
         ensure_directory_of_file(fname)
@@ -88,7 +88,8 @@ except Exception as ex:
 """.format(fname=self.filename,
            tempfname=tempfilename,
            target=self.codegen_target,
-           image_dir=self.image_dir)
+           image_dir=self.image_dir,
+           prefs_dict=self.prefs_dict)
 
         #print(code_string)
 
@@ -126,9 +127,10 @@ class SelectFilesPlugin(Plugin):
     enabled = True
     name = "select-files"
 
-    def __init__(self, targets, image_dir):
+    def __init__(self, targets, image_dir, prefs_dict={}):
         self.targets = targets
         self.image_dir = image_dir
+        self.prefs_dict = prefs_dict
 
     def configure(self, options, conf):
         pass # always on
@@ -153,24 +155,95 @@ class SelectFilesPlugin(Plugin):
         all_tests = []
         for target in self.targets:
             for example in all_examples:
-                all_tests.append(RunTestCase(example, target, self.image_dir))
+                all_tests.append(RunTestCase(example, target, self.image_dir,
+                                             self.prefs_dict))
         return all_tests
 
 
 if __name__ == '__main__':
-    import sys
-    # run as `python run_brian2_examples.py image_dir`
-    assert len(sys.argv) == 2, \
-            'Need image direcotyr as argumenty, got {}'.format(sys.argv)
-    image_dir = sys.argv[1]
 
+    import argparse
+    import utils
+
+    parser = argparse.ArgumentParser(description='Run brian2 examples')
+
+    parser.add_argument('--plot-dir', default=['brian2_examples/'], type=str,
+                        nargs=1, help=("Where to save the created figures "
+                                       "[default: brian2_examples]"))
+
+    args, float_dtypes = utils.parse_arguments(parser,
+                                               float_default=['float64'])
+
+    from StringIO import StringIO
     import brian2
+    from brian2 import prefs
+
+    all_prefs_combinations = utils.set_preferences(args, prefs)
 
     brian_dir = os.path.dirname(brian2.__file__)
-    example_dir = os.path.join(brian_dir, '../examples')
+    example_dir = os.path.abspath(os.path.join(brian_dir, '../examples'))
     argv = [__file__, '-v', '--with-xunit', '--verbose', '--exe', example_dir]
 
-    targets = ['cuda_standalone']#, 'cpp_standalone']
+    stored_prefs = prefs.as_file
 
-    nose.main(argv=argv, plugins=[SelectFilesPlugin(targets, image_dir),
-                                  Capture(), Xunit()])
+    all_successes = []
+    for target in args.targets:
+        target_list = [target]
+        target_image_dir = os.path.join(args.plot_dir[0], target.split('_')[0])
+
+        if target == 'cuda_standalone':
+            preference_dictionaries = all_prefs_combinations
+        else:
+            preference_dictionaries = [None]
+
+        successes = []
+        for dtype in float_dtypes:
+            for n, prefs_dict in enumerate(preference_dictionaries):
+
+                # reset prefs to stored prefs
+                prefs.read_preference_file(StringIO(stored_prefs))
+
+                print "{}. RUN: running on {} with prefs:".format(n + 1, target)
+                if prefs_dict is not None:
+                    if not prefs_dict:
+                        print "default preferences"
+                    else:
+                        for k, v in prefs_dict.items():
+                            prefs[k] = v
+                            print "\tprefs[{}] = {}".format(k,v)
+
+                image_dir = os.path.join(target_image_dir,
+                                         utils.dict_to_name(prefs_dict,
+                                                            float_dtype=dtype))
+
+                success = nose.run(argv=argv,
+                                   plugins=[SelectFilesPlugin(target_list,
+                                                              image_dir,
+                                                              prefs_dict),
+                                            Capture(), Xunit()])
+                successes.append(success)
+
+        all_success = utils.check_success(successes, all_prefs_combinations,
+                                          float_dtypes=float_dtypes)
+
+        print "\nTARGET: {}".format(target.upper())
+        all_success = utils.check_success(successes, all_prefs_combinations,
+                                          float_dtypes=float_dtypes)
+        all_successes.append(all_success)
+
+    if len(args.targets) > 1:
+        print "\nFINISHED ALL TARGETS"
+
+        if all(all_successes):
+            print "\nALL TARGETS PASSED"
+        else:
+            print "\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
+                                                   len(all_successes),
+                                                   len(all_successes))
+            for n, target in enumerate(args.targets):
+                if not all_successes[n]:
+                    print "\t{} failed.".format(target)
+            sys.exit(1)
+
+    elif not all_successes[0]:
+        sys.exit(1)
