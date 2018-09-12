@@ -63,7 +63,7 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
     assert(THREADS_PER_BLOCK == blockDim.x);
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
-    assert(tid == 0);
+    assert(tid == 0 && bid == _idx);
 
     // each thread processes the tridiagsystem of one branch
     const int _i = _idx;
@@ -251,7 +251,7 @@ __global__ void kernel_{{codeobj_name}}_combine(
     assert(THREADS_PER_BLOCK == blockDim.x);
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
-    assert(tid == 0);
+    assert(tid == 0 && bid == _idx);
 
     // each thread combines the tridiagsystem of one branch
     const int _i = _idx;
@@ -293,6 +293,11 @@ __global__ void kernel_{{codeobj_name}}_currents(
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
+    if(_idx >= _N)
+    {
+        return;
+    }
+
     // each thread processes the tridiagsystem of one branch
     const int _i = _idx;
 
@@ -316,7 +321,7 @@ __global__ void kernel_{{codeobj_name}}_currents(
     // kernel 1 is automatically run (via common_group.cu), particularly with full occupancy
 
     // run kernel 2 (tridiag solve): branches many blocks with one thread each
-    int num_blocks_tridiagsolve = _num_B;
+    int num_blocks_tridiagsolve = _num_B-1;
     int num_threads_tridiagsolve = 1;
     kernel_{{codeobj_name}}_tridiagsolve<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
             _N,
@@ -338,7 +343,7 @@ __global__ void kernel_{{codeobj_name}}_currents(
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_coupling");
 
     // kernel 4 (combine): branches many blocks with one thread each
-    int num_blocks_combine = _num_B;
+    int num_blocks_combine = _num_B-1;
     int num_threads_combine = 1;
     kernel_{{codeobj_name}}_combine<<<num_blocks_combine, num_threads_combine>>>(
             _N,
