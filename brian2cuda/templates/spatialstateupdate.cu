@@ -1,3 +1,7 @@
+//#define USE_GPU
+
+#ifdef USE_GPU
+
 {# USES_VARIABLES { Cm, dt, v, N, Ic,
                   _ab_star0, _ab_star1, _ab_star2, _b_plus, _b_minus,
                   _v_star, _u_plus, _u_minus,
@@ -454,3 +458,18 @@ __global__ void kernel_{{codeobj_name}}_currents(
 
 
 {% endblock extra_kernel_call_post %}
+
+#else // i.e., USE_GPU is not set
+
+// TODO: add preference "spatialstateupdate_on_gpu" or similar (default: False), welche in 1. zeile zw. "USE_GPU" und "//USE_GPU" auswählt
+//       preference doc: "If enabled computes the spatialstateupdate (and not only the stateupdate which updates the neuronal state variables) on the GPU (default is CPU) eliminating the need to copy the state variables twice between host and device; note, however, the spatialstateupdate can, for large number of compartments or branches, run significantly slower than the CPU version."
+
+// TODO: copy state variables (i.e., only those from  vector code) from GPU to CPU
+
+// TODO: run spatialstateupdate.cpp (expand it and common_group.cpp) -- alternative to #ifdef is of course also ok, the most simple way should be taken
+
+// TODO: copy state variables (see vectorcode) from CPU back to GPU
+
+// TODO: update objects.cu and remove all occurences of the kernel-specific runtimes, (particularly at write profiling file) in favor of one total runtime for spatialstateupdate if spatialstateupdate_on_gpu=False (since then we only have the runtime of the cpp_standalone code for spatialstateupdate)
+
+#endif // USE_GPU
