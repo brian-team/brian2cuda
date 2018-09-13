@@ -1,4 +1,4 @@
-//#define USE_GPU
+#define USE_GPU
 
 #ifdef USE_GPU
 
@@ -46,7 +46,7 @@
 //         runtime complexity O(compartments) but is inherently sequential
 //         => run no as many blocks as branches with one thread each
 //         => trivial optimization possible by using three threads (one per rhs)
-//         => optimization possible e.g. by using cyclic reduction [more parallel]
+//         => deeper optimizations possible e.g. by using cyclic reduction => https://github.com/brian-team/brian2cuda/issues/137
 
 __global__ void kernel_{{codeobj_name}}_tridiagsolve(
     int _N,
@@ -254,22 +254,27 @@ __global__ void kernel_{{codeobj_name}}_combine(
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
-    // we need to run the kernel with 1 thread per block (to be changed by optimization)
-    assert(tid == 0 && bid == _idx);
+    // each block corresponds to one branch
+    const int _i = bid;
 
-    // each thread combines the tridiagsystem of one branch
-    const int _i = _idx;
+	// load indices into shared memory
+	__shared__ int _i_parent;
+	__shared__ int _j_start;
+	__shared__ int _j_end;
 
-    // below all the code is simply copied from spatialstateupdate.cpp
+    if (tid == 0) {
+        _i_parent = {{_morph_parent_i}}[_i];
+        _j_start = {{_starts}}[_i];
+        _j_end = {{_ends}}[_i];
+     }
 
-    const int _i_parent = {{_morph_parent_i}}[_i];
-    const int _j_start = {{_starts}}[_i];
-    const int _j_end = {{_ends}}[_i];
-    for (int _j=_j_start; _j<_j_end; _j++)
+     __syncthreads();
+
+    // the threads of the block do the actual combine work
+    for(int _j = _j_start + tid; _j < _j_end; _j += THREADS_PER_BLOCK)
         if (_j < _numv)  // don't go beyond the last element
             {{v}}[_j] = {{_v_star}}[_j] + {{_B}}[_i_parent] * {{_u_minus}}[_j]
                                        + {{_B}}[_i+1] * {{_u_plus}}[_j];
-
 
 }
 
@@ -368,8 +373,29 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% if profiled %}
     std::clock_t _start_time_combine = std::clock();
     {% endif %}
+    // determine no of threads
+    // max no of threads possible
+    struct cudaFuncAttributes funcAttrib_combine;
+            CUDA_SAFE_CALL(
+                    cudaFuncGetAttributes(&funcAttrib_combine, kernel_{{codeobj_name}}_combine)
+                    );
+    int threads_per_block_max_combine = funcAttrib_combine.maxThreadsPerBlock;
+    // max no of branches per compartment (not more than this many threads required)
+    int compartments_max = 0;
+    for (int _i=0; _i<_num_B - 1; _i++)
+    {
+        // TODO: confirm or improve this _ptr removing hack (better way?)
+        {% set _starts_no_ptr = _starts.replace('_ptr', '') %}
+        {% set _ends_no_ptr = _ends.replace('_ptr', '') %}
+        int _first = {{_starts_no_ptr}}[_i];
+        int _last = {{_ends_no_ptr}}[_i] - 1;
+        // number of compartments in the i-th section
+        int compartments_i = _last - _first + 1;
+        if (compartments_i > compartments_max)
+            compartments_max = compartments_i;
+     }
+    int num_threads_combine = min(compartments_max, threads_per_block_max_combine);
     int num_blocks_combine = _num_B-1;
-    int num_threads_combine = 1;
     kernel_{{codeobj_name}}_combine<<<num_blocks_combine, num_threads_combine>>>(
             _N,
             num_threads_combine,
