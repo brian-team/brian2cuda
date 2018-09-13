@@ -130,6 +130,14 @@ __global__ void {{path.name}}_init(
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
 double brian::{{codeobj}}_profiling_info = 0.0;
+{% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
+// Profiling information for each of the 5 kernels in spatialstateupdate
+double brian::{{codeobj}}_kernel_integration_profiling_info = 0.0;
+double brian::{{codeobj}}_kernel_tridiagsolve_profiling_info = 0.0;
+double brian::{{codeobj}}_kernel_coupling_profiling_info = 0.0;
+double brian::{{codeobj}}_kernel_combine_profiling_info = 0.0;
+double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
+{% endif %}
 {% endfor %}
 {% endif %}
 
@@ -367,7 +375,15 @@ void _write_arrays()
     if(outfile_profiling_info.is_open())
     {
     {% for codeobj in profiled_codeobjects | sort %}
+    {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
+    outfile_profiling_info << "{{codeobj}}_kernel_integration\t" << {{codeobj}}_kernel_integration_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_tridiagsolve\t" << {{codeobj}}_kernel_tridiagsolve_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_coupling\t" << {{codeobj}}_kernel_coupling_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_combine\t" << {{codeobj}}_kernel_combine_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_currents\t" << {{codeobj}}_kernel_currents_profiling_info << std::endl;
+    {% else %}
     outfile_profiling_info << "{{codeobj}}\t" << {{codeobj}}_profiling_info << std::endl;
+    {% endif %}
     {% endfor %}
     outfile_profiling_info.close();
     } else
@@ -575,6 +591,14 @@ extern bool {{path.name}}_scalar_delay;
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
 extern double {{codeobj}}_profiling_info;
+{% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
+// Profiling information for each of the 5 kernels in spatialstateupdate
+extern double {{codeobj}}_kernel_integration_profiling_info;
+extern double {{codeobj}}_kernel_tridiagsolve_profiling_info;
+extern double {{codeobj}}_kernel_coupling_profiling_info;
+extern double {{codeobj}}_kernel_combine_profiling_info;
+extern double {{codeobj}}_kernel_currents_profiling_info;
+{% endif %}
 {% endfor %}
 {% endif %}
 
