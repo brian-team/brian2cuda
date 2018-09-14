@@ -6,22 +6,15 @@ from brian2cuda.utils.stringtools import replace_floating_point_literals
 
 @attr('codegen-independent')
 def test_replace_floating_point_literals():
-    float_literals = ['1.',
-                      '.2',
-                      '3.14',
-                      '5e6',
-                      '5e-6',
-                      '5E+6',
-                      '7.e8',
-                      '9.0E-10',
-                      '.11e12']
+    float_literals = ['1.', '.2', '3.14', '5e6', '5e-6', '5E+6', '7.e8',
+                      '9.0E-10', '.11e12']
 
-    others = ['-', '+', '/', '%', '*', '(', ')', ' ', ';', ':', '>', '<', '|',
-              '&']
+    delimiters = ['-', '+', '/', '%', '*', '(', ')', ' ', ';', ':', '>', '<',
+                  '|', '&', ',', '=']
 
     for l in float_literals:
-        for start in others:
-            for end in others:
+        for start in delimiters:
+            for end in delimiters:
                 string = start + l + end
                 f_string = start + l + 'f' + end
 
@@ -38,14 +31,27 @@ def test_replace_floating_point_literals():
     not_float_literals = ['1', '100', '002', 'a1.b', '-.-']
 
     for l in not_float_literals:
-        for start in others:
-            for end in others:
+        for start in delimiters:
+            for end in delimiters:
                 string = start + l + end
 
                 # test that these these are not matched
                 replaced = replace_floating_point_literals(string)
                 eq_(replaced, string)
 
+    # test that multiple concatenated literals are correctly replaced
+    concat = ''.join(a + b for a, b in zip(float_literals,
+                                           delimiters[:len(float_literals)]))
+    f_concat = ''.join(a + 'f' + b for a, b in zip(float_literals,
+                                                   delimiters[:len(float_literals)]))
+
+    # replacing double to single precision version
+    replaced = replace_floating_point_literals(concat)
+    eq_(replaced, f_concat)
+
+    # not replacing sincle precision version
+    f_replaced = replace_floating_point_literals(f_concat)
+    eq_(f_replaced, f_concat)
 
 if __name__ == '__main__':
     test_replace_floating_point_literals()
