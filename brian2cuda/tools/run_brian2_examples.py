@@ -16,6 +16,9 @@ class RunTestCase(unittest.TestCase):
         self.filename = filename
         self.codegen_target = codegen_target
         self.image_dir = image_dir
+        for k, v in prefs_dict.items():
+            if k == 'core.default_float_dtype':
+                prefs_dict[k] = v.__name__
         self.prefs_dict = prefs_dict
 
     def id(self):
@@ -171,8 +174,7 @@ if __name__ == '__main__':
                         nargs=1, help=("Where to save the created figures "
                                        "[default: brian2_examples]"))
 
-    args, float_dtypes = utils.parse_arguments(parser,
-                                               float_default=['float64'])
+    args = utils.parse_arguments(parser)
 
     from StringIO import StringIO
     import brian2
@@ -184,10 +186,9 @@ if __name__ == '__main__':
     example_dir = os.path.abspath(os.path.join(brian_dir, '../examples'))
     argv = [__file__, '-v', '--with-xunit', '--verbose', '--exe', example_dir]
 
-    stored_prefs = prefs.as_file
-
     all_successes = []
     for target in args.targets:
+        print "Running examples with target", target
         target_list = [target]
         target_image_dir = os.path.join(args.plot_dir[0], target.split('_')[0])
 
@@ -197,38 +198,30 @@ if __name__ == '__main__':
             preference_dictionaries = [None]
 
         successes = []
-        for dtype in float_dtypes:
-            for n, prefs_dict in enumerate(preference_dictionaries):
+        for n, prefs_dict in enumerate(preference_dictionaries):
 
-                # reset prefs to stored prefs
-                prefs.read_preference_file(StringIO(stored_prefs))
-
+            if prefs_dict is not None:
                 print "{}. RUN: running on {} with prefs:".format(n + 1, target)
-                if prefs_dict is not None:
-                    if not prefs_dict:
-                        print "default preferences"
-                    else:
-                        for k, v in prefs_dict.items():
-                            prefs[k] = v
-                            print "\tprefs[{}] = {}".format(k,v)
+                # print preferences (setting happens in RunTestCase.runTest())
+                utils.print_single_prefs(prefs_dict, set_prefs=prefs)
+            else:  # None
+                print "Running {} with default preferences".format(target)
+                # RunTestCase.runTest() needs a dictionary
+                prefs_dict = {}
 
-                image_dir = os.path.join(target_image_dir,
-                                         utils.dict_to_name(prefs_dict,
-                                                            float_dtype=dtype))
+            image_dir = os.path.join(target_image_dir,
+                                     utils.dict_to_name(prefs_dict))
 
-                success = nose.run(argv=argv,
-                                   plugins=[SelectFilesPlugin(target_list,
-                                                              image_dir,
-                                                              prefs_dict),
-                                            Capture(), Xunit()])
-                successes.append(success)
-
-        all_success = utils.check_success(successes, all_prefs_combinations,
-                                          float_dtypes=float_dtypes)
+            success = nose.run(argv=argv,
+                               plugins=[SelectFilesPlugin(target_list,
+                                                          image_dir,
+                                                          prefs_dict),
+                                        Capture(), Xunit()])
+            successes.append(success)
 
         print "\nTARGET: {}".format(target.upper())
-        all_success = utils.check_success(successes, all_prefs_combinations,
-                                          float_dtypes=float_dtypes)
+        all_success = utils.check_success(successes, all_prefs_combinations)
+
         all_successes.append(all_success)
 
     if len(args.targets) > 1:

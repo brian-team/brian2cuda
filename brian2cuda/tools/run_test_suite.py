@@ -18,8 +18,7 @@ parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                          "targets for which mpi should be used, can be passes as"
                          "arguments. If none are passes, all are run in parallel.")
 
-args, float_dtypes = utils.parse_arguments(parser, float_default=['float64',
-                                                                  'float32'])
+args = utils.parse_arguments(parser)
 
 import os, sys
 from StringIO import StringIO
@@ -47,38 +46,33 @@ for target in args.targets:
         preference_dictionaries = all_prefs_combinations
     else:
         preference_dictionaries = [None]
+
     successes = []
-    for dtype in float_dtypes:
-        for n, prefs_dict in enumerate(preference_dictionaries):
+    for n, prefs_dict in enumerate(preference_dictionaries):
 
-            # reset prefs to stored prefs
-            prefs.read_preference_file(StringIO(stored_prefs))
+        # reset prefs to stored prefs
+        prefs.read_preference_file(StringIO(stored_prefs))
 
-            if prefs_dict is not None:
-                print ("{}. RUN: test suite on CUDA_STANDALONE with prefs:"
-                       "".format(n + 1))
-                if not prefs_dict:
-                    print "default preferences"
-                else:
-                    for k, v in prefs_dict.items():
-                        prefs[k] = v
-                        print "\tprefs[{}] = {}".format(k,v)
+        if prefs_dict is not None:
+            print ("{}. RUN: test suite on CUDA_STANDALONE with prefs:"
+                   "".format(n + 1))
+            # print and set preferences
+            utils.print_single_prefs(prefs_dict, set_prefs=prefs)
 
-            success = test(codegen_targets=[],
-                           long_tests=args.no_long_tests,
-                           test_codegen_independent=False,
-                           test_standalone=target,
-                           reset_preferences=False,
-                           fail_for_not_implemented=args.fail_not_implemented,
-                           test_in_parallel=test_in_parallel,
-                           extra_test_dirs=extra_test_dirs,
-                           float_dtype=dtype)
+        success = test(codegen_targets=[],
+                       long_tests=args.no_long_tests,
+                       test_codegen_independent=False,
+                       test_standalone=target,
+                       reset_preferences=False,
+                       fail_for_not_implemented=args.fail_not_implemented,
+                       test_in_parallel=test_in_parallel,
+                       extra_test_dirs=extra_test_dirs,
+                       float_dtype=None)
 
-            successes.append(success)
+        successes.append(success)
 
     print "\nTARGET: {}".format(target.upper())
-    all_success = utils.check_success(successes, all_prefs_combinations,
-                                      float_dtypes=float_dtypes)
+    all_success = utils.check_success(successes, all_prefs_combinations)
     all_successes.append(all_success)
 
 if len(args.targets) > 1:
@@ -95,6 +89,5 @@ if len(args.targets) > 1:
                 print "\t{} failed.".format(target)
         sys.exit(1)
 
-else:
-    if not all_successes[0]:
-        sys.exit(1)
+elif not all_successes[0]:
+    sys.exit(1)
