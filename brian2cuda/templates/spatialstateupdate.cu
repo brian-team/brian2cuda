@@ -384,11 +384,8 @@ __global__ void kernel_{{codeobj_name}}_currents(
     int compartments_max = 0;
     for (int _i=0; _i<_num_B - 1; _i++)
     {
-        // TODO: confirm or improve this _ptr removing hack (better way?)
-        {% set _starts_no_ptr = _starts.replace('_ptr', '') %}
-        {% set _ends_no_ptr = _ends.replace('_ptr', '') %}
-        int _first = {{_starts_no_ptr}}[_i];
-        int _last = {{_ends_no_ptr}}[_i] - 1;
+        int _first = {{get_array_name(variables['_starts'], access_data=False)}}[_i];
+        int _last = {{get_array_name(variables['_ends'], access_data=False)}}[_i] - 1;
         // number of compartments in the i-th section
         int compartments_i = _last - _first + 1;
         if (compartments_i > compartments_max)
