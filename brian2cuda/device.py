@@ -233,6 +233,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
+        if prefs['core.default_float_dtype'] == np.float32 and 'dt' in variables:
+            print 'DEBUG dt before\n', variables['dt']
+            variables['dt'] = Constant('dt',
+                                       np.float32(variables['dt'].get_value().item()),
+                                       dimensions=variables['dt'].dim,
+                                       owner=variables['dt'].owner)
+            print 'DEBUG dt after\n', variables['dt']
         if template_kwds is None:
             template_kwds = dict()
         else:
