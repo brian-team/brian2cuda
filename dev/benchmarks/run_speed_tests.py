@@ -101,8 +101,9 @@ configs = [# configuration                          project_directory
 speed_tests = [# feature_test                     name                                  n_slice
 
                (CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
-               (COBAHHConstantConnectionProbability,            'COBAHHConstantConnectionProbability',          slice(None)         ),
-               (COBAHHFixedConnectivityNoMonitor,               'COBAHHFixedConnectivityNoMonitor',             slice(None)         ),
+               (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
+               (COBAHHCoupled,                                  'COBAHHCoupled',                                slice(None)         ),
+               (COBAHHPseudocoupled,                            'COBAHHPseudocoupled',                          slice(None)         ),
                (STDP,                                           'STDP',                                         slice(None)         ),
                (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
                (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
