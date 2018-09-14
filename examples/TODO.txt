@@ -1,0 +1,5 @@
+- make network size variable in examples
+- increase network size in examples
+- add comment of mushroombody script at top (e.g. reference their paper)
+- update format of compartmental examples to fit the single compartment examples python scripts
+    (attention: multiple run statements might not allow profiling even for last run call?)
