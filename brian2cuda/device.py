@@ -31,6 +31,8 @@ from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.groups.neurongroup import Thresholder
 
+from brian2cuda.utils.stringtools import replace_floating_point_literals
+
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
 
 
@@ -684,6 +686,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code = code.replace(sub, 'float({})'.format(sub))
                     logger.debug("Replaced {sub} with float({sub}) in {codeobj}"
                                  "".format(sub=sub, codeobj=codeobj))
+                code = replace_floating_point_literals(code)
+                logger.debug("Replaced floating point literals by single "
+                             "precision version (appending `f`) in {}."
+                             "".format(codeobj))
 
             writer.write('code_objects/'+codeobj.name+'.cu', code)
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
