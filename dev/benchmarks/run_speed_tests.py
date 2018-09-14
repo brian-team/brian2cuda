@@ -100,26 +100,9 @@ configs = [# configuration                          project_directory
 
 speed_tests = [# feature_test                     name                                  n_slice
 
-               (ThresholderOnlyPoissonLowRate,                  'ThresholderOnlyPoissonLowRate',                slice(None)         ),
-               (ThresholderOnlyPoissonMediumRate,               'ThresholderOnlyPoissonMediumRate',             slice(None)         ),
-               (ThresholderOnlyPoissonHighRate,                 'ThresholderOnlyPoissonHighRate',               slice(None)         ),
-               (ThresholderOnlyAlwaysSpiking,                   'ThresholderOnlyAlwaysSpiking',                 slice(None)         ),
-
-               (BrunelHakimStateupdateOnlyDouble,               'BrunelHakimStateupdateOnlyDouble',             slice(None)         ),
-               (BrunelHakimStateupdateOnlyTriple,               'BrunelHakimStateupdateOnlyTriple',             slice(None)         ),
-               (BrunelHakimStateupdateOnly,                     'BrunelHakimStateupdateOnly',                   slice(None)         ),
-               (BrunelHakimNeuronsOnly,                         'BrunelHakimNeuronsOnly',                       slice(None)         ),
-               (BrunelHakimNeuronsOnlyNoXi,                     'BrunelHakimNeuronsOnlyNoXi',                   slice(None)         ),
-               (BrunelHakimNeuronsOnlyNoRand,                   'BrunelHakimNeuronsOnlyNoRand',                 slice(None)         ),
-               (BrunelHakimStateupdateThresholdOnly,            'BrunelHakimStateupdateThresholdOnly',          slice(None)         ),
-               (BrunelHakimStateupdateThresholdResetOnly,       'BrunelHakimStateupdateThresholdResetOnly',     slice(None)         ),
-               (BrunelHakimModelScalarDelayShort,               'BrunelHakimModelScalarDelayShort',             slice(None)         ),
-               (BrunelHakimModelScalarDelayNoSelfConnections,   'BrunelHakimModelScalarDelayNoSelfConnections', slice(None)         ),
                (CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
                (COBAHHConstantConnectionProbability,            'COBAHHConstantConnectionProbability',          slice(None)         ),
                (COBAHHFixedConnectivityNoMonitor,               'COBAHHFixedConnectivityNoMonitor',             slice(None)         ),
-               (AdaptationOscillation,                          'AdaptationOscillation',                        slice(None)         ),
-               (Vogels,                                         'Vogels',                                       slice(None)         ),
                (STDP,                                           'STDP',                                         slice(None)         ),
                (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
                (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
@@ -131,18 +114,12 @@ speed_tests = [# feature_test                     name                          
                (SparseLowRateSynapsesOnly,                      'SparseLowRateSynapsesOnly',                    slice(None)         ),
                (SparseHighRateSynapsesOnly,                     'SparseHighRateSynapsesOnly',                   slice(None)         ),
 
-               (STDPNotEventDriven,                             'STDPNotEventDriven',                           slice(None)         ),
-               (STDPMultiPost,                                  'STDPMultiPost',                                slice(None)         ),
-               (STDPNeuronalTraces,                             'STDPNeuronalTraces',                           slice(None)         ),
-               (STDPMultiPostNeuronalTraces,                    'STDPMultiPostNeuronalTraces',                  slice(None)         ),
-
                (DenseMediumRateSynapsesOnlyHeterogeneousDelays, 'DenseMediumRateSynapsesOnlyHeterogeneousDelays', slice(None)       ),
                (SparseLowRateSynapsesOnlyHeterogeneousDelays,   'SparseLowRateSynapsesOnlyHeterogeneousDelays', slice(None)         ),
                (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
 
                (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
                (HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
-               (VogelsWithSynapticDynamic,                      'VogelsWithSynapticDynamic',                    slice(None)         ),
 
                ## below uses monitors
                (CUBAFixedConnectivity,                          'CUBAFixedConnectivity',                        slice(None)         ),
