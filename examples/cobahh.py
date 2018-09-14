@@ -33,6 +33,9 @@ scenario = 'brian2-example' # coupling with 2% probability, nonzero coupling str
 # scenario = 'benchmark-uncoupled' # no coupling at all
 # scenario = 'benchmark-pseudocoupled' # coupling with 1000 synapses per neuron on avg, zero coupling strength
 
+# number of neurons
+N = 4000
+
 # whether to profile run
 profiling = True
 
@@ -42,17 +45,29 @@ resultsfolder = 'results'
 # folder for the code
 codefolder_base = 'code'
 
+# monitors (neede for plot generation)
+with_monitors = True
+
+# single precision
+single_precision = False
+
 #####################################################################################################
 
 if devicename == 'cuda_standalone':
     import brian2cuda
 
 name = os.path.basename(__file__).replace('.py', '') + '_' + scenario + '_' + devicename.replace('_standalone', '')
+name = name + '_single-precision' if single_precision else name
+name = name + '_no-monitors' if not with_monitors else name
+name += '_N-' + str(N)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
 set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
+
+if single_precision:
+    prefs['core.default_float_dtype'] = float32
 
 # Parameters
 area = 20000*umetre**2
@@ -101,12 +116,13 @@ alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
 beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 ''')
 
-P = NeuronGroup(4000, model=eqs, threshold='v>-20*mV', refractory=3*ms,
+P = NeuronGroup(N, model=eqs, threshold='v>-20*mV', refractory=3*ms,
                 method='exponential_euler')
 
 if scenario != 'benchmark-uncoupled': # only synapses for the other scenarios
-    Pe = P[:3200]
-    Pi = P[3200:]
+    Ne = int(0.8 * N)
+    Pe = P[:Ne]
+    Pi = P[Ne:]
     Ce = Synapses(Pe, P, on_pre='ge+=we')
     Ci = Synapses(Pi, P, on_pre='gi+=wi')
 
@@ -126,9 +142,10 @@ P.v = 'El + (randn() * 5 - 5)*mV'
 P.ge = '(randn() * 1.5 + 4) * 10.*nS'
 P.gi = '(randn() * 12 + 20) * 10.*nS'
 
-trace = StateMonitor(P, 'v', record=np.arange(0, P.N, P.N // 100))
-spikemon = SpikeMonitor(P)
-popratemon = PopulationRateMonitor(P)
+if with_monitors:
+    trace = StateMonitor(P, 'v', record=np.arange(0, P.N, P.N // 100))
+    spikemon = SpikeMonitor(P)
+    popratemon = PopulationRateMonitor(P)
 
 run(1 * second, report='text', profile=profiling)
 
@@ -141,15 +158,16 @@ if profiling:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-subplot(311)
-plot(spikemon.t/ms, spikemon.i, ',k')
-subplot(312)
-plot(trace.t/ms, trace.v[:].T[:, :5])
-subplot(313)
-plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
-#show()
+if with_monitors:
+    subplot(311)
+    plot(spikemon.t/ms, spikemon.i, ',k')
+    subplot(312)
+    plot(trace.t/ms, trace.v[:].T[:, :5])
+    subplot(313)
+    plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
+    #show()
 
-plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
-savefig(plotpath)
-print('plot saved in {}'.format(plotpath))
-print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
+    plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+    savefig(plotpath)
+    print('plot saved in {}'.format(plotpath))
+    print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
