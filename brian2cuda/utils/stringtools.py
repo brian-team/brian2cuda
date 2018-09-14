@@ -59,7 +59,9 @@ def replace_floating_point_literals(code):
     # though.
 
     # numbers are not part of variable (e.g. `a1.method()`)
-    #notVar = '[^A-Za-z_]'
+    # use negative lookbehind (?<!) in order to not consume the letter before
+    # the match, s.t. consecutive literals don't overlap (otherwise only one
+    # would be matched, e.g. `1.-.2;` -> `1.f-.2;` instead of `1.f-.2f;`)
     notVar = '(?<!([A-Za-z_]))'
     # anything that has a digit before the dot (e.g. 2.1, 3. 1002.0293)
     preDot = '([1-9]\d*\.\d*)'
