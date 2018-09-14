@@ -678,6 +678,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             code = code.replace('%CODEOBJ_NAME%', codeobj.name)
             code = '#include "objects.h"\n'+code
 
+            if prefs['core.default_float_dtype'] == np.float32:
+                sub = 't - lastupdate'
+                if sub in code:
+                    code = code.replace(sub, 'float({})'.format(sub))
+                    logger.debug("Replaced {sub} with float({sub}) in {codeobj}"
+                                 "".format(sub=sub, codeobj=codeobj))
+
             writer.write('code_objects/'+codeobj.name+'.cu', code)
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
