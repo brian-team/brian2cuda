@@ -805,16 +805,7 @@ namespace std {
 __host__ __device__
 static inline int _timestep(double t, double dt)
 {
-    // maximum 32bit integer divided by 2
-    const int _infinity_int = 1073741823;
-    if (std::isinf(t))
-    {
-        if (t < 0)
-            return -_infinity_int;
-        else
-            return _infinity_int;
-    }
-    return (int)((t + 1e-3*dt)/dt);
+    return (int64_t)((t + 1e-3*dt)/dt);
 }
 '''
 DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(CUDACodeGenerator,
