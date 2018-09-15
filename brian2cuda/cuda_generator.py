@@ -785,29 +785,14 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              name='_rand')
 
 
+# Add support for the `timestep` function added in Brian 2.3.1
 timestep_code = '''
-// Adapted from npy_math.h and https://www.christophlassner.de/collection-of-msvc-gcc-compatibility-tricks.html
-#ifndef _BRIAN_REPLACE_ISINF_MSVC
-#define _BRIAN_REPLACE_ISINF_MSVC
-#if defined(_MSC_VER)
-#if _MSC_VER < 1900
-namespace std {
-    template <typename T>
     __host__ __device__
-    bool isinf(const T &x)
+    static inline int64_t _timestep(double t, double dt)
     {
-        return (!_finite(x))&&(!_isnan(x));
+        return (int64_t)((t + 1e-3*dt)/dt);
     }
-}
-#endif
-#endif
-#endif
-__host__ __device__
-static inline int _timestep(double t, double dt)
-{
-    return (int64_t)((t + 1e-3*dt)/dt);
-}
-'''
+    '''
 DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(CUDACodeGenerator,
                                                                  code=timestep_code,
                                                                  name='_timestep')
