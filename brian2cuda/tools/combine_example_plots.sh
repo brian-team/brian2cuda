@@ -31,4 +31,5 @@ for d in ${dir[@]}; do
     echo "$n: $d" >> $file_name
     n=$((n+1))
 done
-echo "Plot order is saved in $file_name"
+
+cat $file_name
