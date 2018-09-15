@@ -1,3 +1,5 @@
+- cobahh.py: network size is variable and monitor/single_precision preference
+  is added: implement the same for the other examples
 - make network size variable in examples
 - increase network size in examples
 - add comment of mushroombody script at top (e.g. reference their paper)
