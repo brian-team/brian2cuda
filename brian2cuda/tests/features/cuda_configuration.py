@@ -232,14 +232,14 @@ class GeNNConfigurationOptimized(Configuration):
         brian2.prefs._backup()
         brian2.set_device('genn')
         # use another gcc version with GeNN
-        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['Path']
+        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['PATH']
 
 class GeNNConfigurationOptimizedSinglePrecision(Configuration):
-    name = 'GeNN_optimized'
+    name = 'GeNN_optimized (single precision)'
     def before_run(self):
         brian2.prefs.reset_to_defaults()
         prefs['core.default_float_dtype'] = brian2.float32
         brian2.prefs._backup()
         brian2.set_device('genn')
         # use another gcc version with GeNN
-        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['Path']
+        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['PATH']

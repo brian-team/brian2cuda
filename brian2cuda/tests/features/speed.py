@@ -104,9 +104,9 @@ class COBAHHUncoupled(COBAHHBase):
 class COBAHHCoupled(COBAHHBase):
     """COBAHH from brian2 examples without monitors"""
 
-    name = "COBAHH (brian2 example, 80 syn/neuron, no monitors)"
+    name = "COBAHH (brian2 example, 2% coupling probabiliy, no monitors)"
     n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3812500
-    p = lambda: 0.02  # connection probability
+    p = lambda self, n: 0.02  # connection probability
     we = 6 * nS  # excitatory synaptic weight
     wi = 67 * nS  # inhibitory synaptic weight
 
@@ -121,7 +121,7 @@ class COBAHHPseudocoupled(COBAHHBase):
     name = "COBAHH (brian2 example, 1000 syn/neuron, weights zero, no monitors)"
     n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3812500
     # fixed connectivity: 1000 neurons per synapse
-    p = lambda n: 1000. / n
+    p = lambda self, n: 1000. / n
     # weights set to zero
     we = wi = 0
 
