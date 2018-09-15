@@ -179,6 +179,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
+        # In single-precision mode we replace dt variables in codeobjects with
+        # a single precision version, for details see #148
         if hasattr(var, 'real_var'):
             return self.get_array_name(var.real_var, access_data=access_data)
         return super(CUDAStandaloneDevice, self).get_array_name(var, access_data)
@@ -241,6 +243,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
         if prefs['core.default_float_dtype'] == np.float32 and 'dt' in variables:
+            # In single-precision mode we replace dt variables in codeobjects with
+            # a single precision version, for details see #148
             dt_var = variables['dt']
             new_dt_var = ArrayVariable(dt_var.name,
                                        dt_var.owner,
@@ -547,8 +551,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 number_elements = "_N"
             for k, v in codeobj.variables.iteritems():
-                # use the double array versions for dt in the templates
                 if k == 'dt' and prefs['core.default_float_dtype'] == np.float32:
+                    # use the double-precision array versions for dt as kernel arguments
+                    # they are cast to single-precision scalar dt in scalar_code
                     v = v.real_var
                 #code objects which only run once
                 if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
@@ -680,12 +685,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             code = code.replace('%CODEOBJ_NAME%', codeobj.name)
             code = '#include "objects.h"\n'+code
 
+            # substitue in generated code double types with float types in
+            # single-precision mode
             if prefs['core.default_float_dtype'] == np.float32:
+                # cast time differences (double) to float in event-drive updates
                 sub = 't - lastupdate'
                 if sub in code:
                     code = code.replace(sub, 'float({})'.format(sub))
                     logger.debug("Replaced {sub} with float({sub}) in {codeobj}"
                                  "".format(sub=sub, codeobj=codeobj))
+                # replace double-precision floating-point literals with their
+                # single-precision version (e.g. `1.0` -> `1.0f`)
                 code = replace_floating_point_literals(code)
                 logger.debug("Replaced floating point literals by single "
                              "precision version (appending `f`) in {}."
