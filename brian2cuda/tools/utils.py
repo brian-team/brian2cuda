@@ -165,9 +165,10 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         prefs[k] = v
         fixed_prefs_dict[k] = v
 
-    # add fixed_prefs_dict to all combinations
-    for prefs_dict in all_prefs_combinations:
-        prefs_dict.update(fixed_prefs_dict)
+    if args.all_prefs:
+        # add fixed_prefs_dict to all combinations
+        for prefs_dict in all_prefs_combinations:
+            prefs_dict.update(fixed_prefs_dict)
 
     print "Running with the following prefs combinations:\n"
     if all_prefs_combinations[0] is not None:

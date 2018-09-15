@@ -61,9 +61,7 @@ for target in args.targets:
                "(single run statement)\n")
         set_device(target, directory=None, with_output=False)
         argv = make_argv(args.test, 'standalone-compatible,!multiple-runs')
-        print 'DEBUG3', prefs['core.default_float_dtype'], prefs['codegen.generators.cuda.use_atomics']
         success = nose.run(argv=argv)
-        print 'DEBUG4', prefs['core.default_float_dtype'], prefs['codegen.generators.cuda.use_atomics']
         pref_success = pref_success and success
 
         clear_caches()
