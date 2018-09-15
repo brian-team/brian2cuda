@@ -621,12 +621,20 @@ class CUDACodeGenerator(CodeGenerator):
         else:  # np.float32
             default_func_type = 'float'
             other_func_type = 'double'
+        # set clip function to either use all float or all double arguments
+        # see #51 for details
+        if prefs['core.default_float_dtype'] == np.float64:
+            float_dtype = 'float'
+        else:  # np.float32
+            float_dtype = 'double'
         for varname, variable in self.variables.items():
             if isinstance(variable, Function):
                 user_functions.append((varname, variable))
                 funccode = variable.implementations[self.codeobj_class].get_code(self.owner)
                 if varname in functions_C99:
                     funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
+                if varname == 'clip':
+                    funccode = funccode.format(float_dtype=float_dtype)
                 if isinstance(funccode, basestring):
                     funccode = {'support_code': funccode}
                 if funccode is not None:
@@ -716,8 +724,8 @@ for func, func_cuda in func_translations:
 
 # std::abs is available and already overloaded for integral types in device code
 abs_code = '''
-#define _brian_abs std::abs
-'''
+    #define _brian_abs std::abs
+    '''
 DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(CUDACodeGenerator,
                                                             code=abs_code,
                                                             name='_brian_abs')
@@ -742,30 +750,32 @@ DEFAULT_FUNCTIONS['int'].implementations.add_implementation(CUDACodeGenerator,
                                                             code=int_code,
                                                             name='_brian_int')
 
-# TODO: find a way to use fast single-precision arithemics on GPU
+# TODO: make float version type safe or print warning (see #51)
 clip_code = '''
     inline __host__ __device__
-    double _brian_clip(const double value, const double a_min, const double a_max)
-    {
+    {float_dtype} _brian_clip(const {float_dtype} value,
+                              const {float_dtype} a_min,
+                              const {float_dtype} a_max)
+    {{
         if (value < a_min)
             return a_min;
         if (value > a_max)
             return a_max;
         return value;
-    }
+    }}
     '''
 DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=clip_code,
                                                              name='_brian_clip')
 
 sign_code = '''
-        template <typename T>
-        __host__ __device__
-        int _brian_sign(T val)
-        {
-            return (T(0) < val) - (val < T(0));
-        }
-        '''
+    template <typename T>
+    __host__ __device__
+    int _brian_sign(T val)
+    {
+        return (T(0) < val) - (val < T(0));
+    }
+    '''
 DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=sign_code,
                                                              name='_brian_sign')
