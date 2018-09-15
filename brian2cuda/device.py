@@ -31,6 +31,8 @@ from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.groups.neurongroup import Thresholder
 
+from brian2cuda.utils.stringtools import replace_floating_point_literals
+
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
 
 
@@ -176,6 +178,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.delete_synaptic_post = {}
         super(CUDAStandaloneDevice, self).__init__()
 
+    def get_array_name(self, var, access_data=True):
+        # In single-precision mode we replace dt variables in codeobjects with
+        # a single precision version, for details see #148
+        if hasattr(var, 'real_var'):
+            return self.get_array_name(var.real_var, access_data=access_data)
+        return super(CUDAStandaloneDevice, self).get_array_name(var, access_data)
+
     def code_object_class(self, codeobj_class=None, fallback_pref=None):
         '''
         Return `CodeObject` class (either `CUDAStandaloneCodeObject` class or input)
@@ -233,6 +242,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
+        if prefs['core.default_float_dtype'] == np.float32 and 'dt' in variables:
+            # In single-precision mode we replace dt variables in codeobjects with
+            # a single precision version, for details see #148
+            dt_var = variables['dt']
+            new_dt_var = ArrayVariable(dt_var.name,
+                                       dt_var.owner,
+                                       dt_var.size,
+                                       dt_var.device,
+                                       dimensions=dt_var.dim,
+                                       dtype=np.float32,
+                                       constant=dt_var.constant,
+                                       scalar=dt_var.scalar,
+                                       read_only=dt_var.read_only,
+                                       dynamic=dt_var.dynamic,
+                                       unique=dt_var.unique)
+            new_dt_var.real_var = dt_var
+            new_dt_var.set_value(dt_var.get_value().item())
+            variables['dt'] = new_dt_var
         if template_kwds is None:
             template_kwds = dict()
         else:
@@ -524,6 +551,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 number_elements = "_N"
             for k, v in codeobj.variables.iteritems():
+                if k == 'dt' and prefs['core.default_float_dtype'] == np.float32:
+                    # use the double-precision array versions for dt as kernel arguments
+                    # they are cast to single-precision scalar dt in scalar_code
+                    v = v.real_var
                 #code objects which only run once
                 if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     code_snippet='''
@@ -653,6 +684,22 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             code = code.replace('%KERNEL_VARIABLES%', '\n\t'.join(kernel_variables[codeobj.name]))
             code = code.replace('%CODEOBJ_NAME%', codeobj.name)
             code = '#include "objects.h"\n'+code
+
+            # substitue in generated code double types with float types in
+            # single-precision mode
+            if prefs['core.default_float_dtype'] == np.float32:
+                # cast time differences (double) to float in event-drive updates
+                sub = 't - lastupdate'
+                if sub in code:
+                    code = code.replace(sub, 'float({})'.format(sub))
+                    logger.debug("Replaced {sub} with float({sub}) in {codeobj}"
+                                 "".format(sub=sub, codeobj=codeobj))
+                # replace double-precision floating-point literals with their
+                # single-precision version (e.g. `1.0` -> `1.0f`)
+                code = replace_floating_point_literals(code)
+                logger.debug("Replaced floating point literals by single "
+                             "precision version (appending `f`) in {}."
+                             "".format(codeobj))
 
             writer.write('code_objects/'+codeobj.name+'.cu', code)
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)

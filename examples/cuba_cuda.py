@@ -8,7 +8,9 @@ matplotlib.use('Agg')
 from brian2 import *
 
 import brian2cuda
-set_device('cuda_standalone', directory='CUBA_CUDA',compile=True, run=True, debug=True)
+set_device('cuda_standalone', directory='CUBA_CUDA_sp',compile=True, run=True, debug=True)
+
+prefs['core.default_float_dtype'] = float32
 
 taum = 20*ms
 taue = 5*ms
