@@ -51,8 +51,6 @@ prefs.register_preferences(
         default=True)
 )
 
-_universal_support_code = ''
-
 #TODO: Check from python side the CC and CUDA runtime version and only add
 # atomics which don't have hardware implementations
 # (see genn/lib/src/generateRunner.cc and genn-team/genn#93).
@@ -68,12 +66,12 @@ if True:  # CC >= 2.0, TODO: check for it
     atomicAdd_hw.append('float')
 if False:  # CC >= 6.0 TODO check for it AND runtime version (see genn #93)
     atomicAdd_hw.append('double')
-atomic_support_code = ''
+_atomic_support_code = ''
 for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
     for arg_dtype, int_dtype, val_type_cast in overloads:
         if op_name == 'Add' and arg_dtype in atomicAdd_hw:
             # hardware implementations for atomicAdd exist
-            atomic_support_code += '''
+            _atomic_support_code += '''
             inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
             {{
                 // hardware implementation
@@ -81,7 +79,7 @@ for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
             }}
             '''.format(arg_dtype=arg_dtype, op_name=op_name)
         elif arg_dtype == 'int':
-            atomic_support_code += '''
+            _atomic_support_code += '''
             inline __device__ int _brian_atomic{op_name}(int* address, int val)
             {{
                 // software implementation
@@ -99,7 +97,7 @@ for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
             # in the software implementation, we treat all data as integer types
             # (since atomicCAS is only define
             # and use atomicCAS to swap the memory with our our desired value
-            atomic_support_code += '''
+            _atomic_support_code += '''
             inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
             {{
                 // software implementation
@@ -119,41 +117,47 @@ for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
             }}
             '''.format(arg_dtype=arg_dtype, int_dtype=int_dtype,
                        val_type_cast=val_type_cast, op_name=op_name, op=op)
-_universal_support_code += deindent(atomic_support_code)
+
 
 # CUDA does not support modulo arithmetics for long double. Since we can't give a warning, we let the
 # compilation fail, which gives an error message of type
 # error: more than one instance of overloaded function "_brian_mod" matches the argument list: ...
 # TODO: can we produce a more informative error message?
-mod_support_code = ''
-typestrs = ['int', 'long', 'long long', 'float', 'double']#, 'long double']
-floattypestrs = ['float', 'double']#, 'long double']
-for ix, xtype in enumerate(typestrs):
-    for iy, ytype in enumerate(typestrs):
-        hightype = typestrs[max(ix, iy)]
-        if xtype in floattypestrs or ytype in floattypestrs:
-            expr = 'fmod(fmod(x, y)+y, y)'
-        else:
-            expr = '((x%y)+y)%y'
-        mod_support_code += '''
-        inline __host__ __device__ {hightype} _brian_mod({xtype} ux, {ytype} uy)
-        {{
-            const {hightype} x = ({hightype})ux;
-            const {hightype} y = ({hightype})uy;
-            return {expr};
-        }}
-        '''.format(hightype=hightype, xtype=xtype, ytype=ytype, expr=expr)
+_typestrs = ['int', 'long', 'long long', 'float', 'double']#, 'long double']
+_hightype_support_code = 'template < typename T1, typename T2 > struct _higher_type;\n'
+for ix, xtype in enumerate(_typestrs):
+    for iy, ytype in enumerate(_typestrs):
+        hightype = _typestrs[max(ix, iy)]
+        _hightype_support_code += '''
+template < > struct _higher_type<{xtype},{ytype}> {{ typedef {hightype} type; }};
+        '''.format(hightype=hightype, xtype=xtype, ytype=ytype)
 
-_universal_support_code += deindent(mod_support_code)
+_mod_support_code = '''
+template < typename T1, typename T2 >
+__host__ __device__ static inline typename _higher_type<T1,T2>::type
+_brian_mod(T1 x, T2 y)
+{{
+    return x-y*floor(1.0*x/y);
+}}
+'''
 
-pow_support_code = '''
+_floordiv_support_code = '''
+template < typename T1, typename T2 >
+__host__ __device__ static inline typename _higher_type<T1,T2>::type
+_brian_floordiv(T1 x, T2 y)
+{{
+    return floor(1.0*x/y);
+}}
+'''
+
+_pow_support_code = '''
 #ifdef _MSC_VER
 #define _brian_pow(x, y) (pow((double)(x), (y)))
 #else
 #define _brian_pow(x, y) (pow((x), (y)))
 #endif
 '''
-_universal_support_code += pow_support_code
+
 
 class CUDACodeGenerator(CodeGenerator):
     '''
@@ -180,7 +184,9 @@ class CUDACodeGenerator(CodeGenerator):
     class_name = 'cuda'
 
     _use_atomics = False
-    universal_support_code = _universal_support_code
+    universal_support_code = (_hightype_support_code + _mod_support_code +
+                              _floordiv_support_code + _pow_support_code +
+                              _atomic_support_code)
 
     def __init__(self, *args, **kwds):
         super(CUDACodeGenerator, self).__init__(*args, **kwds)
