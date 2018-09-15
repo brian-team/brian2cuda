@@ -1,4 +1,3 @@
-import brian2
 import os
 import shutil
 import sys
@@ -6,10 +5,12 @@ import socket
 import subprocess
 import shlex
 
+import brian2
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 from brian2.core.preferences import prefs
 from brian2.utils.logger import get_logger
+import brian2genn
 
 logger = get_logger('brian2.devices.cuda_standalone.cuda_configuration')
 
@@ -223,3 +224,22 @@ class CUDAStandaloneConfigurationBundlesProfileCPU(CUDAStandaloneConfigurationBa
     name = "CUDA standalone bundles (profile='blocking')"
     commit = 'nemo_bundles'
     device_kwargs = {'profile': 'blocking'}
+
+class GeNNConfigurationOptimized(Configuration):
+    name = 'GeNN_optimized'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+        # use another gcc version with GeNN
+        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['Path']
+
+class GeNNConfigurationOptimizedSinglePrecision(Configuration):
+    name = 'GeNN_optimized'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        prefs['core.default_float_dtype'] = brian2.float32
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+        # use another gcc version with GeNN
+        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['Path']
