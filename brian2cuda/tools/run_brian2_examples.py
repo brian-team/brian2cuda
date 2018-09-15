@@ -18,7 +18,10 @@ class RunTestCase(unittest.TestCase):
         self.image_dir = image_dir
         for k, v in prefs_dict.items():
             if k == 'core.default_float_dtype':
-                prefs_dict[k] = v.__name__
+                try:
+                    prefs_dict[k] = v.__name__
+                except AttributeError:
+                    pass
         self.prefs_dict = prefs_dict
 
     def id(self):
