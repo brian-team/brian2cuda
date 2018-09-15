@@ -5,7 +5,7 @@ TODO: are these tests copied from the brian2 test suite? Check and if so, delete
 
 from nose import with_setup
 from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_allclose, assert_raises, assert_equal, assert_array_equal
+from numpy.testing.utils import assert_raises, assert_equal, assert_array_equal
 
 from brian2 import *
 from brian2.devices.device import reinit_devices

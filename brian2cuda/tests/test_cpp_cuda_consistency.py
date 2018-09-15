@@ -1,8 +1,8 @@
 from nose import with_setup
 from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_allclose
 
 from brian2 import *
+from brian2.tests.utils import assert_allclose
 from brian2.devices.device import reinit_devices, set_device, reset_device
 
 import brian2cuda

@@ -1,10 +1,11 @@
 from nose import with_setup, SkipTest
 from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_allclose, assert_raises
+from numpy.testing.utils import assert_raises
 import numpy as np
 import logging
 
 from brian2 import *
+from brian2.tests.utils import assert_allclose
 from brian2.utils.logger import catch_logs
 from brian2.devices.device import reinit_devices, set_device
 from brian2.tests.test_synapses import permutation_analysis_good_examples

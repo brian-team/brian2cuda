@@ -2,7 +2,7 @@ import os
 import cPickle as pickle
 import pandas as pd
 import brian2
-import brian2.tests.features.base
+from brian2.tests.features.base import SpeedTestResults
 from collections import defaultdict
 
 
