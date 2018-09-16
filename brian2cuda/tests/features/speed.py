@@ -383,19 +383,14 @@ class MushroomBody(SpeedTest):
     #n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 112500]  #fail: 118750
     n_label = 'Num neurons'
 
-    # configuration options (adapted form brian2GeNN benchmark)
-    run_it_for = 1
-    n_patterns = 10
-    n_repeats = run_it_for * 10
-    duration = (n_patterns * n_repeats + 1) * 50*ms
+    # configuration options
+    duration = 1*second
 
     def run(self):
         import random as py_random
-        N_MB = self.n
-        #MB_scaling = N_MB/float(2500)
-        #defaultclock.dt = 0.1*ms
         # Number of neurons
         N_AL = 100
+        N_MB = self.n
         N_LB = 100
         # Constants
         g_Na = 7.15*uS
@@ -412,11 +407,10 @@ class MushroomBody(SpeedTest):
         E_i = -92*mV
         # Actual constants used for synapses
         NKCKC= N_MB
-        if (NKCKC > 10000):
-            NKCKC= 10000
+        if NKCKC > 10000:
+            NKCKC = 10000
         g_scaling = NKCKC/2500
-        #print(g_scaling)
-        if (g_scaling < 1):
+        if g_scaling < 1:
             g_scaling= 1
         tau_PN_LHI = 1*ms
         tau_LHI_iKC = 3*ms
@@ -428,14 +422,7 @@ class MushroomBody(SpeedTest):
         tau_pre = tau_post = 10*ms
         dApre = 0.1*nS/g_scaling
         dApost = -dApre
-        # tau_STDP = 10*ms
-        # g_0 = 0.125*nS
         g_max = 3.75*nS/g_scaling
-        # g_mid = g_max/2
-        # g_slope = g_mid
-        # tau_decay = 10e5*ms
-        # A = g_max/4
-        # offset = 0.01*A
 
         scale = .675
 
@@ -458,17 +445,9 @@ class MushroomBody(SpeedTest):
         beta_n = .5*exp((10*mV-V+VT)/(40*mV))/ms : Hz
         '''
 
-        #alpha_m = 0.32*(-52 - V/mV)/(exp((-52 - V/mV)/4) - 1)/ms: Hz
-        #beta_m = 0.28*(25 + V/mV)/(exp((25 + V/mV)/5) - 1)/ms: Hz
-        #alpha_h = 0.128*exp((-48 - V/mV)/18)/ms: Hz
-        #beta_h = 4/(exp((-25 - V/mV)/5) + 1)/ms : Hz
-        #alpha_n = 0.032*(-50 - V/mV)/(exp((-50 - V/mV)/5) - 1)/ms: Hz
-        #beta_n = 0.5*exp((-55 - V/mV)/40)/ms : Hz
-
         # Principal neurons (Antennal Lobe)
-        n_patterns = self.n_patterns
-        n_repeats = self.n_repeats
-        runtime = (n_patterns*n_repeats+1)*50*ms
+        n_patterns = 10
+        n_repeats = int(self.duration/second*10)
         p_perturb = 0.1
         patterns = np.repeat(np.array([np.random.choice(N_AL, int(0.2*N_AL), replace=False) for _ in range(n_patterns)]), n_repeats, axis=0)
         # Make variants of the patterns
@@ -491,12 +470,6 @@ class MushroomBody(SpeedTest):
         for p in range(n_patterns):
             sorted_variants.extend(variants[n_repeats * p + training_size:n_repeats * (p + 1)])
 
-        # all_patterns = np.zeros((n_patterns*n_repeats, N_AL))
-        # for idx, p in enumerate(sorted_variants):
-        #     all_patterns[idx, p] = 1
-        # plt.imshow(all_patterns[-10*n_patterns:, :], interpolation='none')
-        # plt.show()
-
         spike_times = np.arange(n_patterns*n_repeats)*50*ms + 1*ms + rand(n_patterns*n_repeats)*2*ms
         spike_times = spike_times.repeat([len(p) for p in sorted_variants])
         spike_indices = np.concatenate(sorted_variants)
@@ -509,10 +482,6 @@ class MushroomBody(SpeedTest):
         eqs_iKC = Equations(traub_miles) + Equations(I_syn)
         iKC = NeuronGroup(N_MB, eqs_iKC, threshold='V>0*mV', refractory='V>0*mV',
                           method='exponential_euler')
-        iKC.V = E_leak
-        iKC.h = 1
-        iKC.m = 0
-        iKC.n = .5
 
         # eKCs of the mushroom body lobe
         I_syn = '''I_syn = g_iKC_eKC*(V - E_e) + g_eKC_eKC*(V - E_i): amp
@@ -521,30 +490,9 @@ class MushroomBody(SpeedTest):
         eqs_eKC = Equations(traub_miles) + Equations(I_syn)
         eKC = NeuronGroup(N_LB, eqs_eKC, threshold='V>0*mV', refractory='V>0*mV',
                           method='exponential_euler')
-        eKC.V = E_leak
-        eKC.h = 1
-        eKC.m = 0
-        eKC.n = .5
 
         # Synapses
         PN_iKC = Synapses(PN, iKC, 'weight : siemens', on_pre='g_PN_iKC += scale*weight')
-        PN_iKC.connect(p=0.15)
-        PN_iKC.weight = '10*nS + 1.25*nS*randn()'
-
-        # iKC_eKC = Synapses(iKC, eKC,
-        #              '''
-        #              dg_raw/dt = (g_0 - g_raw)/tau_decay : siemens (event-driven)
-        #              g_syn = g_max*(tanh((g_raw - g_mid)/g_slope) + 1)/2 : siemens
-        #              dapre/dt =  -apre/tau_stdp : siemens (event-driven)
-        #              dapost/dt = -apost/tau_stdp : siemens (event-driven)
-        #              ''',
-        #              on_pre='''
-        #                                    apre += A
-        #                                    g_iKC_eKC += g_max*(tanh((g_raw - g_mid)/g_slope) + 1)/2
-        #                     ''',
-        #              on_post='''
-        #              g_raw += apre - offset
-        #              ''')
         iKC_eKC = Synapses(iKC, eKC,
                            '''g_raw : siemens
                               dApre/dt = -Apre / tau_pre : siemens (event-driven)
@@ -558,16 +506,29 @@ class MushroomBody(SpeedTest):
                                       Apost += dApost
                                       g_raw = clip(g_raw + Apre, 0, g_max)''',
                            )
+        eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC')
+        # bu.insert_benchmark_point()
+        PN_iKC.connect(p=0.15)
+
         if (N_MB > 10000):
             iKC_eKC.connect(p=float(10000)/N_MB)
         else:
             iKC_eKC.connect()
+        eKC_eKC.connect()
+        # bu.insert_benchmark_point()
+
         # First set all synapses as "inactive", then set 20% to active
+        PN_iKC.weight = '10*nS + 1.25*nS*randn()'
         iKC_eKC.g_raw = 'rand()*g_max/10/g_scaling'
         iKC_eKC.g_raw['rand() < 0.2'] = '(2.5*nS + 0.5*nS*randn())/g_scaling'
-
-        eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC')
-        eKC_eKC.connect()
+        iKC.V = E_leak
+        iKC.h = 1
+        iKC.m = 0
+        iKC.n = .5
+        eKC.V = E_leak
+        eKC.h = 1
+        eKC.m = 0
+        eKC.n = .5
 
         #if use_spikemon:
         #    PN_spikes = SpikeMonitor(PN)
