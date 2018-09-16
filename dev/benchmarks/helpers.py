@@ -30,8 +30,8 @@ def configurations_to_dict(configurations):
 
 
 def pickle_results(results, filename):
-    assert isinstance(results, brian2.tests.features.base.SpeedTestResults)
-    to_pickle = brian2.tests.features.base.SpeedTestResults(
+    assert isinstance(results, SpeedTestResults)
+    to_pickle = SpeedTestResults(
         results.full_results,
         configurations_to_dict(results.configurations),
         results.speed_tests

@@ -161,7 +161,6 @@ class BrunelHakimBase(SpeedTest):
         tau = 20*ms
         delta = 2*ms
         taurefr = 2*ms
-        duration = .1*second
         C = 1000
         sparseness = float(C)/self.n
         J = .1*mV
@@ -264,18 +263,17 @@ class SynapsesOnlyHeterogeneousDelays(SpeedTest):
 
 
 class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
-    name = "Dense, medium rate (1s duration)"
+    name = "Dense, medium rate"
     rate = 10 * Hz
     p = 1.0
     n_range = [10, 100, 1000, 10000, 100000, 200000, 462500]  #fail: 468750
 
 
 class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
-    name = "Sparse, low rate (10s duration)"
+    name = "Sparse, low rate"
     rate = 1 * Hz
     p = 0.2
     n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3281250]  #fail: 3312500
-    duration = 10 * second
 
 
 class CUBAFixedConnectivityNoMonitor(SpeedTest):

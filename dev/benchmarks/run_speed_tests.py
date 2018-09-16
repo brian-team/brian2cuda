@@ -208,7 +208,8 @@ try:
                               #n_slice=slice(0,1,None),
                               run_twice=False,
                               verbose=True,
-                              maximum_run_time=maximum_run_time#,
+                              maximum_run_time=maximum_run_time
+                              mark_not_completed=True#,
                               ## this needs modification of brian2 code
                               #profile_only_active=True
                               #profile_only_active=False
@@ -256,7 +257,7 @@ try:
                 if proj_dir == 'GeNNworkspace':
                     main_arg = 'test {time} 1'.format(time=st.duration/second)
                 ns = st.n_range[sl]
-                idx = 2
+                idx = 4
                 max_runtime = 20
                 if isinstance(conf, DynamicConfigCreator):
                     conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')

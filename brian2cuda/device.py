@@ -949,6 +949,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # We store this as an instance variable for later access by the
         # `code_object` method
         self.enable_profiling = profile
+        # To profile SpeedTests, we need to be able to set `profile` in
+        # `set_device`. Here we catch that case.
+        if 'profile' in self.build_options:
+            build_profile = self.build_options.pop('profile')
+            if build_profile:
+                self.enable_profiling = True
 
         net._clocks = {obj.clock for obj in net.objects}
         t_end = net.t+duration
