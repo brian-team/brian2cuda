@@ -8,11 +8,12 @@ from brian2.tests.features.speed import *
 from brian2.tests.features.speed import __all__
 __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'SparseLowRateSynapsesOnlyHeterogeneousDelays',
-                'BrunelHakimModelScalarDelay',
-                'BrunelHakimModelHeterogeneousDelay',
                 'COBAHHUncoupled',
                 'COBAHHCoupled',
                 'COBAHHPseudocoupled',
+                'BrunelHakimHomogDelays',
+                'BrunelHakimHeterogDelays',
+                'BrunelHakimHeterogDelaysNarrowDistr',
                 'CUBAFixedConnectivityNoMonitor',
                 'STDPEventDriven',
                 'MushroomBody'
@@ -25,10 +26,15 @@ class COBAHHBase(SpeedTest):
     category = "Full examples"
     n_label = 'Num neurons'
 
-    uncoupled = False
-
     # configuration options
     duration = 1 * second
+
+    uncoupled = False
+
+    # if not uncoupled, these need to be set in child class
+    we = None
+    wi = None
+    p = lambda self, n: None
 
     def run(self):
         # Parameters
@@ -94,7 +100,7 @@ class COBAHHBase(SpeedTest):
 
 
 class COBAHHUncoupled(COBAHHBase):
-    """COBAHH from brian2 examples without synapses and without monitors"""
+    """COBAHH from brian2 examples but without synapses and without monitors"""
 
     name = "COBAHH uncoupled (no synapses, no monitors)"
     n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #TODO: max size?
@@ -113,94 +119,121 @@ class COBAHHCoupled(COBAHHBase):
 
 class COBAHHPseudocoupled(COBAHHBase):
     """
-    COBAHH from brian2 examples with 1000 synapses per neuron (instead of 80)
-    and all weights set to zero (used in brian2genn benchmarks) and without
+    COBAHH from with 1000 synapses per neuron (instead of 80) and all
+    weights set to zero (used in brian2genn benchmarks) and without
     monitors.
     """
 
-    name = "COBAHH (brian2 example, 1000 syn/neuron, weights zero, no monitors)"
+    name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
     n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3812500
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
     # weights set to zero
-    we = wi = 0
+    we = wi = 0 * nS
 
 
-class BrunelHakimModelScalarDelay(SpeedTest):
+class BrunelHakimBase(SpeedTest):
+    """
+    Base class for BrunelHakim benchmarks with different delay
+    distributions
+    """
 
     category = "Full examples"
-    name = "Brunel Hakim with scalar delay (1s)"
-    tags = ["Neurons", "Synapses"]
+    n_label = 'Num neurons'
+
+    # configuration options
+    duration = 1 * second
+
+    # need to be set in child class
+    sigmaext = None  # vold
+    muext = None  # volt
+    # homogeneous delays
+    homog_delays = None  # second
+    # heterogeneous delays
+    heterog_delays = None  # string syntax
+
+    def run(self):
+        assert not (self.heterog_delays is not None and
+                    self.homog_delays is not None), \
+                "Can't set homog_delays and heterog_delays"
+        Vr = 10*mV
+        theta = 20*mV
+        tau = 20*ms
+        delta = 2*ms
+        taurefr = 2*ms
+        duration = .1*second
+        C = 1000
+        sparseness = float(C)/self.n
+        J = .1*mV
+        muext = self.muext
+        sigmaext = self.sigmaext
+
+        eqs = """
+        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+        """
+
+        group = NeuronGroup(self.n, eqs, threshold='V>theta',
+                            reset='V=Vr', refractory=taurefr)
+        group.V = Vr
+
+        conn = Synapses(group, group, on_pre='V += -J',
+                        delay=self.homog_delays)
+        conn.connect(p=sparseness)
+
+        if self.heterog_delays is not None:
+            conn.delay = self.heterog_delays
+
+        self.timed_run(self.duration)
+
+
+class BrunelHakimHomogDelays(BrunelHakimBase):
+    """
+    BrunelHakim with homogeneous delays from brian2 examples
+    """
+    name = "Brunel Hakim with homogeneous delays (2 ms)"
+    tags = ["Neurons", "Synapses", "Delays"]
     n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 300000, 393750]  #fail: 403125
-    n_label = 'Num neurons'
 
-    # configuration options
-    duration = 1*second
+    # all delays 2 ms
+    homog_delays = 2*ms
 
-    def run(self):
-        N = self.n
-        Vr = 10*mV
-        theta = 20*mV
-        tau = 20*ms
-        delta = 2*ms
-        taurefr = 2*ms
-        C = 1000
-        sparseness = float(C)/N
-        J = .1*mV
-        muext = 25*mV
-        sigmaext = 1*mV
+    sigmaext = 1*mV
+    muext = 25*mV
 
-        eqs = """
-        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
-        """
 
-        group = NeuronGroup(N, eqs, threshold='V>theta',
-                            reset='V=Vr', refractory=taurefr)
-        group.V = Vr
-        conn = Synapses(group, group, on_pre='V += -J', delay=delta)
-        conn.connect('rand()<sparseness')
-
-        self.timed_run(self.duration)
-
-class BrunelHakimModelHeterogeneousDelay(SpeedTest):
-
-    category = "Full examples"
-    name = "Brunel Hakim with heterogenous delays"
-    tags = ["Neurons", "Synapses"]
+class BrunelHakimHeterogDelays(BrunelHakimBase):
+    """
+    BrunelHakim with heterogeneous delays with same mean delay and
+    similar activity regime as brian2 example (with homogeneous delays).
+    """
+    name = "Brunel Hakim with heterogeneous delays (uniform [0, 4] ms)"
+    tags = ["Neurons", "Synapses", "Delays"]
     n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 218750]  #fail: 225000
-    n_label = 'Num neurons'
-    dt = 0.1*ms
 
-    # configuration options
-    duration = 1*second
+    # delays [0, 4] ms
+    heterog_delays = "4*ms * rand()"
 
-    def run(self):
-        N = self.n
-        Vr = 10*mV
-        theta = 20*mV
-        tau = 20*ms
-        delta = 2*ms
-        taurefr = 2*ms
-        C = 1000
-        sparseness = float(C)/N
-        J = .1*mV
-        muext = 25*mV
-        sigmaext = 1*mV
+    # to have a similar network activity regime as for homogenous delays
+    # or narrow delay distribution
+    sigmaext = 0.33*mV
+    muext = 27*mV
 
-        eqs = """
-        dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
-        """
 
-        group = NeuronGroup(N, eqs, threshold='V>theta',
-                            reset='V=Vr', refractory=taurefr)
-        group.V = Vr
-        conn = Synapses(group, group, on_pre='V += -J')
-        conn.connect('rand()<sparseness')
-        conn.delay = "delta * 2 * rand()"
+class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
+    """
+    BrunelHakim with heterogeneous delays with narrow delay distribution
+    with same mean delay and similar activity regime as brian2 example
+    (with homogeneous delays)
+    """
+    name = "Brunel Hakim with heterogeneous delays (uniform 2 ms += dt)"
+    tags = ["Neurons", "Synapses", "Delays"]
+    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 218750]  #TODO: max size?
 
-        defaultclock.dt = self.dt
+    # delays 2 ms += dt
+    heterog_delays = "2*ms + 2 * dt * rand() - dt"
 
-        self.timed_run(self.duration)
+    sigmaext = 1*mV
+    muext = 25*mV
 
 
 class SynapsesOnlyHeterogeneousDelays(SpeedTest):

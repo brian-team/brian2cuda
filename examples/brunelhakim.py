@@ -113,14 +113,14 @@ group.V = Vr
 # delayed synapses
 if heterog_delays:
     conn = Synapses(group, group, on_pre='V += -J')
-    conn.connect('rand()<sparseness')
+    conn.connect(p=sparseness)
     if narrow_delaydistr:
         conn.delay = "delta   +   2 * dt * rand()"
     else:
         conn.delay = "2 * delta * rand()"
 else:
     conn = Synapses(group, group, on_pre='V += -J', delay=delta)
-    conn.connect('rand()<sparseness')
+    conn.connect(p=sparseness)
 
 if with_monitors:
     M = SpikeMonitor(group)

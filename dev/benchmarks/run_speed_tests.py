@@ -36,10 +36,13 @@ from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfigur
                                                           CUDAStandaloneConfigurationSynLaunchBounds,
                                                           CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds,
                                                           CUDAStandaloneConfigurationProfileGPU,
-                                                          CUDAStandaloneConfigurationProfileCPU)
+                                                          CUDAStandaloneConfigurationProfileCPU,
+                                                          GeNNConfigurationOptimized,
+                                                          GeNNConfigurationOptimizedSinglePrecision)
+
 from brian2cuda.tests.features.speed import *
 
-from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
+#from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
 
 from create_readme import create_readme
 from helpers import pickle_results, translate_pkl_to_csv
@@ -92,21 +95,27 @@ configs = [# configuration                          project_directory
           (CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
           (CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
           (CPPStandaloneConfiguration,              'cpp_standalone'),
-          (GeNNConfiguration,                       'GeNNworkspace'),
+          #(GeNNConfiguration,                       'GeNNworkspace'),
           (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
-          (GeNNConfigurationCPU,                    'GeNNworkspace'),
-          (GeNNConfigurationOptimized,              'GeNNworkspace')
+          #(GeNNConfigurationCPU,                    'GeNNworkspace'),
+          (GeNNConfigurationOptimized,              'GeNNworkspace'),
+          (GeNNConfigurationOptimizedSinglePrecision,'GeNNworkspace')
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
 
                (CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
+
                (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
                (COBAHHCoupled,                                  'COBAHHCoupled',                                slice(None)         ),
                (COBAHHPseudocoupled,                            'COBAHHPseudocoupled',                          slice(None)         ),
+
+               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(None)         ),
+               (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
+               (BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(None)         ),
+
                (STDP,                                           'STDP',                                         slice(None)         ),
                (STDPEventDriven,                                'STDPEventDriven',                              slice(None)         ),
-               (BrunelHakimModelScalarDelay,                    'BrunelHakimModelScalarDelay',                  slice(None)         ),
                (MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
 
                (VerySparseMediumRateSynapsesOnly,               'VerySparseMediumRateSynapsesOnly',             slice(None)         ),
@@ -117,7 +126,6 @@ speed_tests = [# feature_test                     name                          
 
                (DenseMediumRateSynapsesOnlyHeterogeneousDelays, 'DenseMediumRateSynapsesOnlyHeterogeneousDelays', slice(None)       ),
                (SparseLowRateSynapsesOnlyHeterogeneousDelays,   'SparseLowRateSynapsesOnlyHeterogeneousDelays', slice(None)         ),
-               (BrunelHakimModelHeterogeneousDelay,             'BrunelHakimModelHeterogeneousDelay',           slice(None)         ),
 
                (LinearNeuronsOnly,                              'LinearNeuronsOnly',                            slice(None)         ),
                (HHNeuronsOnly,                                  'HHNeuronsOnly',                                slice(None)         ),
