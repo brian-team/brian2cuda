@@ -26,11 +26,11 @@ from brian2 import *
 
 # select code generation standalone device
 devicename = 'cuda_standalone'
-# devicename = 'cpp_standalone'
+#devicename = 'cpp_standalone'
 
 # select homogeneous (constant/identical) or heterogeneous (distributed) delays
-heterog_delays = True
-# heterog_delays = False
+heterog_delays = False
+#heterog_delays = True
 
 # select heterogeneous delays distribution:
 # the following flag enables to have a very narrow delay distribution [2ms, 2ms+2dt] such that network
@@ -39,8 +39,11 @@ heterog_delays = True
 # remark: disabling leads to a wider delay distribution [0, 2ms] producing less network oscillations
 # further remark: to have the network operate in a similar activity regime (particular w.r.t. oscillations)
 # we change the sigmaext based on inspecting fig. 8 from (Brunel & Hakim 1999)
-narrow_delaydistr = True
-# narrow_delaydistr = False
+narrow_delaydistr = False
+#narrow_delaydistr = True
+
+# number of neurons
+N = 5000
 
 # whether to profile run
 profiling = True
@@ -50,6 +53,12 @@ resultsfolder = 'results'
 
 # folder for the code
 codefolder_base = 'code'
+
+# monitors (neede for plot generation)
+with_monitors = True
+
+# single precision
+single_precision = False
 
 #####################################################################################################
 
@@ -66,13 +75,15 @@ if heterog_delays:
 else:
     name = name + '_homogdelay[2]'
 name = name + '_' + devicename.replace('_standalone', '')
+name = name + '_single-precision' if single_precision else name
+name = name + '_no-monitors' if not with_monitors else name
+name += '_N-' + str(N)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
 set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
 
-N = 5000
 Vr = 10*mV
 theta = 20*mV
 tau = 20*ms
@@ -111,8 +122,9 @@ else:
     conn = Synapses(group, group, on_pre='V += -J', delay=delta)
     conn.connect('rand()<sparseness')
 
-M = SpikeMonitor(group)
-LFP = PopulationRateMonitor(group)
+if with_monitors:
+    M = SpikeMonitor(group)
+    LFP = PopulationRateMonitor(group)
 
 run(duration, report='text', profile=profiling)
 
@@ -125,16 +137,17 @@ if profiling:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-subplot(211)
-plot(M.t/ms, M.i, '.')
-xlim(0, duration/ms)
+if with_monitors:
+    subplot(211)
+    plot(M.t/ms, M.i, '.')
+    xlim(0, duration/ms)
 
-subplot(212)
-plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
-xlim(0, duration/ms)
-#show()
+    subplot(212)
+    plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
+    xlim(0, duration/ms)
+    #show()
 
-plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
-savefig(plotpath)
-print('plot saved in {}'.format(plotpath))
-print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
+    plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+    savefig(plotpath)
+    print('plot saved in {}'.format(plotpath))
+    print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
