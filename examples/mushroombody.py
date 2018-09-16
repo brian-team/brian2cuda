@@ -15,6 +15,9 @@ import random
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
+# number of mushroom body neurons
+N_MB = 2500
+
 # whether to profile run
 profiling = True
 
@@ -24,12 +27,22 @@ resultsfolder = 'results'
 # folder for the code
 codefolder_base = 'code'
 
+# monitors (neede for plot generation)
+with_monitors = True
+
+# single precision
+single_precision = False
+
 #####################################################################################################
 
 if devicename == 'cuda_standalone':
     import brian2cuda
 
 name = os.path.basename(__file__).replace('.py', '_') + devicename.replace('_standalone', '')
+name = name + '_' + devicename.replace('_standalone', '')
+name = name + '_single-precision' if single_precision else name
+name = name + '_no-monitors' if not with_monitors else name
+name += '_N-' + str(N)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
@@ -40,7 +53,6 @@ set_device(devicename, directory=codefolder, compile=True, run=True, debug=False
 runtime = 1*second
 # Number of neurons
 N_AL = 100
-N_MB = int(2500)
 N_LB = 100
 # Constants
 g_Na = 7.15*uS
@@ -179,9 +191,10 @@ eKC.h = 1
 eKC.m = 0
 eKC.n = .5
 
-PN_spikes = SpikeMonitor(PN)
-iKC_spikes = SpikeMonitor(iKC)
-eKC_spikes = SpikeMonitor(eKC)
+if with_monitors:
+    PN_spikes = SpikeMonitor(PN)
+    iKC_spikes = SpikeMonitor(iKC)
+    eKC_spikes = SpikeMonitor(eKC)
 
 
 run(runtime, report='text', profile=profiling)
@@ -195,14 +208,15 @@ if profiling:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-for p, M in enumerate([PN_spikes, iKC_spikes, eKC_spikes]):
-    subplot(2, 2, p+1)
-    plot(M.t/ms, M.i, ',k')
-    print('SpikeMon %d, average rate %.1f sp/s' %
-          (p, M.num_spikes/(runtime/second*len(M.source))))
-#show()
+if with_monitors:
+    for p, M in enumerate([PN_spikes, iKC_spikes, eKC_spikes]):
+        subplot(2, 2, p+1)
+        plot(M.t/ms, M.i, ',k')
+        print('SpikeMon %d, average rate %.1f sp/s' %
+              (p, M.num_spikes/(runtime/second*len(M.source))))
+    #show()
 
-plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
-savefig(plotpath)
-print('plot saved in {}'.format(plotpath))
-print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
+    plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+    savefig(plotpath)
+    print('plot saved in {}'.format(plotpath))
+    print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

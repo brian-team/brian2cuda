@@ -69,18 +69,36 @@ configs = [# configuration                          project_directory
           (WeaveConfiguration,                     None),
           (LocalConfiguration,                     None),
 
-          (DynamicConfigCreator('CUDA standalone'),
+          (DynamicConfigCreator('CUDA standalone (15 blocks, atomics)'),
            'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone bundles',
-                                git_commit='nemo_bundles'),
+          (DynamicConfigCreator('CUDA standalone (1 block, atomics)',
+                                prefs={'devices.cuda_standalone.parallel_blocks': 1}),
            'cuda_standalone'),
 
-          (DynamicConfigCreator("CUDA standalone (profile='blocking')",
-                                set_device_kwargs={'profile': 'blocking'}),
+          (DynamicConfigCreator('CUDA standalone (15 blocks, no atomics)',
+                                prefs={'codegen.generators.cuda.use_atomics': False}),
            'cuda_standalone'),
-          (DynamicConfigCreator("CUDA standalone with 2 blocks per SM",
-                                prefs={'devices.cuda_standalone.SM_multiplier': 2}),
+
+          (DynamicConfigCreator('CUDA standalone (1 block, no atomics)',
+                                prefs={'codegen.generators.cuda.use_atomics': False,
+                                       'devices.cuda_standalone.parallel_blocks': 1}),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator('CUDA standalone (no bundles)',
+                                prefs={'devices.cuda_standalone.push_synapse_bundles': False}),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator('CUDA standalone (single precision, 15 blocks, atomics)',
+                                prefs={'core.default_float_dtype': float32}),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator('CUDA standalone (master)',
+                                git_commit='master'),
+           'cuda_standalone'),
+
+          (DynamicConfigCreator("CUDA standalone (only compilation)",
+                                set_device_kwargs={'compile': True, 'run': False}),
            'cuda_standalone'),
 
           (CUDAStandaloneConfiguration,             'cuda_standalone'),
