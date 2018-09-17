@@ -1,85 +1,101 @@
+import __main__
+import os
+import socket
 import argparse
 
 
-def parse_arguments(N, single_precision, with_monitors, num_blocks, use_atomics,
-                    bundle_mode, name):
+def update_from_command_line(params):
+    '''
+    Use argparse to overwrite parameters in the `params` dictionary with command
+    line options. Try to import as little modules before calling this function
+    as possible. This gives a much faster response to the `--help` flag.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary with experiment parameters.
+    '''
 
     parser = argparse.ArgumentParser(description='Run brian2cuda example')
 
-    parser.add_argument('--num_neurons', '-N', nargs=1, type=str, default=None,
-                        help=("Number of neurons to run the network with"))
+    for key, value in params.items():
+        dtype = type(value)
+        if dtype == bool:
+            feature_parser = parser.add_mutually_exclusive_group(required=False)
+            feature_parser.add_argument('--{}'.format(key.replace('_', '-')),
+                                        dest=key, action='store_true')
+            feature_parser.add_argument('--no-{}'.format(key.replace('_', '-')),
+                                        dest=key, action='store_false')
+            parser.set_defaults(**{key: None})
+        else:
+            parser.add_argument('--{}'.format(key), type=dtype, default=None)
 
-    parser.add_argument('--single-precision', '-p', nargs=1, type=bool,
-                        choices=[True, False], default=None,
-                        help=("Use single precision floating point numbers."))
-
-    parser.add_argument('--with-monitors', '-m', nargs=1, type=bool,
-                        choices=[True, False], default=None,
-                        help=("Use brian2 Monitors to record activity"))
-
-    parser.add_argument('--use_atomics', '-a', nargs=1, type=str, default=None,
-                        choices=['True', 'False'],
-                        help=("Use atomic operations for parallelisatoin."))
-
-    parser.add_argument('--bundle-mode', '-bu', nargs=1, type=bool,
-                        default=None, choices=[True, False],
-                        help=("Push synapse bundle for synaptic event "
-                              "propagation."))
-
-    parser.add_argument('--num_blocks', '-bl', nargs=1, type=str, default=None,
-                        help=("Number of post blocks in connectivity matrix "
-                              "structure."))
-
-    parser.add_argument('--suffix', '-s', nargs=1, type=str, default=None,
-                        help=("Name suffix for results."))
+    parser.add_argument('--name-suffix', type=str, default=None)
 
     args = parser.parse_args()
 
-    if args.num_neurons is not None:
-        try:
-            new_N = int(args.num_neurons[0])
-        except ValueError:
-            # exponential, e.g. 1e5
-            new_N = int(float(args.num_neurons[0]))
-        if N != new_N:
-            N = new_N
-            print "Setting num_neurons from command line to", N
+    if args.name_suffix is not None:
+        params['name_suffix'] = args.name_suffix
 
-    if args.single_precision is not None:
-        if single_precision != args.single_precision[0]:
-            single_precision = args.single_precision[0]
-            print "Setting single_precision from command line to", \
-                    single_precision
+    for key in sorted(params.keys()):
+        arg = getattr(args, key)
+        if arg is not None:
+            print "Setting {} from command line to {}.".format(key, arg)
+            params[key] = arg
 
-    if args.with_monitors is not None:
-        if with_monitors != args.with_monitors[0]:
-            with_monitors = args.with_monitors[0]
-            print "Setting with_monitors from command line to", with_monitors
 
-    if args.use_atomics is not None:
-        if use_atomics != args.use_atomics[0]:
-            use_atomics = args.use_atomics[0]
-            print "Setting use_atomics from command line to", use_atomics
+def set_prefs(params, prefs):
+    '''
+    Set brian2 preferences depending on parameter dictionary and create a
+    experiment name from the parameters.
 
-    if args.bundle_mode is not None:
-        if bundle_mode != args.bundle_mode[0]:
-            bundle_mode = args.bundle_mode[0]
-            print "Setting bundle_mode from command line to", bundle_mode
+    Parameters
+    ----------
+    params : dict
+        Dictionary with experiment parameters.
+    prefs : BrianGlobalPreferences
+        Brian's preferences object (accesible from brian2.prefs).
 
-    if args.num_blocks is not None:
-        new_num_blocks = int(args.num_blocks[0])
-        if num_blocks != new_num_blocks:
-            num_blocks = new_num_blocks
-            print "Setting num_blocks from command line to", num_blocks
+    Returns
+    -------
+    str
+        Experiment name deduced from the `params` dictionary.
+    '''
 
-    name = name + '_single-precision' if single_precision else name
-    name = name + '_no-monitors' if not with_monitors else name
-    name = name + '_no-atomics' if not use_atomics else name
-    name = name + '_no-bundles' if not bundle_mode else name
-    name = name + '_num-blocks-{}'.format(num_blocks) if num_blocks is not None else name
-    name += '_N-' + str(N)
-    if args.suffix is not None:
-        name += '_' + args.suffix[0]
+    name = os.path.basename(__main__.__file__).replace('.py', '')
+    name += '_' + params['devicename'].replace('_standalone', '')
 
-    return (N, single_precision, with_monitors, num_blocks, use_atomics,
-            bundle_mode, name)
+    for key, value in params.items():
+        if key != 'devicename' and value is not None:
+            # add the parameter value to the name
+            key = key.replace('_', '-')
+            if isinstance(value, bool):
+                string = key if value else 'no-{}'.format(key)
+            else:
+                string = '{}-{}'.format(key, value)
+            name += '_' + string
+
+    if 'name_suffix' in params:
+        name += '_' + params['name_suffix']
+
+    hostname = socket.gethostname()
+    name += '_' + hostname
+
+    if params['devicename'] == 'cuda_standalone':
+        if hostname in ['elnath', 'adhara']:
+            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
+
+        if params['num_blocks'] is not None:
+            prefs['devices.cuda_standalone.parallel_blocks'] = params['num_blocks']
+
+        if not params['bundle_mode']:
+            prefs['devices.cuda_standalone.push_synapse_bundles'] = False
+
+        if not params['atomics']:
+            prefs['codegen.generators.cuda.use_atomics'] = False
+
+    if params['single_precision']:
+        prefs['core.default_float_dtype'] = float32
+
+    return name
