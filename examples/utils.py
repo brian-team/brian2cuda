@@ -68,8 +68,9 @@ def set_prefs(params, prefs):
     name = os.path.basename(__main__.__file__).replace('.py', '')
     name += '_' + params['devicename'].replace('_standalone', '')
 
+    ignores = ['devicename', 'resultsfolder', 'codefolder']
     for key, value in params.items():
-        if key != 'devicename' and value is not None:
+        if key not in ignores and value is not None:
             # add the parameter value to the name
             key = key.replace('_', '-')
             if isinstance(value, bool):

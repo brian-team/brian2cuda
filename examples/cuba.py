@@ -32,7 +32,7 @@ profiling = True
 resultsfolder = 'results'
 
 # folder for the code
-codefolder_base = 'code'
+codefolder = 'code'
 
 # monitors (neede for plot generation)
 monitors = True
@@ -54,6 +54,8 @@ bundle_mode = True
 
 params = {'devicename': devicename,
           'N': N,
+          'resultsfolder': resultsfolder,
+          'codefolder': codefolder,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
@@ -78,7 +80,7 @@ if params['devicename'] == 'cuda_standalone':
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)
 
-codefolder = os.path.join(codefolder_base, name)
+codefolder = os.path.join(params['codefolder'], name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
 
@@ -120,11 +122,11 @@ if params['monitors']:
 
 run(1 * second, report='text', profile=params['profiling'])
 
-if not os.path.exists(resultsfolder):
-    os.mkdir(resultsfolder) # for plots and profiling txt file
+if not os.path.exists(params['resultsfolder']):
+    os.mkdir(params['resultsfolder']) # for plots and profiling txt file
 if params['profiling']:
     print(profiling_summary())
-    profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
+    profilingpath = os.path.join(params['resultsfolder'], '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
@@ -135,7 +137,7 @@ if params['monitors']:
     ylabel('Neuron index')
     #show()
 
-    plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+    plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
     savefig(plotpath)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
