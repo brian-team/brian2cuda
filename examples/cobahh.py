@@ -15,23 +15,29 @@ Clock-driven implementation
 
 R. Brette - Dec 2007
 """
-import os
-import matplotlib
-matplotlib.use('Agg')
 
-from brian2 import *
-
-#####################################################################################################
+###############################################################################
 ## PARAMETERS
 
 # select code generation standalone device
 devicename = 'cuda_standalone'
-# devicename = 'cpp_standalone'
+#devicename = 'cpp_standalone'
 
+#------------------------------------------------------------------------------
 # choose mode
-scenario = 'brian2-example' # coupling with 2% probability, nonzero coupling strength
-# scenario = 'benchmark-uncoupled' # no coupling at all
-# scenario = 'benchmark-pseudocoupled' # coupling with 1000 synapses per neuron on avg, zero coupling strength
+
+# coupling with 2% probability, nonzero coupling strength
+scenario = 'brian2-example'
+
+# no coupling at all
+#scenario = 'uncoupled'
+
+# coupling with 1000 synapses per neuron on avg, zero coupling strength
+#scenario = 'pseudocoupled-1000'
+
+# coupling with 80 synapses per neuron on avg, zero coupling strength
+#scenario = 'pseudocoupled-80'
+#------------------------------------------------------------------------------
 
 # number of neurons
 N = 4000
@@ -46,28 +52,59 @@ resultsfolder = 'results'
 codefolder_base = 'code'
 
 # monitors (neede for plot generation)
-with_monitors = True
+monitors = True
 
 # single precision
 single_precision = False
 
-#####################################################################################################
+# number of post blocks (None is default)
+num_blocks = None
 
-if devicename == 'cuda_standalone':
+# atomic operations
+atomics = True
+
+# push synapse bundles
+bundle_mode = True
+
+###############################################################################
+## CONFIGURATION
+
+params = {'devicename': devicename,
+          'scenario': scenario,
+          'N': N,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'num_blocks': num_blocks,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
+
+from utils import set_prefs, update_from_command_line
+
+# update params from command line
+update_from_command_line(params)
+
+# do the imports after parsing command line arguments (quicker --help)
+import os
+import matplotlib
+matplotlib.use('Agg')
+
+from brian2 import *
+if params['devicename'] == 'cuda_standalone':
     import brian2cuda
 
-name = os.path.basename(__file__).replace('.py', '') + '_' + scenario + '_' + devicename.replace('_standalone', '')
-name = name + '_single-precision' if single_precision else name
-name = name + '_no-monitors' if not with_monitors else name
-name += '_N-' + str(N)
+# set brian2 prefs from params dict
+name = set_prefs(params, prefs)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
 
-if single_precision:
-    prefs['core.default_float_dtype'] = float32
+###############################################################################
+## SIMULATION
+
+set_device(params['devicename'], directory=codefolder, compile=True, run=True,
+           debug=False)
 
 # Parameters
 area = 20000*umetre**2
@@ -87,7 +124,7 @@ taui = 10*ms
 Ee = 0*mV
 Ei = -80*mV
 
-if scenario == 'brian2-example':
+if params['scenario'] == 'brian2-example':
     we = 6 * nS  # excitatory synaptic weight
     wi = 67 * nS  # inhibitory synaptic weight
 else:
@@ -116,25 +153,33 @@ alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
 beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 ''')
 
-P = NeuronGroup(N, model=eqs, threshold='v>-20*mV', refractory=3*ms,
+P = NeuronGroup(params['N'], model=eqs, threshold='v>-20*mV', refractory=3*ms,
                 method='exponential_euler')
 
-if scenario != 'benchmark-uncoupled': # only synapses for the other scenarios
-    Ne = int(0.8 * N)
+# only synapses for the other scenarios
+if params['scenario'] != 'uncoupled':
+    Ne = int(0.8 * params['N'])
     Pe = P[:Ne]
     Pi = P[Ne:]
     Ce = Synapses(Pe, P, on_pre='ge+=we')
     Ci = Synapses(Pi, P, on_pre='gi+=wi')
 
-if scenario == 'brian2-example': # 0.02*N syn per neuron with nonzero efficacy
+# 0.02*N syn per neuron with nonzero efficacy
+if params['scenario'] == 'brian2-example':
     Ce.connect(p=0.02)
     Ci.connect(p=0.02)
 
-elif scenario == 'benchmark-pseudocoupled': # fixed avg no of 1000 syn per neuron with zero efficacy
+# fixed avg no of 1000 syn per neuron with zero efficacy
+elif params['scenario'] == 'pseudocoupled-1000':
     Ce.connect(p=1000. / len(P))
     Ci.connect(p=1000. / len(P))
 
-else: # scenario == 'benchmark-uncoupled'
+# fixed avg no of 80 syn per neuron with zero efficacy
+elif params['scenario'] == 'pseudocoupled-80':
+    Ce.connect(p=80. / len(P))
+    Ci.connect(p=80. / len(P))
+
+else:  # scenario == 'uncoupled'
     pass # no
 
 # Initialization
@@ -142,23 +187,23 @@ P.v = 'El + (randn() * 5 - 5)*mV'
 P.ge = '(randn() * 1.5 + 4) * 10.*nS'
 P.gi = '(randn() * 12 + 20) * 10.*nS'
 
-if with_monitors:
+if params['monitors']:
     trace = StateMonitor(P, 'v', record=np.arange(0, P.N, P.N // 100))
     spikemon = SpikeMonitor(P)
     popratemon = PopulationRateMonitor(P)
 
-run(1 * second, report='text', profile=profiling)
+run(1 * second, report='text', profile=params['profiling'])
 
 if not os.path.exists(resultsfolder):
     os.mkdir(resultsfolder) # for plots and profiling txt file
-if profiling:
+if params['profiling']:
     print(profiling_summary())
     profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-if with_monitors:
+if params['monitors']:
     subplot(311)
     plot(spikemon.t/ms, spikemon.i, ',k')
     subplot(312)
