@@ -15,11 +15,6 @@ Modification to original brian2 example: changed delay from constant to
     distribution reduces the oscillatory power of the network
     (cf. with bifurcation diagrams in  figs 8 of reference above)
 """
-import os
-import matplotlib
-matplotlib.use('Agg')
-
-from brian2 import *
 
 #####################################################################################################
 ## PARAMETERS
@@ -33,12 +28,15 @@ heterog_delays = False
 #heterog_delays = True
 
 # select heterogeneous delays distribution:
-# the following flag enables to have a very narrow delay distribution [2ms, 2ms+2dt] such that network
-#     behaviour is almost identical to the constant delay case but we force usage of the heterogeneous delay
-#     synapse propagation mechanism
-# remark: disabling leads to a wider delay distribution [0, 2ms] producing less network oscillations
-# further remark: to have the network operate in a similar activity regime (particular w.r.t. oscillations)
-# we change the sigmaext based on inspecting fig. 8 from (Brunel & Hakim 1999)
+# the following flag enables to have a very narrow delay distribution [2ms-dt,
+# 2ms+dt] such that network behaviour is almost identical to the constant delay
+# case but we force usage of the heterogeneous delay synapse propagation
+# mechanism
+# remark: disabling leads to a wider delay distribution [0, 4ms] producing less
+# network oscillations
+# further remark: to have the network operate in a similar activity regime
+# (particular w.r.t. oscillations) we change the sigmaext based on inspecting
+# fig. 8 from (Brunel & Hakim 1999)
 narrow_delaydistr = False
 #narrow_delaydistr = True
 
@@ -55,34 +53,62 @@ resultsfolder = 'results'
 codefolder_base = 'code'
 
 # monitors (neede for plot generation)
-with_monitors = True
+monitors = True
 
 # single precision
 single_precision = False
 
-#####################################################################################################
+## the preferences below only apply for cuda_standalone
 
-if devicename == 'cuda_standalone':
+# number of post blocks (None is default)
+num_blocks = None
+
+# atomic operations
+atomics = True
+
+# push synapse bundles
+bundle_mode = True
+
+###############################################################################
+## CONFIGURATION
+
+params = {'devicename': devicename,
+          'heterog_delays': heterog_delays,
+          'narrow_delaydistr': narrow_delaydistr,
+          'N': N,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'num_blocks': num_blocks,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
+
+from utils import set_prefs, update_from_command_line
+
+# update params from command line
+update_from_command_line(params)
+
+# do the imports after parsing command line arguments (quicker --help)
+import os
+import matplotlib
+matplotlib.use('Agg')
+
+from brian2 import *
+if params['devicename'] == 'cuda_standalone':
     import brian2cuda
 
-name = os.path.basename(__file__).replace('.py', '')
-if heterog_delays:
-    name = name + '_heterogdelay'
-    if narrow_delaydistr:
-        name = name.replace('heterogdelay', 'heterogdelay[2,2+2dt]')
-    else:
-        name = name.replace('heterogdelay', 'heterogdelay[0,2]')
-else:
-    name = name + '_homogdelay[2]'
-name = name + '_' + devicename.replace('_standalone', '')
-name = name + '_single-precision' if single_precision else name
-name = name + '_no-monitors' if not with_monitors else name
-name += '_N-' + str(N)
+# set brian2 prefs from params dict
+name = set_prefs(params, prefs)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
+
+###############################################################################
+## SIMULATION
+
+set_device(params['devicename'], directory=codefolder, compile=True, run=True,
+           debug=False)
 
 Vr = 10*mV
 theta = 20*mV
@@ -91,10 +117,11 @@ delta = 2*ms
 taurefr = 2*ms
 duration = .1*second
 C = 1000
-sparseness = float(C)/N
+sparseness = float(C)/params['N']
 J = .1*mV
-if heterog_delays and not narrow_delaydistr:
-    # to have a similar network activity regime as for const delays (or narrow delay distribution)
+if params['heterog_delays'] and not params['narrow_delaydistr']:
+    # to have a similar network activity regime as for const delays (or narrow
+    # delay distribution)
     sigmaext = 0.33*mV
     muext = 27*mV
 else:
@@ -106,38 +133,41 @@ eqs = """
 dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
 """
 
-group = NeuronGroup(N, eqs, threshold='V>theta',
+group = NeuronGroup(params['N'], eqs, threshold='V>theta',
                     reset='V=Vr', refractory=taurefr)
 group.V = Vr
 
 # delayed synapses
-if heterog_delays:
+if params['heterog_delays']:
     conn = Synapses(group, group, on_pre='V += -J')
     conn.connect(p=sparseness)
-    if narrow_delaydistr:
-        conn.delay = "delta   +   2 * dt * rand()"
+    if params['narrow_delaydistr']:
+        conn.delay = "delta + 2 * dt * rand() - dt"
     else:
         conn.delay = "2 * delta * rand()"
 else:
     conn = Synapses(group, group, on_pre='V += -J', delay=delta)
     conn.connect(p=sparseness)
 
-if with_monitors:
+if params['monitors']:
     M = SpikeMonitor(group)
     LFP = PopulationRateMonitor(group)
 
-run(duration, report='text', profile=profiling)
+run(duration, report='text', profile=params['profiling'])
+
+###############################################################################
+## RESULTS COLLECTION
 
 if not os.path.exists(resultsfolder):
     os.mkdir(resultsfolder) # for plots and profiling txt file
-if profiling:
+if params['profiling']:
     print(profiling_summary())
     profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-if with_monitors:
+if params['monitors']:
     subplot(211)
     plot(M.t/ms, M.i, '.')
     xlim(0, duration/ms)
