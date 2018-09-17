@@ -1,6 +1,4 @@
 import __main__
-import os
-import socket
 import argparse
 
 
@@ -20,15 +18,18 @@ def update_from_command_line(params):
 
     for key, value in params.items():
         dtype = type(value)
+        if value is None:
+            dtype = int
+        cmd_arg = key.replace('_', '-')
         if dtype == bool:
             feature_parser = parser.add_mutually_exclusive_group(required=False)
-            feature_parser.add_argument('--{}'.format(key.replace('_', '-')),
+            feature_parser.add_argument('--{}'.format(cmd_arg),
                                         dest=key, action='store_true')
-            feature_parser.add_argument('--no-{}'.format(key.replace('_', '-')),
+            feature_parser.add_argument('--no-{}'.format(cmd_arg),
                                         dest=key, action='store_false')
             parser.set_defaults(**{key: None})
         else:
-            parser.add_argument('--{}'.format(key), type=dtype, default=None)
+            parser.add_argument('--{}'.format(cmd_arg), type=dtype, default=None)
 
     parser.add_argument('--name-suffix', type=str, default=None)
 
@@ -61,6 +62,8 @@ def set_prefs(params, prefs):
     str
         Experiment name deduced from the `params` dictionary.
     '''
+    import os
+    import socket
 
     name = os.path.basename(__main__.__file__).replace('.py', '')
     name += '_' + params['devicename'].replace('_standalone', '')
@@ -82,9 +85,35 @@ def set_prefs(params, prefs):
     name += '_' + hostname
 
     if params['devicename'] == 'cuda_standalone':
+        if hostname == 'merope':
+            dev_no_to_cc = {0: '35'}
         if hostname in ['elnath', 'adhara']:
-            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
+            dev_no_to_cc = {0: '20'}
+        elif hostname == 'sabik':
+            dev_no_to_cc = {0: '61', 1: '52'}
+        elif hostname == 'eltanin':
+            dev_no_to_cc = {0: '52', 1: '61', 2: '61', 3: '61'}
+        else:
+            print "WARNING: can't recognize hostname. Compiling with "\
+                    "{}".format(prefs['codegen.cuda.extra_compile_args_nvcc'])
+
+        # TODO make this a preference
+        #prefs['devices.cuda_standalone.default_device'] = gpu_device
+        try:
+            gpu_device = int(os.environ['CUDA_VISIBLE_DEVICES'])
+        except KeyError:
+            # default
+            gpu_device = 0
+
+        try:
+            cc = dev_no_to_cc[gpu_device]
+        except KeyError as err:
+            raise AttributeError("unknown device number: {}".format(err))
+
+        print "Compiling device code for compute capability "\
+                "{}.{}".format(cc[0], cc[1])
+        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
 
         if params['num_blocks'] is not None:
             prefs['devices.cuda_standalone.parallel_blocks'] = params['num_blocks']
@@ -96,6 +125,7 @@ def set_prefs(params, prefs):
             prefs['codegen.generators.cuda.use_atomics'] = False
 
     if params['single_precision']:
+        from numpy import float32
         prefs['core.default_float_dtype'] = float32
 
     return name
