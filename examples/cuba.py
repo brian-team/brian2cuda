@@ -14,18 +14,16 @@ synaptic currents.
 Clock-driven implementation with exact subthreshold integration
 (but spike times are aligned to the grid).
 '''
-import os
-import matplotlib
-matplotlib.use('Agg')
 
-from brian2 import *
-
-#####################################################################################################
+###############################################################################
 ## PARAMETERS
 
 # select code generation standalone device
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
+
+# number of neurons
+N = 4000
 
 # whether to profile run
 profiling = True
@@ -36,17 +34,59 @@ resultsfolder = 'results'
 # folder for the code
 codefolder_base = 'code'
 
-#####################################################################################################
+# monitors (neede for plot generation)
+monitors = True
 
-if devicename == 'cuda_standalone':
+# single precision
+single_precision = False
+
+# number of post blocks (None is default)
+num_blocks = None
+
+# atomic operations
+atomics = True
+
+# push synapse bundles
+bundle_mode = True
+
+###############################################################################
+## CONFIGURATION
+
+params = {'devicename': devicename,
+          'N': N,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'num_blocks': num_blocks,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
+
+from utils import set_prefs, update_from_command_line
+
+# update params from command line
+update_from_command_line(params)
+
+# do the imports after parsing command line arguments (quicker --help)
+import os
+import matplotlib
+matplotlib.use('Agg')
+
+from brian2 import *
+if params['devicename'] == 'cuda_standalone':
     import brian2cuda
 
-name = os.path.basename(__file__).replace('.py', '_') + devicename.replace('_standalone', '')
+# set brian2 prefs from params dict
+name = set_prefs(params, prefs)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
+
+###############################################################################
+## SIMULATION
+
+set_device(params['devicename'], directory=codefolder, compile=True, run=True,
+           debug=False)
 
 taum = 20 * ms
 taue = 5 * ms
@@ -61,7 +101,7 @@ dge/dt = -ge/taue : volt
 dgi/dt = -gi/taui : volt
 '''
 
-P = NeuronGroup(4000, eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms,
+P = NeuronGroup(params['N'], eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms,
                 method='exact')
 P.v = 'Vr + rand() * (Vt - Vr)'
 P.ge = 0 * mV
@@ -71,28 +111,31 @@ we = (60 * 0.27 / 10) * mV  # excitatory synaptic weight (voltage)
 wi = (-20 * 4.5 / 10) * mV  # inhibitory synaptic weight
 Ce = Synapses(P, P, on_pre='ge += we')
 Ci = Synapses(P, P, on_pre='gi += wi')
-Ce.connect('i<3200', p=0.02)
-Ci.connect('i>=3200', p=0.02)
+Ne = int(0.8 * params['N'])
+Ce.connect('i<Ne', p=0.02)
+Ci.connect('i>=Ne', p=0.02)
 
-s_mon = SpikeMonitor(P)
+if params['monitors']:
+    s_mon = SpikeMonitor(P)
 
-run(1 * second, report='text', profile=profiling)
+run(1 * second, report='text', profile=params['profiling'])
 
 if not os.path.exists(resultsfolder):
     os.mkdir(resultsfolder) # for plots and profiling txt file
-if profiling:
+if params['profiling']:
     print(profiling_summary())
     profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-plot(s_mon.t/ms, s_mon.i, ',k')
-xlabel('Time (ms)')
-ylabel('Neuron index')
-#show()
+if params['monitors']:
+    plot(s_mon.t/ms, s_mon.i, ',k')
+    xlabel('Time (ms)')
+    ylabel('Neuron index')
+    #show()
 
-plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
-savefig(plotpath)
-print('plot saved in {}'.format(plotpath))
-print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
+    plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+    savefig(plotpath)
+    print('plot saved in {}'.format(plotpath))
+    print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
