@@ -1,7 +1,4 @@
-- cobahh.py: network size is variable and monitor/single_precision preference
-  is added: implement the same for the other examples
-- make network size variable in examples
-- increase network size in examples
+- update stdp script once we have decided on the network
 - add comment of mushroombody script at top (e.g. reference their paper)
 - update format of compartmental examples to fit the single compartment examples python scripts
     (attention: multiple run statements might not allow profiling even for last run call?)
