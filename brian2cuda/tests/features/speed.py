@@ -117,17 +117,30 @@ class COBAHHCoupled(COBAHHBase):
     wi = 67 * nS  # inhibitory synaptic weight
 
 
-class COBAHHPseudocoupled(COBAHHBase):
+class COBAHHPseudocoupled1000(COBAHHBase):
     """
-    COBAHH from with 1000 synapses per neuron (instead of 80) and all
-    weights set to zero (used in brian2genn benchmarks) and without
-    monitors.
+    COBAHH with 1000 synapses per neuron and all weights set to zero (used in
+    brian2genn benchmarks) and without monitors.
     """
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3812500
+    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 300000]  #fail: 500000
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
+    # weights set to zero
+    we = wi = 0 * nS
+
+
+class COBAHHPseudocoupled80(COBAHHBase):
+    """
+    COBAHH with 80 synapses per neuron and all weights set to zero (used in
+    brian2genn benchmarks) and without monitors.
+    """
+
+    name = "COBAHH (80 syn/neuron, weights zero, no monitors)"
+    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #TODO: max size?
+    # fixed connectivity: 1000 neurons per synapse
+    p = lambda self, n: 80. / n
     # weights set to zero
     we = wi = 0 * nS
 

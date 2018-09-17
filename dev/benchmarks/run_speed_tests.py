@@ -126,7 +126,8 @@ speed_tests = [# feature_test                     name                          
 
                (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
                (COBAHHCoupled,                                  'COBAHHCoupled',                                slice(None)         ),
-               (COBAHHPseudocoupled,                            'COBAHHPseudocoupled',                          slice(None)         ),
+               (COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
+               (COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
 
                (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(None)         ),
                (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
