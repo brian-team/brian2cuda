@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 
 from brian2 import *
 
-#####################################################################################################
+###############################################################################
 ## PARAMETERS
 
 # select code generation standalone device
@@ -28,77 +28,64 @@ profiling = True
 resultsfolder = 'results'
 
 # folder for the code
-codefolder_base = 'code'
-
-# whether to profile run
-profiling = True
-
-# folder to store plots and profiling information
-resultsfolder = 'results'
-
-# folder for the code
-codefolder_base = 'code'
+codefolder = 'code'
 
 # monitors (neede for plot generation)
-with_monitors = False
+monitors = False
 
 # single precision
 single_precision = False
-
-## the preferences below only apply for cuda_standalone
 
 # number of post blocks (None is default)
 num_blocks = None
 
 # atomic operations
-use_atomics = True
+atomics = True
 
 # push synapse bundles
 bundle_mode = True
 
-#####################################################################################################
+###############################################################################
 ## CONFIGURATION
 
-from utils import parse_arguments
+params = {'devicename': devicename,
+          'post_effects': post_effects,
+          'resultsfolder': resultsfolder,
+          'codefolder': codefolder,
+          'N': N,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'num_blocks': num_blocks,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
 
-name = os.path.basename(__file__).replace('.py', '_') + devicename.replace('_standalone', '')
+from utils import set_prefs, update_from_command_line
 
-name = os.path.basename(__file__).replace('.py', '')
-#TODO naming
-name += '_' + devicename.replace('_standalone', '')
+# update params from command line
+update_from_command_line(params)
 
-(N, single_precision, with_monitors, num_blocks, use_atomics, bundle_mode,
- name) = parse_arguments(N, single_precision, with_monitors, num_blocks,
-                         use_atomics, bundle_mode, name)
+# do the imports after parsing command line arguments (quicker --help)
+import os
+import matplotlib
+matplotlib.use('Agg')
 
-if devicename == 'cuda_standalone':
+from brian2 import *
+if params['devicename'] == 'cuda_standalone':
     import brian2cuda
-    import socket
-    hostname = socket.gethostname() 
-    if hostname in ['elnath', 'adhara']:
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
 
-    if num_blocks is not None:
-        assert isinstance(num_blocks, int), 'num_blocks need to be integer'
-        prefs['devices.cuda_standalone.parallel_blocks'] = num_blocks
+# set brian2 prefs from params dict
+name = set_prefs(params, prefs)
 
-    if not bundle_mode:
-        prefs['devices.cuda_standalone.push_synapse_bundles'] = False
-
-    if not use_atomics:
-        prefs['codegen.generators.cuda.use_atomics'] = False
-
-if single_precision:
-    prefs['core.default_float_dtype'] = float32
-
-codefolder = os.path.join(codefolder_base, name)
+codefolder = os.path.join(params['codefolder'], name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
 
-#####################################################################################################
+###############################################################################
 ## SIMULATION
+
+set_device(params['devicename'], directory=codefolder, compile=True, run=True,
+           debug=False)
 
 taum = 10*ms
 taupre = 20*ms
@@ -120,10 +107,11 @@ dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
 dge/dt = -ge / taue : 1
 '''
 
-on_pre='''ge += w
-          Apre += dApre
-          w = clip(w + Apost, 0, gmax)
-       '''
+on_pre = ''
+if params['post_effects']:
+    on_pre += 'ge += w\n'
+on_pre += '''Apre += dApre
+             w = clip(w + Apost, 0, gmax)'''
 
 input = PoissonGroup(N, rates=F)
 neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
@@ -139,18 +127,18 @@ S.connect()
 S.w = 'rand() * gmax'
 
 n = 2
-if with_monitors:
+if params['monitors']:
     n = 3
     mon = StateMonitor(S, 'w', record=[0, 1])
     s_mon = SpikeMonitor(input)
 
 run(100*second, report='text', profile=profiling)
 
-if not os.path.exists(resultsfolder):
-    os.mkdir(resultsfolder) # for plots and profiling txt file
+if not os.path.exists(params['resultsfolder']):
+    os.mkdir(params['resultsfolder']) # for plots and profiling txt file
 if profiling:
     print(profiling_summary())
-    profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
+    profilingpath = os.path.join(params['resultsfolder'], '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
@@ -162,7 +150,7 @@ xlabel('Synapse index')
 subplot(n,1,2)
 hist(S.w / gmax, 20)
 xlabel('Weight / gmax')
-if with_monitors:
+if params['monitors']:
     subplot(n,1,3)
     plot(mon.t/second, mon.w.T/gmax)
 xlabel('Time (s)')
@@ -170,7 +158,7 @@ ylabel('Weight / gmax')
 tight_layout()
 #show()
 
-plotpath = os.path.join(resultsfolder, '{}.png'.format(name))
+plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
