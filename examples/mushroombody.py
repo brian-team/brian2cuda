@@ -1,22 +1,16 @@
 '''
 this model example is taken from https://github.com/brian-team/brian2genn_benchmarks/blob/master/Mbody_example.py
 '''
-import os
-import matplotlib
-matplotlib.use('Agg')
 
-from brian2 import *
-import random
-
-#####################################################################################################
+###############################################################################
 ## PARAMETERS
 
 # select code generation standalone device
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
-# number of mushroom body neurons
-N_MB = 2500
+# number of mushroom body neurons (N_MB)
+N = 2500
 
 # whether to profile run
 profiling = True
@@ -28,30 +22,63 @@ resultsfolder = 'results'
 codefolder_base = 'code'
 
 # monitors (neede for plot generation)
-with_monitors = True
+monitors = True
 
 # single precision
 single_precision = False
 
-#####################################################################################################
+# number of post blocks (None is default)
+num_blocks = None
 
-if devicename == 'cuda_standalone':
+# atomic operations
+atomics = True
+
+# push synapse bundles
+bundle_mode = True
+
+###############################################################################
+## CONFIGURATION
+
+params = {'devicename': devicename,
+          'N': N,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'num_blocks': num_blocks,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
+
+from utils import set_prefs, update_from_command_line
+
+# update params from command line
+update_from_command_line(params)
+
+# do the imports after parsing command line arguments (quicker --help)
+import os
+import random as py_random
+import matplotlib
+matplotlib.use('Agg')
+
+from brian2 import *
+if params['devicename'] == 'cuda_standalone':
     import brian2cuda
 
-name = os.path.basename(__file__).replace('.py', '_') + devicename.replace('_standalone', '')
-name = name + '_' + devicename.replace('_standalone', '')
-name = name + '_single-precision' if single_precision else name
-name = name + '_no-monitors' if not with_monitors else name
-name += '_N-' + str(N)
+# set brian2 prefs from params dict
+name = set_prefs(params, prefs)
 
 codefolder = os.path.join(codefolder_base, name)
 print('runing example {}'.format(name))
 print('compiling model in {}'.format(codefolder))
-set_device(devicename, directory=codefolder, compile=True, run=True, debug=False)
 
+###############################################################################
+## SIMULATION
+
+set_device(params['devicename'], directory=codefolder, compile=True, run=True,
+           debug=False)
 
 runtime = 1*second
 # Number of neurons
+N_MB = params['N']
 N_AL = 100
 N_LB = 100
 # Constants
@@ -127,7 +154,7 @@ training_size = (n_repeats-10)
 training_variants = []
 for p in range(n_patterns):
     training_variants.extend(variants[n_repeats * p:n_repeats * p + training_size])
-random.shuffle(training_variants)
+py_random.shuffle(training_variants)
 sorted_variants = list(training_variants)
 for p in range(n_patterns):
     sorted_variants.extend(variants[n_repeats * p + training_size:n_repeats * (p + 1)])
@@ -191,24 +218,24 @@ eKC.h = 1
 eKC.m = 0
 eKC.n = .5
 
-if with_monitors:
+if params['monitors']:
     PN_spikes = SpikeMonitor(PN)
     iKC_spikes = SpikeMonitor(iKC)
     eKC_spikes = SpikeMonitor(eKC)
 
 
-run(runtime, report='text', profile=profiling)
+run(runtime, report='text', profile=params['profiling'])
 
 if not os.path.exists(resultsfolder):
     os.mkdir(resultsfolder) # for plots and profiling txt file
-if profiling:
+if params['profiling']:
     print(profiling_summary())
     profilingpath = os.path.join(resultsfolder, '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-if with_monitors:
+if params['monitors']:
     for p, M in enumerate([PN_spikes, iKC_spikes, eKC_spikes]):
         subplot(2, 2, p+1)
         plot(M.t/ms, M.i, ',k')
