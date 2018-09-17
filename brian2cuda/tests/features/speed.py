@@ -10,7 +10,8 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'SparseLowRateSynapsesOnlyHeterogeneousDelays',
                 'COBAHHUncoupled',
                 'COBAHHCoupled',
-                'COBAHHPseudocoupled',
+                'COBAHHPseudocoupled1000',
+                'COBAHHPseudocoupled80',
                 'BrunelHakimHomogDelays',
                 'BrunelHakimHeterogDelays',
                 'BrunelHakimHeterogDelaysNarrowDistr',
@@ -103,7 +104,8 @@ class COBAHHUncoupled(COBAHHBase):
     """COBAHH from brian2 examples but without synapses and without monitors"""
 
     name = "COBAHH uncoupled (no synapses, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #TODO: max size?
+    n_float = [1e2, 5e2, 1e3, 5e3, 1e4, 5e4, 1e5, 5e5, 1e6, 5e6, 1e7, 6e7]  #fail: 7e7
+    n_range = [int(n) for n in n_float]
     uncoupled = True
 
 
@@ -124,7 +126,7 @@ class COBAHHPseudocoupled1000(COBAHHBase):
     """
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 300000]  #fail: 500000
+    n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #fail: 500000
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
     # weights set to zero
@@ -138,8 +140,8 @@ class COBAHHPseudocoupled80(COBAHHBase):
     """
 
     name = "COBAHH (80 syn/neuron, weights zero, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #TODO: max size?
-    # fixed connectivity: 1000 neurons per synapse
+    n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000, 900000, 2000000]  #TODO: max size?
+    # fixed connectivity: 80 neurons per synapse
     p = lambda self, n: 80. / n
     # weights set to zero
     we = wi = 0 * nS
@@ -204,7 +206,7 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with homogeneous delays (2 ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 300000, 393750]  #fail: 403125
+    n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000]  #pass: 393750, fail: 403125
 
     # all delays 2 ms
     homog_delays = 2*ms
@@ -220,7 +222,7 @@ class BrunelHakimHeterogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with heterogeneous delays (uniform [0, 4] ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 218750]  #fail: 225000
+    n_range = [100, 1000, 10000, 20000, 50000, 100000, 218750]  #fail: 225000
 
     # delays [0, 4] ms
     heterog_delays = "4*ms * rand()"
@@ -239,7 +241,7 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
     """
     name = "Brunel Hakim with heterogeneous delays (uniform 2 ms += dt)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 218750]  #TODO: max size?
+    n_range = [100, 1000, 10000, 20000, 50000, 100000, 218750]  #TODO: max size?
 
     # delays 2 ms += dt
     heterog_delays = "2*ms + 2 * dt * rand() - dt"
@@ -251,7 +253,7 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
 class SynapsesOnlyHeterogeneousDelays(SpeedTest):
     category = "Synapses only with heterogeneous delays"
     tags = ["Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 1000000]
+    n_range = [100, 1000, 10000, 100000, 1000000]
     n_label = 'Num neurons'
     duration = 1 * second
     # memory usage will be approximately p**2*rate*dt*N**2*bytes_per_synapse/1024**3 GB
@@ -279,14 +281,14 @@ class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDe
     name = "Dense, medium rate"
     rate = 10 * Hz
     p = 1.0
-    n_range = [10, 100, 1000, 10000, 100000, 200000, 462500]  #fail: 468750
+    n_range = [100, 1000, 10000, 100000, 200000, 462500]  #fail: 468750
 
 
 class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
     name = "Sparse, low rate"
     rate = 1 * Hz
     p = 0.2
-    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3281250]  #fail: 3312500
+    n_range = [100, 1000, 10000, 100000, 500000, 1000000, 3281250]  #fail: 3312500
 
 
 class CUBAFixedConnectivityNoMonitor(SpeedTest):
@@ -294,7 +296,7 @@ class CUBAFixedConnectivityNoMonitor(SpeedTest):
     category = "Full examples"
     name = "CUBA fixed connectivity, no monitor"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3562500]  #fail: 3578125
+    n_range = [100, 1000, 10000, 100000, 500000, 1000000, 3562500]  #fail: 3578125
     n_label = 'Num neurons'
 
     # configuration options
@@ -338,7 +340,7 @@ class STDPEventDriven(SpeedTest):
     category = "Full examples"
     name = "STDP (event-driven)"
     tags = ["Neurons", "Synapses"]
-    n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000, 6542968]  #fail:6562500
+    n_range = [100, 1000, 10000, 20000, 50000, 100000, 1000000, 5000000, 6542968]  #fail:6562500
     n_label = 'Num neurons'
 
     # configuration options
@@ -389,9 +391,8 @@ class MushroomBody(SpeedTest):
     name = "Mushroom Body example from brian2GeNN benchmarks"
     tags = ["Neurons", "Synapses"]
     # scaling values taken from brian2GeNN benchmark
-    scaling =  [0.05, 0.1, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+    scaling =  [0.05, 0.25, 0.5, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
     n_range =  (2500 * array(scaling)).astype('int')
-    #n_range = [10, 100, 1000, 10000, 20000, 50000, 100000, 112500]  #fail: 118750
     n_label = 'Num neurons'
 
     # configuration options
