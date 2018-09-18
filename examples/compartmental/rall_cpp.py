@@ -53,7 +53,8 @@ neuron = SpatialNeuron(morphology=morpho, model=eqs, Cm=Cm, Ri=Ri,
 neuron.v = EL
 
 neuron.I[0] = 0.02*nA # injecting at the left end
-run(100*ms, report='text')
+run(100*ms, report='text', profile=True)
+print(profiling_summary())
 
 plot(neuron.main.distance/um, neuron.main.v/mV, 'k')
 plot(neuron.L.distance/um, neuron.L.v/mV, 'k')
@@ -76,7 +77,10 @@ xlabel('x (um)')
 ylabel('v (mV)')
 #show()
 
-plotpath = os.path.join('plots', '{}.png'.format(name))
+plotfolder = 'plots'
+if not os.path.exists(plotfolder):
+    os.mkdir(plotfolder)
+plotpath = os.path.join(plotfolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

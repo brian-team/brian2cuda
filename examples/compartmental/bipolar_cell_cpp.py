@@ -41,7 +41,8 @@ run(1*ms)
 neuron.I[morpho.L[50*um]] = 0.2*nA  # injecting in the left dendrite
 run(5*ms)
 neuron.I = 0*amp
-run(50*ms, report='text')
+run(50*ms, report='text', profile=True)
+print(profiling_summary())
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug=False)

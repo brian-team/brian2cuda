@@ -52,7 +52,8 @@ mon_soma = StateMonitor(neuron, 'v', record=[0])
 mon_L = StateMonitor(neuron.L, 'v', record=True)
 mon_R = StateMonitor(neuron, 'v', record=morpho.R[99.9*um])
 
-run(50*ms, report='text')
+run(50*ms, report='text', profile=True)
+print(profiling_summary())
 
 subplot(211)
 plot(mon_L.t/ms, mon_soma[0].v/mV, 'k')

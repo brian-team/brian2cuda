@@ -55,7 +55,8 @@ run(50*ms, report='text')
 neuron.I[0] = 1*uA  # current injection at one end
 run(3*ms)
 neuron.I = 0*amp
-run(100*ms, report='text')
+run(100*ms, report='text', profile=True)
+print(profiling_summary())
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug=False)
@@ -68,7 +69,10 @@ xlabel('Position (cm)')
 axis('tight')
 #show()
 
-plotpath = os.path.join('plots', '{}.png'.format(name))
+plotfolder = 'plots'
+if not os.path.exists(plotfolder):
+    os.mkdir(plotfolder)
+plotpath = os.path.join(plotfolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

@@ -72,7 +72,10 @@ xlabel('Time (ms)')
 ylabel('v (mV)')
 #show()
 
-plotpath = os.path.join('plots', '{}.png'.format(name))
+plotfolder = 'plots'
+if not os.path.exists(plotfolder):
+    os.mkdir(plotfolder)
+plotpath = os.path.join(plotfolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

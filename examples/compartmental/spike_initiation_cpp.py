@@ -57,7 +57,10 @@ run(1*ms)
 neuron.main.I = 0.15*nA
 run(50*ms)
 neuron.I = 0*amp
-run(95*ms, report='text')
+run(95*ms, report='text', profile=False)
+# run(95*ms, report='text', profile=True)
+# brian2 cpp_standalone bug preventing profiling output
+# print(profiling_summary())
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug=False)
@@ -71,7 +74,10 @@ xlabel('Time (ms)')
 ylabel('v (mV)')
 #show()
 
-plotpath = os.path.join('plots', '{}.png'.format(name))
+plotfolder = 'plots'
+if not os.path.exists(plotfolder):
+    os.mkdir(plotfolder)
+plotpath = os.path.join(plotfolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
