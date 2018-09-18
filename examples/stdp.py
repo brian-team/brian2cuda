@@ -3,6 +3,7 @@ Spike-timing dependent plasticity
 Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 '''
 import os
+from collections import OrderedDict
 import matplotlib
 matplotlib.use('Agg')
 
@@ -12,14 +13,17 @@ from brian2 import *
 ## PARAMETERS
 
 # select code generation standalone device
-devicename = 'cuda_standalone'
-# devicename = 'cpp_standalone'
+# devicename = 'cuda_standalone'
+devicename = 'cpp_standalone'
+
+# number of neurons
+N = 1000
 
 # select weather spikes effect postsynaptic neurons
 post_effects = True
 
-# number of neurons
-N = 1000
+# whether to normalize the input rate in order to have a similar regime for networks with N!=1000
+normalize_input = True
 
 # whether to profile run
 profiling = True
@@ -31,7 +35,7 @@ resultsfolder = 'results'
 codefolder = 'code'
 
 # monitors (neede for plot generation)
-monitors = False
+monitors = True
 
 # single precision
 single_precision = False
@@ -48,17 +52,18 @@ bundle_mode = True
 ###############################################################################
 ## CONFIGURATION
 
-params = {'devicename': devicename,
-          'post_effects': post_effects,
-          'resultsfolder': resultsfolder,
-          'codefolder': codefolder,
-          'N': N,
-          'profiling': profiling,
-          'monitors': monitors,
-          'single_precision': single_precision,
-          'num_blocks': num_blocks,
-          'atomics': atomics,
-          'bundle_mode': bundle_mode}
+params = OrderedDict([('devicename', devicename),
+                      ('post_effects', post_effects),
+                      ('normalize_input', normalize_input),
+                      ('resultsfolder', resultsfolder),
+                      ('codefolder', codefolder),
+                      ('N', N),
+                      ('profiling', profiling),
+                      ('monitors', monitors),
+                      ('single_precision', single_precision),
+                      ('num_blocks', num_blocks),
+                      ('atomics', atomics),
+                      ('bundle_mode', bundle_mode)])
 
 from utils import set_prefs, update_from_command_line
 
@@ -95,7 +100,12 @@ vt = -54*mV
 vr = -60*mV
 El = -74*mV
 taue = 5*ms
-F = 15*Hz
+if not params['normalize_input']:
+    # original example behaviour which is though specific to N=1000
+    F = 15 * Hz
+else:
+    # to have similar synaptic input on the post neuron for networks with N!=1000 as well
+    F = 15*Hz * (1000./N)
 gmax = .01
 dApre = .01
 dApost = -dApre * taupre / taupost * 1.05
@@ -103,13 +113,18 @@ dApost *= gmax
 dApre *= gmax
 
 eqs_neurons = '''
-dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+dv/dt = (ge * (Ee-vr) + El - v) / taum {} : volt
 dge/dt = -ge / taue : 1
 '''
 
 on_pre = ''
 if params['post_effects']:
+    eqs_neurons = eqs_neurons.format('')
     on_pre += 'ge += w\n'
+else:
+    gsyn = N * F * gmax / 2. # assuming weights average at gmax/2 which holds approx. true for the bimodal distribution
+    eqs_neurons = eqs_neurons.format('+ gsyn * (Ee-vr)')
+    # eqs_neurons = eqs_neurons.format('')
 on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 

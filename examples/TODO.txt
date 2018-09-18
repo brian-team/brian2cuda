@@ -1,4 +1,5 @@
 - update stdp script once we have decided on the network
+- change all examples to OrderedDict (see stdp example) and same structure
 - add comment of mushroombody script at top (e.g. reference their paper)
 - update format of compartmental examples to fit the single compartment examples python scripts
     (attention: multiple run statements might not allow profiling even for last run call?)
