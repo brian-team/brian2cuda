@@ -13,17 +13,14 @@ from brian2 import *
 ## PARAMETERS
 
 # select code generation standalone device
-# devicename = 'cuda_standalone'
-devicename = 'cpp_standalone'
+devicename = 'cuda_standalone'
+# devicename = 'cpp_standalone'
 
-# number of neurons
+# number of _synapses_ -- min. is 1000; and: only multiples of 1000 supported
 N = 1000
 
 # select weather spikes effect postsynaptic neurons
 post_effects = True
-
-# whether to normalize the input rate in order to have a similar regime for networks with N!=1000
-normalize_input = True
 
 # whether to profile run
 profiling = True
@@ -34,7 +31,7 @@ resultsfolder = 'results'
 # folder for the code
 codefolder = 'code'
 
-# monitors (neede for plot generation)
+# monitors (needed for plot generation)
 monitors = True
 
 # single precision
@@ -54,7 +51,6 @@ bundle_mode = True
 
 params = OrderedDict([('devicename', devicename),
                       ('post_effects', post_effects),
-                      ('normalize_input', normalize_input),
                       ('resultsfolder', resultsfolder),
                       ('codefolder', codefolder),
                       ('N', N),
@@ -92,6 +88,9 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
+# we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
+N_poisson = N
+K_poisson = 1000
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -100,36 +99,38 @@ vt = -54*mV
 vr = -60*mV
 El = -74*mV
 taue = 5*ms
-if not params['normalize_input']:
-    # original example behaviour which is though specific to N=1000
-    F = 15 * Hz
-else:
-    # to have similar synaptic input on the post neuron for networks with N!=1000 as well
-    F = 15*Hz * (1000./N)
+F = 15 * Hz
 gmax = .01
 dApre = .01
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
+assert K_poisson == 1000
+assert N % K_poisson == 0
+
 eqs_neurons = '''
-dv/dt = (ge * (Ee-vr) + El - v) / taum {} : volt
-dge/dt = -ge / taue : 1
+dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+dge/dt = -ge / taue {} : 1
 '''
 
 on_pre = ''
 if params['post_effects']:
+    # normal mode => poissongroup spikes make effect on postneurons
     eqs_neurons = eqs_neurons.format('')
     on_pre += 'ge += w\n'
 else:
-    gsyn = N * F * gmax / 2. # assuming weights average at gmax/2 which holds approx. true for the bimodal distribution
-    eqs_neurons = eqs_neurons.format('+ gsyn * (Ee-vr)')
+    # second mode => poissongroup spikes are inffective for postneurons
+    # here: white noise process is added with similar mean and variance as
+    # poissongroup input that is disabled in this case
+    gsyn = K_poisson * F * gmax / 2. # assuming avg weight gmax/2 which holds approx. true for the bimodal distrib.
+    eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
     # eqs_neurons = eqs_neurons.format('')
 on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
-input = PoissonGroup(N, rates=F)
-neurons = NeuronGroup(1, eqs_neurons, threshold='v>vt', reset='v = vr')
+input = PoissonGroup(N_poisson, rates=F)
+neurons = NeuronGroup(N/K_poisson, eqs_neurons, threshold='v>vt', reset='v = vr')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
@@ -138,7 +139,8 @@ S = Synapses(input, neurons,
              on_post='''Apost += dApost
                  w = clip(w + Apre, 0, gmax)'''
             )
-S.connect()
+#S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
+S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
 S.w = 'rand() * gmax'
 
 n = 2
