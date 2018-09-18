@@ -16,6 +16,8 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'BrunelHakimHeterogDelays',
                 'BrunelHakimHeterogDelaysNarrowDistr',
                 'CUBAFixedConnectivityNoMonitor',
+                'STDPCUDA',
+                'STDPCUDANoPostEffects',
                 'STDPEventDriven',
                 'MushroomBody'
                ])
@@ -333,6 +335,99 @@ class CUBAFixedConnectivityNoMonitor(SpeedTest):
         Ci.connect('i>=Ne', p=80. / N)
 
         self.timed_run(self.duration)
+
+
+class STDPCUDA(SpeedTest):
+    """
+    STDP benchmark with postsynaptic effects. On average 1000 out of N
+    presynaptic Poisson neurons are randomly connected to N/1000 postsynaptic
+    neurons, s.t. N is the nubmer of synapses. STDP  is implemented as synaptic
+    variables and presynaptic spikes changes postsynaptic conductances.
+    """
+
+    category = "Full examples"
+    tags = ["Neurons", "Synapses"]
+    n_label = 'Num synapses'
+    name = "STDP (event-driven, ~N neurons, N synapses)"
+    n_range = [1000, 10000, 50000, 100000, 500000, 1000000, 5000000]  #fail:6562500
+
+    # configuration options
+    duration = 1 * second
+    post_effects = True
+
+    def run(self):
+        # we draw by random K_poisson out of N_poisson (on avg.) and connect
+        # them to each post neuron
+        N = self.n
+        N_poisson = N
+        K_poisson = 1000
+        taum = 10*ms
+        taupre = 20*ms
+        taupost = taupre
+        Ee = 0*mV
+        vt = -54*mV
+        vr = -60*mV
+        El = -74*mV
+        taue = 5*ms
+        F = 15 * Hz
+        gmax = .01
+        dApre = .01
+        dApost = -dApre * taupre / taupost * 1.05
+        dApost *= gmax
+        dApre *= gmax
+
+        assert K_poisson == 1000
+        assert N % K_poisson == 0, "{} != {}".format(N, K_poisson)
+
+        eqs_neurons = '''
+        dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
+        dge/dt = -ge / taue {} : 1
+        '''
+
+        on_pre = ''
+        if self.post_effects:
+            # normal mode => poissongroup spikes make effect on postneurons
+            eqs_neurons = eqs_neurons.format('')
+            on_pre += 'ge += w\n'
+        else:
+            # second mode => poissongroup spikes are inffective for postneurons
+            # here: white noise process is added with similar mean and variance as
+            # poissongroup input that is disabled in this case
+            gsyn = K_poisson * F * gmax / 2. # assuming avg weight gmax/2 which holds approx. true for the bimodal distrib.
+            eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
+            # eqs_neurons = eqs_neurons.format('')
+        on_pre += '''Apre += dApre
+                     w = clip(w + Apost, 0, gmax)'''
+
+        input = PoissonGroup(N_poisson, rates=F)
+        neurons = NeuronGroup(N/K_poisson, eqs_neurons, threshold='v>vt', reset='v = vr')
+        S = Synapses(input, neurons,
+                     '''w : 1
+                        dApre/dt = -Apre / taupre : 1 (event-driven)
+                        dApost/dt = -Apost / taupost : 1 (event-driven)''',
+                     on_pre=on_pre,
+                     on_post='''Apost += dApost
+                         w = clip(w + Apre, 0, gmax)'''
+                    )
+        #S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
+        S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
+        S.w = 'rand() * gmax'
+
+        self.timed_run(self.duration)
+
+class STDPCUDANoPostEffects(STDPCUDA):
+    """
+    STDP benchmark without postsynaptic effects. On average 1000 out of N
+    presynaptic Poisson neurons are randomly connected to N/1000 postsynaptic
+    neurons, s.t. N is the nubmer of synapses. STDP is implemented as synaptic
+    variables and presynaptic spikes have NO effect on postsynaptic variables.
+    Postsynaptic neurons are driven with white noise of similar mean and
+    variance as the input from the presynaptic Poisson neurons would create if
+    they had postsynaptic effects.
+    """
+
+    name = "STDP (event-driven, ~N neurons, N synapses, NO postsynaptic effects)"
+    post_effects = False
 
 
 class STDPEventDriven(SpeedTest):
