@@ -2,12 +2,6 @@
 Spike-timing dependent plasticity
 Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 '''
-import os
-from collections import OrderedDict
-import matplotlib
-matplotlib.use('Agg')
-
-from brian2 import *
 
 ###############################################################################
 ## PARAMETERS
@@ -48,6 +42,7 @@ bundle_mode = True
 
 ###############################################################################
 ## CONFIGURATION
+from collections import OrderedDict
 
 params = OrderedDict([('devicename', devicename),
                       ('post_effects', post_effects),
@@ -89,7 +84,7 @@ set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
 # we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
-N_poisson = N
+N_poisson = params['N']
 K_poisson = 1000
 taum = 10*ms
 taupre = 20*ms
@@ -107,7 +102,7 @@ dApost *= gmax
 dApre *= gmax
 
 assert K_poisson == 1000
-assert N % K_poisson == 0
+assert params['N'] % K_poisson == 0
 
 eqs_neurons = '''
 dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
@@ -130,7 +125,7 @@ on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
 input = PoissonGroup(N_poisson, rates=F)
-neurons = NeuronGroup(N/K_poisson, eqs_neurons, threshold='v>vt', reset='v = vr')
+neurons = NeuronGroup(params['N']/K_poisson, eqs_neurons, threshold='v>vt', reset='v = vr')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
