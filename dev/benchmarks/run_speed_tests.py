@@ -68,6 +68,8 @@ configs = [# configuration                          project_directory
           (NumpyConfiguration,                     None),
           (WeaveConfiguration,                     None),
           (LocalConfiguration,                     None),
+          (CPPStandaloneConfiguration,              'cpp_standalone'),
+          (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
 
           (DynamicConfigCreator('CUDA standalone (15 blocks, atomics)'),
            'cuda_standalone'),
@@ -112,9 +114,7 @@ configs = [# configuration                          project_directory
           (CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds, 'cuda_standalone'),
           (CUDAStandaloneConfigurationProfileGPU,   'cuda_standalone'),
           (CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
-          (CPPStandaloneConfiguration,              'cpp_standalone'),
           #(GeNNConfiguration,                       'GeNNworkspace'),
-          (CPPStandaloneConfigurationOpenMP,        'cpp_standalone'),
           #(GeNNConfigurationCPU,                    'GeNNworkspace'),
           (GeNNConfigurationOptimized,              'GeNNworkspace'),
           (GeNNConfigurationOptimizedSinglePrecision,'GeNNworkspace')
