@@ -1,8 +1,8 @@
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index e57fd61..3528356 100644
+index b79ce46..653b418 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -991,6 +991,7 @@ def run(self, directory, with_output, run_args):
+@@ -1003,6 +1003,7 @@ def run(self, directory, with_output, run_args):
                  with open('results/last_run_info.txt', 'r') as f:
                      last_run_info = f.read()
                  self._last_run_time, self._last_run_completed_fraction = map(float, last_run_info.split())
@@ -11,23 +11,31 @@ index e57fd61..3528356 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 2fc47aa..8d8c0be 100644
+index 2fc47aa..7227a77 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
-@@ -226,8 +226,10 @@ def after_run(self):
+@@ -10,6 +10,7 @@
+ import re
+ 
+ from brian2.utils.stringtools import indent
++from brian2.core.base import BrianObjectException
+ 
+ from collections import defaultdict
+ 
+@@ -226,8 +227,10 @@ def after_run(self):
                              with_output=False)
      
      
 -def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
 -    tempfilename = tempfile.mktemp('exception')
 +def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second,
-+           profile_only_active=False):
++           profile_only_active=False, return_lrcf=False):
 +    tempfilename = 'my_file_1'#tempfile.mktemp('exception')
 +    tempfilename_net_obj = 'my_file_2'#tempfile.mktemp('network_objects')
      if n is None:
          init_args = ''
      else:
-@@ -235,9 +237,9 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -235,9 +238,9 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      code_string = '''
  __file__ = '{fname}'
  import brian2
@@ -39,7 +47,7 @@ index 2fc47aa..8d8c0be 100644
  feature = {feature_name}({init_args})
  import warnings, traceback, pickle, sys, os, time
  warnings.simplefilter('ignore')
-@@ -246,6 +248,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -246,6 +249,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      configuration.before_run()
      brian2.device._set_maximum_run_time({maximum_run_time})
      feature.run()
@@ -52,7 +60,7 @@ index 2fc47aa..8d8c0be 100644
      configuration.after_run()
      results = feature.results()
      run_time = time.time()-start_time
-@@ -256,39 +264,72 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -256,39 +265,78 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
              pass
      lrcf = configuration.get_last_run_completed_fraction()
      run_time = run_time/lrcf
@@ -67,7 +75,8 @@ index 2fc47aa..8d8c0be 100644
 +    except ValueError:
 +        pass
      f = open(r'{tempfname}', 'wb')
-     pickle.dump((None, results, run_time, new_prof_info), f, -1)
+-    pickle.dump((None, results, run_time, new_prof_info), f, -1)
++    pickle.dump((None, results, run_time, new_prof_info, lrcf), f, -1)
      f.close()
 +    if {prof_active}:
 +        f2 = open(r'{tempfname_net_obj}', 'wb')
@@ -77,7 +86,12 @@ index 2fc47aa..8d8c0be 100644
      #traceback.print_exc(file=sys.stdout)
      tb = traceback.format_exc()
      f = open(r'{tempfname}', 'wb')
-     pickle.dump((tb, ex, 0.0, []), f, -1)
+-    pickle.dump((tb, ex, 0.0, []), f, -1)
++    try:
++        pickle.dump((tb, ex, 0.0, [], 0.0), f, -1)
++    except pickle.PicklingError:
++        print tb
++        raise
      f.close()
 +    if {prof_active}:
 +        f2 = open(r'{tempfname_net_obj}', 'wb')
@@ -113,7 +127,8 @@ index 2fc47aa..8d8c0be 100644
 +        sys.stdout.write(stdout)
 +        sys.stderr.write(stderr)
      with open(tempfilename, 'rb') as f:
-         tb, res, runtime, profiling_info = pickle.load(f)
+-        tb, res, runtime, profiling_info = pickle.load(f)
++        tb, res, runtime, profiling_info, lrcf = pickle.load(f)
 +    if isinstance(res, Exception):
 +        tb = stdout + '\n' + stderr + '\n' + tb
 +    if profile_only_active:
@@ -127,19 +142,31 @@ index 2fc47aa..8d8c0be 100644
 +        configuration.git_reset()
 +        # check out the original commit
 +        configuration.git_checkout(reverse=True)
++    if return_lrcf:
++        return tb, res, runtime, profiling_info, lrcf
      return tb, res, runtime, profiling_info
      
  
-@@ -477,7 +518,7 @@ def __str__(self):
+@@ -333,7 +381,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
+             txt = 'OK'
+             sym = '.'
+             exc = None
+-            tb, res, runtime, prof_info = results(configuration, ft, maximum_run_time=maximum_run_time)
++            tb, res, runtime, prof_info, lrcf = results(configuration, ft, maximum_run_time=maximum_run_time)
+             if isinstance(res, Exception):
+                 if isinstance(res, NotImplementedError):
+                     sym = 'N'
+@@ -477,7 +525,8 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
 -                    n_slice=slice(None), maximum_run_time=1e7*brian2.second):
-+                    n_slice=slice(None), maximum_run_time=1e7*brian2.second, profile_only_active=True):
++                    n_slice=slice(None), maximum_run_time=1e7*brian2.second,
++                    profile_only_active=True, mark_not_completed=False):
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -495,15 +536,22 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -495,15 +544,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
      full_results = {}
      tag_results = defaultdict(lambda:defaultdict(list))
      for ft in speed_tests:
@@ -158,12 +185,17 @@ index 2fc47aa..8d8c0be 100644
 +                brian_stdout = ''
                  for _ in xrange(1+int(run_twice)):
 -                    tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time)
-+                    tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time,
-+                                                          profile_only_active=profile_only_active)
++                    if mark_not_completed:
++                        tb, res, runtime, prof_info, lrcf = results(configuration, ft, n, maximum_run_time=maximum_run_time,
++                                                                    profile_only_active=profile_only_active,
++                                                                    return_lrcf=mark_not_completed)
++                    else:
++                        tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time,
++                                                              profile_only_active=profile_only_active)
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -512,8 +560,24 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -512,8 +573,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -182,13 +214,16 @@ index 2fc47aa..8d8c0be 100644
                  sys.stdout.write(sym)
 +                sys.stdout.flush()
                  full_results[configuration.name, ft.fullname(), n, 'All'] = runtime
++                if mark_not_completed:
++                    # save last run completed fraction
++                    full_results[configuration.name, ft.fullname(), n, 'lrcf'] = lrcf
 +                traceback[configuration.name, n] = tb
 +                brian_stdouts[configuration.name, n] = brian_stdout
 +                result[configuration.name, n] = res
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -528,8 +592,14 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -528,8 +608,14 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
              if verbose:
                  print ']',
@@ -203,7 +238,7 @@ index 2fc47aa..8d8c0be 100644
          
      return SpeedTestResults(full_results, configurations, speed_tests)
  
-@@ -550,7 +620,7 @@ def get_codeobjsuffixes(self, fullname):
+@@ -550,7 +636,7 @@ def get_codeobjsuffixes(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
          return set(codeobjsuffixes)
  
@@ -212,7 +247,35 @@ index 2fc47aa..8d8c0be 100644
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -581,13 +651,22 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -561,6 +647,8 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+             codeobjsuffixes = self.get_codeobjsuffixes(fullname)
+             codeobjsuffixes.remove('All')
+             codeobjsuffixes.remove('Overheads')
++            if 'lrcf' in codeobjsuffixes:
++                codeobjsuffixes.remove('lrcf')
+             codeobjsuffixes = ['All', 'Overheads']+sorted(codeobjsuffixes)
+             if relative or profiling_minimum==1:
+                 codeobjsuffixes = ['All']
+@@ -570,31 +658,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+             dashes = {}
+             markerstyles = {}
+             for isuffix, suffix in enumerate(codeobjsuffixes):
+-                cols = itertools.cycle(pylab.rcParams['axes.color_cycle'])
+-                for (iconfig, config), col in zip(enumerate(self.configurations), cols):
++                props = itertools.cycle(pylab.rcParams['axes.prop_cycle'])
++                for (iconfig, config), prop in zip(enumerate(self.configurations), props):
+                     configname = config.name
+                     runtimes = []
++                    not_finished = []
+                     skip = True
+                     for n in ns:
+                         runtime = self.full_results.get((configname, fullname, n, 'All'), numpy.nan)
++                        if 'lrcf' in codeobjsuffixes:
++                            lrcf = self.full_results.get((configname, fullname, n, 'lrcf'), numpy.nan)
++                            not_finished.append(lrcf != 1.0)
++                        else:
++                            not_finished = [0]  # no plotting
+                         thistime = self.full_results.get((configname, fullname, n, suffix), numpy.nan)
                          if float(thistime/runtime)>=profiling_minimum:
                              skip = False
                          runtimes.append(thistime)
@@ -236,7 +299,29 @@ index 2fc47aa..8d8c0be 100644
                      if suffix=='All':
                          lw = 2
                          label = configname
-@@ -627,6 +706,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+                     else:
+                         lw = 1
+                         label = suffix
+-                    plottable = sum(-numpy.isnan(runtimes[1:]+runtimes[:-1]))
++                    plottable = sum(~numpy.isnan(runtimes[1:]+runtimes[:-1]))
+                     if plottable:
+                         if label in havelabel:
+                             label = None
+@@ -616,8 +719,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+                                         dash = dash+(4, 2)
+                                 dashes[suffix] = dash
+                                 markerstyles[suffix] = msty = markerstyles_cycle.next()
+-                        line = pylab.plot(ns, runtimes, lw=lw, color=col, marker=msty,
++                        line = pylab.plot(ns, runtimes, lw=lw, color=prop['color'], marker=msty,
+                                           mec='none', ms=8, label=label)[0]
++                        if suffix == 'All' and sum(not_finished) != 0:
++                            pylab.plot(ns[not_finished], runtimes[not_finished],
++                                       linestyle='None', marker=r'$\circlearrowleft$',
++                                       ms=15, color=prop['color'], label='linear runtime interpolation')
+                         if dash is not None:
+                             line.set_dashes(dash)
+             pylab.title(fullname)
+@@ -627,6 +734,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')
