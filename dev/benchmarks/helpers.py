@@ -64,9 +64,16 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
     full_results_dict = speed_test_res.full_results
     ns = speed_test_res.get_ns(speed_test_name)
     configs = speed_test_res.configurations
+    num_genn_configs = len([c['classname'] for c in configs if
+                            c['classname'].lower().startswith('genn')])
 
-    # get all suffixes if speed test was run with profiling
-    recorded_suffixes = [key[-1] for key in full_results_dict.keys()]
+    # get all suffixes if speed test was run with profiling (genn does not
+    # support profiling but saves all codeobject suffixes by default)
+    if len(configs) == num_genn_configs:
+        recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
+    else:
+        recorded_suffixes = set([key[-1] for key in full_results_dict.keys()
+                                 if not key[0].lower().startswith('genn')])
     if profile_suffixes is None:
         profile_suffixes = recorded_suffixes
     assert set(profile_suffixes).issubset(set(recorded_suffixes)), \
