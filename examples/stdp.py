@@ -10,7 +10,7 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
-# number of _synapses_ -- min. is 1000; and: only multiples of 1000 supported
+# number of _synapses_ (must be multiple of 1000
 N = 1000
 
 # select weather spikes effect postsynaptic neurons
@@ -84,8 +84,10 @@ set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
 # we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
-N_poisson = params['N']
+N_poisson = 10000
 K_poisson = 1000
+connection_probability = float(K_poisson) / N_poisson # 10% connection probability if K_poisson=1000, N_poisson=10000
+N_lif = int(params['N'] / K_poisson) # => N specifies the number of synapses or equivalently the number of neurons*1000
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -94,15 +96,14 @@ vt = -54*mV
 vr = -60*mV
 El = -74*mV
 taue = 5*ms
-F = 15 * Hz
+F = 15*Hz * (1000./K_poisson) # this scaling is not active here since K_poisson == 1000
 gmax = .01
 dApre = .01
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
-assert K_poisson == 1000
-assert params['N'] % K_poisson == 0
+assert N_lif * K_poisson == params['N'] # ensure we specify the no of synapses N as a multiple of 1000
 
 eqs_neurons = '''
 dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
@@ -125,7 +126,7 @@ on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
 input = PoissonGroup(N_poisson, rates=F)
-neurons = NeuronGroup(params['N']/K_poisson, eqs_neurons, threshold='v>vt', reset='v = vr')
+neurons = NeuronGroup(N_lif, eqs_neurons, threshold='v>vt', reset='v = vr')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
@@ -134,8 +135,7 @@ S = Synapses(input, neurons,
              on_post='''Apost += dApost
                  w = clip(w + Apre, 0, gmax)'''
             )
-#S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
-S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
+S.connect(p=connection_probability)
 S.w = 'rand() * gmax'
 
 n = 2
@@ -144,7 +144,7 @@ if params['monitors']:
     mon = StateMonitor(S, 'w', record=[0, 1])
     s_mon = SpikeMonitor(input)
 
-run(100*second, report='text', profile=profiling)
+run(1*second, report='text', profile=profiling)
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
