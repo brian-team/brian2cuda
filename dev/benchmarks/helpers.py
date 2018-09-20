@@ -113,5 +113,43 @@ def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
     result_df.sort_index().to_csv(file_name)
 
 
+def plot_from_pkl(pkl_file, plot_dir, base_config='C++ standalone'):
+
+    import matplotlib.pyplot as plt
+
+    with open(pkl_file) as f:
+        # SpeedTestResults object
+        res = pickle.load(f)
+
+    configs = res.configurations
+    confignames = [config.name for config in configs]
+    if base_config in confignames:
+        base_idx = confignames.index(base_config)
+        # swap base_config with position 0
+        configs[base_idx], configs[0] = configs[0], configs[base_idx]
+    else:
+        print("Couldn't find base_config {} in configurations. Not changing the "
+              "baseline for relative speedup plots.".format(base_config,
+                                                            pkl_file))
+
+    # only one benchmark per pkl file
+    name = res.speed_tests[0].__name__
+    res.plot_all_tests()
+    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(name)))
+    plt.close()
+    res.plot_all_tests(relative=True)
+    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+    plt.close()
+    res.plot_all_tests(profiling_minimum=0.05)
+    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+    plt.close()
+   # #if choose_baseline:
+   # for n, config in enumerate(res.configurations):
+   #     print "[{}]\t{}".format(n, config.name)
+   #     print "[{}]\t{}".format(n, config)
+
+
+
+
 if __name__ == '__main__':
     translate_pkl_to_csv('results_2018_08_13_genn_300/data/BrunelHakimModelScalarDelay.pkl')
