@@ -1,7 +1,7 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='brian2cuda',
     version='dev',
-    packages=['brian2cuda',],
+    packages=find_packages(),
 )
