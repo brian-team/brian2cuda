@@ -16,6 +16,11 @@ N = 1000
 # select weather spikes effect postsynaptic neurons
 post_effects = True
 
+# select weather we have (delays: 'homogeneous', 'heterogeneous'; no delays something else)
+delays = False
+# delays = 'homogeneous'
+# delays = 'heterogeneous'
+
 # whether to profile run
 profiling = True
 
@@ -29,7 +34,7 @@ codefolder = 'code'
 monitors = True
 
 # single precision
-single_precision = False
+single_precision = True
 
 # number of post blocks (None is default)
 num_blocks = None
@@ -45,6 +50,7 @@ bundle_mode = True
 from collections import OrderedDict
 
 params = OrderedDict([('devicename', devicename),
+                      ('delays', delays),
                       ('post_effects', post_effects),
                       ('resultsfolder', resultsfolder),
                       ('codefolder', codefolder),
@@ -137,6 +143,11 @@ S = Synapses(input, neurons,
             )
 S.connect(p=connection_probability)
 S.w = 'rand() * gmax'
+
+if delays == 'homogeneous' or delays:
+    S.delay = 2*ms
+elif delays == 'heterogeneous':
+    S.delay = "2 * 2*ms * rand()"
 
 n = 2
 if params['monitors']:
