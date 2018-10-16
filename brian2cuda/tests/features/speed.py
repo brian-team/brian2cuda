@@ -17,6 +17,8 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'BrunelHakimHeterogDelaysNarrowDistr',
                 'CUBAFixedConnectivityNoMonitor',
                 'STDPCUDA',
+                'STDPCUDAHomogeneousDelays',
+                'STDPCUDAHeterogeneousDelays',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
                 'MushroomBody'
@@ -356,6 +358,7 @@ class STDPCUDA(SpeedTest):
     # configuration options
     duration = 1 * second
     post_effects = True
+    delay = None
 
     def run(self):
         # we draw by random K_poisson out of N_poisson (on avg.) and connect
@@ -415,7 +418,18 @@ class STDPCUDA(SpeedTest):
         S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
         S.w = 'rand() * gmax'
 
+        if self.delay is not None:
+            S.delay = self.delay
+
         self.timed_run(self.duration)
+
+class STDPCUDAHomogeneousDelays(STDPCUDA):
+    delay = 2*ms
+    name = "STDP (event-driven, ~N neurons, N synapses, homogeneous delays)"
+
+class STDPCUDAHeterogeneousDelays(STDPCUDA):
+    delay = "2 * 2*ms * rand()"
+    name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays)"
 
 class STDPCUDANoPostEffects(STDPCUDA):
     """

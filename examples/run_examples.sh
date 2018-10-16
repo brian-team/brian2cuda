@@ -58,7 +58,15 @@ for n in 5000 50000 500000; do
                     echo $cmd
                     $cmd 2>&1 | tee -a $logfile
 
-                    cmd="python stdp.py $args"
+                    cmd="python stdp.py --delays none $args"
+                    echo $cmd
+                    $cmd 2>&1 | tee -a $logfile
+
+                    cmd="python stdp.py --delays homogeneous $args"
+                    echo $cmd
+                    $cmd 2>&1 | tee -a $logfile
+
+                    cmd="python stdp.py --delays heterogeneous $args"
                     echo $cmd
                     $cmd 2>&1 | tee -a $logfile
                 done

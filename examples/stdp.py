@@ -16,8 +16,8 @@ N = 1000
 # select weather spikes effect postsynaptic neurons
 post_effects = True
 
-# select weather we have (delays: 'homogeneous', 'heterogeneous'; no delays something else)
-delays = False
+# select weather we have (delays: 'homogeneous', 'heterogeneous', 'none')
+delays = 'none'
 # delays = 'homogeneous'
 # delays = 'heterogeneous'
 
@@ -144,9 +144,9 @@ S = Synapses(input, neurons,
 S.connect(p=connection_probability)
 S.w = 'rand() * gmax'
 
-if delays == 'homogeneous' or delays:
+if params['delays'] == 'homogeneous':
     S.delay = 2*ms
-elif delays == 'heterogeneous':
+elif params['delays'] == 'heterogeneous':
     S.delay = "2 * 2*ms * rand()"
 
 n = 2
@@ -155,11 +155,11 @@ if params['monitors']:
     mon = StateMonitor(S, 'w', record=[0, 1])
     s_mon = SpikeMonitor(input)
 
-run(1*second, report='text', profile=profiling)
+run(1*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
-if profiling:
+if params['profiling']:
     print(profiling_summary())
     profilingpath = os.path.join(params['resultsfolder'], '{}.txt'.format(name))
     with open(profilingpath, 'w') as profiling_file:
