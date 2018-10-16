@@ -32,10 +32,10 @@ scenario = 'brian2-example'
 # no coupling at all
 #scenario = 'uncoupled'
 
-# coupling with 1000 synapses per neuron on avg, zero coupling strength
+# coupling with 1000 synapses per neuron on avg, effectively zero coupling strength
 #scenario = 'pseudocoupled-1000'
 
-# coupling with 80 synapses per neuron on avg, zero coupling strength
+# coupling with 80 synapses per neuron on avg, effectively zero coupling strength
 #scenario = 'pseudocoupled-80'
 #------------------------------------------------------------------------------
 
@@ -126,14 +126,6 @@ taui = 10*ms
 Ee = 0*mV
 Ei = -80*mV
 
-if params['scenario'] == 'brian2-example':
-    we = 6 * nS  # excitatory synaptic weight
-    wi = 67 * nS  # inhibitory synaptic weight
-else:
-    we = 0 * nS  # excitatory synaptic weight
-    wi = 0 * nS  # inhibitory synaptic weight
-
-
 # The model
 eqs = Equations('''
 dv/dt = (gl*(El-v)+ge*(Ee-v)+gi*(Ei-v)-
@@ -163,26 +155,30 @@ if params['scenario'] != 'uncoupled':
     Ne = int(0.8 * params['N'])
     Pe = P[:Ne]
     Pi = P[Ne:]
-    Ce = Synapses(Pe, P, on_pre='ge+=we')
-    Ci = Synapses(Pi, P, on_pre='gi+=wi')
+    Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we')
+    Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi')
+    if params['scenario'] == 'brian2-example':
+        # 0.02*N syn per neuron with nonzero efficacy
+        Ce.connect(p=0.02)
+        Ci.connect(p=0.02)
+    elif params['scenario'] == 'pseudocoupled-1000':
+        # fixed avg no of 1000 syn per neuron with effectively zero efficacy
+        Ce.connect(p=1000. / len(P))
+        Ci.connect(p=1000. / len(P))
+    elif params['scenario'] == 'pseudocoupled-80':
+        # fixed avg no of 80 syn per neuron with effectively zero efficacy
+        Ce.connect(p=80. / len(P))
+        Ci.connect(p=80. / len(P))
 
-# 0.02*N syn per neuron with nonzero efficacy
-if params['scenario'] == 'brian2-example':
-    Ce.connect(p=0.02)
-    Ci.connect(p=0.02)
-
-# fixed avg no of 1000 syn per neuron with zero efficacy
-elif params['scenario'] == 'pseudocoupled-1000':
-    Ce.connect(p=1000. / len(P))
-    Ci.connect(p=1000. / len(P))
-
-# fixed avg no of 80 syn per neuron with zero efficacy
-elif params['scenario'] == 'pseudocoupled-80':
-    Ce.connect(p=80. / len(P))
-    Ci.connect(p=80. / len(P))
-
-else:  # scenario == 'uncoupled'
-    pass # no
+    if params['scenario'] == 'brian2-example':
+        # nonzero efficacy
+        Ce.we = 6 * nS
+        Ci.wi = 67 * nS
+    else:
+        # effectively zero efficacy
+        # (but avoiding compilier optimisations of constants in generated code)
+        Ce.we = 'rand() * 1e-9*nS'
+        Ci.wi = 'rand() * 1e-9*nS'
 
 # Initialization
 P.v = 'El + (randn() * 5 - 5)*mV'

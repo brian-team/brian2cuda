@@ -83,16 +83,16 @@ class COBAHHBase(SpeedTest):
                         method='exponential_euler')
 
         if not self.uncoupled:
-            we = self.we  # excitatory synaptic weight
-            wi = self.wi  # inhibitory synaptic weight
             num_exc = int(0.8 * self.n)
             Pe = P[:num_exc]
             Pi = P[num_exc:]
-            Ce = Synapses(Pe, P, on_pre='ge+=we')
-            Ci = Synapses(Pi, P, on_pre='gi+=wi')
+            Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we')
+            Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi')
             # connection probability p can depend on network size n
             Ce.connect(p=self.p(self.n))
             Ci.connect(p=self.p(self.n))
+            Ce.we = self.we  # excitatory synaptic weight
+            Ci.wi = self.wi  # inhibitory synaptic weight
 
         # Initialization
         P.v = 'El + (randn() * 5 - 5)*mV'
@@ -131,8 +131,9 @@ class COBAHHPseudocoupled1000(COBAHHBase):
     n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #fail: 500000
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
-    # weights set to zero
-    we = wi = 0 * nS
+    # weights set to tiny values, s.t. they are effectively zero but don't
+    # result in compiler optimisations
+    we = wi = 'rand() * 1e-9*nS'
 
 
 class COBAHHPseudocoupled80(COBAHHBase):
@@ -145,8 +146,9 @@ class COBAHHPseudocoupled80(COBAHHBase):
     n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000, 900000, 2000000]  #TODO: max size?
     # fixed connectivity: 80 neurons per synapse
     p = lambda self, n: 80. / n
-    # weights set to zero
-    we = wi = 0 * nS
+    # weights set to tiny values, s.t. they are effectively zero but don't
+    # result in compiler optimisations
+    we = wi = 'rand() * 1e-9*nS'
 
 
 class BrunelHakimBase(SpeedTest):
