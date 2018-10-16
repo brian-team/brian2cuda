@@ -14,6 +14,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <curand.h>
+#include <curand_kernel.h>
 
 size_t brian::used_device_memory = 0;
 
@@ -143,6 +144,8 @@ double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::curand_generator;
+__device__ unsigned long long brian::d_curand_seed;
+unsigned long long* brian::dev_curand_seed;
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 randomNumber_t* brian::dev_{{co.name}}_rand;
 randomNumber_t* brian::dev_{{co.name}}_rand_allocator;
@@ -152,6 +155,10 @@ __device__ randomNumber_t* brian::_array_{{co.name}}_rand;
 randomNumber_t* brian::dev_{{co.name}}_randn;
 randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
 __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
+{% endfor %}
+{% for co in codeobj_with_binomial | sort(attribute='name') %}
+curandState* brian::dev_{{co.name}}_curand_states;
+__device__ curandState* brian::d_{{co.name}}_curand_states;
 {% endfor %}
 
 void _init_arrays()
@@ -168,7 +175,6 @@ void _init_arrays()
             cudaGetDeviceProperties(&props, 0)
             );
 
-
     {% if num_parallel_blocks %}
     num_parallel_blocks = {{num_parallel_blocks}};
     {% else %}
@@ -180,12 +186,31 @@ void _init_arrays()
     max_shared_mem_size = props.sharedMemPerBlock;
     num_threads_per_warp = props.warpSize;
 
+
+    // Random seeds might be overwritten in main.cu
+    unsigned long long seed = time(0);
+
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev_curand_seed,
+                sizeof(unsigned long long))
+            );
+
+    CUDA_SAFE_CALL(
+            cudaMemcpy(dev_curand_seed, &seed,
+                sizeof(unsigned long long), cudaMemcpyHostToDevice)
+            );
+
+    CUDA_SAFE_CALL(
+            cudaMemcpyToSymbol(d_curand_seed, &dev_curand_seed,
+                sizeof(unsigned long long*))
+            );
+
+
     curandCreateGenerator(&curand_generator, {{curand_generator_type}});
     {% if curand_generator_ordering %}
     curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
     {% endif %}
-    // These random seeds might be overwritten in main.cu
-    curandSetPseudoRandomGeneratorSeed(curand_generator, time(0));
+    curandSetPseudoRandomGeneratorSeed(curand_generator, seed);
 
     {% for S in synapses | sort(attribute='name') %}
     {% for path in S._pathways | sort(attribute='name') %}
@@ -505,6 +530,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 
 #include <thrust/device_vector.h>
 #include <curand.h>
+#include <curand_kernel.h>
 
 namespace brian {
 
@@ -604,6 +630,8 @@ extern double {{codeobj}}_kernel_currents_profiling_info;
 
 //////////////// random numbers /////////////////
 extern curandGenerator_t curand_generator;
+extern unsigned long long* dev_curand_seed;
+extern __device__ unsigned long long d_curand_seed;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
 extern randomNumber_t* dev_{{co.name}}_rand;
@@ -614,6 +642,10 @@ extern __device__ randomNumber_t* _array_{{co.name}}_rand;
 extern randomNumber_t* dev_{{co.name}}_randn;
 extern randomNumber_t* dev_{{co.name}}_randn_allocator;
 extern __device__ randomNumber_t* _array_{{co.name}}_randn;
+{% endfor %}
+{% for co in codeobj_with_binomial | sort(attribute='name') %}
+extern curandState* dev_{{co.name}}_curand_states;
+extern __device__ curandState* d_{{co.name}}_curand_states;
 {% endfor %}
 
 //CUDA

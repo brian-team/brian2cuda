@@ -7,6 +7,29 @@
 #include "network.h"
 #include <curand.h>
 #include <ctime>
+#include <curand_kernel.h>
+
+namespace {
+
+    using namespace brian;
+
+    {% for co in codeobj_with_binomial | sort(attribute='name') %}
+    __global__ void init_curand_states_{{co.name}}(int N)
+    {
+        int idx = threadIdx.x + blockIdx.x * blockDim.x;
+        if (idx < N)
+        {
+            // Each thread gets the same seed, a different sequence number and
+            // no offset
+            // TODO: different seed and 0 sequence number is much faster, with
+            // less security for independent sequences
+            //curand_init(curand_seed + idx, 0, 0,
+            curand_init(d_curand_seed, idx, 0,
+                    &d_{{co.name}}_curand_states[idx]);
+        }
+    }
+    {% endfor %}
+}
 
 void _run_random_number_generation()
 {
@@ -154,6 +177,30 @@ void _run_random_number_generation()
                 cudaMalloc((void**)&dev_{{co.name}}_randn_allocator, sizeof(randomNumber_t)*num_per_gen_randn_{{co.name}})
                 );
         {% endfor %}
+
+
+        int num_threads, num_blocks;
+        {% for co in codeobj_with_binomial | sort(attribute='name') %}
+        {% if co.template_name == 'synapses' %}
+        {% set N = '_array_' + co.owner.name + '_N[0]' %}
+        {% else %}
+        {% set N = co.owner._N %}
+        {% endif %}
+        CUDA_SAFE_CALL(
+                cudaMalloc((void**)&dev_{{co.name}}_curand_states,
+                    sizeof(curandState) * {{N}})
+                );
+        CUDA_SAFE_CALL(
+                cudaMemcpyToSymbol(d_{{co.name}}_curand_states,
+                    &dev_{{co.name}}_curand_states, sizeof(curandState*))
+                );
+        num_threads = max_threads_per_block;
+        num_blocks = {{N}} / max_threads_per_block + 1;
+        if ({{N}} < num_threads)
+            num_threads = {{N}};
+        init_curand_states_{{co.name}}<<<num_blocks, num_threads>>>({{N}});
+        {% endfor %}
+
 
         first_run = false;
     }

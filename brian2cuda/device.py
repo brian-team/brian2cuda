@@ -6,6 +6,7 @@ import shutil
 import inspect
 from collections import defaultdict
 import tempfile
+import re
 
 import numpy as np
 
@@ -367,6 +368,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
+        codeobj_with_binomial = [co for co in self.code_objects.values() if co.runs_every_tick and co.binomial_function]
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -396,6 +398,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         get_array_filename=self.get_array_filename,
                         codeobj_with_rand=codeobj_with_rand,
                         codeobj_with_randn=codeobj_with_randn,
+                        codeobj_with_binomial=codeobj_with_binomial,
                         sm_multiplier=sm_multiplier,
                         num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
@@ -518,6 +521,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     main_lines.append('curandSetPseudoRandomGeneratorSeed(curand_generator, {seed!r}ULL);'.format(seed=seed))
                     # generator offset needs to be reset to its default (=0)
                     main_lines.append('curandSetGeneratorOffset(curand_generator, 0ULL);')
+                    # copy seed to device for curand device api calls (used in binmomial function)
+                    code = '''
+                    unsigned long long seed = {seed};
+                    CUDA_SAFE_CALL(
+                            cudaMemcpy(dev_curand_seed, &seed,
+                                sizeof(unsigned long long), cudaMemcpyHostToDevice)
+                            );
+                    '''.format(seed=seed)
+                    main_lines.append(code)
                 # else a random seed is set in objects.cu::_init_arrays()
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
@@ -543,6 +555,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
             num_occurences_rand = code_object.code.cu_file.count("_rand(")
             num_occurences_randn = code_object.code.cu_file.count("_randn(")
+            match = re.search('_binomial\w*\(const int vectorisation_idx\)', code_object.code.cu_file)
+            if match is not None:
+                code_object.binomial_function = True
             if num_occurences_rand > 0:
                 # synapses_create_generator uses host side random number generation
                 if code_object.template_name != "synapses_create_generator":
@@ -735,10 +750,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_rand_source(self, writer):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
+        codeobj_with_binomial = [co for co in self.code_objects.values() if co.runs_every_tick and co.binomial_function]
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
+                                                           codeobj_with_binomial=codeobj_with_binomial,
                                                            profiled=self.enable_profiling,
                                                            curand_float_type=c_data_type(prefs['core.default_float_dtype']))
         writer.write('rand.*', rand_tmp)
