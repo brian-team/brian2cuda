@@ -119,11 +119,12 @@ public:
                 printf("ERROR while allocating memory with size %ld in spikequeue.h/prepare()\n", sizeof(cudaVector<DTYPE_int>*)*num_queues);
             }
         }
+        __syncthreads();
+
         for (int i = tid; i < _num_blocks; i++)
         {
             semaphore[i] = 0;
         }
-        __syncthreads();
 
         for(int i = tid; i < num_queues; i+=num_threads)
         {
