@@ -2,7 +2,7 @@ import __main__
 import argparse
 
 
-def update_from_command_line(params):
+def update_from_command_line(params, choices={}):
     '''
     Use argparse to overwrite parameters in the `params` dictionary with command
     line options. Try to import as little modules before calling this function
@@ -13,6 +13,12 @@ def update_from_command_line(params):
     params : dict
         Dictionary with experiment parameters.
     '''
+    if not isinstance(choices, dict):
+        raise TypeError("`choices` needs to be dict, got "
+                        "{}".format(type(choices)))
+
+    # make a copy such that we can delete used keys without modifying choices
+    choices_copy = choices.copy()
 
     parser = argparse.ArgumentParser(description='Run brian2cuda example')
 
@@ -20,8 +26,10 @@ def update_from_command_line(params):
         dtype = type(value)
         if value is None:
             dtype = int
+        choice = choices_copy.pop(key, None)
         cmd_arg = key.replace('_', '-')
         if dtype == bool:
+            assert choice is None, "Can't have choices for bool arguments"
             feature_parser = parser.add_mutually_exclusive_group(required=False)
             feature_parser.add_argument('--{}'.format(cmd_arg),
                                         dest=key, action='store_true')
@@ -29,7 +37,12 @@ def update_from_command_line(params):
                                         dest=key, action='store_false')
             parser.set_defaults(**{key: None})
         else:
-            parser.add_argument('--{}'.format(cmd_arg), type=dtype, default=None)
+            parser.add_argument('--{}'.format(cmd_arg), type=dtype,
+                                choices=choice, default=None)
+
+    if choices_copy:
+        raise AttributeError("Undefined keys in choices: "
+                             "{}".format(choices_copy.keys()))
 
     parser.add_argument('--name-suffix', type=str, default=None)
 
@@ -95,6 +108,8 @@ def set_prefs(params, prefs):
             dev_no_to_cc = {0: '61', 1: '52'}
         elif hostname == 'eltanin':
             dev_no_to_cc = {0: '52', 1: '61', 2: '61', 3: '61'}
+        elif hostname == 'risha':
+            dev_no_to_cc = {0: '70'}
         else:
             print "WARNING: can't recognize hostname. Compiling with "\
                     "{}".format(prefs['codegen.cuda.extra_compile_args_nvcc'])
