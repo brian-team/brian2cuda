@@ -1,36 +1,29 @@
 diff --git a/brian2genn/device.py b/brian2genn/device.py
-index e1812aa..c214c4d 100644
+index c6936e2..82c7876 100644
 --- a/brian2genn/device.py
 +++ b/brian2genn/device.py
-@@ -849,6 +849,7 @@ class GeNNDevice(CPPStandaloneDevice):
+@@ -853,8 +853,8 @@ class GeNNDevice(CPPStandaloneDevice):
+                 check_call(cmd, cwd=directory)
+             else:
+                 # print ["./main", "test", str(self.run_duration), gpu_arg]
+-                check_call(["./main", "test", str(self.run_duration), gpu_arg],
+-                           cwd=directory)
++                check_call("./main test {} {}".format(str(self.run_duration), gpu_arg),
++                           cwd=directory, shell=True)
+         self.has_been_run = True
+         last_run_info = open(
              os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
-         self._last_run_time, self._last_run_completed_fraction = map(float,
-                                                                      last_run_info.split())
-+        print("INFO _last_run_time = {} s".format(self._last_run_time))
- 
-         # The following is a verbatim copy of the respective code in
-         # CPPStandaloneDevice.run. In the long run, we can hopefully implement
-@@ -953,7 +954,7 @@ class GeNNDevice(CPPStandaloneDevice):
+@@ -981,9 +981,11 @@ class GeNNDevice(CPPStandaloneDevice):
+                 args = [buildmodel_cmd, 'magicnetwork_model.cpp']
+                 if not use_GPU:
                      args += ['-c']
-                 check_call(args, cwd=directory, env=env)
+-                check_call(args, cwd=directory, env=env)
++                args = ['PATH=~/defapps/genn:$PATH'] + args
++                args_str = ' '.join(args)
++                check_call(args_str, cwd=directory, env=env, shell=True)
                  call(["make", "clean"], cwd=directory, env=env)
 -                check_call(["make"], cwd=directory, env=env)
-+                check_call(["make", "-j6"], cwd=directory, env=env)
++                check_call("PATH=~/defapps/genn/:$PATH make -j", cwd=directory, env=env, shell=True)
  
      def add_parameter(self, model, varname, variable):
          model.parameters.append(varname)
-diff --git a/brian2genn/templates/engine.cpp b/brian2genn/templates/engine.cpp
-index fdb6b5c..4cda1a7 100644
---- a/brian2genn/templates/engine.cpp
-+++ b/brian2genn/templates/engine.cpp
-@@ -209,6 +209,10 @@ void engine::run(double duration, //!< Duration of time to run the model for
-       }
-       {% endif %}
-   }  
-+  {% if maximum_run_time is none %}
-+  current= std::clock();
-+  elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
-+  {% endif %}
-   Network::_last_run_time = elapsed_realtime;
-   if (duration > 0.0)
-   {
