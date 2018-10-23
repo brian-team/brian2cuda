@@ -74,20 +74,25 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
     else:
         recorded_suffixes = set([key[-1] for key in full_results_dict.keys()
                                  if not key[0].lower().startswith('genn')])
-    if profile_suffixes is None:
-        profile_suffixes = recorded_suffixes
-    assert set(profile_suffixes).issubset(set(recorded_suffixes)), \
-            "Not all measurement found for recorded_suffixes {}. Must be in {}".format(
-                profile_suffixes, recorded_suffixes)
+        recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+                                      if key[0].lower().startswith('genn')])
 
-    for suffix in profile_suffixes:
-        file_name = os.path.splitext(pkl_file)[0] + '_' + suffix + '.csv'
-        create_csv(file_name, speed_test_name, full_results_dict, configs,
-                   ns, suffix)
+    for rec_suffixes, genn in [(recorded_suffixes, False), (recorded_genn_suffixes, True)]:
+        if profile_suffixes is None:
+            this_profile_suffixes = rec_suffixes
+        # this is probably gonna fail because suffixes in GeNN and other are different
+        assert set(this_profile_suffixes).issubset(set(rec_suffixes)), \
+                "Not all measurement found for recorded_suffixes {}. Must be in {}".format(
+                    this_profile_suffixes, rec_suffixes)
+
+        for suffix in this_profile_suffixes:
+            file_name = os.path.splitext(pkl_file)[0] + '_' + suffix + '.csv'
+            create_csv(file_name, speed_test_name, full_results_dict, configs,
+                       ns, suffix, genn=genn)
 
 
 def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
-               suffix):
+               suffix, genn=False):
     '''
     Create .csv file for one profile suffix if not all time measurements are
     zero (in which case speed test was run without profiling).
@@ -96,17 +101,18 @@ def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
     result_dict = defaultdict(list)
     for config in configs:
         config_name = config.name
-        config_names.append(config.name)
-        for n in ns:
-            res = full_results_dict[config_name,
-                                    speed_test_name,
-                                    n,
-                                    suffix]
-            res = brian2.asarray(res)
-            if not brian2.any(res):
-                # don't save codeobjects that were not profiled
-                return
-            result_dict[n].append(res)
+        if config_name.lower().startswith('genn') == genn:
+            config_names.append(config.name)
+            for n in ns:
+                res = full_results_dict[config_name,
+                                        speed_test_name,
+                                        n,
+                                        suffix]
+                res = brian2.asarray(res)
+                if not brian2.any(res):
+                    # don't save codeobjects that were not profiled
+                    return
+                result_dict[n].append(res)
 
     result_df = pd.DataFrame.from_dict(result_dict, orient='index',
                                        columns=config_names)
