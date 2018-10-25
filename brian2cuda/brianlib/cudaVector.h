@@ -18,9 +18,9 @@ class cudaVector
 {
 private:
     // TODO: consider using data of type char*, since it does not have a cunstructor
-    scalar* m_data;     //pointer to allocated memory
-    size_type m_capacity;   //how much memory is allocated, should ALWAYS >= size
-    size_type m_size;       //how many elements are stored in this vector
+    scalar* volatile m_data;        //pointer to allocated memory
+    volatile size_type m_capacity;  //how much memory is allocated, should ALWAYS >= size
+    volatile size_type m_size;      //how many elements are stored in this vector
 
 public:
     __device__ cudaVector()
@@ -64,6 +64,7 @@ public:
 
     __device__ void push(scalar elem)
     {
+        assert(m_size <= m_capacity);
         if(m_capacity == m_size)
         {
             // increase capacity
