@@ -16,7 +16,7 @@ from brian2.codegen.translation import make_statements
 from brian2.core.clocks import defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
-from brian2.core.preferences import prefs, BrianPreference
+from brian2.core.preferences import prefs, BrianPreference, PreferenceError
 from brian2.core.variables import *
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
@@ -76,28 +76,24 @@ prefs.register_preferences(
         docs='''
         Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
         ''',
-        validator=lambda v: isinstance(v, bool),
         default=False),
 
     syn_launch_bounds=BrianPreference(
         docs='''
         Weather or not to use `__launch_bounds__` in synapses and synapses_push to optimise register usage in kernels.
         ''',
-        validator=lambda v: isinstance(v, bool),
         default=False),
 
     calc_occupancy=BrianPreference(
         docs='''
         Weather or not to use cuda occupancy api to choose num_threads and num_blocks.
         ''',
-        validator=lambda v: isinstance(v, bool),
         default=True),
 
     extra_threshold_kernel=BrianPreference(
         docs='''
         Weather or not to use a extra threshold kernel for resetting or not.
         ''',
-        validator=lambda v: isinstance(v, bool),
         default=True),
 
     random_number_generator_type=BrianPreference(
@@ -136,9 +132,23 @@ prefs.register_preferences(
         with same delay, connected to a single neuron), pushing single Synapses
         can be faster. This option only has effect for `Synapses` objects ith
         heterogenous delays.''',
-        validator=lambda v: isinstance(v, bool),
-        #default=True)
-        default=True)
+        default=True),
+
+    no_pre_references=BrianPreference(
+        docs='''Set this preference if you don't need access to ``i`` in any
+        synaptic code string and no Synapses object applies effects to
+        presynaptic variables. This preference is for memory optimization until
+        unnecassary device memory allocations in synapse creation are fixed, it
+        is only relevant if your network uses close to all memory.''',
+        default=False),
+
+    no_post_references=BrianPreference(
+        docs='''Set this preference if you don't need access to ``i`` in any
+        synaptic code string and no Synapses object applies effects to
+        postsynaptic variables. This preference is for memory optimization until
+        unnecassary device memory allocations in synapse creation are fixed, it
+        is only relevant if your network uses close to all memory.''',
+        default=False)
 )
 
 
@@ -291,8 +301,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     idx = variable_indices[varname]
                     if idx == '_presynaptic_idx' or varname == 'i':
                         self.delete_synaptic_pre[synaptic_pre_array_name] = False
+                        if prefs['devices.cuda_standalone.no_pre_references']:
+                            raise PreferenceError("'devices.cuda_standalone.no_pre_references' "
+                                                  "was set to True, but presynaptic index is "
+                                                  "needed for {varname} in "
+                                                  "{owner.name}".format(varname=varname,
+                                                                        owner=owner))
                     if idx == '_postsynaptic_idx' or varname == 'j':
                         self.delete_synaptic_post[synaptic_post_array_name] = False
+                        if prefs['devices.cuda_standalone.no_post_references']:
+                            raise PreferenceError("'devices.cuda_standalone.no_post_references' "
+                                                  "was set to True, but postsynaptic index is "
+                                                  "needed for {varname} in "
+                                                  "{owner.name}".format(varname=varname,
+                                                                        owner=owner))
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
@@ -318,6 +340,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
+            template_kwds["no_pre_references"] = False
+            template_kwds["no_post_references"] = False
+            if prefs['devices.cuda_standalone.no_pre_references']:
+                template_kwds["no_pre_references"] = True
+            if prefs['devices.cuda_standalone.no_post_references']:
+                template_kwds["no_post_references"] = True
         template_kwds["launch_bounds"] = prefs["devices.cuda_standalone.launch_bounds"]
         template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]

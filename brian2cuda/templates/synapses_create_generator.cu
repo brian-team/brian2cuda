@@ -213,6 +213,12 @@ std::cout << std::endl;
                     );
             {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(1);
+        {% elif variable.name == '_synaptic_pre' and no_pre_references %}
+        // prefs['devices.cuda_standalone.no_pre_references'] was set, skipping
+        // synaptic_pre resize
+        {% elif variable.name == '_synaptic_post' and no_post_references %}
+        // prefs['devices.cuda_standalone.no_post_references'] was set, skipping
+        // synaptic_post resize
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
             THRUST_CHECK_ERROR(

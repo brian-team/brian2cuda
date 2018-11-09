@@ -42,6 +42,9 @@ class COBAHHBase(SpeedTest):
     p = lambda self, n: None
 
     def run(self):
+        # preference for memory saving
+        prefs['devices.cuda_standalone.no_pre_references'] = True
+
         # Parameters
         area = 20000*umetre**2
         Cm = (1*ufarad*cm**-2) * area
@@ -88,8 +91,8 @@ class COBAHHBase(SpeedTest):
             num_exc = int(0.8 * self.n)
             Pe = P[:num_exc]
             Pi = P[num_exc:]
-            Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we')
-            Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi')
+            Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we', delay=0*ms)
+            Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
             # connection probability p can depend on network size n
             Ce.connect(p=self.p(self.n))
             Ci.connect(p=self.p(self.n))
@@ -174,6 +177,8 @@ class BrunelHakimBase(SpeedTest):
     heterog_delays = None  # string syntax
 
     def run(self):
+        # preference for memory saving
+        prefs['devices.cuda_standalone.no_pre_references'] = True
         assert not (self.heterog_delays is not None and
                     self.homog_delays is not None), \
                 "Can't set homog_delays and heterog_delays"
@@ -358,9 +363,15 @@ class STDPCUDA(SpeedTest):
     # configuration options
     duration = 1 * second
     post_effects = True
-    delay = None
+    # homog delay is used in Synapses constructor (for GeNN compatibility)
+    homog_delay = 0*ms
+    # heterog delay is used to set Synapses delay attribute
+    heterog_delay = None
 
     def run(self):
+        # preference for memory saving
+        prefs['devices.cuda_standalone.no_pre_references'] = True
+
         # we draw by random K_poisson out of N_poisson (on avg.) and connect
         # them to each post neuron
         N = self.n
@@ -412,23 +423,24 @@ class STDPCUDA(SpeedTest):
                         dApost/dt = -Apost / taupost : 1 (event-driven)''',
                      on_pre=on_pre,
                      on_post='''Apost += dApost
-                         w = clip(w + Apre, 0, gmax)'''
+                         w = clip(w + Apre, 0, gmax)''',
+                     delay=self.homog_delay
                     )
         #S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
         S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
         S.w = 'rand() * gmax'
 
-        if self.delay is not None:
-            S.delay = self.delay
+        if self.heterog_delay is not None:
+            S.delay = self.heterog_delay
 
         self.timed_run(self.duration)
 
 class STDPCUDAHomogeneousDelays(STDPCUDA):
-    delay = 2*ms
+    homog_delay = 2*ms
     name = "STDP (event-driven, ~N neurons, N synapses, homogeneous delays)"
 
 class STDPCUDAHeterogeneousDelays(STDPCUDA):
-    delay = "2 * 2*ms * rand()"
+    heterog_delay = "2 * 2*ms * rand()"
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays)"
 
 class STDPCUDANoPostEffects(STDPCUDA):
@@ -504,12 +516,16 @@ class MushroomBody(SpeedTest):
     # scaling values taken from brian2GeNN benchmark
     scaling =  [0.05, 0.25, 0.5, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
     n_range =  (2500 * array(scaling)).astype('int')
+    n_range = np.append(n_range, 7600000)  # pass:7600000, fail: 7640000
     n_label = 'Num neurons'
 
     # configuration options
     duration = 1*second
 
     def run(self):
+        # preference for memory saving
+        prefs['devices.cuda_standalone.no_pre_references'] = True
+
         import random as py_random
         # Number of neurons
         N_AL = 100
@@ -628,8 +644,8 @@ class MushroomBody(SpeedTest):
                            on_post='''
                                       Apost += dApost
                                       g_raw = clip(g_raw + Apre, 0, g_max)''',
-                           )
-        eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC')
+                           delay=0*ms)
+        eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC', delay=0*ms)
         # bu.insert_benchmark_point()
         PN_iKC.connect(p=0.15)
 
