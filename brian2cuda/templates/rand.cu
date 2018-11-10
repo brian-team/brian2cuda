@@ -22,12 +22,14 @@ void _run_random_number_generation()
     static int rand_interval_{{co.name}};
     static int num_per_gen_rand_{{co.name}};
     static int idx_rand_{{co.name}};
+    static int rand_floats_per_obj_{{co.name}};
     {% endfor %}
     {% for co in codeobj_with_randn %}
     static int num_per_cycle_randn_{{co.name}};
     static int randn_interval_{{co.name}};
     static int num_per_gen_randn_{{co.name}};
     static int idx_randn_{{co.name}};
+    static int randn_floats_per_obj_{{co.name}};
     {% endfor %}
 
     // Allocate device memory
@@ -52,7 +54,10 @@ void _run_random_number_generation()
         {% endif %}
         // Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
         num_per_cycle_rand_{{co.name}} = {{N}} * {{co.rand_calls}};
-        rand_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_rand_{{co.name}});
+        rand_floats_per_obj_{{co.name}} = floats_per_obj;
+        if (floats_per_obj < num_per_cycle_rand_{{co.name}})
+            rand_floats_per_obj_{{co.name}} = num_per_cycle_rand_{{co.name}};
+        rand_interval_{{co.name}} = (int)(rand_floats_per_obj_{{co.name}} / num_per_cycle_rand_{{co.name}});
         num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * rand_interval_{{co.name}};
         idx_rand_{{co.name}} = rand_interval_{{co.name}};
 
@@ -104,7 +109,10 @@ void _run_random_number_generation()
         {% endif %}
         // Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
         num_per_cycle_randn_{{co.name}} = {{N}} * {{co.randn_calls}};
-        randn_interval_{{co.name}} = (int)(floats_per_obj / num_per_cycle_randn_{{co.name}});
+        randn_floats_per_obj_{{co.name}} = floats_per_obj;
+        if (floats_per_obj < num_per_cycle_randn_{{co.name}})
+            randn_floats_per_obj_{{co.name}} = num_per_cycle_randn_{{co.name}};
+        randn_interval_{{co.name}} = (int)(randn_floats_per_obj_{{co.name}} / num_per_cycle_randn_{{co.name}});
         num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * randn_interval_{{co.name}};
         idx_randn_{{co.name}} = randn_interval_{{co.name}};
 
