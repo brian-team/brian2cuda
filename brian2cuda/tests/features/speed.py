@@ -24,7 +24,6 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'MushroomBody'
                ])
 
-
 class COBAHHBase(SpeedTest):
     """Base class for COBAHH benchmarks with different connectivity"""
 
@@ -32,7 +31,7 @@ class COBAHHBase(SpeedTest):
     n_label = 'Num neurons'
 
     # configuration options
-    duration = 1 * second
+    duration = 10*second
 
     uncoupled = False
 
@@ -111,8 +110,8 @@ class COBAHHUncoupled(COBAHHBase):
     """COBAHH from brian2 examples but without synapses and without monitors"""
 
     name = "COBAHH uncoupled (no synapses, no monitors)"
-    n_float = [1e2, 5e2, 1e3, 5e3, 1e4, 5e4, 1e5, 5e5, 1e6, 5e6, 1e7, 6e7]  #fail: 7e7
-    n_range = [int(n) for n in n_float]
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]  #fail: 131250000
+    n_range = [int(10**p) for p in n_power]
     uncoupled = True
 
 
@@ -120,7 +119,7 @@ class COBAHHCoupled(COBAHHBase):
     """COBAHH from brian2 examples without monitors"""
 
     name = "COBAHH (brian2 example, 2% coupling probabiliy, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #fail: 3812500
+    n_range = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 3781250]  #pass:3781250, fail: 3812500
     p = lambda self, n: 0.02  # connection probability
     we = 6 * nS  # excitatory synaptic weight
     wi = 67 * nS  # inhibitory synaptic weight
@@ -128,12 +127,16 @@ class COBAHHCoupled(COBAHHBase):
 
 class COBAHHPseudocoupled1000(COBAHHBase):
     """
-    COBAHH with 1000 synapses per neuron and all weights set to zero (used in
-    brian2genn benchmarks) and without monitors.
+    COBAHH with 1000 synapses per neuron and all weights set to very small
+    values, s.t. they effectively have not effect while copmiler optimisations
+    are avoided (for better comparibility with the coupled case). This
+    benchmark is used in in the Brian2GeNN paper. No monitors.
     """
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #fail: 500000
+    #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 337500, fail: 346875
+    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(33750)]  #pass: 337500, fail: 346875
+    n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
     # weights set to tiny values, s.t. they are effectively zero but don't
@@ -141,19 +144,44 @@ class COBAHHPseudocoupled1000(COBAHHBase):
     we = wi = 'rand() * 1e-9*nS'
 
 
+class COBAHHPseudocoupledZeroWeights1000(COBAHHPseudocoupled1000):
+    """
+    COBAHH with 1000 synapses per neuron and all weights set to zero and
+    without monitors.
+    """
+
+    name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
+    we = wi = 0
+
+
 class COBAHHPseudocoupled80(COBAHHBase):
     """
-    COBAHH with 80 synapses per neuron and all weights set to zero (used in
-    brian2genn benchmarks) and without monitors.
+    COBAHH with 80 synapses per neuron and all weights set to very small
+    values, s.t. they effectively have not effect while copmiler optimisations
+    are avoided (for better comparibility with the coupled case). This
+    benchmark with 1000 synapses per neuron is is used in in the Brian2GeNN
+    paper. No monitors.
     """
 
     name = "COBAHH (80 syn/neuron, weights zero, no monitors)"
-    n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000, 900000, 2000000]  #TODO: max size?
+    #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000, 900000, 3500000]
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5]  #pass: 3625000, fail: 3632813
+    n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 80 neurons per synapse
     p = lambda self, n: 80. / n
     # weights set to tiny values, s.t. they are effectively zero but don't
     # result in compiler optimisations
     we = wi = 'rand() * 1e-9*nS'
+
+
+class COBAHHPseudocoupledZeroWeights80(COBAHHPseudocoupled80):
+    """
+    COBAHH with 80 synapses per neuron and all weights set to zero and without
+    monitors.
+    """
+
+    name = "COBAHH (80 syn/neuron, weights zero, no monitors)"
+    we = wi = 0
 
 
 class BrunelHakimBase(SpeedTest):
@@ -166,7 +194,7 @@ class BrunelHakimBase(SpeedTest):
     n_label = 'Num neurons'
 
     # configuration options
-    duration = 1 * second
+    duration = 10*second
 
     # need to be set in child class
     sigmaext = None  # vold
@@ -217,7 +245,9 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with homogeneous delays (2 ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000]  #pass: 393750, fail: 403125
+    #n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000, 500000, 900000]
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(91250)]  #pass: 912500, fail: 925000
+    n_range = [int(10**p) for p in n_power]
 
     # all delays 2 ms
     homog_delays = 2*ms
@@ -233,7 +263,9 @@ class BrunelHakimHeterogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with heterogeneous delays (uniform [0, 4] ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [100, 1000, 10000, 20000, 50000, 100000, 218750]  #fail: 225000
+    #n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]  #pass: 389649, fail: 396484
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 389649, fail: 396484
+    n_range = [int(10**p) for p in n_power]
 
     # delays [0, 4] ms
     heterog_delays = "4*ms * rand()"
@@ -252,7 +284,9 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
     """
     name = "Brunel Hakim with heterogeneous delays (uniform 2 ms += dt)"
     tags = ["Neurons", "Synapses", "Delays"]
-    n_range = [100, 1000, 10000, 20000, 50000, 100000, 218750]  #TODO: max size?
+    #n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 423826, fail: 430661
+    n_range = [int(10**p) for p in n_power]
 
     # delays 2 ms += dt
     heterog_delays = "2*ms + 2 * dt * rand() - dt"
@@ -356,12 +390,13 @@ class STDPCUDA(SpeedTest):
 
     category = "Full examples"
     tags = ["Neurons", "Synapses"]
-    n_label = 'Num synapses'
+    n_label = 'Num neurons'
     name = "STDP (event-driven, ~N neurons, N synapses)"
-    n_range = [1000, 10000, 50000, 100000, 500000, 1000000, 5000000]  #fail:6562500
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11325000, fail:11520000
+    n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
     # configuration options
-    duration = 1 * second
+    duration = 10*second
     post_effects = True
     # homog delay is used in Synapses constructor (for GeNN compatibility)
     homog_delay = 0*ms
@@ -442,6 +477,8 @@ class STDPCUDAHomogeneousDelays(STDPCUDA):
 class STDPCUDAHeterogeneousDelays(STDPCUDA):
     heterog_delay = "2 * 2*ms * rand()"
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays)"
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
 class STDPCUDANoPostEffects(STDPCUDA):
     """
@@ -513,14 +550,13 @@ class MushroomBody(SpeedTest):
     category = "Full examples"
     name = "Mushroom Body example from brian2GeNN benchmarks"
     tags = ["Neurons", "Synapses"]
-    # scaling values taken from brian2GeNN benchmark
-    scaling =  [0.05, 0.25, 0.5, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-    n_range =  (2500 * array(scaling)).astype('int')
-    n_range = np.append(n_range, 7600000)  # pass:7600000, fail: 7640000
+
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, log10(7600000)]  # pass:7600000, fail: 7640000
+    n_range = [int(10**p) for p in n_power]
     n_label = 'Num neurons'
 
     # configuration options
-    duration = 1*second
+    duration = 10*second
 
     def run(self):
         # preference for memory saving
