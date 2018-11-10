@@ -75,7 +75,7 @@ class CUDAStandaloneConfigurationBase(Configuration):
         if os.path.exists('cuda_standalone'):
             shutil.rmtree('cuda_standalone')
         brian2.device.build(directory='cuda_standalone', compile=True, run=True,
-                            with_output=False)
+                            with_output=True)
 
 class DynamicConfigCreator(object):
     def __init__(self, config_name, git_commit=None, prefs={}, set_device_kwargs={}):

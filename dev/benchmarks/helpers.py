@@ -34,7 +34,9 @@ def pickle_results(results, filename):
     to_pickle = SpeedTestResults(
         results.full_results,
         configurations_to_dict(results.configurations),
-        results.speed_tests
+        results.speed_tests,
+        results.brian_stdouts,
+        results.tracebacks
     )
     with open(filename, 'wb') as output:
         pickle.dump(to_pickle, output, pickle.HIGHEST_PROTOCOL)
