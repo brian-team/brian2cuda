@@ -121,7 +121,7 @@ public:
         }
         __syncthreads();
 
-        for (int i = tid; i < _num_blocks; i++)
+        for (int i = tid; i < _num_blocks; i+=num_threads)
         {
             semaphore[i] = 0;
         }
