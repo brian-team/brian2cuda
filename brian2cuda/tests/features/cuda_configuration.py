@@ -4,11 +4,11 @@ import sys
 import socket
 import subprocess
 import shlex
+import multiprocessing
 
 import brian2
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
-from brian2.core.preferences import prefs
 from brian2.utils.logger import get_logger
 import brian2genn
 
@@ -26,24 +26,50 @@ class CUDAStandaloneConfigurationBase(Configuration):
     def before_run(self):
         # set brian preferences
         for key, value in self.extra_prefs.iteritems():
-            prefs[key] = value
+            brian2.prefs[key] = value
         if self.name is None:
             raise NotImplementedError("You need to set the name attribute.")
         brian2.set_device('cuda_standalone', build_on_run=False,
                           **self.device_kwargs)
-        if socket.gethostname() == 'elnath':
-            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
-        elif socket.gethostname() == 'sabik':
-            try:
-                dev_no = int(os.environ['CUDA_VISIBLE_DEVICES'])
-            except KeyError:
-                # uses first GPU by default
-                dev_no = 0
+        hostname = socket.gethostname()
+        dev_no_to_cc = None
+        if hostname == 'merope':
+            dev_no_to_cc = {0: '35'}
+        if hostname in ['elnath', 'adhara']:
+            dev_no_to_cc = {0: '20'}
+        elif hostname == 'sabik':
             dev_no_to_cc = {0: '61', 1: '52'}
-            cc = dev_no_to_cc[dev_no]
-            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
+        elif hostname == 'eltanin':
+            dev_no_to_cc = {0: '52', 1: '61', 2: '61', 3: '61'}
+        elif hostname == 'risha':
+            dev_no_to_cc = {0: '70'}
+        else:
+            logger.warn("Unknown hostname. Compiling with default args: {}"
+                        "".format(brian2.prefs['codegen.cuda.extra_compile_args_nvcc']))
+
+        if dev_no_to_cc is not None:
+            try:
+                gpu_device = int(os.environ['CUDA_VISIBLE_DEVICES'])
+            except KeyError:
+                # default
+                logger.info("Using GPU 0 (default). To run on another GPU, "
+                            "set `CUDA_VISIBLE_DEVICES` environmental variable. "
+                            "To run e.g. on GPU 1, prepend you python call with "
+                            "`CUDA_VISIBLE_DEVICES=1 python <yourscript>.py` ")
+                gpu_device = 0
+
+            try:
+                cc = dev_no_to_cc[gpu_device]
+            except KeyError as err:
+                raise AttributeError("Unknown device number: {}".format(err))
+
+            print "Compiling device code for compute capability "\
+                    "{}.{}".format(cc[0], cc[1])
+            logger.info("Compiling device code for compute capability {}.{}"
+                        "".format(cc[0], cc[1]))
+            arch_arg = '-arch=sm_{}'.format(cc)
+            brian2.prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+            brian2.prefs['codegen.cuda.extra_compile_args_nvcc'].extend([arch_arg])
 
     def after_run(self):
         if os.path.exists('cuda_standalone'):
@@ -225,21 +251,149 @@ class CUDAStandaloneConfigurationBundlesProfileCPU(CUDAStandaloneConfigurationBa
     commit = 'nemo_bundles'
     device_kwargs = {'profile': 'blocking'}
 
+class CPPStandaloneConfiguration(Configuration):
+    name = 'C++ standalone'
+    profile = False
+    single_precision = False
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        if self.single_precision:
+            brian2.prefs['core.default_float_dtype'] = brian2.float32
+            brian2.prefs._backup()
+        brian2.set_device('cpp_standalone', build_on_run=False, profile=self.profile)
+        
+    def after_run(self):
+        if os.path.exists('cpp_standalone'):
+            shutil.rmtree('cpp_standalone')
+        brian2.device.build(directory='cpp_standalone', compile=True, run=True,
+                            with_output=True)
+
+class CPPStandaloneConfigurationProfile(CPPStandaloneConfiguration):
+    single_precision = False
+    profile = True
+
+class CPPStandaloneConfigurationSinglePrecision(CPPStandaloneConfiguration):
+    name = 'C++ standalone (single precision)'
+    single_precision = True
+    profile = False
+
+class CPPStandaloneConfigurationSinglePrecisionProfile(CPPStandaloneConfiguration):
+    name = 'C++ standalone (single precision)'
+    single_precision = True
+    profile = True
+
+class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfiguration):
+    single_precision = False
+    profile = False
+    openmp_threads = None
+    hostname = socket.gethostname()
+    known = True
+    if hostname == 'risha':
+        openmp_threads = 12  # 12 physical cores, no hyper-threading
+    elif hostname == 'merope':
+        openmp_threads = 6  # 6 physical cores, with hyper-threading (x2)
+    elif hostname == 'sabik':
+        logger.warn("CHECK CPU COUNT ON SABIK! (using 12)")
+        openmp_threads = 12
+    else:
+        known = False
+        openmp_threads = multiprocessing.cpu_count()
+    name = 'C++ standalone (OpenMP, {} threads)'.format(openmp_threads)
+
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        if self.single_precision:
+            brian2.prefs['core.default_float_dtype'] = brian2.float32
+        brian2.set_device('cpp_standalone', build_on_run=False, profile=self.profile)
+        brian2.prefs['devices.cpp_standalone.openmp_threads'] = self.openmp_threads
+        brian2.prefs._backup()
+        if self.known:
+            logger.info("Running CPPStandaloneConfigurationOpenMP with {} "
+                        "threads".format(self.openmp_threads))
+        else:
+            logger.warn("Unknown hostname. Using number of logical cores ({}) "
+                        "as threads for CPPStandaloneConfigurationOpenMP"
+                        "".format(self.openmp_threads))
+
+class CPPStandaloneConfigurationOpenMPMaxThreadsProfile(CPPStandaloneConfigurationOpenMPMaxThreads):
+    single_precision = False
+    profile = True
+
+class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision(CPPStandaloneConfigurationOpenMPMaxThreads):
+    # TODO: this is pretty hacky... instead just to the hostname stuff outside class definitions and use the global var...
+    name = 'C++ standalone (OpenMP, single_precision, {} threads)'.format(CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads)
+    single_precision = True
+    profile = False
+
+class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStandaloneConfigurationOpenMPMaxThreads):
+    name = 'C++ standalone (OpenMP, single_precision, {} threads)'.format(CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads)
+    single_precision = True
+    profile = True
+
 class GeNNConfigurationOptimized(Configuration):
     name = 'GeNN_optimized'
     def before_run(self):
         brian2.prefs.reset_to_defaults()
         brian2.prefs._backup()
         brian2.set_device('genn')
-        # use another gcc version with GeNN
-        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['PATH']
+
+class GeNNConfigurationOptimizedProfile(Configuration):
+    name = 'GeNN_optimized'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['devices.genn.kernel_timing'] = True
+        brian2.prefs._backup()
+        brian2.set_device('genn')
 
 class GeNNConfigurationOptimizedSinglePrecision(Configuration):
     name = 'GeNN_optimized (single precision)'
     def before_run(self):
         brian2.prefs.reset_to_defaults()
-        prefs['core.default_float_dtype'] = brian2.float32
+        brian2.prefs['core.default_float_dtype'] = brian2.float32
         brian2.prefs._backup()
         brian2.set_device('genn')
-        # use another gcc version with GeNN
-        os.environ['PATH'] = '~/defapps/genn/' + os.pathsep + os.environ['PATH']
+
+class GeNNConfigurationOptimizedSinglePrecisionProfile(Configuration):
+    name = 'GeNN_optimized (single precision)'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['core.default_float_dtype'] = brian2.float32
+        brian2.prefs['devices.genn.kernel_timing'] = True
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+
+class GeNNConfigurationOptimizedSpanTypePre(Configuration):
+    name = 'GeNN_optimized (span type PRE)'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+
+class GeNNConfigurationOptimizedSpanTypePreProfile(Configuration):
+    name = 'GeNN_optimized (span type PRE)'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
+        brian2.prefs['devices.genn.kernel_timing'] = True
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+
+class GeNNConfigurationOptimizedSinglePrecisionSpanTypePre(Configuration):
+    name = 'GeNN_optimized (single precision, span type PRE)'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['core.default_float_dtype'] = brian2.float32
+        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
+        brian2.prefs._backup()
+        brian2.set_device('genn')
+
+class GeNNConfigurationOptimizedSinglePrecisionSpanTypePreProfile(Configuration):
+    name = 'GeNN_optimized (single precision, span type PRE)'
+    def before_run(self):
+        brian2.prefs.reset_to_defaults()
+        brian2.prefs['core.default_float_dtype'] = brian2.float32
+        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
+        brian2.prefs['devices.genn.kernel_timing'] = True
+        brian2.prefs._backup()
+        brian2.set_device('genn')
