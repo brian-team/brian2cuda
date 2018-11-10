@@ -1,5 +1,5 @@
 diff --git a/brian2genn/device.py b/brian2genn/device.py
-index c6936e2..82c7876 100644
+index c6936e2..42bf135 100644
 --- a/brian2genn/device.py
 +++ b/brian2genn/device.py
 @@ -853,8 +853,8 @@ class GeNNDevice(CPPStandaloneDevice):
@@ -27,3 +27,35 @@ index c6936e2..82c7876 100644
  
      def add_parameter(self, model, varname, variable):
          model.parameters.append(varname)
+@@ -1618,6 +1620,31 @@ class GeNNDevice(CPPStandaloneDevice):
+                                             level=level + 1)
+         self.run_statement_used = True
+ 
++    def network_get_profiling_info(self, net):
++        fname = os.path.join(self.project_dir, 'test_output', 'test.time')
++        net._profiling_info = []
++        keys = []
++        if not prefs['devices.genn.kernel_timing']:
++            raise ValueError("No profiling info collected (need to set "
++                             "`prefs['devices.genn.kernel_timing'] = True`?)")
++        for kt in ('neuron_tme', 'synapse_tme', 'learning_tme', 'synDyn_tme'):
++            if self.ktimer[kt]:
++                keys.append(kt)
++        with open(fname) as f:
++            # times are appended as new line in each run
++            last_line = f.read().splitlines()[-1]
++        times = last_line.split()
++        # total elapses time is always recorded
++        assert len(times) == len(keys) + 1, \
++                '{} != {} + 1\ntimes: {}\nkeys: {}'.format(len(times),
++                                                           len(keys), times,
++                                                           keys)
++        for key, val in zip(keys, times):
++            net._profiling_info.append((key, float(val)*second))
++        return sorted(net._profiling_info, key=lambda item: item[1],
++                      reverse=True)
++
++
+ 
+ # ------------------------------------------------------------------------------
+ # End of GeNNDevice

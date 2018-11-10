@@ -69,17 +69,22 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
     num_genn_configs = len([c['classname'] for c in configs if
                             c['classname'].lower().startswith('genn')])
 
-    # get all suffixes if speed test was run with profiling (genn does not
-    # support profiling but saves all codeobject suffixes by default)
-    if len(configs) == num_genn_configs:
-        recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
-    else:
-        recorded_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                 if not key[0].lower().startswith('genn')])
-        recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                      if key[0].lower().startswith('genn')])
+    recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
+    recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+				      if not key[0].lower().startswith('genn')])
+    recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+                                  if key[0].lower().startswith('genn')])
 
-    for rec_suffixes, genn in [(recorded_suffixes, False), (recorded_genn_suffixes, True)]:
+    if len(recorded_suffixes) <= 3:
+        assert 'lrcf' in recorded_suffixes
+        assert 'All' in recorded_suffixes
+        assert 'Overheads' in recorded_suffixes, recorded_suffixes
+        pairs = [(recorded_suffixes, None)]
+    else:
+        pairs = [(recorded_not_genn_suffixes, False), (recorded_genn_suffixes, True)]
+
+    for rec_suffixes, genn in pairs:
+        genn_suffix = '_genn' if genn else ''
         if profile_suffixes is None:
             this_profile_suffixes = rec_suffixes
         # this is probably gonna fail because suffixes in GeNN and other are different
@@ -88,22 +93,23 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
                     this_profile_suffixes, rec_suffixes)
 
         for suffix in this_profile_suffixes:
-            file_name = os.path.splitext(pkl_file)[0] + '_' + suffix + '.csv'
+            file_name = os.path.splitext(pkl_file)[0] + genn_suffix + '_' + suffix + '.csv'
             create_csv(file_name, speed_test_name, full_results_dict, configs,
                        ns, suffix, genn=genn)
 
 
 def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
-               suffix, genn=False):
+               suffix, genn=None):
     '''
     Create .csv file for one profile suffix if not all time measurements are
     zero (in which case speed test was run without profiling).
     '''
+    import brian2
     config_names = []
     result_dict = defaultdict(list)
     for config in configs:
         config_name = config.name
-        if config_name.lower().startswith('genn') == genn:
+        if genn is None or config_name.lower().startswith('genn') == genn:
             config_names.append(config.name)
             for n in ns:
                 res = full_results_dict[config_name,
@@ -151,12 +157,6 @@ def plot_from_pkl(pkl_file, plot_dir, base_config='C++ standalone'):
     res.plot_all_tests(profiling_minimum=0.05)
     plt.savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
     plt.close()
-   # #if choose_baseline:
-   # for n, config in enumerate(res.configurations):
-   #     print "[{}]\t{}".format(n, config.name)
-   #     print "[{}]\t{}".format(n, config)
-
-
 
 
 if __name__ == '__main__':
