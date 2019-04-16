@@ -252,10 +252,9 @@ if ({{pathway.name}}_max_size > 0)
             //step and print INFO at end of simulation
         }
     }
-    {% endif %}
-    // in homogenous delay mode with atomics we set `num_blocks` depending on
-    // the number of spiking neurons, which can be 0
+    // only call kernel if neurons spiked (else num_blocks is zero)
     if (num_blocks != 0) {
+    {% endif %}
         for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
         {
             kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
@@ -275,7 +274,9 @@ if ({{pathway.name}}_max_size > 0)
                 %HOST_PARAMETERS%
             );
         }
+    {% if uses_atomics %}
     }
+    {% endif %}
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 }
