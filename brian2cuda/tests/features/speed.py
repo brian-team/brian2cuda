@@ -135,7 +135,7 @@ class COBAHHPseudocoupled1000(COBAHHBase):
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
     #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 337500, fail: 346875
-    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(33750)]  #pass: 337500, fail: 346875
+    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(337500)]  #pass: 337500, fail: 346875
     n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
@@ -234,6 +234,7 @@ class BrunelHakimBase(SpeedTest):
         conn.connect(p=sparseness)
 
         if self.heterog_delays is not None:
+            assert self.homog_delays is None
             conn.delay = self.heterog_delays
 
         self.timed_run(self.duration)
@@ -246,7 +247,7 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     name = "Brunel Hakim with homogeneous delays (2 ms)"
     tags = ["Neurons", "Synapses", "Delays"]
     #n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000, 500000, 900000]
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(91250)]  #pass: 912500, fail: 925000
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(912500)]  #pass: 912500, fail: 925000
     n_range = [int(10**p) for p in n_power]
 
     # all delays 2 ms
@@ -466,6 +467,7 @@ class STDPCUDA(SpeedTest):
         S.w = 'rand() * gmax'
 
         if self.heterog_delay is not None:
+            assert self.homog_delay is None
             S.delay = self.heterog_delay
 
         self.timed_run(self.duration)
@@ -475,6 +477,7 @@ class STDPCUDAHomogeneousDelays(STDPCUDA):
     name = "STDP (event-driven, ~N neurons, N synapses, homogeneous delays)"
 
 class STDPCUDAHeterogeneousDelays(STDPCUDA):
+    homog_delay = None
     heterog_delay = "2 * 2*ms * rand()"
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays)"
     n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
