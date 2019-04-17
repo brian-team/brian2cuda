@@ -251,7 +251,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
-                    override_conditional_write=None, **kwds):
+                    override_conditional_write=None):
         if prefs['core.default_float_dtype'] == np.float32 and 'dt' in variables:
             # In single-precision mode we replace dt variables in codeobjects with
             # a single precision version, for details see #148
