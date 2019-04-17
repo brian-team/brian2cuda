@@ -76,6 +76,11 @@ matplotlib.use('Agg')
 from brian2 import *
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
+if params['devicename'] == 'genn':
+    import brian2genn
+    if params['profiling']:
+        params['profiling'] = False
+        prefs['devices.genn.kernel_timing'] = True
 
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)

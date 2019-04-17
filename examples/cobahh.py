@@ -81,10 +81,15 @@ params = {'devicename': devicename,
           'atomics': atomics,
           'bundle_mode': bundle_mode}
 
+# Add parameter restrictions
+choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
+           'scenario': ['brian2-example', 'uncoupled', 'pseudocoupled-80',
+                        'pseudocoupled-1000']}
+
 from utils import set_prefs, update_from_command_line
 
 # update params from command line
-update_from_command_line(params)
+update_from_command_line(params, choices=choices)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os
@@ -94,6 +99,11 @@ matplotlib.use('Agg')
 from brian2 import *
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
+if params['devicename'] == 'genn':
+    import brian2genn
+    if params['profiling']:
+        prefs['devices.genn.kernel_timing'] = True
+        params['profiling'] = False
 
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)

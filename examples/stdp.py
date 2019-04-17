@@ -166,7 +166,7 @@ if params['monitors']:
     mon = StateMonitor(S, 'w', record=[0, 1])
     s_mon = SpikeMonitor(input)
 
-run(1*second, report='text', profile=params['profiling'])
+run(100*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
