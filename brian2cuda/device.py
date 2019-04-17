@@ -822,7 +822,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             writer.write('makefile', makefile_tmp)
 
     def build(self, directory='output',
-              compile=True, run=True, debug=False, clean=True,
+              compile=True, run=True, debug=False, clean=False,
               with_output=True, disable_asserts=False,
               additional_source_files=None, additional_header_files=None,
               main_includes=None, run_includes=None,
@@ -854,7 +854,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             Defaults to ``True``.
         clean : bool, optional
             Whether or not to clean the project before building. Defaults to
-            ``True``.
+            ``False``.
         additional_source_files : list of str, optional
             A list of additional ``.cu`` files to include in the build.
         additional_header_files : list of str
