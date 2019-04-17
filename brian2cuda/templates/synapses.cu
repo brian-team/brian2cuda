@@ -242,7 +242,7 @@ if ({{pathway.name}}_max_size > 0)
     // application over spiking neurons in homogeneous delay mode
     if ({{pathway.name}}_scalar_delay)
     {
-        if (defaultclock.timestep[0] >= {{pathway.name}}_delay - 1)
+        if (defaultclock.timestep[0] >= {{pathway.name}}_delay)
         {
             cudaMemcpy(&num_spiking_neurons,
                     &dev{{_eventspace}}[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
