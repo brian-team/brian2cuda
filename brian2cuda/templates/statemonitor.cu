@@ -1,5 +1,5 @@
 {% extends 'common_group.cu' %}
-{# USES_VARIABLES {t} #}
+{# USES_VARIABLES { t, N } #}
 {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
 
 {% block define_N %}
