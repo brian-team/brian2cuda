@@ -523,7 +523,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     main_lines.append('curandSetGeneratorOffset(curand_generator, 0ULL);')
                     # copy seed to device for curand device api calls (used in binmomial function)
                     code = '''
-                    unsigned long long seed = {seed};
+                    seed = {seed};
                     CUDA_SAFE_CALL(
                             cudaMemcpy(dev_curand_seed, &seed,
                                 sizeof(unsigned long long), cudaMemcpyHostToDevice)

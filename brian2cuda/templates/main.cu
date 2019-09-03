@@ -23,6 +23,10 @@
 
 int main(int argc, char **argv)
 {
+    // seed variable set in Python through brian2.seed() calls can use this
+    // variable (see device.py CUDAStandaloneDevice.generate_main_source())
+    unsigned long long seed;
+
     const std::clock_t _start_time = std::clock();
 
     const std::clock_t _start_time2 = std::clock();
