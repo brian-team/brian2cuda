@@ -268,12 +268,10 @@ void RandomNumberBuffer::set_curand_device_api_states()
 
 void RandomNumberBuffer::set_seed(unsigned long long seed)
 {
-    CUDA_CHECK_ERROR("before set seed");
     CUDA_SAFE_CALL(
             curandSetPseudoRandomGeneratorSeed(curand_generator, seed)
             );
 
-    CUDA_CHECK_ERROR("after set seed");
     // generator offset needs to be reset to its default (=0)
     CUDA_SAFE_CALL(
             curandSetGeneratorOffset(curand_generator, 0ULL)
@@ -285,18 +283,9 @@ void RandomNumberBuffer::set_seed(unsigned long long seed)
     //      have one buffer object per codeobject and check per codeobject if
     //      dt has changed or if num_steps_this_run_ was used previously to
     //      generate less random numbers! -> issue?
-    CUDA_CHECK_ERROR("after offset");
-    {% for co in codeobj_with_rand | sort(attribute='name') %}
-    CUDA_SAFE_CALL(
-            cudaFree(dev_{{co.name}}_rand_allocator)
-            );
-    {% endfor %}
-
-    {% for co in codeobj_with_randn | sort(attribute='name') %}
-    CUDA_SAFE_CALL(
-            cudaFree(dev_{{co.name}}_randn_allocator)
-            );
-    {% endfor %}
+    // only free memory during init() to avoid freeing multiple time for
+    // multiple set_seed() calls between network runs
+    needs_buffer_dealloc = true;
 
     // don't call init() here already since the network clocks might not be set
     // up yet, call init() only once network started running
@@ -355,6 +344,24 @@ void RandomNumberBuffer::refill_normal_numbers(
 
 void RandomNumberBuffer::next_time_step()
 {
+    // dealloc buffers if seed was changed between network runs
+    if (needs_buffer_dealloc)
+    {
+        {% for co in codeobj_with_rand | sort(attribute='name') %}
+        CUDA_SAFE_CALL(
+                cudaFree(dev_{{co.name}}_rand_allocator)
+                );
+        {% endfor %}
+
+        {% for co in codeobj_with_randn | sort(attribute='name') %}
+        CUDA_SAFE_CALL(
+                cudaFree(dev_{{co.name}}_randn_allocator)
+                );
+        {% endfor %}
+        needs_buffer_dealloc = false;
+    }
+
+    // init buffers at first run or if seed was changed between network runs
     if (needs_init)
     {
         init();
@@ -422,7 +429,10 @@ void _run_random_number_buffer();
 
 class RandomNumberBuffer
 {
+    // at first run and when seed is set, buffer need to be initialized
     bool needs_init = true;
+    // when seed is set, arrays need to be freed before reinitialization
+    bool needs_buffer_dealloc = false;
 
     // how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
     double mb_per_obj = 50;  // MB per codeobject and rand / randn
