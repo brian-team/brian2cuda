@@ -517,20 +517,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 name, main_lines = procedures[-1]
             elif func=='seed':
                 seed = args
-                if seed is not None:
-                    main_lines.append('curandSetPseudoRandomGeneratorSeed(curand_generator, {seed!r}ULL);'.format(seed=seed))
-                    # generator offset needs to be reset to its default (=0)
-                    main_lines.append('curandSetGeneratorOffset(curand_generator, 0ULL);')
-                    # copy seed to device for curand device api calls (used in binmomial function)
-                    code = '''
-                    seed = {seed};
-                    CUDA_SAFE_CALL(
-                            cudaMemcpy(dev_curand_seed, &seed,
-                                sizeof(unsigned long long), cudaMemcpyHostToDevice)
-                            );
-                    '''.format(seed=seed)
-                    main_lines.append(code)
-                # else a random seed is set in objects.cu::_init_arrays()
+                if seed is None:
+                    # draw random seed in range of possible uint64 numbers
+                    seed = np.random.randint(np.iinfo(np.uint64).max, dtype=np.uint64)
+                main_lines.append('random_number_buffer.set_seed({seed!r}ULL);'.format(seed=seed))
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
@@ -750,11 +740,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_rand_source(self, writer):
         codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
         codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
+        codeobj_with_rand_or_randn = [co for co in self.code_objects.values()
+                                      if co.runs_every_tick and (co.rand_calls > 0 or co.randn_calls > 0)]
         codeobj_with_binomial = [co for co in self.code_objects.values() if co.runs_every_tick and co.binomial_function]
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects=self.code_objects.values(),
                                                            codeobj_with_rand=codeobj_with_rand,
                                                            codeobj_with_randn=codeobj_with_randn,
+                                                           codeobj_with_rand_or_randn=codeobj_with_rand_or_randn,
                                                            codeobj_with_binomial=codeobj_with_binomial,
                                                            profiled=self.enable_profiling,
                                                            curand_float_type=c_data_type(prefs['core.default_float_dtype']))
@@ -1108,7 +1101,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:
-            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_generation);'.format(clock=clock, net=net))
+            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_buffer);'.format(clock=clock, net=net))
 
         all_clocks = set()
         for clock, codeobj in code_objects:

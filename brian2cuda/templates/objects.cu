@@ -5,6 +5,7 @@
 #include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
 #include "network.h"
+#include "rand.h"
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
@@ -146,20 +147,27 @@ double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
 curandGenerator_t brian::curand_generator;
 __device__ unsigned long long brian::d_curand_seed;
 unsigned long long* brian::dev_curand_seed;
+// dev_{}_rand(n)_allocator
+//      pointer to start of generated random numbers array
+//      at each generation cycle this array is refilled
+// dev_{}_rand(n)
+//      pointer moving through generated random number array
+//      until it is regenerated at the next generation cycle
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-randomNumber_t* brian::dev_{{co.name}}_rand;
 randomNumber_t* brian::dev_{{co.name}}_rand_allocator;
+randomNumber_t* brian::dev_{{co.name}}_rand;
 __device__ randomNumber_t* brian::_array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-randomNumber_t* brian::dev_{{co.name}}_randn;
 randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
+randomNumber_t* brian::dev_{{co.name}}_randn;
 __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 {% endfor %}
 {% for co in codeobj_with_binomial | sort(attribute='name') %}
 curandState* brian::dev_{{co.name}}_curand_states;
 __device__ curandState* brian::d_{{co.name}}_curand_states;
 {% endfor %}
+RandomNumberBuffer brian::random_number_buffer;
 
 void _init_arrays()
 {
@@ -185,7 +193,6 @@ void _init_arrays()
     max_threads_per_sm = props.maxThreadsPerMultiProcessor;
     max_shared_mem_size = props.sharedMemPerBlock;
     num_threads_per_warp = props.warpSize;
-
 
     // Random seeds might be overwritten in main.cu
     unsigned long long seed = time(0);
@@ -527,6 +534,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "network.h"
+#include "rand.h"
 
 #include <thrust/device_vector.h>
 #include <curand.h>
@@ -634,19 +642,24 @@ extern unsigned long long* dev_curand_seed;
 extern __device__ unsigned long long d_curand_seed;
 
 {% for co in codeobj_with_rand | sort(attribute='name') %}
-extern randomNumber_t* dev_{{co.name}}_rand;
+// pointer to start of generated random numbers array
+// at each generation cycle this array is refilled
 extern randomNumber_t* dev_{{co.name}}_rand_allocator;
+// pointer moving through generated random number array
+// until it is regenerated at the next generation cycle
+extern randomNumber_t* dev_{{co.name}}_rand;
 extern __device__ randomNumber_t* _array_{{co.name}}_rand;
 {% endfor %}
 {% for co in codeobj_with_randn | sort(attribute='name') %}
-extern randomNumber_t* dev_{{co.name}}_randn;
 extern randomNumber_t* dev_{{co.name}}_randn_allocator;
+extern randomNumber_t* dev_{{co.name}}_randn;
 extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 {% endfor %}
 {% for co in codeobj_with_binomial | sort(attribute='name') %}
 extern curandState* dev_{{co.name}}_curand_states;
 extern __device__ curandState* d_{{co.name}}_curand_states;
 {% endfor %}
+extern RandomNumberBuffer random_number_buffer;
 
 //CUDA
 extern int num_parallel_blocks;
