@@ -66,9 +66,9 @@ def test_random_values_fixed_and_random():
     first_run_values = np.array(mon.v)
 
     # First time step should be identical
-    assert_allclose(mon[:, 0], mon.v[:, 2])
+    assert_allclose(mon.v[:, 0], mon.v[:, 2])
     # Second should be different
-    assert np.var(mon[:, 1] - mon.v[:, 3]) > 0
+    assert np.var(mon.v[:, 1] - mon.v[:, 3]) > 0
 
 
 if __name__ == '__main__':
