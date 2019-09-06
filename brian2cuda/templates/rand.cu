@@ -13,6 +13,10 @@
 using namespace brian;
 
 // TODO make this a class member function
+// TODO don't call one kernel per codeobject but instead on kernel which takes
+//      care of all codeobjects, preferably called with as many threads/blocks
+//      as necessary for all states and initializing in parallel with warp
+//      level divergence [needs changing set_curand_device_api_states()]
 namespace {
 
 
@@ -39,16 +43,16 @@ namespace {
 // method, which is of different type
 void _run_random_number_buffer()
 {
-    // random_number_buffer is a RandomNumberBuffer instanced, declared in objects.cu
+    // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
     random_number_buffer.next_time_step();
 }
 
+
 {#
-// TODO move stuff from objects.cu
-void RandomNumberBuffer::RandomNumberBuffer()
+RandomNumberBuffer::RandomNumberBuffer()
 {
 
-    // Random seeds might be overwritten in main.cu
+    // Random initial seed, might be overwritten in main.cu
     unsigned long long seed = time(0);
 
     CUDA_SAFE_CALL(
@@ -403,14 +407,6 @@ void RandomNumberBuffer::next_time_step()
         dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
         idx_randn_{{co.name}} += 1;
     }
-    if (dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}})
-        printf("dev_randn %u, dev_randn_allocator %u, num_per_gen_randn %d\n",
-                dev_{{co.name}}_randn, dev_{{co.name}}_randn_allocator,
-                num_per_gen_randn_{{co.name}});
-    else
-        printf("ERROR: dev_randn %u, dev_randn_allocator %u, num_per_gen_randn %d\n",
-                dev_{{co.name}}_randn, dev_{{co.name}}_randn_allocator,
-                num_per_gen_randn_{{co.name}});
     assert(dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}});
     {% endfor %}
 }
@@ -429,6 +425,10 @@ void _run_random_number_buffer();
 
 class RandomNumberBuffer
 {
+    // TODO let all random number pointers be class members of this class ->
+    //      check which ones are needed as global variables, maybe have both,
+    //      global and member variables? or change parameters in codeobjects?
+
     // at first run and when seed is set, buffer need to be initialized
     bool needs_init = true;
     // when seed is set, arrays need to be freed before reinitialization
@@ -486,7 +486,7 @@ class RandomNumberBuffer
     void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
 
 public:
-    //Network();
+    //RandomNumberBuffer();
     void next_time_step();
     void set_seed(unsigned long long);
 };
