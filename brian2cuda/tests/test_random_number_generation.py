@@ -1,6 +1,6 @@
 from nose import with_setup
 from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_raises
+from numpy.testing.utils import assert_equal, assert_raises, assert_allclose
 
 from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
@@ -44,6 +44,7 @@ def test_random_number_generation_with_multiple_runs():
 
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 @attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_devices)
 def test_random_values_fixed_and_random():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)
@@ -54,11 +55,9 @@ def test_random_values_fixed_and_random():
     mon = StateMonitor(G, 'v', record=True)
     run(2*defaultclock.dt)
 
-    #G2 = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     seed(13579)
     G.v = 'rand()'
     seed()
-    #mon2 = StateMonitor(G2, 'v', record=True)
     run(2*defaultclock.dt)
 
     device.build(direct_call=False, **device.build_options)
@@ -71,5 +70,34 @@ def test_random_values_fixed_and_random():
     assert np.var(mon.v[:, 1] - mon.v[:, 3]) > 0
 
 
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_devices)
+def test_random_values_codeobject_every_tick():
+
+    set_device('cuda_standalone', directory=None, build_on_run=False)
+    G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
+    mon = StateMonitor(G, 'v', record=True)
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    #first_run_values = np.array(mon.v)
+
+    # First time step should be identical
+    assert_allclose(mon.v[:, 0], mon.v[:, 2])
+    assert_allclose(mon.v[:, 1], mon.v[:, 3])
+    # Second should be different
+    #assert np.var(mon.v[:, 1] - mon.v[:, 3]) > 0
+
+
 if __name__ == '__main__':
+    test_rand()
     test_random_number_generation_with_multiple_runs()
+    test_random_values_fixed_and_random()
+    test_random_values_codeobject_every_tick()
