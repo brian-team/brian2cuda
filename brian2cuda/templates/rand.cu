@@ -93,7 +93,7 @@ void RandomNumberBuffer::init()
     // number of time steps each codeobject is executed during current Network::run() call
     // XXX: we are assuming here that this function is only run in the first time step of a Network::run()
     {% for co in codeobj_with_rand_or_randn | sort(attribute='name') %}
-    int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - {{co.owner.clock.name}}.t[0];
+    int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - *({{co.owner.clock.name}}.timestep);
     {% endfor %}
 
     {% for co in codeobj_with_rand | sort(attribute='name') %}
@@ -117,6 +117,9 @@ void RandomNumberBuffer::init()
         // NOTE: if the conditional is true, we can savely cast num_steps_this_run_{{co.name}} to int
         num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * (int)num_steps_this_run_{{co.name}};
         assert((int64_t)num_per_cycle_rand_{{co.name}} * num_steps_this_run_{{co.name}} == num_per_gen_rand_{{co.name}});
+        rand_interval_{{co.name}} = (int)num_steps_this_run_{{co.name}};
+        // set this for buffer to be refilled at first next_time_step() call
+        idx_rand_{{co.name}} = rand_interval_{{co.name}};
     }
 
     // curandGenerateNormal requires an even number for pseudorandom generators
@@ -175,6 +178,9 @@ void RandomNumberBuffer::init()
         // NOTE: if the conditional is true, we can savely cast num_steps_this_run_{{co.name}} to int
         num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * (int)num_steps_this_run_{{co.name}};
         assert((int64_t)num_per_cycle_randn_{{co.name}} * num_steps_this_run_{{co.name}} == num_per_gen_randn_{{co.name}});
+        randn_interval_{{co.name}} = (int)num_steps_this_run_{{co.name}};
+        // set this for buffer to be refilled at first next_time_step() call
+        idx_randn_{{co.name}} = randn_interval_{{co.name}};
     }
 
     // curandGenerateNormal requires an even number for pseudorandom generators
