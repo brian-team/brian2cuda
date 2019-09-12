@@ -1,10 +1,10 @@
 
-brian2cuda
+Brian2CUDA
 ==========
 
 Please note that this package is still under developement and has not been released yet.
 
-Brian2cuda is an extention of the spiking neural network simulator [Brian2](https://github.com/brian-team/brian2), implementing a [Brian2 standalone device](http://brian2.readthedocs.io/en/stable/developer/devices.html) to generate C++/CUDA code to run simluations on NVIDIA general purpose graphics processing units (GPGPUs).
+Brian2CUDA is an extention of the spiking neural network simulator [Brian2](https://github.com/brian-team/brian2), implementing a [Brian2 standalone device](http://brian2.readthedocs.io/en/stable/developer/devices.html) to generate C++/CUDA code to run simluations on NVIDIA general purpose graphics processing units (GPGPUs).
 
 ### Usage: 
 Use your Brian2 code (see [Brian2 documentation](http://brian2.readthedocs.io/en/stable/index.html)) and modify the imports to:
