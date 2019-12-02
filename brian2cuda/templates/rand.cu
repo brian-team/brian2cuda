@@ -41,15 +41,15 @@ namespace {
 
 // need a function pointer for Network::add(), can't pass a pointer to a class
 // method, which is of different type
-void _run_random_number_buffer()
+void _run_random_number_buffer{{run_suffix}}()
 {
-    // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
-    random_number_buffer.next_time_step();
+    // random_number_buffer is a RandomNumberBuffer{{run_suffix}} instance, declared in objects.cu
+    random_number_buffer{{run_suffix}}.next_time_step();
 }
 
 
 {#
-RandomNumberBuffer::RandomNumberBuffer()
+RandomNumberBuffer{{run_suffix}}::RandomNumberBuffer{{run_suffix}}()
 {
 
     // Random initial seed, might be overwritten in main.cu
@@ -80,7 +80,7 @@ RandomNumberBuffer::RandomNumberBuffer()
 }
 #}
 
-void RandomNumberBuffer::init()
+void RandomNumberBuffer{{run_suffix}}::init()
 {
     // check that we have enough memory available
     size_t free_byte;
@@ -258,7 +258,7 @@ void RandomNumberBuffer::init()
 }
 
 
-void RandomNumberBuffer::set_curand_device_api_states()
+void RandomNumberBuffer{{run_suffix}}::set_curand_device_api_states()
 {
     {% for co in codeobj_with_binomial | sort(attribute='name') %}
     {% if co.template_name == 'synapses' %}
@@ -276,7 +276,7 @@ void RandomNumberBuffer::set_curand_device_api_states()
 }
 
 
-void RandomNumberBuffer::set_seed(unsigned long long seed)
+void RandomNumberBuffer{{run_suffix}}::set_seed(unsigned long long seed)
 {
     CUDA_SAFE_CALL(
             curandSetPseudoRandomGeneratorSeed(curand_generator, seed)
@@ -314,7 +314,7 @@ void RandomNumberBuffer::set_seed(unsigned long long seed)
 }
 
 
-void RandomNumberBuffer::refill_uniform_numbers(
+void RandomNumberBuffer{{run_suffix}}::refill_uniform_numbers(
         randomNumber_t* dev_rand_allocator,
         randomNumber_t* &dev_rand,
         int num_per_gen_rand,
@@ -333,7 +333,7 @@ void RandomNumberBuffer::refill_uniform_numbers(
 }
 
 
-void RandomNumberBuffer::refill_normal_numbers(
+void RandomNumberBuffer{{run_suffix}}::refill_normal_numbers(
         randomNumber_t* dev_randn_allocator,
         randomNumber_t* &dev_randn,
         int num_per_gen_randn,
@@ -352,7 +352,7 @@ void RandomNumberBuffer::refill_normal_numbers(
 }
 
 
-void RandomNumberBuffer::next_time_step()
+void RandomNumberBuffer{{run_suffix}}::next_time_step()
 {
     // dealloc buffers if seed was changed between network runs
     if (needs_buffer_dealloc)
@@ -429,7 +429,7 @@ void RandomNumberBuffer::next_time_step()
 
 void _run_random_number_buffer();
 
-class RandomNumberBuffer
+class RandomNumberBuffer{{run_suffix}}
 {
     // TODO let all random number pointers be class members of this class ->
     //      check which ones are needed as global variables, maybe have both,
@@ -492,7 +492,7 @@ class RandomNumberBuffer
     void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
 
 public:
-    //RandomNumberBuffer();
+    //RandomNumberBuffer{{run_suffix}}();
     void next_time_step();
     void set_seed(unsigned long long);
 };

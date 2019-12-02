@@ -187,6 +187,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # list of pre/post ID arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
+        # track the number of `run` calls for random number generation
+        self.number_run_calls = 0
+        self.run_suffixes = []
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -406,7 +409,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_float_type=c_data_type(prefs['core.default_float_dtype']),
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
-                        profiled_codeobjects=self.profiled_codeobjects)
+                        profiled_codeobjects=self.profiled_codeobjects,
+                        run_suffixes=self.run_suffixes)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -738,20 +742,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
     def generate_rand_source(self, writer):
-        codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
-        codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
-        codeobj_with_rand_or_randn = [co for co in self.code_objects.values()
-                                      if co.runs_every_tick and (co.rand_calls > 0 or co.randn_calls > 0)]
-        codeobj_with_binomial = [co for co in self.code_objects.values() if co.runs_every_tick and co.binomial_function]
-        rand_tmp = self.code_object_class().templater.rand(None, None,
-                                                           code_objects=self.code_objects.values(),
-                                                           codeobj_with_rand=codeobj_with_rand,
-                                                           codeobj_with_randn=codeobj_with_randn,
-                                                           codeobj_with_rand_or_randn=codeobj_with_rand_or_randn,
-                                                           codeobj_with_binomial=codeobj_with_binomial,
-                                                           profiled=self.enable_profiling,
-                                                           curand_float_type=c_data_type(prefs['core.default_float_dtype']))
-        writer.write('rand.*', rand_tmp)
+        for run_i in range(self.number_run_calls):
+            code_objects = self.code_objects_per_run[run_i]
+            codeobj_with_rand = [co for co in code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
+            codeobj_with_randn = [co for co in code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
+            codeobj_with_rand_or_randn = [co for co in code_objects.values()
+                                          if co.runs_every_tick and (co.rand_calls > 0 or co.randn_calls > 0)]
+            codeobj_with_binomial = [co for co in code_objects.values() if co.runs_every_tick and co.binomial_function]
+            rand_tmp = self.code_object_class().templater.rand(None, None,
+                                                               #code_objects=code_objects.values(),
+                                                               codeobj_with_rand=codeobj_with_rand,
+                                                               codeobj_with_randn=codeobj_with_randn,
+                                                               codeobj_with_rand_or_randn=codeobj_with_rand_or_randn,
+                                                               codeobj_with_binomial=codeobj_with_binomial,
+                                                               profiled=self.enable_profiling,
+                                                               curand_float_type=c_data_type(prefs['core.default_float_dtype']),
+                                                               run_suffix=self.run_suffixes[run_i])
+            writer.write('rand{}.*'.format(self.run_suffixes[run_i]), rand_tmp)
 
     def copy_source_files(self, writer, directory):
         # Copy the brianlibdirectory
@@ -1071,6 +1078,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ### From here on the code differs from CPPStandaloneDevice ###
         ##############################################################
 
+        # suffix for random number buffer file, class, instance names
+        # first one has no suffix, next ones are numbered starting with 1
+        run_suffix = ''
+        if self.number_run_calls > 0:
+            run_suffix = '_{}'.format(self.number_run_calls)
+        self.run_suffixes.append(run_suffix)
+        # track number of run calls
+        self.number_run_calls += 1
+        # net.t accesses the net.t_ variable, which is set to t_end above,
+        # therefore calculate t_start using duration of this run call
+        t_start = t_end - duration
+
         # To profile SpeedTests, we need to be able to set `profile` in
         # `set_device`. Here we catch that case.
         if 'profile' in self.build_options:
@@ -1102,7 +1121,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:
-            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_buffer);'.format(clock=clock, net=net))
+            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_buffer{run_suffix});'.format(clock=clock,
+                                                                                                            net=net,
+                                                                                                            run_suffix=run_suffix))
 
         all_clocks = set()
         for clock, codeobj in code_objects:

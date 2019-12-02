@@ -5,7 +5,9 @@
 #include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
 #include "network.h"
-#include "rand.h"
+{% for suffix in run_suffixes %}
+#include "rand{{suffix}}.h"
+{% endfor %}
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
@@ -167,7 +169,9 @@ __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 curandState* brian::dev_{{co.name}}_curand_states;
 __device__ curandState* brian::d_{{co.name}}_curand_states;
 {% endfor %}
-RandomNumberBuffer brian::random_number_buffer;
+{% for suffix in run_suffixes %}
+RandomNumberBuffer{{suffix}} brian::random_number_buffer{{suffix}};
+{% endfor %}
 
 void _init_arrays()
 {
@@ -659,7 +663,9 @@ extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 extern curandState* dev_{{co.name}}_curand_states;
 extern __device__ curandState* d_{{co.name}}_curand_states;
 {% endfor %}
-extern RandomNumberBuffer random_number_buffer;
+{% for suffix in run_suffixes %}
+extern RandomNumberBuffer{{suffix}} random_number_buffer{{suffix}};
+{% endfor %}
 
 //CUDA
 extern int num_parallel_blocks;
