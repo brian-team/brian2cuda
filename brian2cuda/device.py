@@ -187,9 +187,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # list of pre/post ID arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
-        # track the number of `run` calls for random number generation
-        self.number_run_calls = 0
-        self.run_suffixes = []
+        # for each run, store a dictionary of codeobjects using rand, randn, binomial
+        self.code_objects_per_run = []
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -369,9 +368,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             raise NotImplementedError("Using OpenMP in an CUDA standalone project is not supported")
 
     def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
-        codeobj_with_rand = [co for co in self.code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
-        codeobj_with_randn = [co for co in self.code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
-        codeobj_with_binomial = [co for co in self.code_objects.values() if co.runs_every_tick and co.binomial_function]
+        # Create lists of codobjects using rand, randn or binomial across all
+        # runs (needed for variable declarations).
+        all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
+        for run_codeobj in self.code_objects_per_run:
+            all_code_objects['rand'].extend(run_codeobj['rand'])
+            all_code_objects['randn'].extend(run_codeobj['randn'])
+            all_code_objects['rand_or_randn'].extend(run_codeobj['rand_or_randn'])
+            all_code_objects['binomial'].extend(run_codeobj['binomial'])
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -399,9 +403,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         networks=networks,
                         code_objects=self.code_objects.values(),
                         get_array_filename=self.get_array_filename,
-                        codeobj_with_rand=codeobj_with_rand,
-                        codeobj_with_randn=codeobj_with_randn,
-                        codeobj_with_binomial=codeobj_with_binomial,
+                        all_codeobj_with_rand=all_code_objects['rand'],
+                        all_codeobj_with_randn=all_code_objects['randn'],
+                        all_codeobj_with_binomial=all_code_objects['binomial'],
                         sm_multiplier=sm_multiplier,
                         num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
@@ -409,8 +413,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_float_type=c_data_type(prefs['core.default_float_dtype']),
                         eventspace_arrays=self.eventspace_arrays,
                         multisynaptic_idx_vars=multisyn_vars,
-                        profiled_codeobjects=self.profiled_codeobjects,
-                        run_suffixes=self.run_suffixes)
+                        profiled_codeobjects=self.profiled_codeobjects)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -544,33 +547,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('main.cu', main_tmp)
 
     def generate_codeobj_source(self, writer):
-        #check how many random numbers are needed per step
-        for code_object in self.code_objects.itervalues():
-            # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
-            num_occurences_rand = code_object.code.cu_file.count("_rand(")
-            num_occurences_randn = code_object.code.cu_file.count("_randn(")
-            match = re.search('_binomial\w*\(const int vectorisation_idx\)', code_object.code.cu_file)
-            if match is not None:
-                code_object.binomial_function = True
-            if num_occurences_rand > 0:
-                # synapses_create_generator uses host side random number generation
-                if code_object.template_name != "synapses_create_generator":
-                    #first one is alway the definition, so subtract 1
-                    code_object.rand_calls = num_occurences_rand - 1
-                    for i in range(0, code_object.rand_calls):
-                        code_object.code.cu_file = code_object.code.cu_file.replace(
-                            "_rand(_vectorisation_idx)",
-                            "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                            1)
-            if num_occurences_randn > 0 and code_object.template_name != "synapses_create_generator":
-                #first one is alway the definition, so subtract 1
-                code_object.randn_calls = num_occurences_randn - 1
-                for i in range(0, code_object.randn_calls):
-                    code_object.code.cu_file = code_object.code.cu_file.replace(
-                        "_randn(_vectorisation_idx)",
-                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
-                        1)
-
         code_object_defs = defaultdict(list)
         host_parameters = defaultdict(list)
         device_parameters = defaultdict(list)
@@ -742,23 +718,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
     def generate_rand_source(self, writer):
-        for run_i in range(self.number_run_calls):
-            code_objects = self.code_objects_per_run[run_i]
-            codeobj_with_rand = [co for co in code_objects.values() if co.runs_every_tick and co.rand_calls > 0]
-            codeobj_with_randn = [co for co in code_objects.values() if co.runs_every_tick and co.randn_calls > 0]
-            codeobj_with_rand_or_randn = [co for co in code_objects.values()
-                                          if co.runs_every_tick and (co.rand_calls > 0 or co.randn_calls > 0)]
-            codeobj_with_binomial = [co for co in code_objects.values() if co.runs_every_tick and co.binomial_function]
-            rand_tmp = self.code_object_class().templater.rand(None, None,
-                                                               #code_objects=code_objects.values(),
-                                                               codeobj_with_rand=codeobj_with_rand,
-                                                               codeobj_with_randn=codeobj_with_randn,
-                                                               codeobj_with_rand_or_randn=codeobj_with_rand_or_randn,
-                                                               codeobj_with_binomial=codeobj_with_binomial,
-                                                               profiled=self.enable_profiling,
-                                                               curand_float_type=c_data_type(prefs['core.default_float_dtype']),
-                                                               run_suffix=self.run_suffixes[run_i])
-            writer.write('rand{}.*'.format(self.run_suffixes[run_i]), rand_tmp)
+        rand_tmp = self.code_object_class().templater.rand(None, None,
+                                                           code_objects_per_run=self.code_objects_per_run,
+                                                           number_run_calls=len(self.code_objects_per_run),
+                                                           profiled=self.enable_profiling,
+                                                           curand_float_type=c_data_type(prefs['core.default_float_dtype']))
+        writer.write('rand.*', rand_tmp)
 
     def copy_source_files(self, writer, directory):
         # Copy the brianlibdirectory
@@ -1078,17 +1043,45 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ### From here on the code differs from CPPStandaloneDevice ###
         ##############################################################
 
-        # suffix for random number buffer file, class, instance names
-        # first one has no suffix, next ones are numbered starting with 1
-        run_suffix = ''
-        if self.number_run_calls > 0:
-            run_suffix = '_{}'.format(self.number_run_calls)
-        self.run_suffixes.append(run_suffix)
-        # track number of run calls
-        self.number_run_calls += 1
-        # net.t accesses the net.t_ variable, which is set to t_end above,
-        # therefore calculate t_start using duration of this run call
-        t_start = t_end - duration
+        # For each codeobject of this run check if it uses rand, randn or
+        # binomials. Store these as attributes of the codeobject and create
+        # lists of codeobjects that use rand, randn or binomials. This only
+        # checks codeobject in the network, meaning only the ones running every
+        # clock tick.
+        code_object_rng = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
+        for _, co in code_objects:  # (clock, code_object)
+            # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
+            num_occurences_rand = co.code.cu_file.count("_rand(")
+            num_occurences_randn = co.code.cu_file.count("_randn(")
+            match = re.search('_binomial\w*\(const int vectorisation_idx\)', co.code.cu_file)
+            if match is not None:
+                co.binomial_function = True
+                code_object_rng['binomial'].append(co)
+            if num_occurences_rand > 0:
+                # synapses_create_generator uses host side random number generation
+                if co.template_name != "synapses_create_generator":
+                    #first one is alway the definition, so subtract 1
+                    co.rand_calls = num_occurences_rand - 1
+                    code_object_rng['rand'].append(co)
+                    code_object_rng['rand_or_randn'].append(co)
+                    for i in range(0, co.rand_calls):
+                        co.code.cu_file = co.code.cu_file.replace(
+                            "_rand(_vectorisation_idx)",
+                            "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                            1)
+            if num_occurences_randn > 0 and co.template_name != "synapses_create_generator":
+                #first one is alway the definition, so subtract 1
+                co.randn_calls = num_occurences_randn - 1
+                code_object_rng['randn'].append(co)
+                code_object_rng['rand_or_randn'].append(co)
+                for i in range(0, co.randn_calls):
+                    co.code.cu_file = co.code.cu_file.replace(
+                        "_randn(_vectorisation_idx)",
+                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                        1)
+
+        # store the codeobject dictionary for each run
+        self.code_objects_per_run.append(code_object_rng)
 
         # To profile SpeedTests, we need to be able to set `profile` in
         # `set_device`. Here we catch that case.
@@ -1121,9 +1114,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:
-            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_buffer{run_suffix});'.format(clock=clock,
-                                                                                                            net=net,
-                                                                                                            run_suffix=run_suffix))
+            run_lines.append('{net.name}.add(&{clock.name}, _run_random_number_buffer);'.format(clock=clock, net=net))
 
         all_clocks = set()
         for clock, codeobj in code_objects:
@@ -1157,6 +1148,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                                               duration=float(duration),
                                                                                               report_call=report_call,
                                                                                               report_period=float(report_period)))
+        # for multiple runs, the random number buffer needs to be reset
+        run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff
         run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')

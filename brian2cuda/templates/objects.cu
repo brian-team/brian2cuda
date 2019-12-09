@@ -5,9 +5,7 @@
 #include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
 #include "network.h"
-{% for suffix in run_suffixes %}
-#include "rand{{suffix}}.h"
-{% endfor %}
+#include "rand.h"
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
@@ -155,23 +153,21 @@ unsigned long long* brian::dev_curand_seed;
 // dev_{}_rand(n)
 //      pointer moving through generated random number array
 //      until it is regenerated at the next generation cycle
-{% for co in codeobj_with_rand | sort(attribute='name') %}
+{% for co in all_codeobj_with_rand | sort(attribute='name') %}
 randomNumber_t* brian::dev_{{co.name}}_rand_allocator;
 randomNumber_t* brian::dev_{{co.name}}_rand;
 __device__ randomNumber_t* brian::_array_{{co.name}}_rand;
 {% endfor %}
-{% for co in codeobj_with_randn | sort(attribute='name') %}
+{% for co in all_codeobj_with_randn | sort(attribute='name') %}
 randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
 randomNumber_t* brian::dev_{{co.name}}_randn;
 __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 {% endfor %}
-{% for co in codeobj_with_binomial | sort(attribute='name') %}
+{% for co in all_codeobj_with_binomial | sort(attribute='name') %}
 curandState* brian::dev_{{co.name}}_curand_states;
 __device__ curandState* brian::d_{{co.name}}_curand_states;
 {% endfor %}
-{% for suffix in run_suffixes %}
-RandomNumberBuffer{{suffix}} brian::random_number_buffer{{suffix}};
-{% endfor %}
+RandomNumberBuffer brian::random_number_buffer;
 
 void _init_arrays()
 {
@@ -455,12 +451,12 @@ void _dealloc_arrays()
 {
     using namespace brian;
 
-    {% for co in codeobj_with_rand | sort(attribute='name') %}
+    {% for co in all_codeobj_with_rand | sort(attribute='name') %}
     CUDA_SAFE_CALL(
             cudaFree(dev_{{co.name}}_rand_allocator)
             );
     {% endfor %}
-    {% for co in codeobj_with_randn | sort(attribute='name') %}
+    {% for co in all_codeobj_with_randn | sort(attribute='name') %}
     CUDA_SAFE_CALL(
             cudaFree(dev_{{co.name}}_randn_allocator)
             );
@@ -645,7 +641,7 @@ extern curandGenerator_t curand_generator;
 extern unsigned long long* dev_curand_seed;
 extern __device__ unsigned long long d_curand_seed;
 
-{% for co in codeobj_with_rand | sort(attribute='name') %}
+{% for co in all_codeobj_with_rand | sort(attribute='name') %}
 // pointer to start of generated random numbers array
 // at each generation cycle this array is refilled
 extern randomNumber_t* dev_{{co.name}}_rand_allocator;
@@ -654,18 +650,16 @@ extern randomNumber_t* dev_{{co.name}}_rand_allocator;
 extern randomNumber_t* dev_{{co.name}}_rand;
 extern __device__ randomNumber_t* _array_{{co.name}}_rand;
 {% endfor %}
-{% for co in codeobj_with_randn | sort(attribute='name') %}
+{% for co in all_codeobj_with_randn | sort(attribute='name') %}
 extern randomNumber_t* dev_{{co.name}}_randn_allocator;
 extern randomNumber_t* dev_{{co.name}}_randn;
 extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 {% endfor %}
-{% for co in codeobj_with_binomial | sort(attribute='name') %}
+{% for co in all_codeobj_with_binomial | sort(attribute='name') %}
 extern curandState* dev_{{co.name}}_curand_states;
 extern __device__ curandState* d_{{co.name}}_curand_states;
 {% endfor %}
-{% for suffix in run_suffixes %}
-extern RandomNumberBuffer{{suffix}} random_number_buffer{{suffix}};
-{% endfor %}
+extern RandomNumberBuffer random_number_buffer;
 
 //CUDA
 extern int num_parallel_blocks;
