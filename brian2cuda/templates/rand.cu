@@ -92,7 +92,6 @@ void RandomNumberBuffer::init()
             );
     size_t num_free_floats = free_byte / sizeof(randomNumber_t);
 
-    // TODO terrible copy past of code... file becomes huge! clean this up!
     {% for run_i in range(number_run_calls) %}
     if (run_counter == {{run_i}})
     {
@@ -314,24 +313,6 @@ void RandomNumberBuffer::set_seed(unsigned long long seed)
             curandSetGeneratorOffset(curand_generator, 0ULL)
             );
 
-    /* TODO: delete
-    // reinit the buffers, dt might have changed or the num_steps_this_run_{}
-    // need to free memory for init() to work
-    // TODO: could be solved more efficiently:
-    //      have one buffer object per codeobject and check per codeobject if
-    //      dt has changed or if num_steps_this_run_ was used previously to
-    //      generate less random numbers! -> issue?
-    // only free memory during init() to avoid freeing multiple time for
-    // multiple set_seed() calls between network runs
-    needs_buffer_dealloc = true;
-    */
-
-    /* TODO: delete
-    // don't call init() here already since the network clocks might not be set
-    // up yet, call init() only once network started running
-    needs_init = true;
-    */
-
     // set seed for curand device api calls
     // don't set the same seed for host api and device api random states, just in case
     seed += 1;
@@ -385,27 +366,6 @@ void RandomNumberBuffer::refill_normal_numbers(
 
 void RandomNumberBuffer::next_time_step()
 {
-    /* TODO: delete
-{#
-    // dealloc buffers if seed was changed between network runs
-    if (needs_buffer_dealloc)
-    {
-        {% for co in codeobj_with_rand | sort(attribute='name') %}
-        CUDA_SAFE_CALL(
-                cudaFree(dev_{{co.name}}_rand_allocator)
-                );
-        {% endfor %}
-
-        {% for co in codeobj_with_randn | sort(attribute='name') %}
-        CUDA_SAFE_CALL(
-                cudaFree(dev_{{co.name}}_randn_allocator)
-                );
-        {% endfor %}
-        needs_buffer_dealloc = false;
-    }
-#}
-    */
-
     // init buffers at fist time step of each run call
     if (needs_init)
     {
