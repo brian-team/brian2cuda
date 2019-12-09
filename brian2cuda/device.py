@@ -569,38 +569,41 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # they are cast to single-precision scalar dt in scalar_code
                     v = v.real_var
                 #code objects which only run once
-                if k == "_python_randn" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    code_snippet='''
-                        //genenerate an array of random numbers on the device
-                        {dtype}* dev_array_randn;
-                        CUDA_SAFE_CALL(
-                                cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls})
-                                );
-                        curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
-                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
-                                   curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
-                    additional_code.append(code_snippet)
-                    line = "{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                    device_parameters_lines.append(line)
-                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                                                      name=codeobj.name))
-                    host_parameters_lines.append("dev_array_randn")
-                elif k == "_python_rand" and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    code_snippet = '''
-                        //genenerate an array of random numbers on the device
-                        {dtype}* dev_array_rand;
-                        CUDA_SAFE_CALL(
-                                cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls})
-                                );
-                        curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
-                        '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
-                                   curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
-                    additional_code.append(code_snippet)
-                    line = "{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                    device_parameters_lines.append(line)
-                    kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                                                    name=codeobj.name))
-                    host_parameters_lines.append("dev_array_rand")
+                if k in ["_python_rand", "_python_randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
+                    # need to check for rand/randn for objects only run once, stored in `co.rand(n)_calls`.
+                    self.check_codeobj_for_rng(codeobj)
+                    if k == "_python_randn":
+                        code_snippet='''
+                            //genenerate an array of random numbers on the device
+                            {dtype}* dev_array_randn;
+                            CUDA_SAFE_CALL(
+                                    cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{codeobj.randn_calls})
+                                    );
+                            curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{codeobj.randn_calls}, 0, 1);
+                            '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
+                                       curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
+                        additional_code.append(code_snippet)
+                        line = "{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
+                        device_parameters_lines.append(line)
+                        kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                                                                                                                          name=codeobj.name))
+                        host_parameters_lines.append("dev_array_randn")
+                    elif k == "_python_rand":
+                        code_snippet = '''
+                            //genenerate an array of random numbers on the device
+                            {dtype}* dev_array_rand;
+                            CUDA_SAFE_CALL(
+                                    cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{codeobj.rand_calls})
+                                    );
+                            curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{codeobj.rand_calls});
+                            '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
+                                       curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
+                        additional_code.append(code_snippet)
+                        line = "{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
+                        device_parameters_lines.append(line)
+                        kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                                                                                                                        name=codeobj.name))
+                        host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
                         arrayname = self.get_array_name(v)
@@ -1050,35 +1053,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # clock tick.
         code_object_rng = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
         for _, co in code_objects:  # (clock, code_object)
-            # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
-            num_occurences_rand = co.code.cu_file.count("_rand(")
-            num_occurences_randn = co.code.cu_file.count("_randn(")
-            match = re.search('_binomial\w*\(const int vectorisation_idx\)', co.code.cu_file)
-            if match is not None:
-                co.binomial_function = True
-                code_object_rng['binomial'].append(co)
-            if num_occurences_rand > 0:
-                # synapses_create_generator uses host side random number generation
-                if co.template_name != "synapses_create_generator":
-                    #first one is alway the definition, so subtract 1
-                    co.rand_calls = num_occurences_rand - 1
-                    code_object_rng['rand'].append(co)
-                    code_object_rng['rand_or_randn'].append(co)
-                    for i in range(0, co.rand_calls):
-                        co.code.cu_file = co.code.cu_file.replace(
-                            "_rand(_vectorisation_idx)",
-                            "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                            1)
-            if num_occurences_randn > 0 and co.template_name != "synapses_create_generator":
-                #first one is alway the definition, so subtract 1
-                co.randn_calls = num_occurences_randn - 1
+            binomial_match = self.check_codeobj_for_rng(co, check_binomial=True)
+            if co.rand_calls > 0:
+                code_object_rng['rand'].append(co)
+                code_object_rng['rand_or_randn'].append(co)
+            if co.randn_calls > 0:
                 code_object_rng['randn'].append(co)
                 code_object_rng['rand_or_randn'].append(co)
-                for i in range(0, co.randn_calls):
-                    co.code.cu_file = co.code.cu_file.replace(
-                        "_randn(_vectorisation_idx)",
-                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
-                        1)
+            if binomial_match:
+                code_object_rng['binomial'].append(co)
+
 
         # store the codeobject dictionary for each run
         self.code_objects_per_run.append(code_object_rng)
@@ -1182,7 +1166,57 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                    'statements with this device.')
             self.build(direct_call=False, **self.build_options)
 
+    def check_codeobj_for_rng(self, codeobj, check_binomial=False):
+        '''
+        Count the number of `"rand()"` and `"randn()"` appearances in
+        `codeobj.code.cu_file` and store them as attributes in `codeobj.rand_calls`
+        and `codeobj.randn_calls`.
 
+        Parameters
+        ----------
+        codeobj: CodeObjects
+            Codeobject with generated CUDA code in `codeobj.code.cu_file`.
+        check_binomial: bool, optional
+            Wether to also check if `"binomial()"` appears. Default is False.
+
+        Returns
+        -------
+        binomial_match: bool or None
+            If `check_binomial` is True, this tells if `binomial(const int
+            vectorisation_idx)` is appearing in `code`, else `None`.
+        '''
+        # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
+        num_occurences_rand = codeobj.code.cu_file.count("_rand(")
+        num_occurences_randn = codeobj.code.cu_file.count("_randn(")
+
+        if num_occurences_rand > 0:
+            # synapses_create_generator uses host side random number generation
+            if codeobj.template_name != "synapses_create_generator":
+                #first one is alway the definition, so subtract 1
+                codeobj.rand_calls = num_occurences_rand - 1
+                for i in range(0, codeobj.rand_calls):
+                    codeobj.code.cu_file = codeobj.code.cu_file.replace(
+                        "_rand(_vectorisation_idx)",
+                        "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                        1)
+
+        if num_occurences_randn > 0 and codeobj.template_name != "synapses_create_generator":
+            #first one is alway the definition, so subtract 1
+            codeobj.randn_calls = num_occurences_randn - 1
+            for i in range(0, codeobj.randn_calls):
+                codeobj.code.cu_file = codeobj.code.cu_file.replace(
+                    "_randn(_vectorisation_idx)",
+                    "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                    1)
+
+        binomial = None
+        if check_binomial:
+            binomial = False
+            match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+            if match is not None:
+                binomial = True
+
+        return binomial
 
 
 cuda_standalone_device = CUDAStandaloneDevice()
