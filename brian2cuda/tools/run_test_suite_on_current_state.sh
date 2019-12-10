@@ -84,15 +84,15 @@ cd ../../brian2cuda/tools
 
 if [ "$SP" = true ]
 then
-    echo "\n\n\nRunning tests in single precision mode..." | tee -a "$LOG_FILE"
+    echo -e "\n\n\nRunning tests in single precision mode..." | tee -a "$LOG_FILE"
     PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --single-precision --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
-    echo "\n... Done with tests in single precision mode."
+    echo -e "\n... Done with tests in single precision mode."
 fi
 
 if [ "$DP" = true ]
 then
-    echo "\n\n\nRunning tests in double precision mode..." | tee -a "$LOG_FILE"
+    echo -e "\n\n\nRunning tests in double precision mode..." | tee -a "$LOG_FILE"
     PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
-    echo "\n... Done with tests in double precision mode."
+    echo -e "\n... Done with tests in double precision mode."
 fi
 
