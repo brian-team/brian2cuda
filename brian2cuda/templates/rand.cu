@@ -273,6 +273,7 @@ void RandomNumberBuffer::init()
 
 void RandomNumberBuffer::set_curand_device_api_states()
 {
+    int num_threads, num_blocks;
     {% for run_i in range(number_run_calls) %}
     if (run_counter == {{run_i}})
     {
@@ -284,7 +285,6 @@ void RandomNumberBuffer::set_curand_device_api_states()
         {% else %}
         {% set N = co.owner._N %}
         {% endif %}
-        int num_threads, num_blocks;
         num_threads = max_threads_per_block;
         num_blocks = {{N}} / max_threads_per_block + 1;
         if ({{N}} < num_threads)
