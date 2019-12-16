@@ -21,6 +21,9 @@
 {% block occupancy %}
 {% endblock %}
 
+{% block update_occupancy %}
+{% endblock %}
+
 {% block kernel_info %}
 {% endblock %}
 

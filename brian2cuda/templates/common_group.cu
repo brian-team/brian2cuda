@@ -158,6 +158,17 @@ void _run_{{codeobj_name}}()
                    max_threads_per_block, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes);
+
+            {% block update_occupancy %}
+            // calculate theoretical occupancy for new num_threads
+            CUDA_SAFE_CALL(
+                    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+                        kernel_{{codeobj_name}}, num_threads, 0)
+                    );
+
+            occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
+                        (float)(max_threads_per_sm / num_threads_per_warp);
+            {% endblock update_occupancy %}
         }
         {% block extra_info_msg %}
         {% endblock %}
