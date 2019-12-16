@@ -35,7 +35,7 @@ public:
             }
             else
             {
-                printf("ERROR while creating cudaVector with size %d in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
+                printf("ERROR while creating cudaVector with size %ld in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
                 assert(m_data != NULL);
             }
         }
@@ -134,7 +134,7 @@ public:
             }
             else
             {
-                printf("ERROR while allocating %d bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
+                printf("ERROR while allocating %ld bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
                 assert(new_data != NULL);
             }
         }
