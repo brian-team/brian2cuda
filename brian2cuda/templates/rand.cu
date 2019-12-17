@@ -19,10 +19,7 @@ using namespace brian;
 //      level divergence [needs changing set_curand_device_api_states()]
 namespace {
 
-    {% for run_i in range(number_run_calls) %}
-    {% set codeobj_with_binomial = code_objects_per_run[run_i]['binomial'] %}
-    {% for co in codeobj_with_binomial | sort(attribute='name') %}
-    __global__ void init_curand_states_{{co.name}}(int N)
+    __global__ void init_curand_states(int N, int sequence_offset)
     {
         int idx = threadIdx.x + blockIdx.x * blockDim.x;
         if (idx < N)
@@ -30,14 +27,16 @@ namespace {
             // Each thread gets the same seed, a different sequence number and
             // no offset
             // TODO: different seed and 0 sequence number is much faster, with
-            // less security for independent sequences
+            // less security for independent sequences, add option as
+            // preference!
             //curand_init(curand_seed + idx, 0, 0,
-            curand_init(d_curand_seed, idx, 0,
-                    &d_{{co.name}}_curand_states[idx]);
+            curand_init(
+                    d_curand_seed,           // seed
+                    sequence_offset + idx,   // sequence number
+                    0,                       // offset
+                    &d_curand_states[idx]);
         }
     }
-    {% endfor %}{# co #}
-    {% endfor %}{# run_i #}
 }
 
 
@@ -49,38 +48,6 @@ void _run_random_number_buffer()
     random_number_buffer.next_time_step();
 }
 
-
-{#
-RandomNumberBuffer::RandomNumberBuffer()
-{
-
-    // Random initial seed, might be overwritten in main.cu
-    unsigned long long seed = time(0);
-
-    CUDA_SAFE_CALL(
-            cudaMalloc((void**)&dev_curand_seed,
-                sizeof(unsigned long long))
-            );
-
-    CUDA_SAFE_CALL(
-            cudaMemcpy(dev_curand_seed, &seed,
-                sizeof(unsigned long long), cudaMemcpyHostToDevice)
-            );
-
-    CUDA_SAFE_CALL(
-            cudaMemcpyToSymbol(d_curand_seed, &dev_curand_seed,
-                sizeof(unsigned long long*))
-            );
-
-
-    curandCreateGenerator(&curand_generator, {{curand_generator_type}});
-    {% if curand_generator_ordering %}
-    curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
-    {% endif %}
-    curandSetPseudoRandomGeneratorSeed(curand_generator, seed);
-
-}
-#}
 
 void RandomNumberBuffer::init()
 {
@@ -246,53 +213,112 @@ void RandomNumberBuffer::init()
             exit(1);
         }
 
-        // allocate globabl memory for curand device api states
-        {% for co in codeobj_with_binomial | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
-        {% set N = '_array_' + co.owner.name + '_N[0]' %}
-        {% else %}
-        {% set N = co.owner._N %}
-        {% endif %}
-        CUDA_SAFE_CALL(
-                cudaMalloc((void**)&dev_{{co.name}}_curand_states,
-                    sizeof(curandState) * {{N}})
-                );
-        CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol(d_{{co.name}}_curand_states,
-                    &dev_{{co.name}}_curand_states, sizeof(curandState*))
-                );
-        {% endfor %}
-
     } // if (run_counter == {{run_i}})
     {% endfor %}{# run_i #}
 
-    // set curand device api states
-    set_curand_device_api_states();
+    // init curand states only in first run
+    if (run_counter == 0)
+    {
+
+        // Update curand device api states once before anything is run. At this
+        // point all N's (also from probabilistically generated synapses) are
+        // known. This might update the number of needed curand states.
+        bool reset_seed = false;
+        set_curand_device_api_states(reset_seed);
+    }
+
 }
 
 
-void RandomNumberBuffer::set_curand_device_api_states()
+void RandomNumberBuffer::allocate_device_curand_states()
 {
-    int num_threads, num_blocks;
-    {% for run_i in range(number_run_calls) %}
-    if (run_counter == {{run_i}})
-    {
-        {% set codeobj_with_binomial = code_objects_per_run[run_i]['binomial'] %}
+    // allocate globabl memory for curand device api states
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev_curand_states,
+                sizeof(curandState) * num_curand_states)
+            );
+    CUDA_SAFE_CALL(
+            cudaMemcpyToSymbol(d_curand_states,
+                &dev_curand_states, sizeof(curandState*))
+            );
+}
 
-        {% for co in codeobj_with_binomial | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
-        {% set N = '_array_' + co.owner.name + '_N[0]' %}
-        {% else %}
-        {% set N = co.owner._N %}
-        {% endif %}
-        num_threads = max_threads_per_block;
-        num_blocks = {{N}} / max_threads_per_block + 1;
-        if ({{N}} < num_threads)
-            num_threads = {{N}};
-        init_curand_states_{{co.name}}<<<num_blocks, num_threads>>>({{N}});
-        {% endfor %}
-    } // if (run_counter == {{run_i}})
-    {% endfor %}{# run_i #}
+
+
+void RandomNumberBuffer::update_needed_number_curand_states()
+{
+    // Find the maximum number of threads generating random numbers in parallel
+    // using the cuRAND device API.
+    {% for co in all_codeobj_with_binomial %}
+    {% if co.template_name == 'synapses' %}
+    {% set N = '_array_' + co.owner.name + '_N[0]' %}
+    {% else %}
+    {% set N = co.owner._N %}
+    {% endif %}
+    if (num_curand_states < {{N}})
+        num_curand_states = {{N}};
+    {% endfor %}
+    num_threads_curand_init = max_threads_per_block;
+    num_blocks_curand_init = num_curand_states / max_threads_per_block + 1;
+    if (num_curand_states < num_threads_curand_init)
+        num_threads_curand_init = num_curand_states;
+}
+
+
+void RandomNumberBuffer::set_curand_device_api_states(bool reset_seed)
+{
+    int sequence_offset = 0;
+    int num_curand_states_old = num_curand_states;
+    // Whenever curand states are set, check if enough states where
+    // initialized. This will generate states the first time the seed is set.
+    // But it can be that the seed is set before all network objects' N are
+    // available (e.g. synapses not created yet) and before the network is
+    // run. In such a case, once the network is run, missing curand states are
+    // generated here. If the seed was not reset inbetween, the pervious states
+    // should not be reinitialized (achieved by the `sequence_offset`
+    // parameter). If the seed was reset, then all states should be
+    // reinitialized.
+    update_needed_number_curand_states();
+    // number of curand states that need to be initialized
+    int num_curand_states_to_init = num_curand_states;
+
+    if (reset_seed)
+    {
+        // initialize all curand states
+        num_curand_states_to_init = num_curand_states;
+        sequence_offset = 0;
+    }
+    else
+    {
+        // don't initialize existing curand states, only the new ones
+        num_curand_states_to_init = num_curand_states - num_curand_states_old;
+        sequence_offset = num_curand_states_old;
+    }
+
+    if (num_curand_states_old < num_curand_states)
+    {
+        // copy curand states to new array of updated size
+        curandState* dev_curand_states_old = dev_curand_states;
+        // allocate memory for new number of curand states
+        allocate_device_curand_states();
+
+        if ((!reset_seed) && (num_curand_states_old > 0))
+        {
+            // copy old states to new memory address on device
+            CUDA_SAFE_CALL(
+                    cudaMemcpy(dev_curand_states, dev_curand_states_old,
+                        sizeof(curandState) * num_curand_states_old,
+                        cudaMemcpyDeviceToDevice)
+                    );
+        }
+    }
+
+    if (num_curand_states_to_init > 0)
+    {
+        init_curand_states<<<num_blocks_curand_init, num_threads_curand_init>>>(
+                num_curand_states_to_init,
+                sequence_offset);
+    }
 }
 
 
@@ -301,6 +327,7 @@ void RandomNumberBuffer::run_finished()
     needs_init = true;
     run_counter += 1;
 }
+
 
 void RandomNumberBuffer::set_seed(unsigned long long seed)
 {
@@ -321,8 +348,13 @@ void RandomNumberBuffer::set_seed(unsigned long long seed)
                 sizeof(unsigned long long), cudaMemcpyHostToDevice)
             );
 
-    // curand device api states are only needed for binomials during network runs
-    // and will be set in init(), once the network is run
+    bool reset_seed = true;
+    set_curand_device_api_states(reset_seed);
+    // We set all device api states for codeobjects run outside the network
+    // since we don't know when they will be used.
+    //set_curand_device_api_states_for_separate_calls();
+    // Curand device api states for binomials during network runs will be set
+    // only for the current run in init(), once the network starts.
 }
 
 
@@ -373,6 +405,7 @@ void RandomNumberBuffer::next_time_step()
         if (run_counter > 0)
         {
             {% for run_i in range(number_run_calls) %}
+            {% if code_objects_per_run[run_i]['rand'] or code_objects_per_run[run_i]['randn'] %}
             if (run_counter == {{run_i}})
             {
                 {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
@@ -390,7 +423,8 @@ void RandomNumberBuffer::next_time_step()
                         );
                 {% endfor %}
             } // run_counter == {{run_i}}
-            {% endfor %}
+            {% endif %}{# len(rand) > 0 or len(randn) > 0 #}
+            {% endfor %}{# run_i #}
         }
 
         // init random number buffers
@@ -467,6 +501,10 @@ class RandomNumberBuffer
     bool needs_init = true;
     // how many 'run' calls have finished
     int run_counter = 0;
+    // number of needed cuRAND states
+    int num_curand_states = 0;
+    // number of threads and blocks to set curand states
+    int num_threads_curand_init, num_blocks_curand_init;
 
     // how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
     double mb_per_obj = 50;  // MB per codeobject and rand / randn
@@ -525,7 +563,9 @@ class RandomNumberBuffer
     {% endfor %} {# run_i #}
 
     void init();
-    void set_curand_device_api_states();
+    void allocate_device_curand_states();
+    void update_needed_number_curand_states();
+    void set_curand_device_api_states(bool);
     void refill_uniform_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
     void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
 

@@ -33,7 +33,7 @@ def _generate_cuda_code(n, p, use_normal, name):
         __device__
         %DTYPE% %NAME%(const int vectorisation_idx)
         {
-            return curand_normal%SUFFIX%(brian::d_%CODEOBJ_NAME%_curand_states + vectorisation_idx) * %SCALE% + %LOC%;
+            return curand_normal%SUFFIX%(brian::d_curand_states + vectorisation_idx) * %SCALE% + %LOC%;
         }
         '''
         cuda_code = replace(cuda_code, {'%SCALE%': '%.15f' % scale,
@@ -51,7 +51,7 @@ def _generate_cuda_code(n, p, use_normal, name):
         __device__
         long %NAME%(const int vectorisation_idx)
         {
-            curandState localState = brian::d_%CODEOBJ_NAME%_curand_states[vectorisation_idx];
+            curandState localState = brian::d_curand_states[vectorisation_idx];
             %DTYPE% U = curand_uniform%SUFFIX%(&localState);
             long X = 0;
             %DTYPE% px = %QN%;
@@ -70,7 +70,7 @@ def _generate_cuda_code(n, p, use_normal, name):
                 }
             }
             // copy the locally changed CuRAND state back to global memory
-            brian::d_%CODEOBJ_NAME%_curand_states[vectorisation_idx] = localState;
+            brian::d_curand_states[vectorisation_idx] = localState;
             return %RETURN_VALUE%;
         }
         '''

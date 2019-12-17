@@ -189,6 +189,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.delete_synaptic_post = {}
         # for each run, store a dictionary of codeobjects using rand, randn, binomial
         self.code_objects_per_run = []
+        # and a dictionary with the same across all run calls
+        self.all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
+        # and collect codeobjects run only once with binomial in separate list
+        self.code_object_with_binomial_separate_call = []
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -368,14 +372,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             raise NotImplementedError("Using OpenMP in an CUDA standalone project is not supported")
 
     def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
-        # Create lists of codobjects using rand, randn or binomial across all
-        # runs (needed for variable declarations).
-        all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
-        for run_codeobj in self.code_objects_per_run:
-            all_code_objects['rand'].extend(run_codeobj['rand'])
-            all_code_objects['randn'].extend(run_codeobj['randn'])
-            all_code_objects['rand_or_randn'].extend(run_codeobj['rand_or_randn'])
-            all_code_objects['binomial'].extend(run_codeobj['binomial'])
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -403,9 +399,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         networks=networks,
                         code_objects=self.code_objects.values(),
                         get_array_filename=self.get_array_filename,
-                        all_codeobj_with_rand=all_code_objects['rand'],
-                        all_codeobj_with_randn=all_code_objects['randn'],
-                        all_codeobj_with_binomial=all_code_objects['binomial'],
+                        all_codeobj_with_rand=self.all_code_objects['rand'],
+                        all_codeobj_with_randn=self.all_code_objects['randn'],
+                        all_codeobj_with_binomial=self.all_code_objects['binomial'],
                         sm_multiplier=sm_multiplier,
                         num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
@@ -427,6 +423,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 codeobj, = args
                 codeobj.runs_every_tick = False
                 main_lines.append('_run_%s();' % codeobj.name)
+                # need to check for rand/randn/binomial for objects only run
+                # once, stored in `code_object.rand(n)_calls`.
+                uses_binomial = self.check_codeobj_for_rng(codeobj)
+                if uses_binomial:
+                    self.code_object_with_binomial_separate_call.append(codeobj)
             elif func=='run_network':
                 net, netcode = args
                 main_lines.extend(netcode)
@@ -568,10 +569,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # use the double-precision array versions for dt as kernel arguments
                     # they are cast to single-precision scalar dt in scalar_code
                     v = v.real_var
-                #code objects which only run once
+                # code objects which only run once
                 if k in ["_python_rand", "_python_randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    # need to check for rand/randn for objects only run once, stored in `co.rand(n)_calls`.
-                    self.check_codeobj_for_rng(codeobj)
                     if k == "_python_randn":
                         code_snippet='''
                             //genenerate an array of random numbers on the device
@@ -723,6 +722,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_rand_source(self, writer):
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects_per_run=self.code_objects_per_run,
+                                                           all_codeobj_with_binomial=self.all_code_objects['binomial'],
                                                            number_run_calls=len(self.code_objects_per_run),
                                                            profiled=self.enable_profiling,
                                                            curand_float_type=c_data_type(prefs['core.default_float_dtype']))
@@ -928,6 +928,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # for repeated runs of standalone (e.g. in the test suite).
         for net in self.networks:
             net.after_run()
+
+        # Create lists of codobjects using rand, randn or binomial across all
+        # runs (needed for variable declarations).
+        for run_codeobj in self.code_objects_per_run:
+            self.all_code_objects['rand'].extend(run_codeobj['rand'])
+            self.all_code_objects['randn'].extend(run_codeobj['randn'])
+            self.all_code_objects['rand_or_randn'].extend(run_codeobj['rand_or_randn'])
+            self.all_code_objects['binomial'].extend(run_codeobj['binomial'])
+        # all binomial initialization is done in rand.cu, need codeobjects with
+        # single tick as well (for rand/n, init is done in the codeobjects cu code)
+        self.all_code_objects['binomial'].extend(self.code_object_with_binomial_separate_call)
 
         self.generate_main_source(writer, main_includes)
         self.generate_codeobj_source(writer)
@@ -1185,22 +1196,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             If `check_binomial` is True, this tells if `binomial(const int
             vectorisation_idx)` is appearing in `code`, else `None`.
         '''
+        # synapses_create_generator uses host side random number generation
+        if codeobj.template_name == 'synapses_create_generator':
+            if check_binomial:
+                return False
+            else:
+                return None
+
         # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
         num_occurences_rand = codeobj.code.cu_file.count("_rand(")
         num_occurences_randn = codeobj.code.cu_file.count("_randn(")
 
         if num_occurences_rand > 0:
-            # synapses_create_generator uses host side random number generation
-            if codeobj.template_name != "synapses_create_generator":
-                #first one is alway the definition, so subtract 1
-                codeobj.rand_calls = num_occurences_rand - 1
-                for i in range(0, codeobj.rand_calls):
-                    codeobj.code.cu_file = codeobj.code.cu_file.replace(
-                        "_rand(_vectorisation_idx)",
-                        "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                        1)
+            #first one is alway the definition, so subtract 1
+            codeobj.rand_calls = num_occurences_rand - 1
+            for i in range(0, codeobj.rand_calls):
+                codeobj.code.cu_file = codeobj.code.cu_file.replace(
+                    "_rand(_vectorisation_idx)",
+                    "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                    1)
 
-        if num_occurences_randn > 0 and codeobj.template_name != "synapses_create_generator":
+        if num_occurences_randn > 0:
             #first one is alway the definition, so subtract 1
             codeobj.randn_calls = num_occurences_randn - 1
             for i in range(0, codeobj.randn_calls):

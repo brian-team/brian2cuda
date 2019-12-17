@@ -163,10 +163,8 @@ randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
 randomNumber_t* brian::dev_{{co.name}}_randn;
 __device__ randomNumber_t* brian::_array_{{co.name}}_randn;
 {% endfor %}
-{% for co in all_codeobj_with_binomial | sort(attribute='name') %}
-curandState* brian::dev_{{co.name}}_curand_states;
-__device__ curandState* brian::d_{{co.name}}_curand_states;
-{% endfor %}
+curandState* brian::dev_curand_states;
+__device__ curandState* brian::d_curand_states;
 RandomNumberBuffer brian::random_number_buffer;
 
 void _init_arrays()
@@ -203,21 +201,17 @@ void _init_arrays()
             );
 
     CUDA_SAFE_CALL(
-            cudaMemcpy(dev_curand_seed, &seed,
-                sizeof(unsigned long long), cudaMemcpyHostToDevice)
-            );
-
-    CUDA_SAFE_CALL(
             cudaMemcpyToSymbol(d_curand_seed, &dev_curand_seed,
                 sizeof(unsigned long long*))
             );
-
 
     curandCreateGenerator(&curand_generator, {{curand_generator_type}});
     {% if curand_generator_ordering %}
     curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
     {% endif %}
-    curandSetPseudoRandomGeneratorSeed(curand_generator, seed);
+
+    // this sets seed for host and device api RNG
+    random_number_buffer.set_seed(seed);
 
     {% for S in synapses | sort(attribute='name') %}
     {% for path in S._pathways | sort(attribute='name') %}
@@ -655,10 +649,8 @@ extern randomNumber_t* dev_{{co.name}}_randn_allocator;
 extern randomNumber_t* dev_{{co.name}}_randn;
 extern __device__ randomNumber_t* _array_{{co.name}}_randn;
 {% endfor %}
-{% for co in all_codeobj_with_binomial | sort(attribute='name') %}
-extern curandState* dev_{{co.name}}_curand_states;
-extern __device__ curandState* d_{{co.name}}_curand_states;
-{% endfor %}
+extern curandState* dev_curand_states;
+extern __device__ curandState* d_curand_states;
 extern RandomNumberBuffer random_number_buffer;
 
 //CUDA
