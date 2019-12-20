@@ -7,7 +7,18 @@
 #include<brianlib/curand_buffer.h>
 #include "brianlib/cuda_utils.h"
 #include<map>
-{% endblock %}
+{% endblock extra_headers %}
+
+{% block extra_device_helper %}
+// NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
+// but an instance of CurandBuffer, which overloads the operator[], which then just
+// returns the next random number in the buffer, ignoring the argument passed to operator[]
+// NOTE: Put buffers into anonymous namespace such that host versions of the
+// binomial function implementation can also use it.
+CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&brian::curand_generator, RAND);
+CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&brian::curand_generator, RANDN);
+{% endblock extra_device_helper %}
+
 
 {% block kernel %}
 {% endblock %}
@@ -67,12 +78,6 @@ std::cout << std::endl;
     const int _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
     {{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
     {{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
-
-    // NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
-    // but an instance of CurandBuffer, which overloads the operator[], which then just
-    // returns the next random number in the buffer, ignoring the argument passed to operator[]
-    CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&curand_generator, RAND);
-    CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&curand_generator, RANDN);
 
     int _raw_pre_idx, _raw_post_idx;
     const int _vectorisation_idx = -1;
@@ -270,3 +275,9 @@ std::cout << std::endl;
                 cudaMemcpyHostToDevice)
             );
 {% endblock extra_maincode %}
+
+{% block extra_kernel_call_post %}
+// free memory in CurandBuffers
+_ptr_array_%CODEOBJ_NAME%_rand.free_memory();
+_ptr_array_%CODEOBJ_NAME%_randn.free_memory();
+{% endblock extra_kernel_call_post %}

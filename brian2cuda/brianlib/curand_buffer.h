@@ -119,15 +119,27 @@ public:
     {
         if (memory_allocated)
         {
-            delete[] host_data;
-            cudaError_t status = cudaFree(dev_data);
-            if (status != cudaSuccess)
-            {
-                printf("ERROR freeing device memory in %s(%d):%s\n",
-                        __FILE__, __LINE__, cudaGetErrorString(status));
-                exit(EXIT_FAILURE);
-            }
+            free_memory();
         }
+    }
+
+    // We declare the CurandBuffer in anonymous namespace (file global
+    // variable) in the synapses_create_generator template, therefore its
+    // declaration scope only ends at program termination, but then the CUDA
+    // device is already detached, which results in an error when freeing the
+    // device memory in the destructor. This method can be called to free
+    // device memory manually before the destructor is called.
+    void free_memory()
+    {
+        delete[] host_data;
+        cudaError_t status = cudaFree(dev_data);
+        if (status != cudaSuccess)
+        {
+            printf("ERROR freeing device memory in %s(%d):%s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(status));
+            exit(EXIT_FAILURE);
+        }
+        memory_allocated = false;
     }
 
     // don't return reference to prohibit assignment
