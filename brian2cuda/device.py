@@ -1203,27 +1203,48 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 return None
 
-        # TODO: this needs better checking, what if someone defines a custom funtion `my_rand()`?
-        num_occurences_rand = codeobj.code.cu_file.count("_rand(")
-        num_occurences_randn = codeobj.code.cu_file.count("_randn(")
+        # regex explained
+        # (?<!...) negative lookbehind: don't match if ... preceeds
+        #     XXX: This only excludes #define lines which have exactly one space to '_rand'.
+        #          As long is we don't have '#define  _rand' with 2 spaces, thats fine.
+        # \b - non-alphanumeric character (word boundary, does not consume a character)
+        rand_pattern = r'(?<!#define )\b_rand\(_vectorisation_idx\)'
+        matches_rand = re.findall(rand_pattern, codeobj.code.cu_file)
+        codeobj.rand_calls = len(matches_rand)
 
-        if num_occurences_rand > 0:
-            #first one is alway the definition, so subtract 1
-            codeobj.rand_calls = num_occurences_rand - 1
-            for i in range(0, codeobj.rand_calls):
-                codeobj.code.cu_file = codeobj.code.cu_file.replace(
-                    "_rand(_vectorisation_idx)",
-                    "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                    1)
+        randn_pattern = r'(?<!#define )\b_randn\(_vectorisation_idx\)'
+        matches_randn = re.findall(randn_pattern, codeobj.code.cu_file)
+        codeobj.randn_calls = len(matches_randn)
 
-        if num_occurences_randn > 0:
-            #first one is alway the definition, so subtract 1
-            codeobj.randn_calls = num_occurences_randn - 1
-            for i in range(0, codeobj.randn_calls):
-                codeobj.code.cu_file = codeobj.code.cu_file.replace(
-                    "_randn(_vectorisation_idx)",
-                    "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
-                    1)
+        if codeobj.template_name == 'synapses':
+            # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
+            # therefore we have twice as much matches for rand/randn
+            assert codeobj.rand_calls % 2 == 0
+            assert codeobj.randn_calls % 2 == 0
+            codeobj.randn_calls /= 2
+            codeobj.rand_calls /= 2
+
+        if codeobj.rand_calls > 0:
+            # substitute rand/n arguments twice for synapses templates
+            repeat = 2 if codeobj.template_name == 'synapses' else 1
+            for _ in range(repeat):
+                for i in range(0, codeobj.rand_calls):
+                    codeobj.code.cu_file = re.sub(
+                        rand_pattern,
+                        "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                        codeobj.code.cu_file,
+                        count=1)
+
+        if codeobj.randn_calls > 0:
+            # substitute rand/n arguments twice for synapses templates
+            repeat = 2 if codeobj.template_name == 'synapses' else 1
+            for _ in range(repeat):
+                for i in range(0, codeobj.randn_calls):
+                    codeobj.code.cu_file = re.sub(
+                        randn_pattern,
+                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                        codeobj.code.cu_file,
+                        count=1)
 
         binomial = None
         if check_binomial:
