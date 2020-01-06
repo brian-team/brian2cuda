@@ -425,7 +425,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.append('_run_%s();' % codeobj.name)
                 # need to check for rand/randn/binomial for objects only run
                 # once, stored in `code_object.rand(n)_calls`.
-                uses_binomial = self.check_codeobj_for_rng(codeobj)
+                uses_binomial = check_codeobj_for_rng(codeobj)
                 if uses_binomial:
                     self.code_object_with_binomial_separate_call.append(codeobj)
             elif func=='run_network':
@@ -1064,7 +1064,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # clock tick.
         code_object_rng = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
         for _, co in code_objects:  # (clock, code_object)
-            binomial_match = self.check_codeobj_for_rng(co, check_binomial=True)
+            binomial_match = check_codeobj_for_rng(co, check_binomial=True)
             if co.rand_calls > 0:
                 code_object_rng['rand'].append(co)
                 code_object_rng['rand_or_randn'].append(co)
@@ -1177,83 +1177,84 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                    'statements with this device.')
             self.build(direct_call=False, **self.build_options)
 
-    def check_codeobj_for_rng(self, codeobj, check_binomial=False):
-        '''
-        Count the number of `"rand()"` and `"randn()"` appearances in
-        `codeobj.code.cu_file` and store them as attributes in `codeobj.rand_calls`
-        and `codeobj.randn_calls`.
 
-        Parameters
-        ----------
-        codeobj: CodeObjects
-            Codeobject with generated CUDA code in `codeobj.code.cu_file`.
-        check_binomial: bool, optional
-            Wether to also check if `"binomial()"` appears. Default is False.
+def check_codeobj_for_rng(codeobj, check_binomial=False):
+    '''
+    Count the number of `"rand()"` and `"randn()"` appearances in
+    `codeobj.code.cu_file` and store them as attributes in `codeobj.rand_calls`
+    and `codeobj.randn_calls`.
 
-        Returns
-        -------
-        binomial_match: bool or None
-            If `check_binomial` is True, this tells if `binomial(const int
-            vectorisation_idx)` is appearing in `code`, else `None`.
-        '''
-        # synapses_create_generator uses host side random number generation
-        if codeobj.template_name == 'synapses_create_generator':
-            if check_binomial:
-                return False
-            else:
-                return None
+    Parameters
+    ----------
+    codeobj: CodeObjects
+        Codeobject with generated CUDA code in `codeobj.code.cu_file`.
+    check_binomial: bool, optional
+        Wether to also check if `"binomial()"` appears. Default is False.
 
-        # regex explained
-        # (?<!...) negative lookbehind: don't match if ... preceeds
-        #     XXX: This only excludes #define lines which have exactly one space to '_rand'.
-        #          As long is we don't have '#define  _rand' with 2 spaces, thats fine.
-        # \b - non-alphanumeric character (word boundary, does not consume a character)
-        rand_pattern = r'(?<!#define )\b_rand\(_vectorisation_idx\)'
-        matches_rand = re.findall(rand_pattern, codeobj.code.cu_file)
-        codeobj.rand_calls = len(matches_rand)
-
-        randn_pattern = r'(?<!#define )\b_randn\(_vectorisation_idx\)'
-        matches_randn = re.findall(randn_pattern, codeobj.code.cu_file)
-        codeobj.randn_calls = len(matches_randn)
-
-        if codeobj.template_name == 'synapses':
-            # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
-            # therefore we have twice as much matches for rand/randn
-            assert codeobj.rand_calls % 2 == 0
-            assert codeobj.randn_calls % 2 == 0
-            codeobj.randn_calls /= 2
-            codeobj.rand_calls /= 2
-
-        if codeobj.rand_calls > 0:
-            # substitute rand/n arguments twice for synapses templates
-            repeat = 2 if codeobj.template_name == 'synapses' else 1
-            for _ in range(repeat):
-                for i in range(0, codeobj.rand_calls):
-                    codeobj.code.cu_file = re.sub(
-                        rand_pattern,
-                        "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                        codeobj.code.cu_file,
-                        count=1)
-
-        if codeobj.randn_calls > 0:
-            # substitute rand/n arguments twice for synapses templates
-            repeat = 2 if codeobj.template_name == 'synapses' else 1
-            for _ in range(repeat):
-                for i in range(0, codeobj.randn_calls):
-                    codeobj.code.cu_file = re.sub(
-                        randn_pattern,
-                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
-                        codeobj.code.cu_file,
-                        count=1)
-
-        binomial = None
+    Returns
+    -------
+    binomial_match: bool or None
+        If `check_binomial` is True, this tells if `binomial(const int
+        vectorisation_idx)` is appearing in `code`, else `None`.
+    '''
+    # synapses_create_generator uses host side random number generation
+    if codeobj.template_name == 'synapses_create_generator':
         if check_binomial:
-            binomial = False
-            match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
-            if match is not None:
-                binomial = True
+            return False
+        else:
+            return None
 
-        return binomial
+    # regex explained
+    # (?<!...) negative lookbehind: don't match if ... preceeds
+    #     XXX: This only excludes #define lines which have exactly one space to '_rand'.
+    #          As long is we don't have '#define  _rand' with 2 spaces, thats fine.
+    # \b - non-alphanumeric character (word boundary, does not consume a character)
+    rand_pattern = r'(?<!#define )\b_rand\(_vectorisation_idx\)'
+    matches_rand = re.findall(rand_pattern, codeobj.code.cu_file)
+    codeobj.rand_calls = len(matches_rand)
+
+    randn_pattern = r'(?<!#define )\b_randn\(_vectorisation_idx\)'
+    matches_randn = re.findall(randn_pattern, codeobj.code.cu_file)
+    codeobj.randn_calls = len(matches_randn)
+
+    if codeobj.template_name == 'synapses':
+        # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
+        # therefore we have twice as much matches for rand/randn
+        assert codeobj.rand_calls % 2 == 0
+        assert codeobj.randn_calls % 2 == 0
+        codeobj.randn_calls /= 2
+        codeobj.rand_calls /= 2
+
+    if codeobj.rand_calls > 0:
+        # substitute rand/n arguments twice for synapses templates
+        repeat = 2 if codeobj.template_name == 'synapses' else 1
+        for _ in range(repeat):
+            for i in range(0, codeobj.rand_calls):
+                codeobj.code.cu_file = re.sub(
+                    rand_pattern,
+                    "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
+                    codeobj.code.cu_file,
+                    count=1)
+
+    if codeobj.randn_calls > 0:
+        # substitute rand/n arguments twice for synapses templates
+        repeat = 2 if codeobj.template_name == 'synapses' else 1
+        for _ in range(repeat):
+            for i in range(0, codeobj.randn_calls):
+                codeobj.code.cu_file = re.sub(
+                    randn_pattern,
+                    "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                    codeobj.code.cu_file,
+                    count=1)
+
+    binomial = None
+    if check_binomial:
+        binomial = False
+        match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+        if match is not None:
+            binomial = True
+
+    return binomial
 
 
 cuda_standalone_device = CUDAStandaloneDevice()

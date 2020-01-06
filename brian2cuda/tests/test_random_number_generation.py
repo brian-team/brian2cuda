@@ -9,6 +9,7 @@ from brian2.utils.logger import catch_logs
 from brian2.devices.device import reinit_devices, set_device, device
 
 import brian2cuda
+from brian2cuda.device import check_codeobj_for_rng
 
 
 @attr('standalone-compatible')
@@ -176,8 +177,57 @@ def test_binomial_values():
                   run_values_2, run_values_3)
 
 
+def test_rand_randn_regex():
+
+    # dummy class to fit with check_codeobj_for_rng function
+    class DummyCodeobj():
+        def __init__(self, string):
+            self.template_name = 'TemplateName'
+            self.name = 'Name'
+            self.code = lambda: 0
+            self.code.cu_file = string
+            self.rand_calls = 0
+            self.randn_calls = 0
+
+    # should match
+    m = []
+    m.append(DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
+    m.append(DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
+    m.append(DummyCodeobj(' _rand(_vectorisation_idx)'))
+    m.append(DummyCodeobj('_rand(_vectorisation_idx)'))
+    m.append(DummyCodeobj('*_rand(_vectorisation_idx)'))
+    m.append(DummyCodeobj('_rand(_vectorisation_idx)-'))
+    m.append(DummyCodeobj('+_rand(_vectorisation_idx)-'))
+
+    # should not match
+    n = []
+    n.append(DummyCodeobj('h_rand(_vectorisation_idx)'))
+    n.append(DummyCodeobj('_rand_h(_vectorisation_idx)'))
+    n.append(DummyCodeobj('#_rand_h(_vectorisation_idx)'))
+    n.append(DummyCodeobj('# _rand_h(_vectorisation_idx)'))
+    n.append(DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
+    n.append(DummyCodeobj('#define _rand(_vectorisation_idx)'))
+    n.append(DummyCodeobj(' #define _rand(_vectorisation_idx)'))
+    n.append(DummyCodeobj('  #define _rand(_vectorisation_idx)'))
+
+    # this one is matches currently (double space)
+    #n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
+
+    for i, co in enumerate(m):
+        check_codeobj_for_rng(co)
+        assert co.rand_calls == 1, "{}: matches: {} in '{}'".format(i,
+                                                                  co.rand_calls,
+                                                                  co.code.cu_file)
+
+    for i, co in enumerate(n):
+        check_codeobj_for_rng(co)
+        assert co.rand_calls == 0, "{}: matches: {} in '{}'".format(i,
+                                                                  co.rand_calls,
+                                                                  co.code.cu_file)
+
 if __name__ == '__main__':
     test_rand()
     test_random_number_generation_with_multiple_runs()
     test_random_values_fixed_and_random()
     test_random_values_codeobject_every_tick()
+    test_rand_randn_regex()
