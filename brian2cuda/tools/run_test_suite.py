@@ -14,11 +14,26 @@ parser.add_argument('--fail-not-implemented', action='store_true',
                     help="Weather to reset prefs between tests or not.")
 
 parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
-                    help="Weather to use multiple cores for testing. Optionally the"
-                         "targets for which mpi should be used, can be passes as"
-                         "arguments. If none are passes, all are run in parallel.")
+                    help="Weather to use multiple cores for testing. Optionally the "
+                         "targets for which mpi should be used, can be passed as "
+                         "arguments. If none are passed, all are run in parallel.")
+
+parser.add_argument('--notify-slack', action='store_true',
+                    help="Send progress reports through Slack via ClusterBot "
+                          "(if installed)")
 
 args = utils.parse_arguments(parser)
+
+bot = None
+if args.notify_slack:
+    try:
+        from clusterbot import ClusterBot
+        bot = ClusterBot()
+    except ImportError:
+        print("WARNING: clusterbot not installed. Can't notify slack.")
+        pass
+
+buffer = utils.PrintBuffer(clusterbot=bot)
 
 import os, sys
 from StringIO import StringIO
@@ -26,7 +41,10 @@ from StringIO import StringIO
 from brian2 import test, prefs
 import brian2cuda
 
-all_prefs_combinations = utils.set_preferences(args, prefs)
+all_prefs_combinations, print_lines = utils.set_preferences(args, prefs,
+                                                            return_lines=True)
+buffer.add(print_lines)
+buffer.print_all()
 
 extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
 
@@ -54,10 +72,13 @@ for target in args.targets:
         prefs.read_preference_file(StringIO(stored_prefs))
 
         if prefs_dict is not None:
-            print ("{}. RUN: test suite on CUDA_STANDALONE with prefs:"
-                   "".format(n + 1))
+            buffer.add("{}. RUN: test suite on CUDA_STANDALONE with prefs: "
+                       "".format(n + 1))
             # print and set preferences
-            utils.print_single_prefs(prefs_dict, set_prefs=prefs)
+            print_lines = utils.print_single_prefs(prefs_dict, set_prefs=prefs,
+                                                   return_lines=True)
+            buffer.add(print_lines)
+            buffer.print_all()
 
         success = test(codegen_targets=[],
                        long_tests=args.no_long_tests,
@@ -71,22 +92,27 @@ for target in args.targets:
 
         successes.append(success)
 
-    print "\nTARGET: {}".format(target.upper())
-    all_success = utils.check_success(successes, all_prefs_combinations)
+    buffer.add("\nTARGET: {}".format(target.upper()))
+    all_success, print_lines = utils.check_success(successes,
+                                                   all_prefs_combinations,
+                                                   return_lines=True)
     all_successes.append(all_success)
+    buffer.add(print_lines)
+    buffer.print_all()
 
 if len(args.targets) > 1:
-    print "\nFINISHED ALL TARGETS"
+    buffer.add("\nFINISHED ALL TARGETS")
 
     if all(all_successes):
-        print "\nALL TARGETS PASSED"
+        buffer.add("\nALL TARGETS PASSED")
+        buffer.print_all()
     else:
-        print "\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
-                                               len(all_successes),
-                                               len(all_successes))
+        buffer.add("\n{}/{} TARGETS FAILED:".format(
+            sum(all_successes) - len(all_successes), len(all_successes)))
         for n, target in enumerate(args.targets):
             if not all_successes[n]:
-                print "\t{} failed.".format(target)
+                buffer.add("\t{} failed.".format(target))
+        buffer.print_all()
         sys.exit(1)
 
 elif not all_successes[0]:
