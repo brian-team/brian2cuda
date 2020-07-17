@@ -22,4 +22,4 @@ min=$(( $runtime / 60 ))
 remaining_sec=$(( $runtime - $min * 60 ))
 hour=$(( $min / 60 ))
 remaining_min=$(( $min - $hour * 60 ))
-echo -e "Test suite took $hour h $min m $sec s." | tee -a "$logfile"
+echo -e "Test suite took $hour h $remaining_min m $remaining_sec s." | tee -a "$logfile"
