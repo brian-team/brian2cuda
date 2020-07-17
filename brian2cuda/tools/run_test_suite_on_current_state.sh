@@ -4,11 +4,12 @@
 # $2: commit hash or branch name to check out after cloning
 # $3: float32 or float64 or both (default)
 # $4: number of cores used for parallel compilation (make -j $4)
+# $5: true/false: Weather all preference combinations should be run
 
 # the directory of the script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # folder name for log files (relative to $DIR)
-LOG_DIR=test_suit_logs
+LOG_DIR=test_suite_logs
 # the temp directory used, within $DIR
 WORK_DIR=`mktemp -d -p "$DIR"`
 # the directory of the brian2cuda repository
@@ -26,6 +27,13 @@ function cleanup {
 
 # register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
+
+if [ -z "$5" ]
+then
+    ALL_PREFS=""
+elif [ "$5" = "true" ]
+    ALL_PREFS="--all-prefs"
+fi
 
 if [ -z "$4" ]
 then
@@ -85,14 +93,14 @@ cd ../../brian2cuda/tools
 if [ "$SP" = true ]
 then
     echo -e "\n\n\nRunning tests in single precision mode..." | tee -a "$LOG_FILE"
-    PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --single-precision --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+    PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --single-precision --fail-not-implemented -j"$J" "$ALL_PREFS" 2>&1 | tee -a "$LOG_FILE"
     echo -e "\n... Done with tests in single precision mode."
 fi
 
 if [ "$DP" = true ]
 then
     echo -e "\n\n\nRunning tests in double precision mode..." | tee -a "$LOG_FILE"
-    PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --fail-not-implemented -j"$J" 2>&1 | tee -a "$LOG_FILE"
+    PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" python run_test_suite.py --fail-not-implemented -j"$J" "$ALL_PREFS" 2>&1 | tee -a "$LOG_FILE"
     echo -e "\n... Done with tests in double precision mode."
 fi
 

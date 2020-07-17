@@ -48,8 +48,8 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -l cuda=1 \
     -l h=cognition13 \
     -N $qsub_name \
+    -pe cognition.pe 4 \
     $remote_folder/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
     $remote_folder $logfile
     "
     # $1: b2c_dir, # $2: logfile (on_headnode.sh)
-    #-pe cognition.pe 10 \
