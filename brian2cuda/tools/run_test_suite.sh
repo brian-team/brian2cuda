@@ -3,7 +3,7 @@
 # $2 logdir (optional, default: test_suit_logs)
 
 task_name=${1:-noname}       # default: noname
-logdir=${2:-test_suit_logs}  # default: test_suit_logs
+logdir=${2:-test_suite_logs}  # default: test_suit_logs
 
 # add timestemp to name
 task_name="$(date +%y-%m-%d_%T)"__"$task_name"
