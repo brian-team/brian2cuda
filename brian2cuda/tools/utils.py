@@ -121,6 +121,16 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
 
+    if socket.gethostname() == 'cognition13':
+        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
+
+    if socket.gethostname() == 'selene':
+        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_61'])
+
+    # cognition14 hat die Tesla K40c, die hat sm 35 (current default?)
+
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'
         if '-j' not in prefs[k]:
