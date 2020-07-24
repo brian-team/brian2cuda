@@ -74,7 +74,8 @@ void RandomNumberBuffer::init()
         {% endfor %}
 
         {% for co in codeobj_with_rand | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
+        {# TODO: pass isinstance to Jinja template to make it available here #}
+        {% if co.owner.__class__.__name__ == 'Synapses' %}
         {% set N = '_array_' + co.owner.name + '_N[0]' %}
         {% else %}
         {% set N = co.owner._N %}
@@ -135,7 +136,7 @@ void RandomNumberBuffer::init()
 
 
         {% for co in codeobj_with_randn | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
+        {% if co.owner.__class__.__name__ == 'Synapses' %}
         {% set N = '_array_' + co.owner.name + '_N[0]' %}
         {% else %}
         {% set N = co.owner._N %}
@@ -248,15 +249,25 @@ void RandomNumberBuffer::allocate_device_curand_states()
 void RandomNumberBuffer::update_needed_number_curand_states()
 {
     // Find the maximum number of threads generating random numbers in parallel
-    // using the cuRAND device API.
-    {% for co in all_codeobj_with_binomial %}
-    {% if co.template_name == 'synapses' %}
-    {% set N = '_array_' + co.owner.name + '_N[0]' %}
-    {% else %}
-    {% set N = co.owner._N %}
+    // using the cuRAND device API. For synapses objects, the number of
+    // synapses might not be known yet. This is the case when the first random
+    // seed is set and for any seed() call before the synapses creation.
+    {% for co_name in binomial_codeobjects %}
+    {% set co = binomial_codeobjects[co_name] %}
+
+    {% if co['test_ptr'] %}
+    // test if synapses are already created (else this is a NULL pointer)
+    if ({{co['test_ptr']}})
+    {
     {% endif %}
-    if (num_curand_states < {{N}})
-        num_curand_states = {{N}};
+
+        if (num_curand_states < {{co['N']}})
+            num_curand_states = {{co['N']}};
+
+    {% if co['test_ptr'] %}
+    }
+    {% endif %}
+
     {% endfor %}
     num_threads_curand_init = max_threads_per_block;
     num_blocks_curand_init = num_curand_states / max_threads_per_block + 1;

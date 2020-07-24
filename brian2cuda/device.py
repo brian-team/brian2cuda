@@ -720,9 +720,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
     def generate_rand_source(self, writer):
+        binomial_codeobjects = {}
+        for co in self.all_code_objects['binomial']:
+            name = co.owner.name
+            if name not in binomial_codeobjects:
+                if isinstance(co.owner, Synapses):
+                    test_ptr = '_array_{name}_N'.format(name=name)
+                    N = test_ptr + '[0]'
+                else:
+                    test_ptr = None
+                    N = co.owner._N
+                binomial_codeobjects[name] = {'test_ptr': test_ptr, 'N': N}
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects_per_run=self.code_objects_per_run,
-                                                           all_codeobj_with_binomial=self.all_code_objects['binomial'],
+                                                           binomial_codeobjects=binomial_codeobjects,
                                                            number_run_calls=len(self.code_objects_per_run),
                                                            profiled=self.enable_profiling,
                                                            curand_float_type=c_data_type(prefs['core.default_float_dtype']))
@@ -1070,7 +1081,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 code_object_rng['rand_or_randn'].append(co)
             if co.randn_calls > 0:
                 code_object_rng['randn'].append(co)
-                code_object_rng['rand_or_randn'].append(co)
+                if co.rand_calls == 0:
+                    # only add if it wasn't already added above
+                    code_object_rng['rand_or_randn'].append(co)
             if binomial_match:
                 code_object_rng['binomial'].append(co)
 

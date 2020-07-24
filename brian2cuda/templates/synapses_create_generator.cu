@@ -9,15 +9,26 @@
 #include<map>
 {% endblock extra_headers %}
 
-{% block extra_device_helper %}
+{% block random_functions %}
 // NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
 // but an instance of CurandBuffer, which overloads the operator[], which then just
 // returns the next random number in the buffer, ignoring the argument passed to operator[]
-// NOTE: Put buffers into anonymous namespace such that host versions of the
-// binomial function implementation can also use it.
+// NOTE: Put buffers into anonymous namespace such that host_rand/n and rand/n
+// in main code have access to it.
+// NOTE: host_rand/n is used in the host compiled implementation of binomial
+// functions. Here, it just returns the next element from the CurandBuffer.
 CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&brian::curand_generator, RAND);
+randomNumber_t host_rand(const int _vectorisation_idx)
+{
+    return _ptr_array_%CODEOBJ_NAME%_rand[_vectorisation_idx];
+}
+
 CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&brian::curand_generator, RANDN);
-{% endblock extra_device_helper %}
+randomNumber_t host_randn(const int _vectorisation_idx)
+{
+    return _ptr_array_%CODEOBJ_NAME%_randn[_vectorisation_idx];
+}
+{% endblock random_functions %}
 
 
 {% block kernel %}

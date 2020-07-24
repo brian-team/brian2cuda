@@ -30,10 +30,14 @@ def _generate_cuda_code(n, p, use_normal, name):
     if use_normal:
         loc, scale = _pre_calc_constants_approximated(n, p)
         cuda_code = '''
-        __device__
+        __host__ __device__
         %DTYPE% %NAME%(const int vectorisation_idx)
         {
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             return curand_normal%SUFFIX%(brian::d_curand_states + vectorisation_idx) * %SCALE% + %LOC%;
+        #else
+            return host_randn(vectorisation_idx) * %SCALE% + %LOC%;
+        #endif
         }
         '''
         cuda_code = replace(cuda_code, {'%SCALE%': '%.15f' % scale,
@@ -48,11 +52,15 @@ def _generate_cuda_code(n, p, use_normal, name):
         # rk_binomial_inversion function
         # (numpy/random/mtrand/distributions.c)
         cuda_code = '''
-        __device__
+        __host__ __device__
         long %NAME%(const int vectorisation_idx)
         {
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             curandState localState = brian::d_curand_states[vectorisation_idx];
             %DTYPE% U = curand_uniform%SUFFIX%(&localState);
+        #else
+            %DTYPE% U = host_rand(vectorisation_idx);
+        #endif
             long X = 0;
             %DTYPE% px = %QN%;
             while (U > px)
@@ -62,15 +70,21 @@ def _generate_cuda_code(n, p, use_normal, name):
                 {
                     X = 0;
                     px = %QN%;
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
                     U = curand_uniform%SUFFIX%(&localState);
+        #else
+                    U = host_rand(vectorisation_idx);
+        #endif
                 } else
                 {
                     U -= px;
                     px = ((%N%-X+1) * %P% * px)/(X*%Q%);
                 }
             }
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             // copy the locally changed CuRAND state back to global memory
             brian::d_curand_states[vectorisation_idx] = localState;
+        #endif
             return %RETURN_VALUE%;
         }
         '''
