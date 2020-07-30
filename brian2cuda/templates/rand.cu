@@ -31,7 +31,7 @@ namespace {
             // preference!
             //curand_init(curand_seed + idx, 0, 0,
             curand_init(
-                    d_curand_seed,           // seed
+                    *d_curand_seed,          // seed
                     sequence_offset + idx,   // sequence number
                     0,                       // offset
                     &d_curand_states[idx]);
@@ -369,9 +369,9 @@ void RandomNumberBuffer::set_seed(unsigned long long seed)
 
     // set seed for curand device api calls
     // don't set the same seed for host api and device api random states, just in case
-    seed += 1;
+    unsigned long long curand_seed = seed + 1;
     CUDA_SAFE_CALL(
-            cudaMemcpy(dev_curand_seed, &seed,
+            cudaMemcpy(dev_curand_seed, &curand_seed,
                 sizeof(unsigned long long), cudaMemcpyHostToDevice)
             );
 

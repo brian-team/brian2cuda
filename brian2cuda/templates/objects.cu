@@ -145,7 +145,7 @@ double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
 
 //////////////random numbers//////////////////
 curandGenerator_t brian::curand_generator;
-__device__ unsigned long long brian::d_curand_seed;
+__device__ unsigned long long* brian::d_curand_seed;
 unsigned long long* brian::dev_curand_seed;
 // dev_{}_rand(n)_allocator
 //      pointer to start of generated random numbers array
@@ -633,7 +633,7 @@ extern double {{codeobj}}_kernel_currents_profiling_info;
 //////////////// random numbers /////////////////
 extern curandGenerator_t curand_generator;
 extern unsigned long long* dev_curand_seed;
-extern __device__ unsigned long long d_curand_seed;
+extern __device__ unsigned long long* d_curand_seed;
 
 {% for co in all_codeobj_with_rand | sort(attribute='name') %}
 // pointer to start of generated random numbers array
