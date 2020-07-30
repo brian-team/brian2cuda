@@ -65,7 +65,9 @@ void RandomNumberBuffer::init()
         {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
         {% set codeobj_with_randn = code_objects_per_run[run_i]['randn'] %}
         {% set codeobj_with_rand_or_randn = code_objects_per_run[run_i]['rand_or_randn'] %}
+        {# not used, binomial doesn't use a buffer but on the fly rng
         {% set codeobj_with_binomial = code_objects_per_run[run_i]['binomial'] %}
+        #}
 
         // number of time steps each codeobject is executed during current Network::run() call
         // XXX: we are assuming here that this function is only run in the first time step of a Network::run()
@@ -224,8 +226,7 @@ void RandomNumberBuffer::init()
         // Update curand device api states once before anything is run. At this
         // point all N's (also from probabilistically generated synapses) are
         // known. This might update the number of needed curand states.
-        bool reset_seed = false;
-        set_curand_device_api_states(reset_seed);
+        ensure_enough_curand_states();
     }
 
 }
@@ -253,6 +254,8 @@ void RandomNumberBuffer::update_needed_number_curand_states()
     // synapses might not be known yet. This is the case when the first random
     // seed is set and for any seed() call before the synapses creation.
     {% for co_name in binomial_codeobjects %}
+
+    // codeobject with binomial: {{co_name}}
     {% set co = binomial_codeobjects[co_name] %}
 
     {% if co['test_ptr'] %}
@@ -290,8 +293,9 @@ void RandomNumberBuffer::set_curand_device_api_states(bool reset_seed)
     // parameter). If the seed was reset, then all states should be
     // reinitialized.
     update_needed_number_curand_states();
+
     // number of curand states that need to be initialized
-    int num_curand_states_to_init = num_curand_states;
+    int num_curand_states_to_init;
 
     if (reset_seed)
     {
@@ -330,6 +334,18 @@ void RandomNumberBuffer::set_curand_device_api_states(bool reset_seed)
                 num_curand_states_to_init,
                 sequence_offset);
     }
+}
+
+
+void RandomNumberBuffer::ensure_enough_curand_states()
+{
+    // Separate public function needed for synapses codeobjects that are run
+    // only once before the network
+    // The N of synapses will not be known when setting the seed and needs to
+    // be updated before using random numbers per synapse. This occurs e.g.
+    // when initializing synaptic variables (synapses_group_conditional_....)
+    bool reset_seed = false;
+    set_curand_device_api_states(reset_seed);
 }
 
 
@@ -581,10 +597,10 @@ class RandomNumberBuffer
     void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
 
 public:
-    //RandomNumberBuffer();
     void next_time_step();
     void set_seed(unsigned long long);
     void run_finished();
+    void ensure_enough_curand_states();
 };
 
 #endif

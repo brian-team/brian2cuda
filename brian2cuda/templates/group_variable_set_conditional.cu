@@ -1,9 +1,10 @@
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
-#include<math.h>
+#include "rand.h"
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
 #include "brianlib/cuda_utils.h"
+#include<math.h>
 #include<stdint.h>
 #include<iostream>
 #include<fstream>
@@ -61,8 +62,8 @@ __global__ void kernel_{{codeobj_name}}(
     {{scalar_code['statement']|autoindent}}
 
     ///// vector_code['condition'] /////
-
     {{vector_code['condition']|autoindent}}
+
     if (_cond)
     {
         ///// vector_code['statement'] /////

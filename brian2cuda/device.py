@@ -286,7 +286,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         no_or_const_delay_mode = False
         if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
-                no_or_const_delay_mode = True
+            no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
         if isinstance(owner, Synapses) and template_name in ['synapses', 'stateupdate']:
             # Check if pre/post IDs are needed per synapse (which is the case
@@ -401,7 +401,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         get_array_filename=self.get_array_filename,
                         all_codeobj_with_rand=self.all_code_objects['rand'],
                         all_codeobj_with_randn=self.all_code_objects['randn'],
-                        all_codeobj_with_binomial=self.all_code_objects['binomial'],
                         sm_multiplier=sm_multiplier,
                         num_parallel_blocks=num_parallel_blocks,
                         curand_generator_type=curand_generator_type,
@@ -422,12 +421,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if func=='run_code_object':
                 codeobj, = args
                 codeobj.runs_every_tick = False
-                main_lines.append('_run_%s();' % codeobj.name)
                 # need to check for rand/randn/binomial for objects only run
                 # once, stored in `code_object.rand(n)_calls`.
-                uses_binomial = check_codeobj_for_rng(codeobj)
+                uses_binomial = check_codeobj_for_rng(codeobj, check_binomial=True)
                 if uses_binomial:
                     self.code_object_with_binomial_separate_call.append(codeobj)
+                    if isinstance(codeobj.owner, Synapses) \
+                            and codeobj.template_name in ['group_variable_set_conditional', 'group_variable_set']:
+                        # At curand state initalization, synapses are not generated yet.
+                        # For codeobjects run every tick, this happens in the init() of
+                        # tha random number buffer called at first clock cycle of the network
+                        main_lines.append('random_number_buffer.ensure_enough_curand_states();')
+                main_lines.append('_run_%s();' % codeobj.name)
             elif func=='run_network':
                 net, netcode = args
                 main_lines.extend(netcode)
@@ -725,6 +730,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             name = co.owner.name
             if name not in binomial_codeobjects:
                 if isinstance(co.owner, Synapses):
+                    # this is the pointer to the synapse object's N, which is a
+                    # null pointer before synapses are generated and an int ptr
+                    # after synapse generation (used to test if synapses
+                    # already generated or not)
                     test_ptr = '_array_{name}_N'.format(name=name)
                     N = test_ptr + '[0]'
                 else:
@@ -940,18 +949,29 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for net in self.networks:
             net.after_run()
 
+        self.generate_main_source(writer, main_includes)
+
         # Create lists of codobjects using rand, randn or binomial across all
         # runs (needed for variable declarations).
+        #   - Variables needed for device side rand/randn are declared in objects.cu:
+        #     all_code_objects['rand'/'rand'] are neede in `generate_objects_source`
+        #   - Variables neede for device side binomial functions are initialized in rand.cu:
+        #     all_code_objects['binomial'] is needed in `generate_rand_source`
         for run_codeobj in self.code_objects_per_run:
             self.all_code_objects['rand'].extend(run_codeobj['rand'])
             self.all_code_objects['randn'].extend(run_codeobj['randn'])
             self.all_code_objects['rand_or_randn'].extend(run_codeobj['rand_or_randn'])
             self.all_code_objects['binomial'].extend(run_codeobj['binomial'])
-        # all binomial initialization is done in rand.cu, need codeobjects with
-        # single tick as well (for rand/n, init is done in the codeobjects cu code)
+        # Device side binomial functions use curand device api. The curand states (one per thread
+        # executed in parallel) are initialized in rand.cu. The `run_codeobj` dictionary above only
+        # collects codeobjects run every tick in the network. Here, we add those codeobjects that
+        # use device side binomial functions and are run only once (e.g. when setting group
+        # variables before run). For rand/randn, the codeobject themselves take care of the
+        # initialization. For binomial, we need to initialize them in rand.cu.
+        # This line needs to be after `self.generate_main_source`, which populates
+        # `self.code_object_with_binomial_separate_call` and before `self.generate_rand_source`
         self.all_code_objects['binomial'].extend(self.code_object_with_binomial_separate_call)
 
-        self.generate_main_source(writer, main_includes)
         self.generate_codeobj_source(writer)
         self.generate_objects_source(writer, self.arange_arrays,
                                      self.net_synapses,

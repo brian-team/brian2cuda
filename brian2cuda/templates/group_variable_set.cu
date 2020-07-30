@@ -1,5 +1,9 @@
 {% extends 'common_group.cu' %}
 
+{% block extra_headers %}
+#include "rand.h"
+{% endblock %}
+
 {% block maincode %}
     {# USES_VARIABLES { _group_idx } #}
     ///// block maincode /////
