@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 from brian2 import *
 
 import brian2cuda
-set_device('cuda_standalone', directory='CUBA_CUDA_sp',compile=True, run=True, debug=True)
+set_device('cuda_standalone', directory='code/CUBA_CUDA_sp',compile=True, run=True, debug=True)
 
 prefs['core.default_float_dtype'] = float32
 
@@ -45,5 +45,5 @@ plot(s_mon.t/ms, s_mon.i, '.k', ms=1)
 title('CUBA_CUDA')
 xlabel('Time (ms)')
 ylabel('Neuron index')
-savefig('CUBA_CUDA/CUBA_CUDA_rasterplot.png')
+savefig('code/CUBA_CUDA/CUBA_CUDA_rasterplot.png')
 #show()
