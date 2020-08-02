@@ -118,16 +118,12 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
 
     # TODO: remove once we set CC automatically from hardware
     if socket.gethostname() == 'elnath':
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
 
     if socket.gethostname() == 'cognition13':
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
+        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
-
-    if socket.gethostname() == 'selene':
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_61'])
 
     # cognition14 hat die Tesla K40c, die hat sm 35 (current default?)
 
