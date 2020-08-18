@@ -11,7 +11,7 @@ logdir="~/projects/brian2cuda/test-suite/results"
 local_folder=$(git rev-parse --show-toplevel)
 
 run_name="$(date +%y-%m-%d_%T)_$task_name"
-logfile="$logdir/$run_name"
+logfile="$logdir/$run_name.log"
 qsub_name=${run_name//_/__}
 qsub_name=b2c-tests__${qsub_name//:/_}
 

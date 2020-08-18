@@ -10,7 +10,7 @@ logdir=$2
 
 mkdir -p "$logdir"
 
-logfile="$logdir/$task_name"
+logfile="$logdir/$task_name.log"
 
 start_time=`date +%s`
 
