@@ -144,7 +144,7 @@ prefs.register_preferences(
         default=False),
 
     no_post_references=BrianPreference(
-        docs='''Set this preference if you don't need access to ``i`` in any
+        docs='''Set this preference if you don't need access to ``j`` in any
         synaptic code string and no Synapses object applies effects to
         postsynaptic variables. This preference is for memory optimization until
         unnecassary device memory allocations in synapse creation are fixed, it
@@ -184,6 +184,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     '''
 
     def __init__(self):
+        # only true during first run call (relevant for synaptic pre/post ID deletion)
+        self.first_run = True
         # list of pre/post ID arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
@@ -288,13 +290,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all
             no_or_const_delay_mode = True
         template_kwds["no_or_const_delay_mode"] = no_or_const_delay_mode
-        if isinstance(owner, Synapses) and template_name in ['synapses', 'stateupdate']:
-            # Check if pre/post IDs are needed per synapse (which is the case
-            # only if presynapic/postsynapitc variables are used in synapses code)
-            # If in at least one `synapses` template for the same Synapses
-            # object or in a `run_regularly` call (creates a `statupdate`) a
-            # pre/post IDs are needed, we don't delete them. These will be
-            # deleted on the device in `run_lines` (see below)
+
+        # Check if pre/post IDs are needed per synapse
+        # This is the case  when presynapic/postsynapitc variables are used in synapses code or
+        # if they are used to set synaptic variables after the first run call.
+        # If in at least one `synapses` template for the same Synapses
+        # object or in a `run_regularly` call (creates a `statupdate`) a
+        # pre/post IDs are needed, we don't delete them. And if a synapses object that is only
+        # run once after the first run call (e.g. syn.w['i<j'] = ...), we don't delete either.
+        # If deleted, they will be deleted on the device in `run_lines` (see below)
+        synapses_object_every_tick = False
+        synapses_object_single_tick_after_run = False
+        if isinstance(owner, Synapses):
+            if template_name in ['synapses', 'stateupdate']:
+                synapses_object_every_tick = True
+            if not self.first_run and template_name in ['group_variable_set_conditional', 'group_variable_set']:
+                synapses_object_single_tick_after_run = True
+        if synapses_object_every_tick or synapses_object_single_tick_after_run:
             read, write = self.get_array_read_write(abstract_code, variables)
             read_write = read.union(write)
             synaptic_pre_array_name = self.get_array_name(owner.variables['_synaptic_pre'], False)
@@ -319,9 +331,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         if prefs['devices.cuda_standalone.no_post_references']:
                             raise PreferenceError("'devices.cuda_standalone.no_post_references' "
                                                   "was set to True, but postsynaptic index is "
-                                                  "needed for {varname} in "
-                                                  "{owner.name}".format(varname=varname,
-                                                                        owner=owner))
+                                                  "needed for '{varname}' in "
+                                                  "'{owner.name}'".format(varname=varname,
+                                                                          owner=owner))
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
@@ -417,6 +429,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         main_lines = []
         procedures = [('', main_lines)]
         runfuncs = {}
+        run_counter = 0
         for func, args in self.main_queue:
             if func=='run_code_object':
                 codeobj, = args
@@ -435,7 +448,26 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.append('_run_%s();' % codeobj.name)
             elif func=='run_network':
                 net, netcode = args
+                if run_counter == 0:
+                    # These lines delete `i`/`j` variables stored per synapse. They need to be called after
+                    # synapses_initialise_queue codeobjects, therefore just before the network creation, so I
+                    # put them here
+                    for arrname, boolean in self.delete_synaptic_pre.iteritems():
+                        if boolean:
+                            lines = '''
+                            dev{synaptic_pre}.clear();
+                            dev{synaptic_pre}.shrink_to_fit();
+                            '''.format(synaptic_pre=arrname)
+                            main_lines.extend(lines.split('\n'))
+                    for arrname, boolean in self.delete_synaptic_post.iteritems():
+                        if boolean:
+                            lines = '''
+                            dev{synaptic_post}.clear();
+                            dev{synaptic_post}.shrink_to_fit();
+                            '''.format(synaptic_post=arrname)
+                            main_lines.extend(lines.split('\n'))
                 main_lines.extend(netcode)
+                run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
                 size_str = arrayname + ".size()" if is_dynamic else "_num_" + arrayname
@@ -1118,26 +1150,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if build_profile:
                 self.enable_profiling = True
 
-        # these are not really `run_lines`, but they need to be called after
-        # synapses_initialise_queue codeobjects, therefore just before the
-        # network creation, so I put them here
-        run_lines = []
-        for arrname, boolean in self.delete_synaptic_pre.iteritems():
-            if boolean:
-                lines = '''
-                dev{synaptic_pre}.clear();
-                dev{synaptic_pre}.shrink_to_fit();
-                '''.format(synaptic_pre=arrname)
-                run_lines.append(lines)
-        for arrname, boolean in self.delete_synaptic_post.iteritems():
-            if boolean:
-                lines = '''
-                dev{synaptic_post}.clear();
-                dev{synaptic_post}.shrink_to_fit();
-                '''.format(synaptic_post=arrname)
-                run_lines.append(lines)
-
         # Generate the updaters
+        run_lines = []
         run_lines.append('{net.name}.clear();'.format(net=net))
 
         # create all random numbers needed for the next clock cycle
@@ -1209,6 +1223,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                    'device.build call to use multiple run '
                                    'statements with this device.')
             self.build(direct_call=False, **self.build_options)
+
+        self.first_run = False
 
 
 def check_codeobj_for_rng(codeobj, check_binomial=False):
