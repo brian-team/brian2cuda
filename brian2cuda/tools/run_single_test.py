@@ -13,6 +13,9 @@ parser.add_argument('test', nargs='*', type=str,
                           "(e.g. brian2.tests.test_base:test_names) or "
                           "package.tests.test_file to run all tests in a "
                           "file."))
+parser.add_argument('--only',
+                    choices=['single-run', 'multi-run', 'standalone-only'],
+                    default=None)
 
 args = utils.parse_arguments(parser)
 
@@ -52,42 +55,49 @@ for target in args.targets:
             utils.print_single_prefs(prefs_dict, set_prefs=prefs)
         else:  # None
             print "Running {} with default preferences\n".format(target)
+        sys.stdout.flush()
 
         # backup prefs such that reinit_device in the nose test teardown resets
         # the preferences to what was set above (in restore_initial_state())
         prefs._backup()
 
-        print ("Running standalone-compatible standard tests "
-               "(single run statement)\n")
-        set_device(target, directory=None, with_output=False)
-        argv = make_argv(args.test, 'standalone-compatible,!multiple-runs')
-        success = nose.run(argv=argv)
-        pref_success = pref_success and success
+        if args.only is None or args.only == 'single-run':
+            print ("Running standalone-compatible standard tests "
+                   "(single run statement)\n")
+            sys.stdout.flush()
+            set_device(target, directory=None, with_output=False)
+            argv = make_argv(args.test, 'standalone-compatible,!multiple-runs')
+            success = nose.run(argv=argv)
+            pref_success = pref_success and success
 
-        clear_caches()
-        reset_device()
+            clear_caches()
+            reset_device()
 
-        print ("Running standalone-compatible standard tests "
-               "(multiple run statements)\n")
-        set_device(target, directory=None, with_output=False,
-                   build_on_run=False)
-        argv = make_argv(args.test, 'standalone-compatible,multiple-runs')
-        success = nose.run(argv=argv)
-        pref_success = pref_success and success
+        if args.only is None or args.only == 'multi-run':
+            print ("Running standalone-compatible standard tests "
+                   "(multiple run statements)\n")
+            sys.stdout.flush()
+            set_device(target, directory=None, with_output=False,
+                       build_on_run=False)
+            argv = make_argv(args.test, 'standalone-compatible,multiple-runs')
+            success = nose.run(argv=argv)
+            pref_success = pref_success and success
 
-        clear_caches()
-        reset_device()
+            clear_caches()
+            reset_device()
 
-        print "Running standalone-specific tests\n"
-        set_device(target, directory=None, with_output=False)
-        argv = make_argv(args.test, target)
-        success = nose.run(argv=argv)
-        pref_success = pref_success and success
+        if args.only is None or args.only == 'standalone-only':
+            print "Running standalone-specific tests\n"
+            sys.stdout.flush()
+            set_device(target, directory=None, with_output=False)
+            argv = make_argv(args.test, target)
+            success = nose.run(argv=argv)
+            pref_success = pref_success and success
 
-        successes.append(pref_success)
+            successes.append(pref_success)
 
-        clear_caches()
-        reset_device()
+            clear_caches()
+            reset_device()
 
     print "\nTARGET: {}".format(target.upper())
     all_success = utils.check_success(successes, all_prefs_combinations)
