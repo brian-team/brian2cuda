@@ -54,21 +54,20 @@ def test_rand_randn_regex():
 
     for i, co in enumerate(m):
         check_codeobj_for_rng(co)
-        assert co.rand_calls == 1, "{}: matches: {} in '{}'".format(i,
-                                                                  co.rand_calls,
-                                                                  co.code.cu_file)
+        assert co.rand_calls == 1, \
+            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
 
     for i, co in enumerate(n):
         check_codeobj_for_rng(co)
-        assert co.rand_calls == 0, "{}: matches: {} in '{}'".format(i,
-                                                                  co.rand_calls,
-                                                                  co.code.cu_file)
+        assert co.rand_calls == 0, \
+            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
 
 
 @attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
 def test_rand_randn_occurence_counting():
 
-    set_device('cuda_standalone')
+    set_device('cuda_standalone', directory=None)
 
     G_rand = NeuronGroup(10, '''dx/dt = rand()/ms : 1''', threshold='True', name='G_rand')
     S_rand = Synapses(G_rand, G_rand, on_pre='''x += rand()''', name='S_rand')
@@ -95,9 +94,10 @@ def test_rand_randn_occurence_counting():
 
 
 @attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
 def test_binomial_occurence():
 
-    set_device('cuda_standalone')
+    set_device('cuda_standalone', directory=None)
 
     my_f_a = BinomialFunction(100, 0.1, approximate=True)
     my_f = BinomialFunction(100, 0.1, approximate=False)
