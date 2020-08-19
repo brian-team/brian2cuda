@@ -6,6 +6,6 @@ task_name=${1:-noname}       # default: noname
 logdir=${2:-test_suite_logs}  # default: test_suit_logs
 
 # add timestemp to name
-task_name="$(date +%y-%m-%d_%T)"__"$task_name"
+task_name="$(date +%y-%m-%d_%T)"__"$task_name".log
 
 bash _run_test_suite.sh "$task_name" "$logdir"
