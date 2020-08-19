@@ -10,6 +10,9 @@
 #include <ctime>
 #include <curand_kernel.h>
 
+// XXX: for some documentation on random number generation, check out our wiki:
+//      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
+
 using namespace brian;
 
 // TODO make this a class member function

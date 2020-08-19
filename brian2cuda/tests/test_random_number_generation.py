@@ -14,6 +14,9 @@ from brian2cuda.device import check_codeobj_for_rng
 
 @attr('cuda_standalone', 'standalone-only')
 def test_rand_randn_regex():
+    # Since we don't build anython but only test a Python function in
+    # device.py, we can run this standalone-only test without set_device and
+    # device.build
 
     # dummy class to fit with check_codeobj_for_rng function
     class DummyCodeobj():
@@ -60,6 +63,69 @@ def test_rand_randn_regex():
         assert co.rand_calls == 0, "{}: matches: {} in '{}'".format(i,
                                                                   co.rand_calls,
                                                                   co.code.cu_file)
+
+
+@attr('cuda_standalone', 'standalone-only')
+def test_rand_randn_occurence_counting():
+
+    set_device('cuda_standalone')
+
+    G_rand = NeuronGroup(10, '''dx/dt = rand()/ms : 1''', threshold='True', name='G_rand')
+    S_rand = Synapses(G_rand, G_rand, on_pre='''x += rand()''', name='S_rand')
+    S_rand.connect()
+
+    G_randn = NeuronGroup(10, '''dx/dt = randn()/ms : 1''', threshold='True', name='G_randn')
+    S_randn = Synapses(G_randn, G_randn, on_pre='''x += randn()''', name='S_randn')
+    S_randn.connect()
+
+    run(0*ms)
+
+    assert len(device.all_code_objects['binomial']) == 0
+
+    for code_object in device.all_code_objects['rand']:
+        assert code_object.rand_calls == 1
+        assert code_object.randn_calls == 0
+
+    for code_object in device.all_code_objects['randn']:
+        assert code_object.rand_calls == 0
+        assert code_object.randn_calls == 1
+
+    for code_object in device.all_code_objects['rand_or_randn']:
+        assert code_object not in device.code_object_with_binomial_separate_call
+
+
+@attr('cuda_standalone', 'standalone-only')
+def test_binomial_occurence():
+
+    set_device('cuda_standalone')
+
+    my_f_a = BinomialFunction(100, 0.1, approximate=True)
+    my_f = BinomialFunction(100, 0.1, approximate=False)
+
+
+    G_my_f = NeuronGroup(10, '''dx/dt = my_f()/ms : 1''', threshold='True', name='G_my_f')
+    G_my_f.x = 'my_f()'
+    S_my_f = Synapses(G_my_f, G_my_f, on_pre='''x += my_f()''', name='S_my_f')
+    S_my_f.connect()
+
+    G_my_f_a = NeuronGroup(10, '''dx/dt = my_f_a()/ms : 1''', threshold='True', name='G_my_f_a')
+    S_my_f_a = Synapses(G_my_f_a, G_my_f_a, on_pre='''x += my_f_a()''', name='S_my_f_a')
+    S_my_f_a.connect()
+
+    run(0*ms)
+
+    for key in ['rand', 'randn', 'rand_or_randn']:
+        assert len(device.all_code_objects[key]) == 0
+
+    # all_code_objects['binomial'] collects all codeobjects that use binomials (run
+    # every or single clock cycle). We have 5 objects
+    assert len(device.all_code_objects['binomial']) == 5
+
+    # Here we collect all codeobjects with binomial run only ones
+    # This is only one from the G_my_f.x = 'my_f()' line above
+    obj_list = device.code_object_with_binomial_separate_call
+    assert len(obj_list) == 1
+    assert obj_list[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
 
 
 @attr('standalone-compatible')

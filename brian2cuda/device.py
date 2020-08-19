@@ -987,7 +987,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # runs (needed for variable declarations).
         #   - Variables needed for device side rand/randn are declared in objects.cu:
         #     all_code_objects['rand'/'rand'] are neede in `generate_objects_source`
-        #   - Variables neede for device side binomial functions are initialized in rand.cu:
+        #   - Variables needed for device side binomial functions are initialized in rand.cu:
         #     all_code_objects['binomial'] is needed in `generate_rand_source`
         for run_codeobj in self.code_objects_per_run:
             self.all_code_objects['rand'].extend(run_codeobj['rand'])
@@ -1002,7 +1002,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # initialization. For binomial, we need to initialize them in rand.cu.
         # This line needs to be after `self.generate_main_source`, which populates
         # `self.code_object_with_binomial_separate_call` and before `self.generate_rand_source`
-        self.all_code_objects['binomial'].extend(self.code_object_with_binomial_separate_call)
+        for codeobj in self.code_object_with_binomial_separate_call:
+            if codeobj not in self.all_code_objects['binomial']:
+                self.all_code_objects['binomial'].append(codeobj)
 
         self.generate_codeobj_source(writer)
         self.generate_objects_source(writer, self.arange_arrays,

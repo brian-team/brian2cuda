@@ -5,6 +5,11 @@
 #include <curand.h>
 #include <cuda.h>
 
+
+// XXX: for some documentation on random number generation, check out our wiki:
+//      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
+
+
 enum ProbDistr
 {
     RAND,  // uniform distribution over [0,1)
