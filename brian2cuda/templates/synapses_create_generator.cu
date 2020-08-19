@@ -7,7 +7,29 @@
 #include<brianlib/curand_buffer.h>
 #include "brianlib/cuda_utils.h"
 #include<map>
-{% endblock %}
+{% endblock extra_headers %}
+
+{% block random_functions %}
+// NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
+// but an instance of CurandBuffer, which overloads the operator[], which then just
+// returns the next random number in the buffer, ignoring the argument passed to operator[]
+// NOTE: Put buffers into anonymous namespace such that host_rand/n and rand/n
+// in main code have access to it.
+// NOTE: host_rand/n is used in the host compiled implementation of binomial
+// functions. Here, it just returns the next element from the CurandBuffer.
+CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&brian::curand_generator, RAND);
+randomNumber_t host_rand(const int _vectorisation_idx)
+{
+    return _ptr_array_%CODEOBJ_NAME%_rand[_vectorisation_idx];
+}
+
+CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&brian::curand_generator, RANDN);
+randomNumber_t host_randn(const int _vectorisation_idx)
+{
+    return _ptr_array_%CODEOBJ_NAME%_randn[_vectorisation_idx];
+}
+{% endblock random_functions %}
+
 
 {% block kernel %}
 {% endblock %}
@@ -19,6 +41,9 @@
 {% endblock %}
 
 {% block occupancy %}
+{% endblock %}
+
+{% block update_occupancy %}
 {% endblock %}
 
 {% block kernel_info %}
@@ -64,12 +89,6 @@ std::cout << std::endl;
     const int _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
     {{_dynamic_N_incoming}}.resize(_N_post + _target_offset);
     {{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
-
-    // NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
-    // but an instance of CurandBuffer, which overloads the operator[], which then just
-    // returns the next random number in the buffer, ignoring the argument passed to operator[]
-    CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&curand_generator, RAND);
-    CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&curand_generator, RANDN);
 
     int _raw_pre_idx, _raw_post_idx;
     const int _vectorisation_idx = -1;
@@ -214,11 +233,11 @@ std::cout << std::endl;
             {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
-        // prefs['devices.cuda_standalone.no_pre_references'] was set, skipping
-        // synaptic_pre resize
+        // prefs['devices.cuda_standalone.no_pre_references'] was set,
+        // skipping synaptic_pre resize
         {% elif variable.name == '_synaptic_post' and no_post_references %}
-        // prefs['devices.cuda_standalone.no_post_references'] was set, skipping
-        // synaptic_post resize
+        // prefs['devices.cuda_standalone.no_post_references'] was set,
+        // skipping synaptic_post resize
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
             THRUST_CHECK_ERROR(
@@ -267,3 +286,9 @@ std::cout << std::endl;
                 cudaMemcpyHostToDevice)
             );
 {% endblock extra_maincode %}
+
+{% block extra_kernel_call_post %}
+// free memory in CurandBuffers
+_ptr_array_%CODEOBJ_NAME%_rand.free_memory();
+_ptr_array_%CODEOBJ_NAME%_randn.free_memory();
+{% endblock extra_kernel_call_post %}

@@ -1,53 +1,86 @@
 {% macro cu_file() %}
 
 #include "objects.h"
+#include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
 #include "network.h"
 #include <curand.h>
 #include <ctime>
+#include <curand_kernel.h>
 
-void _run_random_number_generation()
-{
-    using namespace brian;
+// XXX: for some documentation on random number generation, check out our wiki:
+//      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
 
-    // how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
-    static double mb_per_obj = 50;  // MB per codeobject and rand / randn
-    static int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(randomNumber_t);
+using namespace brian;
 
-    // Get the number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
-    {% for co in codeobj_with_rand %}
-    static int num_per_cycle_rand_{{co.name}};
-    static int rand_interval_{{co.name}};
-    static int num_per_gen_rand_{{co.name}};
-    static int idx_rand_{{co.name}};
-    static int rand_floats_per_obj_{{co.name}};
-    {% endfor %}
-    {% for co in codeobj_with_randn %}
-    static int num_per_cycle_randn_{{co.name}};
-    static int randn_interval_{{co.name}};
-    static int num_per_gen_randn_{{co.name}};
-    static int idx_randn_{{co.name}};
-    static int randn_floats_per_obj_{{co.name}};
-    {% endfor %}
+// TODO make this a class member function
+// TODO don't call one kernel per codeobject but instead on kernel which takes
+//      care of all codeobjects, preferably called with as many threads/blocks
+//      as necessary for all states and initializing in parallel with warp
+//      level divergence [needs changing set_curand_device_api_states()]
+namespace {
 
-    // Allocate device memory
-    static bool first_run = true;
-    if (first_run)
+    __global__ void init_curand_states(int N, int sequence_offset)
     {
+        int idx = threadIdx.x + blockIdx.x * blockDim.x;
+        if (idx < N)
+        {
+            // Each thread gets the same seed, a different sequence number and
+            // no offset
+            // TODO: different seed and 0 sequence number is much faster, with
+            // less security for independent sequences, add option as
+            // preference!
+            //curand_init(curand_seed + idx, 0, 0,
+            curand_init(
+                    *d_curand_seed,          // seed
+                    sequence_offset + idx,   // sequence number
+                    0,                       // offset
+                    &d_curand_states[idx]);
+        }
+    }
+}
 
-        // check that we have enough memory available
-        size_t free_byte ;
-        size_t total_byte ;
-        CUDA_SAFE_CALL(
-                cudaMemGetInfo(&free_byte, &total_byte)
-                );
-        size_t num_free_floats = free_byte / sizeof(randomNumber_t);
 
+// need a function pointer for Network::add(), can't pass a pointer to a class
+// method, which is of different type
+void _run_random_number_buffer()
+{
+    // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
+    random_number_buffer.next_time_step();
+}
+
+
+void RandomNumberBuffer::init()
+{
+    // check that we have enough memory available
+    size_t free_byte;
+    size_t total_byte;
+    CUDA_SAFE_CALL(
+            cudaMemGetInfo(&free_byte, &total_byte)
+            );
+    size_t num_free_floats = free_byte / sizeof(randomNumber_t);
+
+    {% for run_i in range(number_run_calls) %}
+    if (run_counter == {{run_i}})
+    {
+        {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
+        {% set codeobj_with_randn = code_objects_per_run[run_i]['randn'] %}
+        {% set codeobj_with_rand_or_randn = code_objects_per_run[run_i]['rand_or_randn'] %}
+        {# not used, binomial doesn't use a buffer but on the fly rng
+        {% set codeobj_with_binomial = code_objects_per_run[run_i]['binomial'] %}
+        #}
+
+        // number of time steps each codeobject is executed during current Network::run() call
+        // XXX: we are assuming here that this function is only run in the first time step of a Network::run()
+        {% for co in codeobj_with_rand_or_randn | sort(attribute='name') %}
+        int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - *({{co.owner.clock.name}}.timestep);
+        {% endfor %}
 
         {% for co in codeobj_with_rand | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
+        {# TODO: pass isinstance to Jinja template to make it available here #}
+        {% if co.owner.__class__.__name__ == 'Synapses' %}
         {% set N = '_array_' + co.owner.name + '_N[0]' %}
         {% else %}
         {% set N = co.owner._N %}
@@ -61,19 +94,25 @@ void _run_random_number_generation()
         num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * rand_interval_{{co.name}};
         idx_rand_{{co.name}} = rand_interval_{{co.name}};
 
-        if (rand_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
+        // create max as many random numbers as will be needed during the current Network.run() call
+        if ((int64_t)rand_interval_{{co.name}} > num_steps_this_run_{{co.name}})
         {
-            // create max as many random numbers as will be needed in the entire simulation
-            num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * {{co.owner.clock.name}}.i_end;
+            // NOTE: if the conditional is true, we can savely cast num_steps_this_run_{{co.name}} to int
+            num_per_gen_rand_{{co.name}} = num_per_cycle_rand_{{co.name}} * (int)num_steps_this_run_{{co.name}};
+            assert((int64_t)num_per_cycle_rand_{{co.name}} * num_steps_this_run_{{co.name}} == num_per_gen_rand_{{co.name}});
+            rand_interval_{{co.name}} = (int)num_steps_this_run_{{co.name}};
+            // set this for buffer to be refilled at first next_time_step() call
+            idx_rand_{{co.name}} = rand_interval_{{co.name}};
         }
+
+        // curandGenerateNormal requires an even number for pseudorandom generators
         if (num_per_gen_rand_{{co.name}} % 2 != 0)
         {
-            // curandGenerateNormal requires an even number for pseudorandom generators
             num_per_gen_rand_{{co.name}} = num_per_gen_rand_{{co.name}} + 1;
         }
 
         // make sure that we don't use more memory then available
-        // TODO: this checks per codeobject the number of generated floats against total available floats. But we neet to check all generated floats against available floats.
+        // this checks per codeobject the number of generated floats against total available floats
         while (num_free_floats < num_per_gen_rand_{{co.name}})
         {
             printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
@@ -102,7 +141,7 @@ void _run_random_number_generation()
 
 
         {% for co in codeobj_with_randn | sort(attribute='name') %}
-        {% if co.template_name == 'synapses' %}
+        {% if co.owner.__class__.__name__ == 'Synapses' %}
         {% set N = '_array_' + co.owner.name + '_N[0]' %}
         {% else %}
         {% set N = co.owner._N %}
@@ -116,19 +155,25 @@ void _run_random_number_generation()
         num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * randn_interval_{{co.name}};
         idx_randn_{{co.name}} = randn_interval_{{co.name}};
 
-        if (randn_interval_{{co.name}} > {{co.owner.clock.name}}.i_end)
+        // create max as many random numbers as will be needed during the current Network.run() call
+        if ((int64_t)randn_interval_{{co.name}} > num_steps_this_run_{{co.name}})
         {
-            // create max as many random numbers as will be needed in the entire simulation
-            num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * {{co.owner.clock.name}}.i_end;
+            // NOTE: if the conditional is true, we can savely cast num_steps_this_run_{{co.name}} to int
+            num_per_gen_randn_{{co.name}} = num_per_cycle_randn_{{co.name}} * (int)num_steps_this_run_{{co.name}};
+            assert((int64_t)num_per_cycle_randn_{{co.name}} * num_steps_this_run_{{co.name}} == num_per_gen_randn_{{co.name}});
+            randn_interval_{{co.name}} = (int)num_steps_this_run_{{co.name}};
+            // set this for buffer to be refilled at first next_time_step() call
+            idx_randn_{{co.name}} = randn_interval_{{co.name}};
         }
+
+        // curandGenerateNormal requires an even number for pseudorandom generators
         if (num_per_gen_randn_{{co.name}} % 2 != 0)
         {
-            // curandGenerateNormal requires an even number for pseudorandom generators
             num_per_gen_randn_{{co.name}} = num_per_gen_randn_{{co.name}} + 1;
         }
 
         // make sure that we don't use more memory then available
-        // TODO: this checks per codeobject the number of generated floats against total available floats. But we neet to check all generated floats against available floats.
+        // this checks per codeobject the number of generated floats against total available floats
         while (num_free_floats < num_per_gen_randn_{{co.name}})
         {
             printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
@@ -155,49 +200,313 @@ void _run_random_number_generation()
                 );
         {% endfor %}
 
-        first_run = false;
+        // now check if the total number of generated floats fit into available memory
+        int total_num_generated_floats = 0;
+        {% for co in codeobj_with_rand %}
+        total_num_generated_floats += num_per_gen_rand_{{co.name}};
+        {% endfor %}
+        {% for co in codeobj_with_randn %}
+        total_num_generated_floats += num_per_gen_randn_{{co.name}};
+        {% endfor %}
+        if (num_free_floats < total_num_generated_floats)
+        {
+            // TODO: find a way to deal with this? E.g. looping over buffers sorted
+            // by buffer size and reducing them until it fits.
+            printf("MEMORY ERROR: Trying to generate more random numbers than fit "
+                   "into available memory. Please report this as an issue on "
+                   "GitHub: https://github.com/brian-team/brian2cuda/issues/new");
+            _dealloc_arrays();
+            exit(1);
+        }
+
+    } // if (run_counter == {{run_i}})
+    {% endfor %}{# run_i #}
+
+    // init curand states only in first run
+    if (run_counter == 0)
+    {
+
+        // Update curand device api states once before anything is run. At this
+        // point all N's (also from probabilistically generated synapses) are
+        // known. This might update the number of needed curand states.
+        ensure_enough_curand_states();
     }
 
-    // Generate random numbers
-    {% for co in codeobj_with_rand %}
-    if (idx_rand_{{co.name}} == rand_interval_{{co.name}})
+}
+
+
+void RandomNumberBuffer::allocate_device_curand_states()
+{
+    // allocate globabl memory for curand device api states
+    CUDA_SAFE_CALL(
+            cudaMalloc((void**)&dev_curand_states,
+                sizeof(curandState) * num_curand_states)
+            );
+    CUDA_SAFE_CALL(
+            cudaMemcpyToSymbol(d_curand_states,
+                &dev_curand_states, sizeof(curandState*))
+            );
+}
+
+
+
+void RandomNumberBuffer::update_needed_number_curand_states()
+{
+    // Find the maximum number of threads generating random numbers in parallel
+    // using the cuRAND device API. For synapses objects, the number of
+    // synapses might not be known yet. This is the case when the first random
+    // seed is set and for any seed() call before the synapses creation.
+    {% for co_name in binomial_codeobjects %}
+
+    // codeobject with binomial: {{co_name}}
+    {% set co = binomial_codeobjects[co_name] %}
+
+    {% if co['test_ptr'] %}
+    // test if synapses are already created (else this is a NULL pointer)
+    if ({{co['test_ptr']}})
     {
-        {% if curand_float_type == 'float' %}
-        curandGenerateUniform(curand_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
-        {% else %}
-        curandGenerateUniformDouble(curand_generator, dev_{{co.name}}_rand_allocator, num_per_gen_rand_{{co.name}});
-        {% endif %}
-        dev_{{co.name}}_rand = &dev_{{co.name}}_rand_allocator[0];
-        idx_rand_{{co.name}} = 1;
+    {% endif %}
+
+        if (num_curand_states < {{co['N']}})
+            num_curand_states = {{co['N']}};
+
+    {% if co['test_ptr'] %}
+    }
+    {% endif %}
+
+    {% endfor %}
+    num_threads_curand_init = max_threads_per_block;
+    num_blocks_curand_init = num_curand_states / max_threads_per_block + 1;
+    if (num_curand_states < num_threads_curand_init)
+        num_threads_curand_init = num_curand_states;
+}
+
+
+void RandomNumberBuffer::set_curand_device_api_states(bool reset_seed)
+{
+    int sequence_offset = 0;
+    int num_curand_states_old = num_curand_states;
+    // Whenever curand states are set, check if enough states where
+    // initialized. This will generate states the first time the seed is set.
+    // But it can be that the seed is set before all network objects' N are
+    // available (e.g. synapses not created yet) and before the network is
+    // run. In such a case, once the network is run, missing curand states are
+    // generated here. If the seed was not reset inbetween, the pervious states
+    // should not be reinitialized (achieved by the `sequence_offset`
+    // parameter). If the seed was reset, then all states should be
+    // reinitialized.
+    update_needed_number_curand_states();
+
+    // number of curand states that need to be initialized
+    int num_curand_states_to_init;
+
+    if (reset_seed)
+    {
+        // initialize all curand states
+        num_curand_states_to_init = num_curand_states;
+        sequence_offset = 0;
     }
     else
     {
-        // move device pointer to next numbers
-        dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
-        idx_rand_{{co.name}} += 1;
+        // don't initialize existing curand states, only the new ones
+        num_curand_states_to_init = num_curand_states - num_curand_states_old;
+        sequence_offset = num_curand_states_old;
     }
-    assert(dev_{{co.name}}_rand < dev_{{co.name}}_rand_allocator + num_per_gen_rand_{{co.name}});
-    {% endfor %}
 
-    {% for co in codeobj_with_randn %}
-    if (idx_randn_{{co.name}} == randn_interval_{{co.name}})
+    if (num_curand_states_old < num_curand_states)
     {
-        {% if curand_float_type == 'float' %}
-        curandGenerateNormal(curand_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
-        {% else %}
-        curandGenerateNormalDouble(curand_generator, dev_{{co.name}}_randn_allocator, num_per_gen_randn_{{co.name}}, 0, 1);
-        {% endif %}
-        dev_{{co.name}}_randn = &dev_{{co.name}}_randn_allocator[0];
-        idx_randn_{{co.name}} = 1;
+        // copy curand states to new array of updated size
+        curandState* dev_curand_states_old = dev_curand_states;
+        // allocate memory for new number of curand states
+        allocate_device_curand_states();
+
+        if ((!reset_seed) && (num_curand_states_old > 0))
+        {
+            // copy old states to new memory address on device
+            CUDA_SAFE_CALL(
+                    cudaMemcpy(dev_curand_states, dev_curand_states_old,
+                        sizeof(curandState) * num_curand_states_old,
+                        cudaMemcpyDeviceToDevice)
+                    );
+        }
     }
-    else
+
+    if (num_curand_states_to_init > 0)
     {
-        // move device pointer to next numbers
-        dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
-        idx_randn_{{co.name}} += 1;
+        init_curand_states<<<num_blocks_curand_init, num_threads_curand_init>>>(
+                num_curand_states_to_init,
+                sequence_offset);
     }
-    assert(dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}});
-    {% endfor %}
+}
+
+
+void RandomNumberBuffer::ensure_enough_curand_states()
+{
+    // Separate public function needed for synapses codeobjects that are run
+    // only once before the network
+    // The N of synapses will not be known when setting the seed and needs to
+    // be updated before using random numbers per synapse. This occurs e.g.
+    // when initializing synaptic variables (synapses_group_conditional_....)
+    bool reset_seed = false;
+    set_curand_device_api_states(reset_seed);
+}
+
+
+void RandomNumberBuffer::run_finished()
+{
+    needs_init = true;
+    run_counter += 1;
+}
+
+
+void RandomNumberBuffer::set_seed(unsigned long long seed)
+{
+    CUDA_SAFE_CALL(
+            curandSetPseudoRandomGeneratorSeed(curand_generator, seed)
+            );
+
+    // generator offset needs to be reset to its default (=0)
+    CUDA_SAFE_CALL(
+            curandSetGeneratorOffset(curand_generator, 0ULL)
+            );
+
+    // set seed for curand device api calls
+    // don't set the same seed for host api and device api random states, just in case
+    unsigned long long curand_seed = seed + 1;
+    CUDA_SAFE_CALL(
+            cudaMemcpy(dev_curand_seed, &curand_seed,
+                sizeof(unsigned long long), cudaMemcpyHostToDevice)
+            );
+
+    bool reset_seed = true;
+    set_curand_device_api_states(reset_seed);
+    // We set all device api states for codeobjects run outside the network
+    // since we don't know when they will be used.
+    //set_curand_device_api_states_for_separate_calls();
+    // Curand device api states for binomials during network runs will be set
+    // only for the current run in init(), once the network starts.
+}
+
+
+void RandomNumberBuffer::refill_uniform_numbers(
+        randomNumber_t* dev_rand_allocator,
+        randomNumber_t* &dev_rand,
+        int num_per_gen_rand,
+        int &idx_rand)
+{
+    // generate uniform distributed random numbers and reset buffer index
+
+    {% if curand_float_type == 'float' %}
+    curandGenerateUniform(curand_generator, dev_rand_allocator, num_per_gen_rand);
+    {% else %}
+    curandGenerateUniformDouble(curand_generator, dev_rand_allocator, num_per_gen_rand);
+    {% endif %}
+    // before: XXX dev_rand = &dev_rand_allocator[0];
+    dev_rand = dev_rand_allocator;
+    idx_rand = 1;
+}
+
+
+void RandomNumberBuffer::refill_normal_numbers(
+        randomNumber_t* dev_randn_allocator,
+        randomNumber_t* &dev_randn,
+        int num_per_gen_randn,
+        int &idx_randn)
+{
+    // generate normal distributed random numbers and reset buffer index
+
+    {% if curand_float_type == 'float' %}
+    curandGenerateNormal(curand_generator, dev_randn_allocator, num_per_gen_randn, 0, 1);
+    {% else %}
+    curandGenerateNormalDouble(curand_generator, dev_randn_allocator, num_per_gen_randn, 0, 1);
+    {% endif %}
+    // before: XXX dev_randn = &dev_randn_allocator[0];
+    dev_randn = dev_randn_allocator;
+    idx_randn = 1;
+}
+
+
+void RandomNumberBuffer::next_time_step()
+{
+    // init buffers at fist time step of each run call
+    if (needs_init)
+    {
+        // free device memory for random numbers used during last run call
+        if (run_counter > 0)
+        {
+            {% for run_i in range(number_run_calls) %}
+            {% if code_objects_per_run[run_i]['rand'] or code_objects_per_run[run_i]['randn'] %}
+            if (run_counter == {{run_i}})
+            {
+                {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
+                {% set codeobj_with_randn = code_objects_per_run[run_i]['randn'] %}
+
+                {% for co in codeobj_with_rand | sort(attribute='name') %}
+                CUDA_SAFE_CALL(
+                        cudaFree(dev_{{co.name}}_rand_allocator)
+                        );
+                {% endfor %}
+
+                {% for co in codeobj_with_randn | sort(attribute='name') %}
+                CUDA_SAFE_CALL(
+                        cudaFree(dev_{{co.name}}_randn_allocator)
+                        );
+                {% endfor %}
+            } // run_counter == {{run_i}}
+            {% endif %}{# len(rand) > 0 or len(randn) > 0 #}
+            {% endfor %}{# run_i #}
+        }
+
+        // init random number buffers
+        init();
+        needs_init = false;
+    }
+
+    {% for run_i in range(number_run_calls) %}
+    if (run_counter == {{run_i}})
+    {
+        {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
+        {% set codeobj_with_randn = code_objects_per_run[run_i]['randn'] %}
+
+        {% for co in codeobj_with_rand %}
+        // uniform numbers for {{co.name}}
+        if (idx_rand_{{co.name}} == rand_interval_{{co.name}})
+        {
+            refill_uniform_numbers(
+                    dev_{{co.name}}_rand_allocator,
+                    dev_{{co.name}}_rand,
+                    num_per_gen_rand_{{co.name}},
+                    idx_rand_{{co.name}});
+        }
+        else
+        {
+            // move device pointer to next numbers
+            dev_{{co.name}}_rand += num_per_cycle_rand_{{co.name}};
+            idx_rand_{{co.name}} += 1;
+        }
+        assert(dev_{{co.name}}_rand < dev_{{co.name}}_rand_allocator + num_per_gen_rand_{{co.name}});
+        {% endfor %}
+
+        {% for co in codeobj_with_randn %}
+        // normal numbers for {{co.name}}
+        if (idx_randn_{{co.name}} == randn_interval_{{co.name}})
+        {
+            refill_normal_numbers(
+                    dev_{{co.name}}_randn_allocator,
+                    dev_{{co.name}}_randn,
+                    num_per_gen_randn_{{co.name}},
+                    idx_randn_{{co.name}});
+        }
+        else
+        {
+            // move device pointer to next numbers
+            dev_{{co.name}}_randn += num_per_cycle_randn_{{co.name}};
+            idx_randn_{{co.name}} += 1;
+        }
+        assert(dev_{{co.name}}_randn < dev_{{co.name}}_randn_allocator + num_per_gen_randn_{{co.name}});
+        {% endfor %}
+    }// run_counter == {{run_i}}
+    {% endfor %}{# run_i #}
 }
 {% endmacro %}
 
@@ -210,9 +519,93 @@ void _run_random_number_generation()
 
 #include <curand.h>
 
-void _run_random_number_generation();
+void _run_random_number_buffer();
+
+class RandomNumberBuffer
+{
+    // TODO let all random number pointers be class members of this class ->
+    //      check which ones are needed as global variables, maybe have both,
+    //      global and member variables? or change parameters in codeobjects?
+
+    // before each run, buffers need to be reinitialized
+    bool needs_init = true;
+    // how many 'run' calls have finished
+    int run_counter = 0;
+    // number of needed cuRAND states
+    int num_curand_states = 0;
+    // number of threads and blocks to set curand states
+    int num_threads_curand_init, num_blocks_curand_init;
+
+    // how many random numbers we want to create at once (tradeoff memory usage <-> generation overhead)
+    double mb_per_obj = 50;  // MB per codeobject and rand / randn
+    int floats_per_obj = (mb_per_obj * 1024.0 * 1024.0) / sizeof(randomNumber_t);
+
+    // The number of needed random numbers per clock cycle, the generation interval, and the number generated per curand call.
+    //
+    // needed random numbers per clock cycle
+    // int num_per_cycle_rand_{};
+    //
+    // number of time steps after which buffer needs to be refilled
+    // int rand_interval_{};
+    //
+    // buffer size
+    // int num_per_gen_rand_{};
+    //
+    // number of time steps since last buffer refill
+    // int idx_rand_{};
+    //
+    // maximum number of random numbers fitting given allocated memory
+    // int rand_floats_per_obj_{};
+
+    // For each call of brians `run`, a new set of codeobjects (with different
+    // suffixes) is generated. The following are variables for all codeobjects
+    // for all runs that need random numbers.
+
+    {% for run_i in range(number_run_calls) %}
+    ////// run {run_i}
+
+    {% set codeobj_with_rand = code_objects_per_run[run_i]['rand'] %}
+    {% set codeobj_with_randn = code_objects_per_run[run_i]['randn'] %}
+
+    //// uniform distributed random numbers (rand)
+
+    {% for co in codeobj_with_rand %}
+    // {{co.name}}
+    int num_per_cycle_rand_{{co.name}};
+    int rand_interval_{{co.name}};
+    int num_per_gen_rand_{{co.name}};
+    int idx_rand_{{co.name}};
+    int rand_floats_per_obj_{{co.name}};
+
+    {% endfor %}{# co #}
+
+    //// normal distributed random numbers (randn)
+
+    {% for co in codeobj_with_randn %}
+    // {{co.name}}
+    int num_per_cycle_randn_{{co.name}};
+    int randn_interval_{{co.name}};
+    int num_per_gen_randn_{{co.name}};
+    int idx_randn_{{co.name}};
+    int randn_floats_per_obj_{{co.name}};
+
+    {% endfor %}{# co #}
+    {% endfor %} {# run_i #}
+
+    void init();
+    void allocate_device_curand_states();
+    void update_needed_number_curand_states();
+    void set_curand_device_api_states(bool);
+    void refill_uniform_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
+    void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
+
+public:
+    void next_time_step();
+    void set_seed(unsigned long long);
+    void run_finished();
+    void ensure_enough_curand_states();
+};
 
 #endif
-
 
 {% endmacro %}

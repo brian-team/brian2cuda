@@ -7,7 +7,9 @@
 
 {# remove this once we have properly defined num_threads, num_blocks here... #}
 {% block occupancy %}
-{% endblock occupancy %}
+{% endblock %}
+{% block update_occupancy %}
+{% endblock %}
 {% block kernel_info %}
 {% endblock %}
 

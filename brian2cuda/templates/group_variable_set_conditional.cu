@@ -1,9 +1,10 @@
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
-#include<math.h>
+#include "rand.h"
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
 #include "brianlib/cuda_utils.h"
+#include<math.h>
 #include<stdint.h>
 #include<iostream>
 #include<fstream>
@@ -13,6 +14,21 @@
 
 ////// SUPPORT CODE ///////
 namespace {
+    // Implement dummy functions such that the host compiled code of binomial
+    // functions works. Hacky, hacky ...
+    double host_rand(const int _vectorisation_idx)
+    {
+        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+                __LINE__);
+        exit(EXIT_FAILURE);
+    }
+    double host_randn(const int _vectorisation_idx)
+    {
+        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+                __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
     {{support_code_lines|autoindent}}
 }
 
@@ -46,8 +62,8 @@ __global__ void kernel_{{codeobj_name}}(
     {{scalar_code['statement']|autoindent}}
 
     ///// vector_code['condition'] /////
-
     {{vector_code['condition']|autoindent}}
+
     if (_cond)
     {
         ///// vector_code['statement'] /////

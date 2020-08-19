@@ -4,7 +4,7 @@
  # on the propagation mode.
  #
  # DELAY MODE
- # When the delay is set using the `Synapses` constructors `delay` keyword
+ # When the delay is set using the `Synapses` constructor's `delay` keyword
  # (e.g. `syn = Synapses(..., delay=2*ms)`) or no delay is set at all, we
  # are in "no_or_const_delay_mode" (template parameter). If the delay is
  # set in the objects `delay` attribute (e.g.  `syn.delay = ...`), we are

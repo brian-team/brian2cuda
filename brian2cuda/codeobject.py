@@ -39,6 +39,7 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     runs_every_tick = True  #default True, set False in generate_main_source
     rand_calls = 0
     randn_calls = 0
+    binomial_function = False
 
     def __call__(self, **kwds):
         return self.run()
