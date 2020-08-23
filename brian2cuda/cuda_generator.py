@@ -592,13 +592,13 @@ class CUDACodeGenerator(CodeGenerator):
     def determine_keywords(self):
         # set up the restricted pointers, these are used so that the compiler
         # knows there is no aliasing in the pointers, for optimisation
-        lines = []
-        # it is possible that several different variable names refer to the
+        pointers = []
+        # It is possible that several different variable names refer to the
         # same array. E.g. in gapjunction code, v_pre and v_post refer to the
         # same array if a group is connected to itself
         handled_pointers = set()
         template_kwds = {}
-        # again, do the import here to avoid a circular dependency.
+        # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
         for varname, var in self.variables.iteritems():
@@ -610,11 +610,16 @@ class CUDACodeGenerator(CodeGenerator):
                     continue
                 if getattr(var, 'ndim', 1) > 1:
                     continue  # multidimensional (dynamic) arrays have to be treated differently
-                line = self.c_data_type(var.dtype) + ' * ' + self.restrict + pointer_name + ' = ' + array_name + ';'
-                lines.append(line)
+                restrict = self.restrict
+                # turn off restricted pointers for scalars for safety
+                if var.scalar:
+                    restrict = ' '
+                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                                                    restrict,
+                                                    pointer_name,
+                                                    array_name)
+                pointers.append(line)
                 handled_pointers.add(pointer_name)
-
-        pointers = '\n'.join(lines)
 
         # set up the functions
         user_functions = []
