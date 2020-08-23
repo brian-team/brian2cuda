@@ -651,16 +651,6 @@ class CUDACodeGenerator(CodeGenerator):
                 if funccode is not None:
                     support_code += '\n' + deindent(funccode.get('support_code', ''))
                     hash_defines += '\n' + deindent(funccode.get('hashdefine_code', ''))
-                # add the Python function with a leading '_python', if it
-                # exists. This allows the function to make use of the Python
-                # function via weave if necessary (e.g. in the case of randn)
-                if not variable.pyfunc is None:
-                    pyfunc_name = '_python_' + varname
-                    if pyfunc_name in self.variables:
-                        logger.warn(('Namespace already contains function %s, '
-                                     'not replacing it') % pyfunc_name)
-                    else:
-                        self.variables[pyfunc_name] = variable.pyfunc
 
         support_code += '\n' + deindent(self.universal_support_code)
 
