@@ -22,7 +22,11 @@ def _generate_cuda_code_1d(values, dt, name):
                i = 0;
             if(i >= %NUM_VALUES%)
                 i = %NUM_VALUES%-1;
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             return d%NAME%_values[i];
+        #else
+            return %NAME%_values[i];
+        #endif
         }
         '''.replace('%NAME%', name).replace('%DT%', '%.18f' % dt).replace(
             '%K%', str(K)).replace('%NUM_VALUES%', str(len(values)))
@@ -49,7 +53,12 @@ def _generate_cuda_code_2d(values, dt, name):
                timestep = 0;
             else if(timestep >= %ROWS%)
                 timestep = %ROWS%-1;
+        #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             return d%NAME%_values[timestep*%COLS% + i];
+        #else
+            return %NAME%_values[timestep*%COLS% + i];
+        #endif
+
         }
         '''
         code = replace(code, {'%NAME%': name,
