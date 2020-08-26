@@ -609,8 +609,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     v = v.real_var
 
                 # code objects which only run once
-                if k in ["_python_rand", "_python_randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    if k == "_python_randn":
+                if k in ["rand", "randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
+                    if k == "randn":
                         code_snippet='''
                             //genenerate an array of random numbers on the device
                             {dtype}* dev_array_randn;
@@ -624,7 +624,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         line = "{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                         device_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_randn")
-                    elif k == "_python_rand":
+                    elif k == "rand":
                         code_snippet = '''
                             //genenerate an array of random numbers on the device
                             {dtype}* dev_array_rand;
@@ -695,7 +695,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
             # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
             # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
-            # TODO can we just include this in the k == '_python_rand' test above?
+            # TODO can we just include this in the k == 'rand' test above?
             if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
                 device_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),

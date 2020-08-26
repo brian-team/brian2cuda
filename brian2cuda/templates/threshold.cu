@@ -33,8 +33,7 @@
         // might contain references to not_refractory or lastspike and in
         // that case the names will refer to a single entry.
         {{not_refractory}}[_idx] = false;
-        {# we can't use {{t}} directly, since it returns ...[0] (in Device.code_object()) but our t is not a pointer #}
-        {{lastspike}}[_idx] = {{get_array_name(variables['t'])}};
+        {{lastspike}}[_idx] = {{t}};
         {% endif %}
     }
     }
