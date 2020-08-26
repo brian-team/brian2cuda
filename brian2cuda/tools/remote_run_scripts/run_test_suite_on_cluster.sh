@@ -6,38 +6,70 @@ task_name=${1:-noname}
 # remote machine name
 remote="cluster"
 # where to store the logfile on the remote
-logdir="~/projects/brian2cuda/test-suite/results"
+remote_logdir="~/projects/brian2cuda/test-suite/results"
 # get path to this git repo (brian2cuda)
-local_folder=$(git rev-parse --show-toplevel)
+local_b2c_dir=$(git rev-parse --show-toplevel)
 
 run_name="$(date +%y-%m-%d_%T)_$task_name"
-logfile="$logdir/$run_name.log"
+local_logfile="/tmp/$run_name.log"
+remote_logfile="$remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}
 qsub_name=b2c-tests__${qsub_name//:/_}
 
 # create tmp folder name for brian2cuda code (in $HOME)
-remote_folder="~/projects/brian2cuda/test-suite/brian2cuda-synced-repos/$run_name"
-#remote_folder="/cognition/home/denis/projects/brian2cuda/test-suite/$run_name"
+remote_b2c_dir="~/projects/brian2cuda/test-suite/brian2cuda-synced-repos/$run_name"
 
-# if excluding tracked files, the git diff on the remote is messed up
-# TODO: create the git diff locally instead ...
-#rsync -avzz --exclude 'dev' --exclude 'examples' \
 
-rsync -avzz --exclude '*.o' \
-    "$local_folder"/ "$remote:$remote_folder"
+### Create git diffs locally
+# else excluding tracked files in rsync will mess  diffs up
 
-# This works for the git diff but excludes any new and still untracked files...
-## copy brian2cuda directory to remote server
-#tracked=$local_folder/.tracked_files
-#cd $local_folder
-#git ls-tree -r HEAD --name-only > $tracked
-## add git directory such that git commands work remotely
-#echo ".git" >> $tracked
-##num_files=$(wc -l < $tracked)
-#rsync -avzzr --files-from="$tracked" \
-#    "$local_folder"/ "$remote:$remote_folder"
-## --info=progress2
-#cd - > /dev/null
+# get code state
+cd "$local_b2c_dir"
+b2c_branch="$(git rev-parse --abbrev-ref HEAD)"
+b2c_commit="$(git rev-parse HEAD)"
+b2c_diff="$(git diff)"
+cd frozen_repos/brian2
+brian2_branch="$(git rev-parse --abbrev-ref HEAD)"
+brian2_commit="$(git rev-parse HEAD)"
+brian2_diff="$(git diff)"
+
+
+cat > "$local_logfile" <<EOL
+brian2CUDA test suite run
+name: $run_name
+run directory: $local_b2c_dir
+
+b2c branch: $b2c_branch
+b2c commit: $b2c_commit
+--- b2c-diff start ---
+$b2c_diff
+--- b2c-diff end ---
+
+brian2 branch: $brian2_branch
+brian2 commit: $brian2_commit
+--- brian2-diff start ---
+$brian2_diff
+--- brian2-diff end ---
+
+EOL
+
+
+### Create logdir on remote
+ssh "$remote" "mkdir -p $logdir"
+
+### Copy local logfile with diff over to remote
+rsync -avzz "$local_logfile" "$remote:$remote_logfile"
+
+
+### Copy brian2cuda repo over to remote
+rsync -avzz \
+    --exclude '*.o' \
+    --exclude 'tags' \
+    --exclude 'examples' \
+    --exclude 'dev'\
+    --exclude '.eggs'\
+    --exclude '.git' \
+    "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 
 # submit test suite script through qsub on cluster headnote
@@ -49,7 +81,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -l h=cognition13 \
     -N $qsub_name \
     -pe cognition.pe 4 \
-    $remote_folder/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
-    $remote_folder $logfile
+    $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
+    $remote_b2c_dir $remote_logfile
     "
     # $1: b2c_dir, # $2: logfile (on_headnode.sh)
