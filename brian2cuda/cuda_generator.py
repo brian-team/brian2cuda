@@ -589,9 +589,9 @@ class CUDACodeGenerator(CodeGenerator):
                     type_str = self.c_data_type(ns_value.dtype) + '*'
                 else:  # e.g. a function
                     type_str = 'py::object'
-                support_code.append('static {0} _namespace{1};'.format(type_str,
-                                                                       ns_key))
-                pointers.append('_namespace{0} = {1};'.format(ns_key, ns_key))
+                #support_code.append('__device__ {0} _namespace{1};'.format(type_str,
+                #                                                           ns_key))
+                #pointers.append('_namespace{0} = {1};'.format(ns_key, ns_key))
             support_code.append(deindent(funccode.get('support_code', '')))
             hash_defines.append(deindent(funccode.get('hashdefine_code', '')))
 

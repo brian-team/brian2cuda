@@ -31,6 +31,7 @@ from brian2.units import second
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.groups.neurongroup import Thresholder
+from brian2.input.timedarray import TimedArray
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
@@ -636,6 +637,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         line = "{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                         device_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
+                elif isinstance(v, TimedArray):
+                    print("DEBUG timedarray", v.name)
+                    clock = codeobj.owner.clock
+                    # NOTE: we are passing `t` by value here since clocks are running on the host
+                    #       and time variables on the device are not updated
+                    host_parameters_lines.append(
+                            # could also use "{clock.name}.t[0]"
+                            "_array_{clock.name}_t[0]".format(clock=clock))
+                    device_parameters_lines.append(
+                            "const {dtype} {clock.name}_t_value".format(
+                                dtype=c_data_type(clock.t.dtype), clock=clock))
+                    # NOTE: `_ptr_...` needs to be a pointer for {{scalar_code} / {{vector_code}}
+                    kernel_variables_lines.append(
+                            "const {dtype}* _ptr_array_{clock.name}_t = &{clock.name}_t_value;".format(
+                                dtype=c_data_type(clock.t.dtype), clock=clock))
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
                         arrayname = self.get_array_name(v)

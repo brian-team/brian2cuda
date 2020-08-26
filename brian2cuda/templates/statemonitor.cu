@@ -99,6 +99,7 @@ kernel_{{codeobj_name}}(
     }
     int32_t _idx = indices[tid];
 
+    ///// KERNEL_VARIABLES /////
     %KERNEL_VARIABLES%
 
     ///// scalar_code /////
