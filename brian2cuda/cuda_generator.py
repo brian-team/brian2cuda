@@ -564,9 +564,10 @@ class CUDACodeGenerator(CodeGenerator):
 
         ### Different from CPPCodeGenerator: We format the funccode dtypes here
         if varname in functions_C99:
-            funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
+            funccode = funccode.format(default_type=self.default_func_type,
+                                       other_type=self.other_func_type)
         if varname == 'clip':
-            funccode = funccode.format(float_dtype=float_dtype)
+            funccode = funccode.format(float_dtype=self.float_dtype)
         ###
 
         if isinstance(funccode, basestring):
@@ -658,6 +659,7 @@ class CUDACodeGenerator(CodeGenerator):
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
                     'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
                     'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
+                    'uses_atomics': self.uses_atomics
                     }
         keywords.update(template_kwds)
         return keywords

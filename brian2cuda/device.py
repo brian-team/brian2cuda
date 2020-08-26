@@ -639,7 +639,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         device_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
                 # Clock variables (t, dt, timestep)
-                elif hasattr(v, 'owner') and isinstance(v.owner, brian2.Clock):  # TODO: import Clock correctly
+                elif hasattr(v, 'owner') and isinstance(v.owner, Clock):
                     # Clocks only run on the host and the corresponding device variables are copied
                     # to the device only once in the beginning and in the end of a simulation.
                     # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
