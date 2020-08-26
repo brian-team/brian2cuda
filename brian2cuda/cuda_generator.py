@@ -296,11 +296,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 line = ''
             line = line + self.c_data_type(var.dtype) + ' ' + varname + ' = '
-            if varname in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep']:
-                # variables passed by value to kernel
-                line = line + self.get_array_name(var, self.variables) + ';'
-            else:
-                line = line + self.get_array_name(var, self.variables) + '[' + index_var + '];'
+            line = line + self.get_array_name(var, self.variables) + '[' + index_var + '];'
             lines.append(line)
         return lines
 

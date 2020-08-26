@@ -660,43 +660,38 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         "".format(dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
-                    if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
-                        arrayname = self.get_array_name(v)
-                        host_parameters_lines.append(arrayname + '[0]')
-                        device_parameters_lines.append("const {dtype} _ptr{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
-                    else:
-                        try:
-                            if isinstance(v, DynamicArrayVariable):
-                                if v.ndim == 1:
-                                    dyn_array_name = self.dynamic_arrays[v]
-                                    array_name = self.arrays[v]
-                                    line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
-                                    line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
-                                                       dyn_array_name=dyn_array_name)
-                                    code_object_defs_lines.append(line)
-                                    line = 'const int _num{k} = dev{dyn_array_name}.size();'
-                                    line = line.format(k=k, dyn_array_name=dyn_array_name)
-                                    code_object_defs_lines.append(line)
+                    try:
+                        if isinstance(v, DynamicArrayVariable):
+                            if v.ndim == 1:
+                                dyn_array_name = self.dynamic_arrays[v]
+                                array_name = self.arrays[v]
+                                line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
+                                line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                code_object_defs_lines.append(line)
+                                line = 'const int _num{k} = dev{dyn_array_name}.size();'
+                                line = line.format(k=k, dyn_array_name=dyn_array_name)
+                                code_object_defs_lines.append(line)
 
-                                    host_parameters_lines.append(array_name)
-                                    host_parameters_lines.append("_num" + k)
+                                host_parameters_lines.append(array_name)
+                                host_parameters_lines.append("_num" + k)
 
-                                    line = "{c_type}* _ptr{array_name}"
-                                    device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                    line = "const int _num{array_name}"
-                                    device_parameters_lines.append(line.format(array_name=k))
+                                line = "{c_type}* _ptr{array_name}"
+                                device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
+                                line = "const int _num{array_name}"
+                                device_parameters_lines.append(line.format(array_name=k))
 
-                            else:  # v is ArrayVariable but not DynamicArrayVariable
-                                arrayname = self.get_array_name(v)
-                                host_parameters_lines.append("dev"+arrayname)
-                                device_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
+                        else:  # v is ArrayVariable but not DynamicArrayVariable
+                            arrayname = self.get_array_name(v)
+                            host_parameters_lines.append("dev"+arrayname)
+                            device_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
 
-                                code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
-                                kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
-                                if k.endswith('space'):
-                                    host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
-                        except TypeError:
-                            pass
+                            code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
+                            kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
+                            if k.endswith('space'):
+                                host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
+                    except TypeError:
+                        pass
 
             # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
             # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
