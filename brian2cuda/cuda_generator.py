@@ -195,6 +195,21 @@ class CUDACodeGenerator(CodeGenerator):
         self.previous_convertion_pref = None
         self.uses_atomics = False
 
+        # Set convertion types for standard C99 functions in device code
+        # These are used in _add_user_function to format the function code
+        if prefs.codegen.generators.cuda.default_functions_integral_convertion == np.float64:
+            self.default_func_type = 'double'
+            self.other_func_type = 'float'
+        else:  # np.float32
+            self.default_func_type = 'float'
+            self.other_func_type = 'double'
+        # set clip function to either use all float or all double arguments
+        # see #51 for details
+        if prefs['core.default_float_dtype'] == np.float64:
+            self.float_dtype = 'float'
+        else:  # np.float32
+            self.float_dtype = 'double'
+
     @property
     def restrict(self):
         return prefs['codegen.generators.cpp.restrict_keyword'] + ' '
@@ -550,6 +565,14 @@ class CUDACodeGenerator(CodeGenerator):
         pointers = []
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
+
+        ### Different from CPPCodeGenerator: We format the funccode dtypes here
+        if varname in functions_C99:
+            funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
+        if varname == 'clip':
+            funccode = funccode.format(float_dtype=float_dtype)
+        ###
+
         if isinstance(funccode, basestring):
             funccode = {'support_code': funccode}
         if funccode is not None:
@@ -623,42 +646,22 @@ class CUDACodeGenerator(CodeGenerator):
 
         # set up the functions
         user_functions = []
-        support_code = ''
-        hash_defines = ''
-        # set convertion types for standard C99 functions in device code
-        if prefs.codegen.generators.cuda.default_functions_integral_convertion == np.float64:
-            default_func_type = 'double'
-            other_func_type = 'float'
-        else:  # np.float32
-            default_func_type = 'float'
-            other_func_type = 'double'
-        # set clip function to either use all float or all double arguments
-        # see #51 for details
-        if prefs['core.default_float_dtype'] == np.float64:
-            float_dtype = 'float'
-        else:  # np.float32
-            float_dtype = 'double'
+        support_code = []
+        hash_defines = []
         for varname, variable in self.variables.items():
             if isinstance(variable, Function):
-                user_functions.append((varname, variable))
-                funccode = variable.implementations[self.codeobj_class].get_code(self.owner)
-                if varname in functions_C99:
-                    funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
-                if varname == 'clip':
-                    funccode = funccode.format(float_dtype=float_dtype)
-                if isinstance(funccode, basestring):
-                    funccode = {'support_code': funccode}
-                if funccode is not None:
-                    support_code += '\n' + deindent(funccode.get('support_code', ''))
-                    hash_defines += '\n' + deindent(funccode.get('hashdefine_code', ''))
+                hd, ps, sc, uf = self._add_user_function(varname, variable)
+                user_functions.extend(uf)
+                support_code.extend(sc)
+                pointers.extend(ps)
+                hash_defines.extend(hd)
+        support_code.append(self.universal_support_code)
 
-        support_code += '\n' + deindent(self.universal_support_code)
 
-        keywords = {'pointers_lines': stripped_deindented_lines(pointers),
-                    'support_code_lines': stripped_deindented_lines(support_code),
-                    'hashdefine_lines': stripped_deindented_lines(hash_defines),
-                    'denormals_code_lines': stripped_deindented_lines(self.denormals_to_zero_code()),
-                    'uses_atomics': self.uses_atomics
+        keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
+                    'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
+                    'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
+                    'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
                     }
         keywords.update(template_kwds)
         return keywords
