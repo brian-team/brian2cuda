@@ -35,6 +35,9 @@ if (_num__array_{{owner.name}}__indices > 1024)
 {% endblock prepare_kernel_inner %}
 
 {% block extra_maincode %}
+// TODO: this pushes a new value to the device each time step? Looks
+// inefficient, can we keep the t values on the host instead? Do we need them
+// on the device?
 dev_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
 
 int num_iterations = {{owner.clock.name}}.i_end;

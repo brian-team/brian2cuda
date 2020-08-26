@@ -14,7 +14,7 @@ import brian2
 
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.codegen.translation import make_statements
-from brian2.core.clocks import defaultclock
+from brian2.core.clocks import Clock, defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
 from brian2.core.preferences import prefs, BrianPreference, PreferenceError
@@ -607,6 +607,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # use the double-precision array versions for dt as kernel arguments
                     # they are cast to single-precision scalar dt in scalar_code
                     v = v.real_var
+
                 # code objects which only run once
                 if k in ["_python_rand", "_python_randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
                     if k == "_python_randn":
@@ -637,21 +638,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         line = "{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                         device_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
-                elif isinstance(v, TimedArray):
-                    print("DEBUG timedarray", v.name)
-                    clock = codeobj.owner.clock
+                # Clock variables (t, dt, timestep)
+                elif hasattr(v, 'owner') and isinstance(v.owner, brian2.Clock):  # TODO: import Clock correctly
+                    # Clocks only run on the host and the corresponding device variables are copied
+                    # to the device only once in the beginning and in the end of a simulation.
+                    # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
+                    # parameters whenever they are needed on the device.
+                    clock = v.owner
+                    print("CLOCK DEBUG: k", k, "clock.name", clock.name, "v.name", v.name)
                     # NOTE: we are passing `t` by value here since clocks are running on the host
                     #       and time variables on the device are not updated
                     host_parameters_lines.append(
-                            # could also use "{clock.name}.t[0]"
-                            "_array_{clock.name}_t[0]".format(clock=clock))
+                        # could also use "{clock.name}.t[0]"
+                        "_array_{clock.name}_{v.name}[0]".format(clock=clock, v=v))
                     device_parameters_lines.append(
-                            "const {dtype} {clock.name}_t_value".format(
-                                dtype=c_data_type(clock.t.dtype), clock=clock))
+                        "const {dtype} {clock.name}_{v.name}_value".format(
+                            dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
                     # NOTE: `_ptr_...` needs to be a pointer for {{scalar_code} / {{vector_code}}
                     kernel_variables_lines.append(
-                            "const {dtype}* _ptr_array_{clock.name}_t = &{clock.name}_t_value;".format(
-                                dtype=c_data_type(clock.t.dtype), clock=clock))
+                        "const {dtype}* _ptr_array_{clock.name}_{v.name} = &{clock.name}_{v.name}_value;"
+                        "".format(dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
+                # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
                         arrayname = self.get_array_name(v)
