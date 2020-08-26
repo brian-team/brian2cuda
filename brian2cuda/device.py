@@ -619,10 +619,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
-                        line = "{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
+                        line = "{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                         device_parameters_lines.append(line)
-                        kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                                                          name=codeobj.name))
                         host_parameters_lines.append("dev_array_randn")
                     elif k == "_python_rand":
                         code_snippet = '''
@@ -635,17 +633,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             '''.format(number_elements=number_elements, codeobj=codeobj, dtype=c_data_type(prefs['core.default_float_dtype']),
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
-                        line = "{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
+                        line = "{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
                         device_parameters_lines.append(line)
-                        kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                                                        name=codeobj.name))
                         host_parameters_lines.append("dev_array_rand")
                 elif isinstance(v, ArrayVariable):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
                         arrayname = self.get_array_name(v)
                         host_parameters_lines.append(arrayname + '[0]')
-                        device_parameters_lines.append("{dtype} par_{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
-                        kernel_variables_lines.append("const {dtype} _ptr{name} = par_{name};".format(dtype=c_data_type(v.dtype), name=arrayname))
+                        device_parameters_lines.append("const {dtype} _ptr_{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
                     else:
                         try:
                             if isinstance(v, DynamicArrayVariable):
@@ -663,20 +658,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     host_parameters_lines.append(array_name)
                                     host_parameters_lines.append("_num" + k)
 
-                                    line = "{c_type}* par_{array_name}"
+                                    line = "{c_type}* _ptr_{array_name}"
                                     device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                    line = "int par_num_{array_name}"
+                                    line = "const int _num_{array_name}"
                                     device_parameters_lines.append(line.format(array_name=k))
 
-                                    line = "{c_type}* _ptr{array_name} = par_{array_name};"
-                                    kernel_variables_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                    line = "const int _num{array_name} = par_num_{array_name};"
-                                    kernel_variables_lines.append(line.format(array_name=k))
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 arrayname = self.get_array_name(v)
                                 host_parameters_lines.append("dev"+arrayname)
-                                device_parameters_lines.append("%s* par_%s" % (c_data_type(v.dtype), arrayname))
-                                kernel_variables_lines.append("%s* _ptr%s = par_%s;" % (c_data_type(v.dtype),  arrayname, arrayname))
+                                device_parameters_lines.append("%s* _ptr_%s" % (c_data_type(v.dtype), arrayname))
 
                                 code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
                                 kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
@@ -690,16 +680,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # TODO can we just include this in the k == '_python_rand' test above?
             if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* par_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                device_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
-                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_rand = par_array_{name}_rand;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                  name=codeobj.name))
             if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* par_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                device_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
-                kernel_variables_lines.append("{dtype}* _ptr_array_{name}_randn = par_array_{name}_randn;".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                  name=codeobj.name))
 
             # Sometimes an array is referred to by to different keys in our
             # dictionary -- make sure to never add a line twice
