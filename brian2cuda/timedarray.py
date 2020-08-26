@@ -39,6 +39,8 @@ def _generate_cuda_code_2d(values, dt, name):
         __host__ __device__
         static inline double %NAME%(const double t, const int i)
         {
+            using namespace brian;
+
             const double epsilon = %DT% / %K%;
             if (i < 0 || i >= %COLS%)
                 return NAN;
