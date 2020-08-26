@@ -640,7 +640,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
                         arrayname = self.get_array_name(v)
                         host_parameters_lines.append(arrayname + '[0]')
-                        device_parameters_lines.append("const {dtype} _ptr_{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
+                        device_parameters_lines.append("const {dtype} _ptr{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
                     else:
                         try:
                             if isinstance(v, DynamicArrayVariable):
@@ -658,15 +658,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     host_parameters_lines.append(array_name)
                                     host_parameters_lines.append("_num" + k)
 
-                                    line = "{c_type}* _ptr_{array_name}"
+                                    line = "{c_type}* _ptr{array_name}"
                                     device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                    line = "const int _num_{array_name}"
+                                    line = "const int _num{array_name}"
                                     device_parameters_lines.append(line.format(array_name=k))
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 arrayname = self.get_array_name(v)
                                 host_parameters_lines.append("dev"+arrayname)
-                                device_parameters_lines.append("%s* _ptr_%s" % (c_data_type(v.dtype), arrayname))
+                                device_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
 
                                 code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
                                 kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
