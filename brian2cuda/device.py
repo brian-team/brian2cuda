@@ -645,7 +645,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
                     # parameters whenever they are needed on the device.
                     clock = v.owner
-                    print("CLOCK DEBUG: k", k, "clock.name", clock.name, "v.name", v.name)
                     # NOTE: we are passing `t` by value here since clocks are running on the host
                     #       and time variables on the device are not updated
                     host_parameters_lines.append(

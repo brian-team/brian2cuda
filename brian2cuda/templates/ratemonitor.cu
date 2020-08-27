@@ -1,10 +1,6 @@
 {% extends 'common_group.cu' %}
 {# USES_VARIABLES { rate, t, _spikespace, _clock_t, _clock_dt,
                     _num_source_neurons, _source_start, _source_stop } #}
-{# we can't use _clock_t since it returns var[0] but our t is not a pointer #}
-//{{_clock_t}}
-{% set _clock_t = get_array_name(owner.clock.variables['t']) %}
-//{{_clock_t}}
 
 {% block define_N %}
 {% endblock %}
