@@ -296,7 +296,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 line = ''
             line = line + self.c_data_type(var.dtype) + ' ' + varname + ' = '
-            line = line + self.get_array_name(var, self.variables) + '[' + index_var + '];'
+            line = line + self.get_array_name(var) + '[' + index_var + '];'
             lines.append(line)
         return lines
 
@@ -336,7 +336,7 @@ class CUDACodeGenerator(CodeGenerator):
         for varname in write:
             index_var = self.variable_indices[varname]
             var = self.variables[varname]
-            line = self.get_array_name(var, self.variables) + '[' + index_var + '] = ' + varname + ';'
+            line = self.get_array_name(var) + '[' + index_var + '] = ' + varname + ';'
             lines.append(line)
         return lines
 
