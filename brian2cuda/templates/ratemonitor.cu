@@ -1,6 +1,14 @@
 {% extends 'common_group.cu' %}
 {# USES_VARIABLES { rate, t, _spikespace, _clock_t, _clock_dt,
-                    _num_source_neurons, _source_start, _source_stop } #}
+                    _num_source_neurons, _source_start, _source_stop }
+
+  We can't use _clock_t and _clock_dt and _clock_timestep since they return
+  `var[0]` but our clock variables are not pointer and we need just `var`.
+  We still need them in USES_VARIABLES, else they are not passed as kernel
+  parameters.
+#}
+{% set _clock_t = get_array_name(owner.clock.variables['t']) %}
+{% set _clock_dt = get_array_name(owner.clock.variables['dt']) %}
 
 {% block define_N %}
 {% endblock %}

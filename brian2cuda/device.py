@@ -645,18 +645,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
                     # parameters whenever they are needed on the device.
                     clock = v.owner
-                    # NOTE: we are passing `t` by value here since clocks are running on the host
-                    #       and time variables on the device are not updated
+                    arrayname = self.get_array_name(v)
                     host_parameters_lines.append(
                         # could also use "{clock.name}.t[0]"
-                        "_array_{clock.name}_{v.name}[0]".format(clock=clock, v=v))
+                        "{arrayname}[0]".format(arrayname=arrayname))
                     device_parameters_lines.append(
-                        "const {dtype} {clock.name}_{v.name}_value".format(
-                            dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
-                    # NOTE: `_ptr_...` needs to be a pointer for {{scalar_code} / {{vector_code}}
-                    kernel_variables_lines.append(
-                        "const {dtype}* _ptr_array_{clock.name}_{v.name} = &{clock.name}_{v.name}_value;"
-                        "".format(dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
+                        "const {dtype} _value{arrayname}".format(
+                            dtype=c_data_type(clock.t.dtype), arrayname=arrayname))
+                    # NOTE: we are passing `t` by value here since clocks are running on the host
+                    #       and time variables on the device are not updated
+                    #host_parameters_lines.append(
+                    #    # could also use "{clock.name}.t[0]"
+                    #    "_array_{clock.name}_{v.name}[0]".format(clock=clock, v=v))
+                    #device_parameters_lines.append(
+                    #    "const {dtype} {clock.name}_{v.name}_value".format(
+                    #        dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
+                    ## NOTE: `_ptr_...` needs to be a pointer for {{scalar_code} / {{vector_code}}
+                    #kernel_variables_lines.append(
+                    #    "const {dtype}* _ptr_array_{clock.name}_{v.name} = &{clock.name}_{v.name}_value;"
+                    #    "".format(dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
                     try:
