@@ -14,7 +14,6 @@ from brian2.core.variables import ArrayVariable
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
-from brian2.core.clocks import Clock
 
 __all__ = ['CUDACodeGenerator',
            'CUDAAtomicsCodeGenerator'
@@ -225,12 +224,7 @@ class CUDACodeGenerator(CodeGenerator):
         from brian2.devices.device import get_device
         device = get_device()
         if access_data:
-            # Clock variables are passed to kernels by value, not by reference
-            if hasattr(var, 'owner') and isinstance(var.owner, Clock):
-                prefix = '_value'
-            else:
-                prefix = '_ptr'
-            return prefix + device.get_array_name(var)
+            return '_ptr' + device.get_array_name(var)
         else:
             return device.get_array_name(var, access_data=False)
 
@@ -302,12 +296,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 line = ''
             line = line + self.c_data_type(var.dtype) + ' ' + varname + ' = '
-            line = line + self.get_array_name(var)
-            if hasattr(var, 'owner') and isinstance(var.owner, Clock):
-                # Clock variables are passed by value, not by reference
-                line = line + ';'
-            else:
-                line = line + '[' + index_var + '];'
+            line = line + self.get_array_name(var) + '[' + index_var + '];'
             lines.append(line)
         return lines
 
