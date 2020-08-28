@@ -45,14 +45,14 @@ kernel_{{codeobj_name}}(
     {{c_type}}* ratemonitor_rate,
     {% set c_type = c_data_type(variables['t'].dtype) %}
     {{c_type}}* ratemonitor_t,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     using namespace brian;
 
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     int num_spikes = 0;
 

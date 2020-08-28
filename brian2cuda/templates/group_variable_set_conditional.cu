@@ -35,8 +35,8 @@ namespace {
 __global__ void kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -47,8 +47,8 @@ __global__ void kernel_{{codeobj_name}}(
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
 
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     if(_idx >= _N)
     {
@@ -85,8 +85,8 @@ void _run_{{codeobj_name}}()
        way. #}
     const int _N = {{constant_or_scalar('N', variables['N'])}};
 
-    ///// CONSTANTS ///////////
-    %CONSTANTS%
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
 
     static int num_threads, num_blocks;
     static bool first_run = true;

@@ -23,7 +23,8 @@ __global__ void kernel_{{codeobj_name}}(
     int num_blocks_per_neuron,
     int num_threads,
     int syn_N,
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {% set _target_var_array = get_array_name(_target_var) %}
@@ -36,7 +37,8 @@ __global__ void kernel_{{codeobj_name}}(
     int num_block_for_neuron = bid % num_blocks_per_neuron;
     int _idx = num_block_for_neuron*num_threads + tid;
     double* shared_double_mem = (double*) shared_mem;
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     //// MAIN CODE ////////////
     if(_idx < 0 || _idx >=  syn_N)
@@ -81,6 +83,7 @@ __global__ void kernel_{{codeobj_name}}(
             _num_blocks,
             _num_threads,
             syn_N,
+            ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
 

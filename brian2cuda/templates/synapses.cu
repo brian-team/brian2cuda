@@ -29,7 +29,8 @@ kernel_{{codeobj_name}}(
     {% else %}
     int neurongroup_size,
     {% endif %}
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N, _synaptic_pre} #}
@@ -44,7 +45,8 @@ kernel_{{codeobj_name}}(
     // subexpression that is the same for all synapses, ?)
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
     {% block additional_variables %}
     {% endblock %}
 
@@ -271,6 +273,7 @@ if ({{pathway.name}}_max_size > 0)
                 {% else %}
                 _num_{{_eventspace}}-1,
                 {% endif %}
+                ///// HOST_PARAMETERS /////
                 %HOST_PARAMETERS%
             );
         }

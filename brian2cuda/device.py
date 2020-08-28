@@ -592,14 +592,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_codeobj_source(self, writer):
         code_object_defs = defaultdict(list)
         host_parameters = defaultdict(list)
-        device_parameters = defaultdict(list)
-        kernel_variables = defaultdict(list)
+        kernel_parameters = defaultdict(list)
+        kernel_constants = defaultdict(list)
         # Generate data for non-constant values
         for codeobj in self.code_objects.itervalues():
             code_object_defs_lines = []
             host_parameters_lines = []
-            device_parameters_lines = []
-            kernel_variables_lines = []
+            kernel_parameters_lines = []
+            kernel_constants_lines = []
             additional_code = []
             number_elements = ""
             if hasattr(codeobj, 'owner') and hasattr(codeobj.owner, '_N') and codeobj.owner._N != 0:
@@ -626,7 +626,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
                         line = "{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                        device_parameters_lines.append(line)
+                        kernel_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_randn")
                     elif k == "rand":
                         code_snippet = '''
@@ -640,7 +640,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
                         line = "{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                        device_parameters_lines.append(line)
+                        kernel_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
                 # Clock variables (t, dt, timestep)
                 elif hasattr(v, 'owner') and isinstance(v.owner, Clock):
@@ -680,17 +680,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 host_parameters_lines.append("_num" + k)
 
                                 line = "{c_type}* _ptr{array_name}"
-                                device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
+                                kernel_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
                                 line = "const int _num{array_name}"
-                                device_parameters_lines.append(line.format(array_name=k))
+                                kernel_parameters_lines.append(line.format(array_name=k))
 
                         else:  # v is ArrayVariable but not DynamicArrayVariable
                             arrayname = self.get_array_name(v)
                             host_parameters_lines.append("dev"+arrayname)
-                            device_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
+                            kernel_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
 
                             code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
-                            kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
+                            kernel_constants_lines.append('const int _num%s = %s;' % (k, v.size))
                             if k.endswith('space'):
                                 host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                     except TypeError:
@@ -701,11 +701,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # TODO can we just include this in the k == 'rand' test above?
             if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
             if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
 
             # Sometimes an array is referred to by to different keys in our
@@ -716,12 +716,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for line in host_parameters_lines:
                 if not line in host_parameters[codeobj.name]:
                     host_parameters[codeobj.name].append(line)
-            for line in device_parameters_lines:
-                if not line in device_parameters[codeobj.name]:
-                    device_parameters[codeobj.name].append(line)
-            for line in chain(kernel_variables_lines, self.extra_kernel_variables_lines):
-                if not line in kernel_variables[codeobj.name]:
-                    kernel_variables[codeobj.name].append(line)
+            for line in kernel_parameters_lines:
+                if not line in kernel_parameters[codeobj.name]:
+                    kernel_parameters[codeobj.name].append(line)
+            for line in chain(kernel_constants_lines):
+                if not line in kernel_constants[codeobj.name]:
+                    kernel_constants[codeobj.name].append(line)
 
             for line in additional_code:
                 if not line in code_object_defs[codeobj.name]:
@@ -730,17 +730,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Generate the code objects
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
-            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            # TODO: fix these freeze/HOST_CONSTANTS hacks somehow - they work but not elegant.
             code = self.freeze(codeobj.code.cu_file, ns)
 
             if len(host_parameters[codeobj.name]) == 0:
                 host_parameters[codeobj.name].append("0")
-                device_parameters[codeobj.name].append("int dummy")
+                kernel_parameters[codeobj.name].append("int dummy")
 
-            code = code.replace('%CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+            # HOST_CONSTANTS are equivalent to C++ Standalone's CONSTANTS
+            code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+            # KERNEL_CONSTANTS are the same for inside device kernels
+            code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
+            # HOST_PARAMETERS are parameters that device kernels are called with from host code
             code = code.replace('%HOST_PARAMETERS%', ',\n\t\t\t'.join(host_parameters[codeobj.name]))
-            code = code.replace('%DEVICE_PARAMETERS%', ',\n\t'.join(device_parameters[codeobj.name]))
-            code = code.replace('%KERNEL_VARIABLES%', '\n\t'.join(kernel_variables[codeobj.name]))
+            # KERNEL_PARAMETERS are the same names of the same parameters inside the device kernels
+            code = code.replace('%KERNEL_PARAMETERS%', ',\n\t'.join(kernel_parameters[codeobj.name]))
             code = code.replace('%CODEOBJ_NAME%', codeobj.name)
             code = '#include "objects.h"\n'+code
 

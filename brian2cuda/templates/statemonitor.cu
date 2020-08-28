@@ -91,8 +91,8 @@ kernel_{{codeobj_name}}(
     {% for varname, var in _recorded_variables | dictsort %}
     {{c_data_type(var.dtype)}}** monitor_{{varname}},
     {% endfor %}
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     using namespace brian;
@@ -104,8 +104,8 @@ kernel_{{codeobj_name}}(
     }
     int32_t _idx = indices[tid];
 
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     ///// scalar_code /////
     {{scalar_code|autoindent}}

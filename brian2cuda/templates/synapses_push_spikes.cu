@@ -76,8 +76,8 @@ void _run_{{codeobj_name}}()
     const std::clock_t _start_time = std::clock();
     {% endif %}
 
-    ///// CONSTANTS /////
-    %CONSTANTS%
+    ///// HOST_CONSTANTS /////
+    %HOST_CONSTANTS%
 
     {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
     if ({{owner.name}}_scalar_delay)

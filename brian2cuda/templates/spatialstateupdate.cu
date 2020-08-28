@@ -47,8 +47,8 @@
 __global__ void kernel_{{codeobj_name}}_tridiagsolve(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -57,8 +57,8 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -121,8 +121,8 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
 __global__ void kernel_{{codeobj_name}}_coupling(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -131,8 +131,8 @@ __global__ void kernel_{{codeobj_name}}_coupling(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -235,8 +235,8 @@ __global__ void kernel_{{codeobj_name}}_coupling(
 __global__ void kernel_{{codeobj_name}}_combine(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -245,8 +245,8 @@ __global__ void kernel_{{codeobj_name}}_combine(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -278,8 +278,8 @@ __global__ void kernel_{{codeobj_name}}_combine(
 __global__ void kernel_{{codeobj_name}}_currents(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -288,8 +288,8 @@ __global__ void kernel_{{codeobj_name}}_currents(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 

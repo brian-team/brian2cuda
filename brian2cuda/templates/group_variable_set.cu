@@ -20,7 +20,7 @@
     ///// endblock maincode /////
 {% endblock %}
 
-{# _num_group_idx is defined in CONSTANTS, so we can't set _N before #}
+{# _num_group_idx is defined in HOST_CONSTANTS, so we can't set _N before #}
 {% block define_N %}
 {% endblock %}
 
