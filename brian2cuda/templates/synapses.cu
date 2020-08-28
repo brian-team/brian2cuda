@@ -45,11 +45,17 @@ kernel_{{codeobj_name}}(
     // subexpression that is the same for all synapses, ?)
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     {% block additional_variables %}
     {% endblock %}
 
+    ///// scalar_code /////
     {{scalar_code|autoindent}}
 
     {  // _idx is defined in outer and inner scope (for `scalar_code`)
@@ -103,6 +109,7 @@ kernel_{{codeobj_name}}(
                             int32_t _idx = propagating_synapses[j];
                             _vectorisation_idx = j;
 
+                            ///// vector_code /////
                             {{vector_code|autoindent}}
                         }
                     }
@@ -150,6 +157,7 @@ kernel_{{codeobj_name}}(
 
             {% endif %}{# bundle_mode #}
 
+                            ///// vector_code /////
                             {{vector_code|autoindent}}
                         }
                     }

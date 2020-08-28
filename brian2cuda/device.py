@@ -198,8 +198,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
         # and collect codeobjects run only once with binomial in separate list
         self.code_object_with_binomial_separate_call = []
-        # %KERNEL_VARIABLES% lines added in CUDACodeGenerator
-        self.extra_kernel_variables_lines = []
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -647,20 +645,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # Clocks only run on the host and the corresponding device variables are copied
                     # to the device only once in the beginning and in the end of a simulation.
                     # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
-                    # parameters whenever they are needed on the device.
-                    clock = v.owner
-                    # NOTE: we are passing `t` by value here since clocks are running on the host
-                    #       and time variables on the device are not updated
+                    # parameters whenever they are needed on the device. These values are translated
+                    # into pointers in CUDACodeGenerator.determine_keywords(), such that they can be
+                    # used in scalar/vector code.
+                    arrayname = self.get_array_name(v)
+                    dtype = c_data_type(v.dtype)
                     host_parameters_lines.append(
-                        # could also use "{clock.name}.t[0]"
-                        "_array_{clock.name}_{v.name}[0]".format(clock=clock, v=v))
-                    device_parameters_lines.append(
-                        "const {dtype} {clock.name}_{v.name}_value".format(
-                            dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
-                    # NOTE: `_ptr_...` needs to be a pointer for {{scalar_code} / {{vector_code}}
-                    kernel_variables_lines.append(
-                        "const {dtype}* _ptr_array_{clock.name}_{v.name} = &{clock.name}_{v.name}_value;"
-                        "".format(dtype=c_data_type(clock.t.dtype), clock=clock, v=v))
+                        "{arrayname}[0]".format(arrayname=arrayname))
+                    kernel_parameters_lines.append(
+                        "const {dtype} _value{arrayname}".format(
+                            dtype=dtype, arrayname=arrayname))
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
                     try:

@@ -9,6 +9,7 @@ from brian2.utils.logger import get_logger
 from brian2.utils.stringtools import get_identifiers
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
+from brian2.core.clocks import Clock
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
@@ -219,12 +220,16 @@ class CUDACodeGenerator(CodeGenerator):
         return prefs['codegen.generators.cpp.flush_denormals']
 
     @staticmethod
-    def get_array_name(var, access_data=True):
+    def get_array_name(var, access_data=True, pointer=True):
         # We have to do the import here to avoid circular import dependencies.
         from brian2.devices.device import get_device
         device = get_device()
         if access_data:
-            return '_ptr' + device.get_array_name(var)
+            if pointer:
+                prefix = '_ptr'
+            else:
+                prefix = ''
+            return prefix + device.get_array_name(var)
         else:
             return device.get_array_name(var, access_data=False)
 
@@ -559,6 +564,7 @@ class CUDACodeGenerator(CodeGenerator):
         support_code = []
         hash_defines = []
         pointers = []
+        kernel_lines = []
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
 
@@ -599,42 +605,45 @@ class CUDACodeGenerator(CodeGenerator):
                     #endif
                     '''.format(dtype=type_str, name=ns_key)
                 support_code.append(namespace_ptr)
-                # pointer lines will be used in host templates
+                # pointer lines will be used in codeobjects running on the host
                 pointers.append('_namespace{name} = {name};'.format(name=ns_key))
-                # extra_kernel_variables_lines will be used in %KERNEL_VARIABLES%
-                # in device tempaltes
-                lines = '''
+                # kernel lines will be used in codeobjects running on the device
+                kernel_lines.append('''
                     #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
                     _namespace{name} = d{name};
                     #else
                     _namespace{name} = {name};
                     #endif
-                    '''.format(name=ns_key)
-                device.extra_kernel_variables_lines.append(lines)
+                    '''.format(name=ns_key))
             support_code.append(deindent(funccode.get('support_code', '')))
             hash_defines.append(deindent(funccode.get('hashdefine_code', '')))
 
         dep_hash_defines = []
         dep_pointers = []
         dep_support_code = []
+        dep_kernel_lines = []
         if impl.dependencies is not None:
             for dep_name, dep in impl.dependencies.iteritems():
                 self.variables[dep_name] = dep
-                hd, ps, sc, uf = self._add_user_function(dep_name, dep)
+                hd, ps, sc, uf, kl = self._add_user_function(dep_name, dep)
                 dep_hash_defines.extend(hd)
                 dep_pointers.extend(ps)
                 dep_support_code.extend(sc)
                 user_functions.extend(uf)
+                dep_kernel_lines.extend(kl)
 
         return (dep_hash_defines + hash_defines,
                 dep_pointers + pointers,
                 dep_support_code + support_code,
-                user_functions)
+                user_functions,
+                dep_kernel_lines + kernel_lines)
 
     def determine_keywords(self):
         # set up the restricted pointers, these are used so that the compiler
         # knows there is no aliasing in the pointers, for optimisation
         pointers = []
+        # Add additional lines inside the kernel functions
+        kernel_lines = []
         # It is possible that several different variable names refer to the
         # same array. E.g. in gapjunction code, v_pre and v_post refer to the
         # same array if a group is connected to itself
@@ -669,18 +678,29 @@ class CUDACodeGenerator(CodeGenerator):
         hash_defines = []
         for varname, variable in self.variables.items():
             if isinstance(variable, Function):
-                hd, ps, sc, uf = self._add_user_function(varname, variable)
+                hd, ps, sc, uf, kl = self._add_user_function(varname, variable)
                 user_functions.extend(uf)
                 support_code.extend(sc)
                 pointers.extend(ps)
                 hash_defines.extend(hd)
+                kernel_lines.extend(kl)
         support_code.append(self.universal_support_code)
 
+        # Clock variables (t, dt, timestep) are passed by value to kernels and
+        # need to be translated back into pointers for scalar/vector code.
+        for varname, variable in self.variables.iteritems():
+            if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
+                # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
+                arrayname = self.get_array_name(variable, pointer=False)
+                kernel_lines.append(
+                    "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
+                    "".format(dtype=c_data_type(variable.dtype), arrayname=arrayname))
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
                     'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
                     'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
+                    'kernel_lines': stripped_deindented_lines('\n'.join(kernel_lines)),
                     'uses_atomics': self.uses_atomics
                     }
         keywords.update(template_kwds)

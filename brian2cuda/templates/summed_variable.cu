@@ -37,8 +37,12 @@ __global__ void kernel_{{codeobj_name}}(
     int num_block_for_neuron = bid % num_blocks_per_neuron;
     int _idx = num_block_for_neuron*num_threads + tid;
     double* shared_double_mem = (double*) shared_mem;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     //// MAIN CODE ////////////
     if(_idx < 0 || _idx >=  syn_N)

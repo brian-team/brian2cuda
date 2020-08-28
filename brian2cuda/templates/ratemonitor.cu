@@ -54,6 +54,9 @@ kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     int num_spikes = 0;
 
     if (_num_spikespace-1 != _num_source_neurons)  // we have a subgroup

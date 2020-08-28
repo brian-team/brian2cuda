@@ -50,6 +50,9 @@ __global__ void kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     if(_idx >= _N)
     {
         return;

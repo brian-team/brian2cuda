@@ -62,6 +62,9 @@ kernel_{{codeobj_name}}(
     // KERNEL_CONSTANTS
     %KERNEL_CONSTANTS%
 
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     // scalar_code
     {{scalar_code|autoindent}}
 
@@ -115,6 +118,9 @@ __global__ void _run_debugmsg_{{codeobj_name}}_kernel(
     // KERNEL_CONSTANTS
     %KERNEL_CONSTANTS%
 
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     printf("Number of spikes: %d\n", {{N}});
 }
 
@@ -130,6 +136,9 @@ __global__ void _count_{{codeobj_name}}_kernel(
 
     // KERNEL_CONSTANTS
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     {# If there are any record_variables, get the size of one arbitrary monitor #}
     {% if record_variables %}

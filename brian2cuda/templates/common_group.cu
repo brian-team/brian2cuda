@@ -56,8 +56,12 @@ kernel_{{codeobj_name}}(
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 

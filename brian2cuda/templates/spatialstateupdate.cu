@@ -57,8 +57,12 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -131,8 +135,12 @@ __global__ void kernel_{{codeobj_name}}_coupling(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -245,8 +253,12 @@ __global__ void kernel_{{codeobj_name}}_combine(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -288,8 +300,12 @@ __global__ void kernel_{{codeobj_name}}_currents(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
+
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 

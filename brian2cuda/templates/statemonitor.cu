@@ -107,6 +107,9 @@ kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
+
     ///// scalar_code /////
     {{scalar_code|autoindent}}
 
