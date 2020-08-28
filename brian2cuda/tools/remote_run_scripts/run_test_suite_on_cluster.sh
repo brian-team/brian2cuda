@@ -1,7 +1,9 @@
 #!/bin/bash
 # $1: task name (optional, default: noname)
+# $2: cognition node number (optional, default: 13)
 
 task_name=${1:-noname}
+node=${2:-13}
 
 # remote machine name
 remote="cluster"
@@ -78,7 +80,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -cwd \
     -q cognition-all.q \
     -l cuda=1 \
-    -l h=cognition13 \
+    -l h=cognition$node \
     -N $qsub_name \
     -pe cognition.pe 4 \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
