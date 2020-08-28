@@ -13,29 +13,36 @@ from brian2.devices.device import reinit_devices
 import brian2cuda
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
-def test_user_defined_function():
-    @implementation('cuda',"""
-                __host__ __device__ inline double usersin(double x)
-                {
-                    return sin(x);
-                }
-                """)
-    # version of this test with cython and cpp implementation is in brian2.tests
-    @check_units(x=1, result=1)
-    def usersin(x):
-        return np.sin(x)
+# cuda version of same test in brian2.tests.test_functions.py
+# ERROR: unexpected keyword argument 'header'
+@attr('standalone-only')
+@attr('cuda-standalone')
+def test_manual_user_defined_function_cuda_standalone_compiler_args():
+    set_device('cuda_standalone', directory=None)
 
-    default_dt = defaultclock.dt
-    test_array = np.array([0, 1, 2, 3])
-    G = NeuronGroup(len(test_array),
-                    '''func = usersin(variable) : 1
-                              variable : 1''')
-    G.variable = test_array
+    @implementation('cpp', '''
+    __host__ __device__ static inline double foo(const double x, const double y)
+    {
+        return x + y + _THREE;
+    }''',  # just check whether we can specify the supported compiler args,
+           # only the define macro is actually used
+        headers=[], sources=[], libraries=[], include_dirs=[],
+        library_dirs=[], runtime_library_dirs=[],
+        define_macros=[('_THREE', '3')])
+    @check_units(x=volt, y=volt, result=volt)
+    def foo(x, y):
+        return x + y + 3*volt
+
+    G = NeuronGroup(1, '''
+                       func = foo(x, y) : volt
+                       x : volt
+                       y : volt''')
+    G.x = 1*volt
+    G.y = 2*volt
     mon = StateMonitor(G, 'func', record=True)
-    run(default_dt)
-    assert_equal(np.sin(test_array), mon.func_.flatten())
+    net = Network(G, mon)
+    net.run(defaultclock.dt)
+    assert mon[0].func == [6] * volt
 
 
 #TODO: Update BinomialFunction with cuda implementation
