@@ -7,6 +7,7 @@ import inspect
 from collections import defaultdict
 import tempfile
 import re
+from itertools import chain
 
 import numpy as np
 
@@ -18,7 +19,8 @@ from brian2.core.clocks import Clock, defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
 from brian2.core.preferences import prefs, BrianPreference, PreferenceError
-from brian2.core.variables import *
+from brian2.core.variables import ArrayVariable, DynamicArrayVariable
+from brian2.core.functions import Function
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
@@ -196,6 +198,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
         # and collect codeobjects run only once with binomial in separate list
         self.code_object_with_binomial_separate_call = []
+        # %KERNEL_VARIABLES% lines added in CUDACodeGenerator
+        self.extra_kernel_variables_lines = []
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -715,7 +719,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for line in device_parameters_lines:
                 if not line in device_parameters[codeobj.name]:
                     device_parameters[codeobj.name].append(line)
-            for line in kernel_variables_lines:
+            for line in chain(kernel_variables_lines, self.extra_kernel_variables_lines):
                 if not line in kernel_variables[codeobj.name]:
                     kernel_variables[codeobj.name].append(line)
 

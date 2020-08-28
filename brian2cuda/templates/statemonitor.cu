@@ -77,7 +77,7 @@ if (_num__array_{{owner.name}}__indices > 0)
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 }
-{% endblock %}
+{% endblock kernel_call %}
 
 {% block kernel %}
 __global__ void
@@ -95,6 +95,8 @@ kernel_{{codeobj_name}}(
     %DEVICE_PARAMETERS%
     )
 {
+    using namespace brian;
+
     int tid = threadIdx.x;
     if(tid > _num_indices)
     {

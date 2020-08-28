@@ -563,6 +563,8 @@ class CUDACodeGenerator(CodeGenerator):
         funccode = impl.get_code(self.owner)
 
         ### Different from CPPCodeGenerator: We format the funccode dtypes here
+        from brian2.devices.device import get_device
+        device = get_device()
         if varname in functions_C99:
             funccode = funccode.format(default_type=self.default_func_type,
                                        other_type=self.other_func_type)
@@ -578,17 +580,37 @@ class CUDACodeGenerator(CodeGenerator):
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
             for ns_key, ns_value in func_namespace.iteritems():
-                if hasattr(ns_value, 'dtype'):
-                    if ns_value.shape == ():
-                        raise NotImplementedError((
-                        'Directly replace scalar values in the function '
-                        'instead of providing them via the namespace'))
-                    type_str = self.c_data_type(ns_value.dtype) + '*'
-                else:  # e.g. a function
-                    type_str = 'py::object'
-                #support_code.append('__device__ {0} _namespace{1};'.format(type_str,
-                #                                                           ns_key))
-                #pointers.append('_namespace{0} = {1};'.format(ns_key, ns_key))
+                # This section is adapted from CPPCodeGenerator such that file
+                # global namespace pointers can be used in both host and device
+                # code.
+                assert hasattr(ns_value, 'dtype'), \
+                    'This should not have happened. Please report at ' \
+                    'https://github.com/brian-team/brian2cuda/issues/new'
+                if ns_value.shape == ():
+                    raise NotImplementedError((
+                    'Directly replace scalar values in the function '
+                    'instead of providing them via the namespace'))
+                type_str = self.c_data_type(ns_value.dtype) + '*'
+                namespace_ptr = '''
+                    #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+                    __device__ {dtype} _namespace{name};
+                    #else
+                    {dtype} _namespace{name};
+                    #endif
+                    '''.format(dtype=type_str, name=ns_key)
+                support_code.append(namespace_ptr)
+                # pointer lines will be used in host templates
+                pointers.append('_namespace{name} = {name};'.format(name=ns_key))
+                # extra_kernel_variables_lines will be used in %KERNEL_VARIABLES%
+                # in device tempaltes
+                lines = '''
+                    #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+                    _namespace{name} = d{name};
+                    #else
+                    _namespace{name} = {name};
+                    #endif
+                    '''.format(name=ns_key)
+                device.extra_kernel_variables_lines.append(lines)
             support_code.append(deindent(funccode.get('support_code', '')))
             hash_defines.append(deindent(funccode.get('hashdefine_code', '')))
 
