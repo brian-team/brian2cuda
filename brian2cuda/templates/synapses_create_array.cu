@@ -109,7 +109,8 @@ for (int _i=0; _i<newsize; _i++)
     const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
     {% if multisynaptic_index %}
     // Save the "synapse number"
-    {{get_array_name(variables[multisynaptic_index], access_data=False)}}[_i] = source_target_count[source_target];
+    {% set dynamic_multisynaptic_idx = get_array_name(multisynaptic_idx_var, access_data=False) %}
+    {{dynamic_multisynaptic_idx}}[_i] = source_target_count[source_target];
     {% endif %}
     source_target_count[source_target]++;
     //printf("source target count = %i\n", source_target_count[source_target]);
@@ -127,6 +128,9 @@ dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
 dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
 dev{{_dynamic__synaptic_pre}} = {{_dynamic__synaptic_pre}};
 dev{{_dynamic__synaptic_post}} = {{_dynamic__synaptic_post}};
+{% if multisynaptic_index %}
+dev{{dynamic_multisynaptic_idx}} = {{dynamic_multisynaptic_idx}};
+{% endif %}
 CUDA_SAFE_CALL(
         cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
             {{get_array_name(variables['N'], access_data=False)}},
