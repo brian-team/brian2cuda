@@ -93,14 +93,13 @@ std::cout << std::endl;
     int _raw_pre_idx, _raw_post_idx;
     const int _vectorisation_idx = -1;
     ///// scalar_code['setup_iterator'] /////
-        {{scalar_code['setup_iterator']|autoindent}}
+    {{scalar_code['setup_iterator']|autoindent}}
     ///// scalar_code['create_j'] /////
-        {{scalar_code['create_j']|autoindent}}
+    {{scalar_code['create_j']|autoindent}}
     ///// scalar_code['create_cond'] /////
-        {{scalar_code['create_cond']|autoindent}}
+    {{scalar_code['create_cond']|autoindent}}
     ///// scalar_code['update_post'] /////
-        {{scalar_code['update_post']|autoindent}}
-    int syn_id = 0;
+    {{scalar_code['update_post']|autoindent}}
 
     for(int _i = 0; _i < _N_pre; _i++)
     {
@@ -182,18 +181,22 @@ std::cout << std::endl;
                 _j = __j; // make the previously locally scoped _j available
                 _pre_idx = __pre_idx;
                 _raw_post_idx = _j + _target_offset;
-                if(_j<0 || _j>=_N_post)
-                {
-                    {% if skip_if_invalid %}
-                    continue;
-                    {% else %}
-                    cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
-                            _N_post-1 << endl;
-                    exit(1);
-                    {% endif %}
-                }
                 {% if postsynaptic_condition %}
                 {
+                    {% if postsynaptic_variable_used %}
+                    {# The condition could index outside of array range #}
+                    if(_j<0 || _j>=_N_post)
+                    {
+                        {% if skip_if_invalid %}
+                        continue;
+                        {% else %}
+                        cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
+                                                _N_post-1 << endl;
+                        exit(1);
+                        {% endif %}
+                    }
+                    {% endif %}
+
                     ///// vector_code['create_cond'] /////
                     {{vector_code['create_cond']|autoindent}}
                     __cond = _cond;
@@ -204,19 +207,30 @@ std::cout << std::endl;
                 {% if if_expression!='True' %}
                 if(!_cond) continue;
                 {% endif %}
+                {% if not postsynaptic_variable_used %}
+                {# Otherwise, we already checked before #}
+                if(_j<0 || _j>=_N_post)
+                {
+                    {% if skip_if_invalid %}
+                    continue;
+                    {% else %}
+                    cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
+                            _N_post-1 << endl;
+                    exit(1);
+                    {% endif %}
+                }
+                {% endif %}
 
                 ///// vector_code['update_post'] /////
                 {{vector_code['update_post']|autoindent}}
 
-            for (int _repetition = 0; _repetition < _n; _repetition++)
-            {
-                {{_dynamic_N_outgoing}}[_pre_idx] += 1;
-                {{_dynamic_N_incoming}}[_post_idx] += 1;
-                {{_dynamic__synaptic_pre}}.push_back(_pre_idx);
-                {{_dynamic__synaptic_post}}.push_back(_post_idx);
-                // TODO: what do we need syn_id for?
-                syn_id++;
-            }
+                for (int _repetition = 0; _repetition < _n; _repetition++)
+                {
+                    {{_dynamic_N_outgoing}}[_pre_idx] += 1;
+                    {{_dynamic_N_incoming}}[_post_idx] += 1;
+                    {{_dynamic__synaptic_pre}}.push_back(_pre_idx);
+                    {{_dynamic__synaptic_post}}.push_back(_post_idx);
+                }
             }
         {% endblock %}
     }
