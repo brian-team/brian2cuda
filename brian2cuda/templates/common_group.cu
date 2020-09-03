@@ -143,6 +143,10 @@ void _run_{{codeobj_name}}()
         }
         num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
         {% endif %}
+
+        {% block modify_kernel_dimensions %}
+        {% endblock %}
+
         {% endblock prepare_kernel_inner %}
 
         {% block occupancy %}
