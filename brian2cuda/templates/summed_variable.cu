@@ -18,7 +18,7 @@ __device__ double atomicAddDouble(double* address, double val)
 {% endblock %}
 
 {% block kernel %}
-{# USES_VARIABLES { _synaptic_post, _synaptic_pre, N_post, N_pre } #}
+{# USES_VARIABLES { N, _synaptic_post, _synaptic_pre, N_post, N_pre } #}
 __global__ void kernel_{{codeobj_name}}(
     int num_blocks_per_neuron,
     int num_threads,
