@@ -305,7 +305,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         synapses_object_every_tick = False
         synapses_object_single_tick_after_run = False
         if isinstance(owner, Synapses):
-            if template_name in ['synapses', 'stateupdate']:
+            if template_name in ['synapses', 'stateupdate', 'summed_variable']:
                 synapses_object_every_tick = True
             if not self.first_run and template_name in ['group_variable_set_conditional', 'group_variable_set']:
                 synapses_object_single_tick_after_run = True
@@ -318,25 +318,45 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.delete_synaptic_pre[synaptic_pre_array_name] = True
             if synaptic_post_array_name not in self.delete_synaptic_post.iterkeys():
                 self.delete_synaptic_post[synaptic_post_array_name] = True
+            error_msg = ("'devices.cuda_standalone.no_{prepost}_references' "
+                         "was set to True, but {prepost}synaptic index is "
+                         "needed for variable {varname} in {owner.name}")
+            # Check for all variable that are read or written to if they are
+            # i/j or their indices are pre/post
             for varname in variables.iterkeys():
                 if varname in read_write:
                     idx = variable_indices[varname]
                     if idx == '_presynaptic_idx' or varname == 'i':
                         self.delete_synaptic_pre[synaptic_pre_array_name] = False
                         if prefs['devices.cuda_standalone.no_pre_references']:
-                            raise PreferenceError("'devices.cuda_standalone.no_pre_references' "
-                                                  "was set to True, but presynaptic index is "
-                                                  "needed for {varname} in "
-                                                  "{owner.name}".format(varname=varname,
-                                                                        owner=owner))
+                            raise PreferenceError(error_msg.format(prepost='pre',
+                                                                   varname=varname,
+                                                                   owner=owner))
                     if idx == '_postsynaptic_idx' or varname == 'j':
                         self.delete_synaptic_post[synaptic_post_array_name] = False
                         if prefs['devices.cuda_standalone.no_post_references']:
-                            raise PreferenceError("'devices.cuda_standalone.no_post_references' "
-                                                  "was set to True, but postsynaptic index is "
-                                                  "needed for '{varname}' in "
-                                                  "'{owner.name}'".format(varname=varname,
-                                                                          owner=owner))
+                            raise PreferenceError(error_msg.format(prepost='post',
+                                                                   varname=varname,
+                                                                   owner=owner))
+            # Summed variables need the indices of their target variable, which
+            # are not in the read_write set.
+            if template_name == 'summed_variable':
+                idx = template_kwds['_index_var'].name
+                varname = template_kwds['_target_var'].name
+                if idx == '_synaptic_pre':
+                    self.delete_synaptic_pre[synaptic_pre_array_name] = False
+                    if prefs['devices.cuda_standalone.no_pre_references']:
+                        raise PreferenceError(error_msg.format(prepost='pre',
+                                                               varname=varname,
+                                                               owner=owner))
+                if idx == '_synaptic_post':
+                    self.delete_synaptic_post[synaptic_post_array_name] = False
+                    if prefs['devices.cuda_standalone.no_post_references']:
+                        raise PreferenceError(error_msg.format(prepost='post',
+                                                               varname=varname,
+                                                               owner=owner))
+                if idx == '_syaptic_post':
+                    self.delete_synaptic_post[synaptic_post_array_name] = False
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
