@@ -692,9 +692,10 @@ class CUDACodeGenerator(CodeGenerator):
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
                 arrayname = self.get_array_name(variable, pointer=False)
-                kernel_lines.append(
-                    "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
-                    "".format(dtype=c_data_type(variable.dtype), arrayname=arrayname))
+                line = "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
+                line = line.format(dtype=c_data_type(variable.dtype), arrayname=arrayname)
+                if line not in kernel_lines:
+                    kernel_lines.append(line)
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
