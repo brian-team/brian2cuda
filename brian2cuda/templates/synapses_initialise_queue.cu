@@ -153,7 +153,7 @@ void _run_{{pathobj}}_initialise_queue()
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_start = used_device_memory;
 
-    {# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %DEVICE_PARAMETERS% #}
+    {# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %KERNEL_PARAMETERS% #}
     int64_t syn_N_check = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
     if (syn_N_check == 0){
         return;

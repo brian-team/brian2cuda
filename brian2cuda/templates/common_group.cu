@@ -45,8 +45,8 @@ __launch_bounds__(1024, {{sm_multiplier}})
 kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -56,8 +56,12 @@ kernel_{{codeobj_name}}(
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     assert(THREADS_PER_BLOCK == blockDim.x);
 
@@ -107,8 +111,8 @@ void _run_{{codeobj_name}}()
     const int _N = {{constant_or_scalar('N', variables['N'])}};
     {% endblock %}
 
-    ///// CONSTANTS ///////////
-    %CONSTANTS%
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
 
     {% block extra_maincode %}
     {% endblock %}

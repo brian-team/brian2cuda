@@ -33,8 +33,8 @@ kernel_{{codeobj_name}}(
     int THREADS_PER_BLOCK,
     double t,
     double dt,
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
     {# USES_VARIABLES { N } #}
@@ -44,8 +44,12 @@ kernel_{{codeobj_name}}(
     int bid = blockIdx.x;
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
-    ///// KERNEL_VARIABLES /////
-    %KERNEL_VARIABLES%
+
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     if(_idx >= _N)
     {

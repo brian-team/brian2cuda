@@ -35,6 +35,9 @@ if (_num__array_{{owner.name}}__indices > 1024)
 {% endblock prepare_kernel_inner %}
 
 {% block extra_maincode %}
+// TODO: this pushes a new value to the device each time step? Looks
+// inefficient, can we keep the t values on the host instead? Do we need them
+// on the device?
 dev_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
 
 int num_iterations = {{owner.clock.name}}.i_end;
@@ -74,7 +77,7 @@ if (_num__array_{{owner.name}}__indices > 0)
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
 }
-{% endblock %}
+{% endblock kernel_call %}
 
 {% block kernel %}
 __global__ void
@@ -88,10 +91,12 @@ kernel_{{codeobj_name}}(
     {% for varname, var in _recorded_variables | dictsort %}
     {{c_data_type(var.dtype)}}** monitor_{{varname}},
     {% endfor %}
-    ///// DEVICE_PARAMETERS /////
-    %DEVICE_PARAMETERS%
+    ///// KERNEL_PARAMETERS /////
+    %KERNEL_PARAMETERS%
     )
 {
+    using namespace brian;
+
     int tid = threadIdx.x;
     if(tid > _num_indices)
     {
@@ -99,7 +104,11 @@ kernel_{{codeobj_name}}(
     }
     int32_t _idx = indices[tid];
 
-    %KERNEL_VARIABLES%
+    ///// KERNEL_CONSTANTS /////
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     ///// scalar_code /////
     {{scalar_code|autoindent}}

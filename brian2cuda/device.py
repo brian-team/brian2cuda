@@ -7,6 +7,7 @@ import inspect
 from collections import defaultdict
 import tempfile
 import re
+from itertools import chain
 
 import numpy as np
 
@@ -14,11 +15,12 @@ import brian2
 
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.codegen.translation import make_statements
-from brian2.core.clocks import defaultclock
+from brian2.core.clocks import Clock, defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.network import Network
 from brian2.core.preferences import prefs, BrianPreference, PreferenceError
-from brian2.core.variables import *
+from brian2.core.variables import ArrayVariable, DynamicArrayVariable
+from brian2.core.functions import Function
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
@@ -31,6 +33,7 @@ from brian2.units import second
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.groups.neurongroup import Thresholder
+from brian2.input.timedarray import TimedArray
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
@@ -587,14 +590,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_codeobj_source(self, writer):
         code_object_defs = defaultdict(list)
         host_parameters = defaultdict(list)
-        device_parameters = defaultdict(list)
-        kernel_variables = defaultdict(list)
+        kernel_parameters = defaultdict(list)
+        kernel_constants = defaultdict(list)
         # Generate data for non-constant values
         for codeobj in self.code_objects.itervalues():
             code_object_defs_lines = []
             host_parameters_lines = []
-            device_parameters_lines = []
-            kernel_variables_lines = []
+            kernel_parameters_lines = []
+            kernel_constants_lines = []
             additional_code = []
             number_elements = ""
             if hasattr(codeobj, 'owner') and hasattr(codeobj.owner, '_N') and codeobj.owner._N != 0:
@@ -606,9 +609,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # use the double-precision array versions for dt as kernel arguments
                     # they are cast to single-precision scalar dt in scalar_code
                     v = v.real_var
+
                 # code objects which only run once
-                if k in ["_python_rand", "_python_randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
-                    if k == "_python_randn":
+                if k in ["rand", "randn"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
+                    if k == "randn":
                         code_snippet='''
                             //genenerate an array of random numbers on the device
                             {dtype}* dev_array_randn;
@@ -620,9 +624,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
                         line = "{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                        device_parameters_lines.append(line)
+                        kernel_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_randn")
-                    elif k == "_python_rand":
+                    elif k == "rand":
                         code_snippet = '''
                             //genenerate an array of random numbers on the device
                             {dtype}* dev_array_rand;
@@ -634,57 +638,68 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                        curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
                         additional_code.append(code_snippet)
                         line = "{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                        device_parameters_lines.append(line)
+                        kernel_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
+                # Clock variables (t, dt, timestep)
+                elif hasattr(v, 'owner') and isinstance(v.owner, Clock):
+                    # Clocks only run on the host and the corresponding device variables are copied
+                    # to the device only once in the beginning and in the end of a simulation.
+                    # Therefore, we pass clock variables (t, dt, timestep) by value as kernel
+                    # parameters whenever they are needed on the device. These values are translated
+                    # into pointers in CUDACodeGenerator.determine_keywords(), such that they can be
+                    # used in scalar/vector code.
+                    arrayname = self.get_array_name(v)
+                    dtype = c_data_type(v.dtype)
+                    host_parameters_lines.append(
+                        "{arrayname}[0]".format(arrayname=arrayname))
+                    kernel_parameters_lines.append(
+                        "const {dtype} _value{arrayname}".format(
+                            dtype=dtype, arrayname=arrayname))
+                # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
-                    if k in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep'] and v.scalar:  # monitors have not scalar t variables
-                        arrayname = self.get_array_name(v)
-                        host_parameters_lines.append(arrayname + '[0]')
-                        device_parameters_lines.append("const {dtype} _ptr{name}".format(dtype=c_data_type(v.dtype), name=arrayname))
-                    else:
-                        try:
-                            if isinstance(v, DynamicArrayVariable):
-                                if v.ndim == 1:
-                                    dyn_array_name = self.dynamic_arrays[v]
-                                    array_name = self.arrays[v]
-                                    line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
-                                    line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
-                                                       dyn_array_name=dyn_array_name)
-                                    code_object_defs_lines.append(line)
-                                    line = 'const int _num{k} = dev{dyn_array_name}.size();'
-                                    line = line.format(k=k, dyn_array_name=dyn_array_name)
-                                    code_object_defs_lines.append(line)
+                    try:
+                        if isinstance(v, DynamicArrayVariable):
+                            if v.ndim == 1:
+                                dyn_array_name = self.dynamic_arrays[v]
+                                array_name = self.arrays[v]
+                                line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
+                                line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                code_object_defs_lines.append(line)
+                                line = 'const int _num{k} = dev{dyn_array_name}.size();'
+                                line = line.format(k=k, dyn_array_name=dyn_array_name)
+                                code_object_defs_lines.append(line)
 
-                                    host_parameters_lines.append(array_name)
-                                    host_parameters_lines.append("_num" + k)
+                                host_parameters_lines.append(array_name)
+                                host_parameters_lines.append("_num" + k)
 
-                                    line = "{c_type}* _ptr{array_name}"
-                                    device_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                    line = "const int _num{array_name}"
-                                    device_parameters_lines.append(line.format(array_name=k))
+                                line = "{c_type}* _ptr{array_name}"
+                                kernel_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
+                                line = "const int _num{array_name}"
+                                kernel_parameters_lines.append(line.format(array_name=k))
 
-                            else:  # v is ArrayVariable but not DynamicArrayVariable
-                                arrayname = self.get_array_name(v)
-                                host_parameters_lines.append("dev"+arrayname)
-                                device_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
+                        else:  # v is ArrayVariable but not DynamicArrayVariable
+                            arrayname = self.get_array_name(v)
+                            host_parameters_lines.append("dev"+arrayname)
+                            kernel_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
 
-                                code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
-                                kernel_variables_lines.append('const int _num%s = %s;' % (k, v.size))
-                                if k.endswith('space'):
-                                    host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
-                        except TypeError:
-                            pass
+                            code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
+                            kernel_constants_lines.append('const int _num%s = %s;' % (k, v.size))
+                            if k.endswith('space'):
+                                host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
+                    except TypeError:
+                        pass
 
             # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
             # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
-            # TODO can we just include this in the k == '_python_rand' test above?
+            # TODO can we just include this in the k == 'rand' test above?
             if codeobj.rand_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_rand".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
             if codeobj.randn_calls >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
-                device_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
+                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
 
             # Sometimes an array is referred to by to different keys in our
@@ -695,12 +710,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for line in host_parameters_lines:
                 if not line in host_parameters[codeobj.name]:
                     host_parameters[codeobj.name].append(line)
-            for line in device_parameters_lines:
-                if not line in device_parameters[codeobj.name]:
-                    device_parameters[codeobj.name].append(line)
-            for line in kernel_variables_lines:
-                if not line in kernel_variables[codeobj.name]:
-                    kernel_variables[codeobj.name].append(line)
+            for line in kernel_parameters_lines:
+                if not line in kernel_parameters[codeobj.name]:
+                    kernel_parameters[codeobj.name].append(line)
+            for line in chain(kernel_constants_lines):
+                if not line in kernel_constants[codeobj.name]:
+                    kernel_constants[codeobj.name].append(line)
 
             for line in additional_code:
                 if not line in code_object_defs[codeobj.name]:
@@ -709,17 +724,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Generate the code objects
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
-            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            # TODO: fix these freeze/HOST_CONSTANTS hacks somehow - they work but not elegant.
             code = self.freeze(codeobj.code.cu_file, ns)
 
             if len(host_parameters[codeobj.name]) == 0:
                 host_parameters[codeobj.name].append("0")
-                device_parameters[codeobj.name].append("int dummy")
+                kernel_parameters[codeobj.name].append("int dummy")
 
-            code = code.replace('%CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+            # HOST_CONSTANTS are equivalent to C++ Standalone's CONSTANTS
+            code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+            # KERNEL_CONSTANTS are the same for inside device kernels
+            code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
+            # HOST_PARAMETERS are parameters that device kernels are called with from host code
             code = code.replace('%HOST_PARAMETERS%', ',\n\t\t\t'.join(host_parameters[codeobj.name]))
-            code = code.replace('%DEVICE_PARAMETERS%', ',\n\t'.join(device_parameters[codeobj.name]))
-            code = code.replace('%KERNEL_VARIABLES%', '\n\t'.join(kernel_variables[codeobj.name]))
+            # KERNEL_PARAMETERS are the same names of the same parameters inside the device kernels
+            code = code.replace('%KERNEL_PARAMETERS%', ',\n\t'.join(kernel_parameters[codeobj.name]))
             code = code.replace('%CODEOBJ_NAME%', codeobj.name)
             code = '#include "objects.h"\n'+code
 

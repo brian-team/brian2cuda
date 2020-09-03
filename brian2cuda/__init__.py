@@ -6,3 +6,4 @@ import cuda_prefs
 from .codeobject import CUDAStandaloneCodeObject
 from .device import cuda_standalone_device
 import binomial
+import timedarray

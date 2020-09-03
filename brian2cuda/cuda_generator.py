@@ -9,6 +9,7 @@ from brian2.utils.logger import get_logger
 from brian2.utils.stringtools import get_identifiers
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
+from brian2.core.clocks import Clock
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
@@ -195,6 +196,21 @@ class CUDACodeGenerator(CodeGenerator):
         self.previous_convertion_pref = None
         self.uses_atomics = False
 
+        # Set convertion types for standard C99 functions in device code
+        # These are used in _add_user_function to format the function code
+        if prefs.codegen.generators.cuda.default_functions_integral_convertion == np.float64:
+            self.default_func_type = 'double'
+            self.other_func_type = 'float'
+        else:  # np.float32
+            self.default_func_type = 'float'
+            self.other_func_type = 'double'
+        # set clip function to either use all float or all double arguments
+        # see #51 for details
+        if prefs['core.default_float_dtype'] == np.float64:
+            self.float_dtype = 'float'
+        else:  # np.float32
+            self.float_dtype = 'double'
+
     @property
     def restrict(self):
         return prefs['codegen.generators.cpp.restrict_keyword'] + ' '
@@ -204,12 +220,16 @@ class CUDACodeGenerator(CodeGenerator):
         return prefs['codegen.generators.cpp.flush_denormals']
 
     @staticmethod
-    def get_array_name(var, access_data=True):
+    def get_array_name(var, access_data=True, pointer=True):
         # We have to do the import here to avoid circular import dependencies.
         from brian2.devices.device import get_device
         device = get_device()
         if access_data:
-            return '_ptr' + device.get_array_name(var)
+            if pointer:
+                prefix = '_ptr'
+            else:
+                prefix = ''
+            return prefix + device.get_array_name(var)
         else:
             return device.get_array_name(var, access_data=False)
 
@@ -281,11 +301,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 line = ''
             line = line + self.c_data_type(var.dtype) + ' ' + varname + ' = '
-            if varname in ['t', 'timestep', '_clock_t', '_clock_timestep', '_source_t', '_source_timestep']:
-                # variables passed by value to kernel
-                line = line + self.get_array_name(var, self.variables) + ';'
-            else:
-                line = line + self.get_array_name(var, self.variables) + '[' + index_var + '];'
+            line = line + self.get_array_name(var) + '[' + index_var + '];'
             lines.append(line)
         return lines
 
@@ -325,7 +341,7 @@ class CUDACodeGenerator(CodeGenerator):
         for varname in write:
             index_var = self.variable_indices[varname]
             var = self.variables[varname]
-            line = self.get_array_name(var, self.variables) + '[' + index_var + '] = ' + varname + ';'
+            line = self.get_array_name(var) + '[' + index_var + '] = ' + varname + ';'
             lines.append(line)
         return lines
 
@@ -548,8 +564,20 @@ class CUDACodeGenerator(CodeGenerator):
         support_code = []
         hash_defines = []
         pointers = []
+        kernel_lines = []
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
+
+        ### Different from CPPCodeGenerator: We format the funccode dtypes here
+        from brian2.devices.device import get_device
+        device = get_device()
+        if varname in functions_C99:
+            funccode = funccode.format(default_type=self.default_func_type,
+                                       other_type=self.other_func_type)
+        if varname == 'clip':
+            funccode = funccode.format(float_dtype=self.float_dtype)
+        ###
+
         if isinstance(funccode, basestring):
             funccode = {'support_code': funccode}
         if funccode is not None:
@@ -558,47 +586,71 @@ class CUDACodeGenerator(CodeGenerator):
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
             for ns_key, ns_value in func_namespace.iteritems():
-                if hasattr(ns_value, 'dtype'):
-                    if ns_value.shape == ():
-                        raise NotImplementedError((
-                        'Directly replace scalar values in the function '
-                        'instead of providing them via the namespace'))
-                    type_str = self.c_data_type(ns_value.dtype) + '*'
-                else:  # e.g. a function
-                    type_str = 'py::object'
-                support_code.append('static {0} _namespace{1};'.format(type_str,
-                                                                       ns_key))
-                pointers.append('_namespace{0} = {1};'.format(ns_key, ns_key))
+                # This section is adapted from CPPCodeGenerator such that file
+                # global namespace pointers can be used in both host and device
+                # code.
+                assert hasattr(ns_value, 'dtype'), \
+                    'This should not have happened. Please report at ' \
+                    'https://github.com/brian-team/brian2cuda/issues/new'
+                if ns_value.shape == ():
+                    raise NotImplementedError((
+                    'Directly replace scalar values in the function '
+                    'instead of providing them via the namespace'))
+                type_str = self.c_data_type(ns_value.dtype) + '*'
+                namespace_ptr = '''
+                    #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+                    __device__ {dtype} _namespace{name};
+                    #else
+                    {dtype} _namespace{name};
+                    #endif
+                    '''.format(dtype=type_str, name=ns_key)
+                support_code.append(namespace_ptr)
+                # pointer lines will be used in codeobjects running on the host
+                pointers.append('_namespace{name} = {name};'.format(name=ns_key))
+                # kernel lines will be used in codeobjects running on the device
+                kernel_lines.append('''
+                    #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+                    _namespace{name} = d{name};
+                    #else
+                    _namespace{name} = {name};
+                    #endif
+                    '''.format(name=ns_key))
             support_code.append(deindent(funccode.get('support_code', '')))
             hash_defines.append(deindent(funccode.get('hashdefine_code', '')))
 
         dep_hash_defines = []
         dep_pointers = []
         dep_support_code = []
+        dep_kernel_lines = []
         if impl.dependencies is not None:
             for dep_name, dep in impl.dependencies.iteritems():
-                self.variables[dep_name] = dep
-                hd, ps, sc, uf = self._add_user_function(dep_name, dep)
-                dep_hash_defines.extend(hd)
-                dep_pointers.extend(ps)
-                dep_support_code.extend(sc)
-                user_functions.extend(uf)
+                if dep_name not in self.variables:
+                    self.variables[dep_name] = dep
+                    hd, ps, sc, uf, kl = self._add_user_function(dep_name, dep)
+                    dep_hash_defines.extend(hd)
+                    dep_pointers.extend(ps)
+                    dep_support_code.extend(sc)
+                    user_functions.extend(uf)
+                    dep_kernel_lines.extend(kl)
 
         return (dep_hash_defines + hash_defines,
                 dep_pointers + pointers,
                 dep_support_code + support_code,
-                user_functions)
+                user_functions,
+                dep_kernel_lines + kernel_lines)
 
     def determine_keywords(self):
         # set up the restricted pointers, these are used so that the compiler
         # knows there is no aliasing in the pointers, for optimisation
-        lines = []
-        # it is possible that several different variable names refer to the
+        pointers = []
+        # Add additional lines inside the kernel functions
+        kernel_lines = []
+        # It is possible that several different variable names refer to the
         # same array. E.g. in gapjunction code, v_pre and v_post refer to the
         # same array if a group is connected to itself
         handled_pointers = set()
         template_kwds = {}
-        # again, do the import here to avoid a circular dependency.
+        # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
         for varname, var in self.variables.iteritems():
@@ -610,67 +662,47 @@ class CUDACodeGenerator(CodeGenerator):
                     continue
                 if getattr(var, 'ndim', 1) > 1:
                     continue  # multidimensional (dynamic) arrays have to be treated differently
-                line = self.c_data_type(var.dtype) + ' * ' + self.restrict + pointer_name + ' = ' + array_name + ';'
-                lines.append(line)
+                restrict = self.restrict
+                # turn off restricted pointers for scalars for safety
+                if var.scalar:
+                    restrict = ' '
+                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                                                    restrict,
+                                                    pointer_name,
+                                                    array_name)
+                pointers.append(line)
                 handled_pointers.add(pointer_name)
-
-        pointers = '\n'.join(lines)
 
         # set up the functions
         user_functions = []
-        support_code = ''
-        hash_defines = ''
-        # set convertion types for standard C99 functions in device code
-        if prefs.codegen.generators.cuda.default_functions_integral_convertion == np.float64:
-            default_func_type = 'double'
-            other_func_type = 'float'
-        else:  # np.float32
-            default_func_type = 'float'
-            other_func_type = 'double'
-        # set clip function to either use all float or all double arguments
-        # see #51 for details
-        if prefs['core.default_float_dtype'] == np.float64:
-            float_dtype = 'float'
-        else:  # np.float32
-            float_dtype = 'double'
+        support_code = []
+        hash_defines = []
         for varname, variable in self.variables.items():
             if isinstance(variable, Function):
-                user_functions.append((varname, variable))
-                funccode = variable.implementations[self.codeobj_class].get_code(self.owner)
-                if varname in functions_C99:
-                    funccode = funccode.format(default_type=default_func_type, other_type=other_func_type)
-                if varname == 'clip':
-                    funccode = funccode.format(float_dtype=float_dtype)
-                if isinstance(funccode, basestring):
-                    funccode = {'support_code': funccode}
-                if funccode is not None:
-                    support_code += '\n' + deindent(funccode.get('support_code', ''))
-                    hash_defines += '\n' + deindent(funccode.get('hashdefine_code', ''))
-                # add the Python function with a leading '_python', if it
-                # exists. This allows the function to make use of the Python
-                # function via weave if necessary (e.g. in the case of randn)
-                if not variable.pyfunc is None:
-                    pyfunc_name = '_python_' + varname
-                    if pyfunc_name in self.variables:
-                        logger.warn(('Namespace already contains function %s, '
-                                     'not replacing it') % pyfunc_name)
-                    else:
-                        self.variables[pyfunc_name] = variable.pyfunc
+                hd, ps, sc, uf, kl = self._add_user_function(varname, variable)
+                user_functions.extend(uf)
+                support_code.extend(sc)
+                pointers.extend(ps)
+                hash_defines.extend(hd)
+                kernel_lines.extend(kl)
+        support_code.append(self.universal_support_code)
 
-        # delete the user-defined functions from the namespace and add the
-        # function namespaces (if any)
-        for funcname, func in user_functions:
-            del self.variables[funcname]
-            func_namespace = func.implementations[self.codeobj_class].get_namespace(self.owner)
-            if func_namespace is not None:
-                self.variables.update(func_namespace)
+        # Clock variables (t, dt, timestep) are passed by value to kernels and
+        # need to be translated back into pointers for scalar/vector code.
+        for varname, variable in self.variables.iteritems():
+            if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
+                # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
+                arrayname = self.get_array_name(variable, pointer=False)
+                line = "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
+                line = line.format(dtype=c_data_type(variable.dtype), arrayname=arrayname)
+                if line not in kernel_lines:
+                    kernel_lines.append(line)
 
-        support_code += '\n' + deindent(self.universal_support_code)
-
-        keywords = {'pointers_lines': stripped_deindented_lines(pointers),
-                    'support_code_lines': stripped_deindented_lines(support_code),
-                    'hashdefine_lines': stripped_deindented_lines(hash_defines),
-                    'denormals_code_lines': stripped_deindented_lines(self.denormals_to_zero_code()),
+        keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
+                    'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
+                    'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
+                    'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
+                    'kernel_lines': stripped_deindented_lines('\n'.join(kernel_lines)),
                     'uses_atomics': self.uses_atomics
                     }
         keywords.update(template_kwds)

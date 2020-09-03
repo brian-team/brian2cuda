@@ -71,7 +71,7 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
 
     recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
     recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-				      if not key[0].lower().startswith('genn')])
+                                      if not key[0].lower().startswith('genn')])
     recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
                                   if key[0].lower().startswith('genn')])
 

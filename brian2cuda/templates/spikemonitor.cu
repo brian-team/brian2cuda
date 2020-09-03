@@ -45,8 +45,8 @@ __launch_bounds__(1024, {{sm_multiplier}})
 kernel_{{codeobj_name}}(
     int neurongroup_N,
     int32_t* count,
-    // DEVICE_PARAMETERS
-    %DEVICE_PARAMETERS%
+    // KERNEL_PARAMETERS
+    %KERNEL_PARAMETERS%
     )
 {
     using namespace brian;
@@ -59,8 +59,11 @@ kernel_{{codeobj_name}}(
     int num_events = 0;
     {% endif %}
 
-    // KERNEL_VARIABLES
-    %KERNEL_VARIABLES%
+    // KERNEL_CONSTANTS
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     // scalar_code
     {{scalar_code|autoindent}}
@@ -106,30 +109,36 @@ kernel_{{codeobj_name}}(
 
 {% block extra_functions_cu %}
 __global__ void _run_debugmsg_{{codeobj_name}}_kernel(
-    // DEVICE_PARAMETERS
-    %DEVICE_PARAMETERS%
+    // KERNEL_PARAMETERS
+    %KERNEL_PARAMETERS%
 )
 {
     using namespace brian;
 
-    // KERNEL_VARIABLES
-    %KERNEL_VARIABLES%
+    // KERNEL_CONSTANTS
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     printf("Number of spikes: %d\n", {{N}});
 }
 
 __global__ void _count_{{codeobj_name}}_kernel(
     int* dev_num_events,
-    // DEVICE_PARAMETERS
-    %DEVICE_PARAMETERS%
+    // KERNEL_PARAMETERS
+    %KERNEL_PARAMETERS%
 )
 {
     using namespace brian;
     // TODO: fix int types, num_events and  cudaVector::size() are int but {{N}} is size32_t
     int num_events;
 
-    // KERNEL_VARIABLES
-    %KERNEL_VARIABLES%
+    // KERNEL_CONSTANTS
+    %KERNEL_CONSTANTS%
+
+    ///// kernel_lines /////
+    {{kernel_lines|autoindent}}
 
     {# If there are any record_variables, get the size of one arbitrary monitor #}
     {% if record_variables %}
@@ -188,8 +197,8 @@ void _copyToHost_{{codeobj_name}}()
             cudaMalloc((void**)&dev_num_events, sizeof(int))
             );
 
-    // CONSTANTS
-    %CONSTANTS%
+    // HOST_CONSTANTS
+    %HOST_CONSTANTS%
 
     _count_{{codeobj_name}}_kernel<<<1,1>>>(
         dev_num_events,
@@ -224,8 +233,8 @@ void _debugmsg_{{codeobj_name}}()
 {
     using namespace brian;
 
-    // CONSTANTS
-    %CONSTANTS%
+    // HOST_CONSTANTS
+    %HOST_CONSTANTS%
 
     // TODO: can't we acces the correct _array_eventmonitor_N[0]
     //   value here without any kernel call?
