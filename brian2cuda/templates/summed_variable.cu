@@ -12,8 +12,9 @@
 
 {% block kernel %}
 __global__ void kernel_{{codeobj_name}}(
-    int num_blocks_per_neuron,
+    int _num_blocks_per_target,
     int num_threads,
+    int num_blocks,
     int syn_N,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
@@ -22,11 +23,15 @@ __global__ void kernel_{{codeobj_name}}(
     using namespace brian;
 
     extern __shared__ char shared_mem[];
-    int tid = threadIdx.x;
-    int bid = blockIdx.x;
-    int neuron_id = bid/num_blocks_per_neuron;
-    int num_block_for_neuron = bid % num_blocks_per_neuron;
-    int _idx = num_block_for_neuron*num_threads + tid;
+    int _tidx = threadIdx.x;
+    int _bidx = blockIdx.x;
+    // Group ID of summed target variable that this block works on
+    int _target_id_this_block = _bidx/_num_blocks_per_target + {{_target_start}};
+    // Block index working on this target (in [0, _target_size])
+    int _bidx_this_target = _bidx % _num_blocks_per_target;
+    // _idx is the synapse index and for each target, it goes from 0 to num_synapses
+    int _idx = _bidx_this_target * num_threads + _tidx;
+    int _target_size = num_blocks / _num_blocks_per_target;
     double* shared_double_mem = (double*) shared_mem;
 
     ///// KERNEL_CONSTANTS /////
@@ -36,35 +41,43 @@ __global__ void kernel_{{codeobj_name}}(
     {{kernel_lines|autoindent}}
 
     //// MAIN CODE ////////////
-    if(_idx < 0 || _idx >=  syn_N)
+    if(_idx >=  syn_N)
     {
         return;
     }
     double _local_sum = 0.0;
-    shared_double_mem[tid] = 0.0;
+    shared_double_mem[_tidx] = 0.0;
 
-    // Let one thread per block range set all summed target variables to 0
-    if(tid == 0 && num_block_for_neuron == 0)
+    // Let one thread per target set the summed target variable to 0
+    // XXX TODO: We can't synchronize between blocks, therefore the target variable
+    //           might not be 0 while other blocks for the same target might
+    //           already do their atomicAdd instructions...
+    if(_tidx == 0 && _bidx_this_target == 0)
     {
-        {{_target_var_array}}[neuron_id] = 0.0;
+        {{_target_var_array}}[_target_id_this_block] = 0;
     }
 
     // Get target ID for each synapse
-    int target_id = {{_index_array}}[_idx];
-    // For each target ID that equals the neuron ID of this block range, set
+    int this_syn_target_id = {{_index_array}}[_idx];
+
+    const int _vectorisation_idx = -1;
+    ///// scalar_code /////
+    {{scalar_code|autoindent}}
+
+    // For each target IDX that equals the target ID of this synapse, set
     // shared memory array to _synaptic_var (all others stay 0)
-    if(target_id == neuron_id)
+    if(this_syn_target_id == _target_id_this_block)
     {
-        int _vectorisation_idx = _idx;
+        const int _vectorisation_idx = _idx;
         ///// vector code /////
         {{vector_code|autoindent}}
-        shared_double_mem[tid] = _synaptic_var;
+        shared_double_mem[_tidx] = _synaptic_var;
     }
 
     __syncthreads();
 
     // Let only the first thread of each block sum all its _synaptic_vars
-    if(tid != 0)
+    if(_tidx != 0)
     {
         return;
     }
@@ -74,10 +87,9 @@ __global__ void kernel_{{codeobj_name}}(
         _local_sum += shared_double_mem[_idx];
     }
 
-    // atomicAdd the block sums to the target neuron
-    // We can only get atomic conflicts if there are multiple synapses with
-    // same target variable
-    _brian_atomicAdd(&{{_target_var_array}}[neuron_id], _local_sum);
+    // atomicAdd the block sums to the target variable
+    // (potentially as many conflicts as there are blocks per target)
+    _brian_atomicAdd(&{{_target_var_array}}[_target_id_this_block], _local_sum);
 }
 {% endblock %}
 
@@ -86,20 +98,21 @@ __global__ void kernel_{{codeobj_name}}(
 {# This enables summed variables for connections to a synapse,
    copied from cpp template #}
 const int _target_size = {{constant_or_scalar(_target_size_name, variables[_target_size_name])}};
-static int num_blocks_per_target;
+static int _num_blocks_per_target;
 {% endblock %}
 
 
 {% block modify_kernel_dimensions %}
-num_blocks_per_target = num_blocks;
+_num_blocks_per_target = num_blocks;
 num_blocks *= _target_size;
 {% endblock %}
 
 
 {% block kernel_call %}
     kernel_{{codeobj_name}}<<<num_blocks, num_threads, num_threads*MEM_PER_THREAD>>>(
-            num_blocks_per_target,
+            _num_blocks_per_target,
             num_threads,
+            num_blocks,
             _N,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%

@@ -1132,7 +1132,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         if report_func != '':
             if self.report_func != '' and report_func != self.report_func:
-                raise NotImplementedError('The C++ standalone device does not '
+                raise NotImplementedError('The CUDA standalone device does not '
                                           'support multiple report functions, '
                                           'each run has to use the same (or '
                                           'none).')
