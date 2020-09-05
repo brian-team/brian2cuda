@@ -5,7 +5,7 @@
 {% block define_N %}
 {% endblock %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 int current_iteration = {{owner.clock.name}}.timestep[0];
 static int start_offset = current_iteration;
 {% endblock %}

@@ -44,7 +44,7 @@ if (tot_memory_MB > 0)
 std::cout << std::endl;
 {% endblock %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 {# USES_VARIABLES { _synaptic_pre, _synaptic_post, sources, targets
                 N_incoming, N_outgoing, N,
                 N_pre, N_post, _source_offset, _target_offset } #}
@@ -138,4 +138,4 @@ CUDA_SAFE_CALL(
             cudaMemcpyHostToDevice)
         );
 
-{% endblock extra_maincode %}
+{% endblock host_maincode %}

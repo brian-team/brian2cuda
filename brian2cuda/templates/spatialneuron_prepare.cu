@@ -24,7 +24,7 @@
 {% block define_N %}
 {% endblock %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 
 {# needed to translate _array... to _ptr_array... #}
 ///// pointers_lines /////

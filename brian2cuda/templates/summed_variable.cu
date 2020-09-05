@@ -94,7 +94,7 @@ __global__ void kernel_{{codeobj_name}}(
 {% endblock %}
 
 
-{% block extra_maincode %}
+{% block host_maincode %}
 {# This enables summed variables for connections to a synapse,
    copied from cpp template #}
 const int _target_size = {{constant_or_scalar(_target_size_name, variables[_target_size_name])}};

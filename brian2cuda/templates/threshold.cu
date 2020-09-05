@@ -8,7 +8,7 @@
    event.
 #}
 
-{% block maincode %}
+{% block kernel_maincode %}
     {#  Get the name of the array that stores these events (e.g. the spikespace array) #}
     {% set _eventspace = get_array_name(eventspace_variable) %}
 
@@ -79,7 +79,7 @@
     {% endif %}
 {% endblock extra_kernel_call %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
     {% if not extra_threshold_kernel %}
         {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
         // reset eventspace counter to 0
@@ -87,4 +87,4 @@
             cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t))
             );
 {% endif %}
-{% endblock extra_maincode %}
+{% endblock host_maincode %}

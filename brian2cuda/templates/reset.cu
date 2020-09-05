@@ -1,5 +1,5 @@
 {% extends 'common_group.cu' %}
-{% block maincode %}
+{% block kernel_maincode %}
     {# USES_VARIABLES { N } #}
 
     {#  Get the name of the array that stores these events (e.g. the spikespace array) #}
