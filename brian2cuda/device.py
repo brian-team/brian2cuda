@@ -200,12 +200,56 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.code_object_with_binomial_separate_call = []
         super(CUDAStandaloneDevice, self).__init__()
 
-    def get_array_name(self, var, access_data=True):
+    def get_array_name(self, var, access_data=True, prefix=None):
+        '''
+        Return a globally unique name for `var`.
+
+        Parameters
+        ----------
+        access_data : bool, optional
+            For `DynamicArrayVariable` objects, specifying `True` here means the
+            name for the underlying data is returned. If specifying `False`,
+            the name of object itself is returned (e.g. to allow resizing).
+        prefix: {'_ptr', 'dev', 'd'}, optional
+            Prefix for array name. Host pointers to device memory are prefixed
+            with `dev`, device pointers to device memory are prefixed with `d`
+            and pointers used in `scalar_code` and `vector_code` are prefixed
+            with `_ptr` (independent of whether they are used in host or device
+            code). The `_ptr` variables are declared as parameters in the
+            kernel definition (KERNEL_PARAMETERS).
+        '''
         # In single-precision mode we replace dt variables in codeobjects with
         # a single precision version, for details see #148
         if hasattr(var, 'real_var'):
-            return self.get_array_name(var.real_var, access_data=access_data)
-        return super(CUDAStandaloneDevice, self).get_array_name(var, access_data)
+            return self.get_array_name(var.real_var, access_data=access_data,
+                                       device_data=device_data)
+
+        prefix = prefix or ''
+        choices = ['_ptr', 'dev', 'd', '']
+        if prefix not in choices:
+            msg = "`prefix` has to be one of {choices} or `None`, got {prefix}"
+            raise ValueError(msg.format(choices=choices, prefix=prefix))
+
+        if not access_data and prefix in ['_ptr', 'd']:
+            msg = "Don't use `'{prefix}'` prefix for a dynamic array object."
+            raise ValueError(msg.format(prefix=prefix))
+
+        array_name = ''
+        if isinstance(var, DynamicArrayVariable):
+            if access_data:
+                array_name = self.arrays[var]
+            elif var.ndim == 1:
+                array_name = self.dynamic_arrays[var]
+            else:
+                array_name = self.dynamic_arrays_2d[var]
+
+        elif isinstance(var, ArrayVariable):
+            array_name = self.arrays[var]
+        else:
+            raise TypeError(('Do not have a name for variable of type '
+                             '%s') % type(var))
+
+        return prefix + array_name
 
     def code_object_class(self, codeobj_class=None, fallback_pref=None):
         '''
@@ -677,36 +721,64 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype=dtype, arrayname=arrayname))
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
+                    prefix = 'dev'
+                    if codeobj.template_name.startswith("synapses_create"):
+                        # codeobject runs on the host
+                        prefix = ''
                     try:
+                        dyn_array_name = self.get_array_name(v,
+                                                             access_data=False,
+                                                             prefix=prefix)
+                        array_name = self.get_array_name(v,
+                                                         access_data=True,
+                                                         prefix=prefix)
+                        ptr_array_name = self.get_array_name(v,
+                                                             access_data=True,
+                                                             prefix='_ptr')
+                        dtype = c_data_type(v.dtype)
                         if isinstance(v, DynamicArrayVariable):
                             if v.ndim == 1:
-                                dyn_array_name = self.dynamic_arrays[v]
-                                array_name = self.arrays[v]
-                                line = '{c_type}* const {array_name} = thrust::raw_pointer_cast(&dev{dyn_array_name}[0]);'
-                                line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
+
+                                line = '{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
+                                line = line.format(dtype=dtype,
+                                                   array_name=array_name,
                                                    dyn_array_name=dyn_array_name)
                                 code_object_defs_lines.append(line)
-                                line = 'const int _num{k} = dev{dyn_array_name}.size();'
+
+                                line = 'const int _num{k} = {dyn_array_name}.size();'
                                 line = line.format(k=k, dyn_array_name=dyn_array_name)
                                 code_object_defs_lines.append(line)
 
-                                host_parameters_lines.append(array_name)
-                                host_parameters_lines.append("_num" + k)
+                                # These lines are used to define the kernel call parameters, that
+                                # means only for codeobjects running on the device. The array names
+                                # always have a `_dev` prefix.
+                                line = '{array_name}'.format(array_name=array_name)
+                                host_parameters_lines.append(line)
+                                host_parameters_lines.append("_num{k}".format(k=k))
 
-                                line = "{c_type}* _ptr{array_name}"
-                                kernel_parameters_lines.append(line.format(c_type=c_data_type(v.dtype), array_name=array_name))
-                                line = "const int _num{array_name}"
-                                kernel_parameters_lines.append(line.format(array_name=k))
+                                # These lines declare kernel parameters as the `_ptr` variables that
+                                # are used in `scalar_code` and `vector_code`.
+                                # TODO: here we should add const / __restrict and other optimizations
+                                #       for variables that are e.g. only read in the kernel
+                                line = "{dtype}* {ptr_array_name}"
+                                kernel_parameters_lines.append(line.format(dtype=dtype,
+                                                                           ptr_array_name=ptr_array_name))
+
+                                line = "const int _num{k}"
+                                kernel_parameters_lines.append(line.format(k=k))
 
                         else:  # v is ArrayVariable but not DynamicArrayVariable
-                            arrayname = self.get_array_name(v)
-                            host_parameters_lines.append("dev"+arrayname)
-                            kernel_parameters_lines.append("%s* _ptr%s" % (c_data_type(v.dtype), arrayname))
+                            host_parameters_lines.append("{array_name}".format(array_name=array_name))
+                            line = '{dtype}* {ptr_array_name}'.format(dtype=dtype,
+                                                                      ptr_array_name=ptr_array_name)
+                            kernel_parameters_lines.append(line)
 
-                            code_object_defs_lines.append('const int _num%s = %s;' % (k, v.size))
-                            kernel_constants_lines.append('const int _num%s = %s;' % (k, v.size))
+                            code_object_defs_lines.append('const int _num{k} = {v.size};'.format(k=k, v=v))
+                            kernel_constants_lines.append('const int _num{k} = {v.size};'.format(k=k, v=v))
                             if k.endswith('space'):
-                                host_parameters_lines[-1] += '[current_idx{arrayname}]'.format(arrayname=arrayname)
+                                bare_array_name = self.get_array_name(v)
+                                idx = '[current_idx{bare_array_name}]'.format(bare_array_name=bare_array_name)
+                                host_parameters_lines[-1] += idx
                     except TypeError:
                         pass
 

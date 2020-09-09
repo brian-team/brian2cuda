@@ -220,18 +220,25 @@ class CUDACodeGenerator(CodeGenerator):
         return prefs['codegen.generators.cpp.flush_denormals']
 
     @staticmethod
-    def get_array_name(var, access_data=True, pointer=True):
+    def get_array_name(var, access_data=True, prefix=None):
+        '''
+        Return a globally unique name for `var`.
+        See CUDAStandaloneDevice.get_array_name for parameters.
+
+        Here, `prefix` defaults to `'_ptr'` when `access_data=True`.
+
+        `prefix='_ptr'` is used since the CUDACodeGenerator generates the
+        `scalar_code` and `vector_code` snippets.
+        '''
         # We have to do the import here to avoid circular import dependencies.
         from brian2.devices.device import get_device
         device = get_device()
         if access_data:
-            if pointer:
+            if prefix is None:
                 prefix = '_ptr'
-            else:
-                prefix = ''
-            return prefix + device.get_array_name(var)
+            return device.get_array_name(var, access_data=True, prefix=prefix)
         else:
-            return device.get_array_name(var, access_data=False)
+            return device.get_array_name(var, access_data=False, prefix=prefix)
 
     def translate_expression(self, expr):
         expr = word_substitute(expr, self.func_name_replacements)
@@ -692,7 +699,7 @@ class CUDACodeGenerator(CodeGenerator):
         for varname, variable in self.variables.iteritems():
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
-                arrayname = self.get_array_name(variable, pointer=False)
+                arrayname = self.get_array_name(variable, prefix='')
                 line = "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
                 line = line.format(dtype=c_data_type(variable.dtype), arrayname=arrayname)
                 if line not in kernel_lines:
