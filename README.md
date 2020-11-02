@@ -27,11 +27,20 @@ cd brian2cuda
 git submodule update --init frozen_repos/brian2
 ```
 
-Now you can install the correct Brian2 and brian2cuda versions using pip (Be careful if you already have a Brian2 version installed in your current Python environment!):
+Next, you need to incorporate a few changes into the brian2 repo. These changes are already included in the newest brian2 version, but need to be added manually to the brian2 version that is used in `frozen_repose`. To add these changes, apply the `brian2.diff` file to the repository:
+```
+cd frozen_repos/brian2
+git apply ../brian2.diff
+# return to the brian2cuda root directory for the following installation
+cd ../..
+```
+
+Now you can install the correct brian2 and brian2cuda versions using pip (Be careful if you already have a Brian2 version installed in your current Python environment!):
 ```
 pip install .
 pip install ./frozen_repos/brian2
 ```
+
 Or just add them to your `PYTHONPATH` (in which case you need to install their dependencies manually).
 
 #### Comparison with brian2genn
