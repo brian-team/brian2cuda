@@ -34,6 +34,7 @@ from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.groups.neurongroup import Thresholder
 from brian2.input.timedarray import TimedArray
+from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
@@ -436,7 +437,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]
         template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
-        if template_name == "threshold":
+        if template_name in ["threshold", "spikegenerator"]:
             template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                template_name, variable_indices,
@@ -456,9 +457,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         self.eventspace_arrays = {}
+        self.spikegenerator_eventspaces = []
         for var, varname in self.arrays.iteritems():
             if var.name.endswith('space'):  # get all eventspace variables
                 self.eventspace_arrays[var] = varname
+                #if hasattr(var, 'owner') and isinstance(v.owner, Clock):
+                if isinstance(var.owner, SpikeGeneratorGroup):
+                    self.spikegenerator_eventspaces.append(varname)
         for var in self.eventspace_arrays.iterkeys():
             del self.arrays[var]
         multisyn_vars = []
@@ -486,6 +491,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_generator_ordering=curand_generator_ordering,
                         curand_float_type=c_data_type(prefs['core.default_float_dtype']),
                         eventspace_arrays=self.eventspace_arrays,
+                        spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
@@ -896,7 +902,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             maximum_run_time = float(maximum_run_time)
         network_tmp = self.code_object_class().templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
-                                                                 eventspace_arrays=self.eventspace_arrays)
+                                                                 eventspace_arrays=self.eventspace_arrays,
+                                                                 spikegenerator_eventspaces=self.spikegenerator_eventspaces)
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
