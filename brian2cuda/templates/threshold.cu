@@ -8,9 +8,13 @@
    event.
 #}
 
+{# Get the names of the array that stores these events (e.g. the spikespace array) #}
+{# _ptr_array variable used in the kernels #}
+{% set _eventspace = get_array_name(eventspace_variable) %}
+{# _array variable used on the host #}
+{% set _eventspace_name = get_array_name(eventspace_variable, access_data=False) %}
+
 {% block maincode %}
-    {#  Get the name of the array that stores these events (e.g. the spikespace array) #}
-    {% set _eventspace = get_array_name(eventspace_variable) %}
 
     ///// scalar_code /////
     {{scalar_code|autoindent}}
@@ -53,26 +57,25 @@
 
             int _idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-            if (_idx == 0)
-            {
+            if (_idx >= N) {
+                return;
+            }
+
+            if (_idx == 0) {
                 // reset eventspace counter
                 eventspace[N] = 0;
             }
 
-            if (_idx < N)
-            {
-                // reset eventspace
-                eventspace[_idx] = -1;
-            }
+            // reset eventspace
+            eventspace[_idx] = -1;
         }
     {% endif %}
 {% endblock %}
 
 {% block extra_kernel_call %}
     {% if extra_threshold_kernel %}
-        {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
         _reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-                dev{{_eventspace}}[current_idx{{_eventspace}}]
+                dev{{_eventspace_name}}[current_idx{{_eventspace_name}}]
             );
 
         CUDA_CHECK_ERROR("_reset_{{codeobj_name}}");
@@ -81,10 +84,9 @@
 
 {% block extra_maincode %}
     {% if not extra_threshold_kernel %}
-        {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
         // reset eventspace counter to 0
-    CUDA_SAFE_CALL(
-            cudaMemset(&(dev{{_eventspace}}[current_idx{{_eventspace}}][_N]), 0, sizeof(int32_t))
-            );
+        CUDA_SAFE_CALL(
+                cudaMemset(&(dev{{_eventspace_name}}[current_idx{{_eventspace_name}}][_N]), 0, sizeof(int32_t))
+                );
 {% endif %}
 {% endblock extra_maincode %}
