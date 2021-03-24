@@ -43,7 +43,7 @@
 {# USES_VARIABLES {_spikespace, N, t, dt, neuron_index, spike_time, period, _lastindex } #}
 
 
-{% block maincode %}
+{% block kernel_maincode %}
     double _epsilon = 1e-3 * {{dt}};
     {# In spikegenerator.cpp, this is `padding_after` #}
     double _time_within_period = _get_time_within_period({{t}}, {{dt}}, {{period}});
