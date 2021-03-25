@@ -119,9 +119,11 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
 
     # TODO: remove once we set CC automatically from hardware
     # Could also just cudaDeviceQuery and grep capability from there?
-    s = subprocess.run("nvidia-smi -q | grep 'Product Name' | awk -F': ' '{print $2}'",
-                       shell=True, stdout=subprocess.PIPE)
-    gpu_name = s.stdout.decode()
+    s = subprocess.Popen(
+        "nvidia-smi -q | grep 'Product Name' | awk -F': ' '{print $2}'", shell=True,
+        stdout=subprocess.PIPE
+    )
+    gpu_name = s.communicate()[0]
     if gpu_name.startswith("Tesla K40"):
         prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_35'])
