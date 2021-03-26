@@ -127,12 +127,12 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
     if gpu_name.startswith("Tesla K40"):
         prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_35'])
-        print("INFO brian2cuda/tools/utils.py: Setting -arch=sm_35")
+        prints.append("INFO brian2cuda/tools/utils.py: Setting -arch=sm_35")
 
     if gpu_name.startswith("GeForce RTX 2080"):
         prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
-        print("INFO brian2cuda/tools/utils.py: Setting -arch=sm_75")
+        prints.append("INFO brian2cuda/tools/utils.py: Setting -arch=sm_75")
 
     #if socket.gethostname() == 'elnath':
     #    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')

@@ -82,7 +82,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -q cognition-all.q \
     -l cuda=\"1($gpu)\" \
     -N $qsub_name \
-    -pe cognition.pe 4 \
+    -binding linear:2 \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
     $remote_b2c_dir $remote_logfile
     "
