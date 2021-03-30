@@ -10,21 +10,40 @@ from brian2.utils.stringtools import get_identifiers
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.clocks import Clock
-from brian2.core.preferences import prefs, BrianPreference
+from brian2.core.preferences import prefs, BrianPreference, PreferenceError
 from brian2.core.variables import ArrayVariable
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
+
 
 __all__ = ['CUDACodeGenerator',
            'CUDAAtomicsCodeGenerator'
            'c_data_type'
            ]
 
+
 logger = get_logger('brian2.codegen.generators.cuda_generator')
+
 
 class ParallelisationError(Exception):
     pass
+
+
+def compute_capability_validator(cc):
+    """
+    This function checks compute capability preference and raises an error if it is
+    larger than the minimal supported compute capability.
+    """
+    if cc is not None:
+        pref_name = "prefs.codegen.generators.cuda.compute_capability"
+        if not isinstance(cc, float):
+            raise PreferenceError(
+                "Preference `{}` has to be of type float "
+                "(e.g. `6.1`), got `{}`".format(pref_name, type(cc))
+            )
+
+    return True
 
 
 # Preferences
@@ -49,8 +68,16 @@ prefs.register_preferences(
         application. Since this avoids race conditions, effect application can
         be parallelised.''',
         validator=lambda v: isinstance(v, bool),
-        default=True)
+        default=True),
+
+    compute_capability=BrianPreference(
+        docs='''Manually set the compute capability for which CUDA code will be
+        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
+        chosen depending on GPU in use. ''',
+        validator=compute_capability_validator,
+        default=None),
 )
+
 
 #TODO: Check from python side the CC and CUDA runtime version and only add
 # atomics which don't have hardware implementations

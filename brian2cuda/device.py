@@ -36,6 +36,7 @@ from brian2.groups.neurongroup import Thresholder
 from brian2.input.timedarray import TimedArray
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
+from brian2cuda.utils.gputools import select_gpu, get_nvcc_path
 
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
 
@@ -187,6 +188,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     '''
 
     def __init__(self):
+        self.minimal_compute_capability = 3.5
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
         # list of pre/post ID arrays that are not needed in device memory
@@ -198,6 +200,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.all_code_objects = {'rand': [], 'randn': [], 'rand_or_randn': [], 'binomial': []}
         # and collect codeobjects run only once with binomial in separate list
         self.code_object_with_binomial_separate_call = []
+        # store gpu_id and compute capability
+        self.gpu_id = None
+        self.compute_capability = None
         super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True):
@@ -572,12 +577,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
+
+        # Store the GPU ID and it's compute capability. The latter can be overwritten in
+        # self.generate_makefile() via preferces
+        self.gpu_id, self.compute_capability = select_gpu()
+
         # generate the finalisations
         for codeobj in self.code_objects.itervalues():
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
         main_tmp = self.code_object_class().templater.main(None, None,
+                                                           gpu_id=self.gpu_id,
                                                            main_lines=main_lines,
                                                            code_objects=self.code_objects.values(),
                                                            report_func=self.report_func,
@@ -820,18 +831,87 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('run.*', run_tmp)
 
     def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads, disable_asserts=False):
+        available_gpu_arch_flags = (
+            '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
+            '-gencode'
+        )
         nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
-        gpu_arch_flags = ['']
+        gpu_arch_flags = []
         disable_warnings = False
         for flag in nvcc_compiler_flags:
-            if flag.startswith(('--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code', '-gencode')):
+            if flag.startswith(available_gpu_arch_flags):
                 gpu_arch_flags.append(flag)
                 nvcc_compiler_flags.remove(flag)
             elif flag.startswith(('-w', '--disable-warnings')):
                 disable_warnings = True
                 nvcc_compiler_flags.remove(flag)
+        # Check if compute capability was set manually via preference
+        compute_capability_pref = prefs.codegen.generators.cuda.compute_capability
+        # If GPU architecture was set via `extra_compile_args_nvcc` and
+        # `compute_capability`, ignore `compute_capability`
+        if gpu_arch_flags and compute_capability_pref is not None:
+            logger.warn(
+                "GPU architecture for compilation was specified via "
+                "`prefs.codegen.generators.cuda.compute_capability` and "
+                "`prefs.codegen.cuda.extra_compile_args_nvcc`. "
+                "`prefs.codegen.generators.cuda.compute_capability` will be ignored. "
+                "Minimal supported compute capability will not be checked (it is {}). "
+                "To get rid of this warning, set "
+                "`prefs.codegen.generators.cuda.compute_capability` to it's default "
+                "value `None`)"
+            )
+            # Ignore compute capability of chosen GPU and the one manually set via
+            # `compute_capability` preferences.
+            self.compute_capability = None
+            logger.info(
+                "Found architecture flags in "
+                "`prefs.codegen.cuda.extra_compile_args_nvcc`. Minimal compute "
+                "capability ({}) will not be checked.".format(
+                    self.minimal_compute_capability
+                )
+            )
+        # If GPU architecture was set only via `extra_compile_args_nvcc`, use that
+        elif gpu_arch_flags:
+            # Ignore compute capability of chosen GPU
+            self.compute_capability = None
+        # If GPU architecture was set only via `compute_capability` prefs, use that
+        elif compute_capability_pref is not None:
+            self.compute_capability = compute_capability_pref
+        # If compute_capability wasn't set manually, the one from the chosen GPU is used
+        # (stored in self.compute_capability, see self.generate_main_source())
+
+        if self.compute_capability is not None:
+            # check if compute capability is supported
+            if self.compute_capability < self.minimal_compute_capability:
+                raise NotImplementedError(
+                    "Compute capability `{}` is not supported. Minimal supported "
+                    "compute capability is `{}`.".format(
+                        self.compute_capability, self.minimal_compute_capability
+                    )
+                )
+
+        # If GPU architecture is detected automatically or set via `compute_capability`
+        # prefs, we still need to add it as a compile argument
+        if not gpu_arch_flags:
+            # Turn float (3.5) into string ("35")
+            compute_capability_str = ''.join(str(self.compute_capability).split('.'))
+            gpu_arch_flags.append("-arch=sm_{}".format(compute_capability_str))
+
+        # Log compiled GPU architecture
+        if self.compute_capability is None:
+            logger.info(
+                "Compiling device code with manually set architecture flags: "
+                "{}".format(gpu_arch_flags)
+            )
+        else:
+            logger.info(
+                "Compiling device code for compute capability {} (compiler flags: {})."
+                "".format(self.compute_capability, gpu_arch_flags)
+            )
+
         nvcc_optimization_flags = ' '.join(nvcc_compiler_flags)
         gpu_arch_flags = ' '.join(gpu_arch_flags)
+        nvcc_path = get_nvcc_path()
         if cpp_compiler=='msvc':
             if nb_threads>1:
                 openmp_flag = '/openmp'
@@ -852,7 +932,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-            makefile_tmp = self.code_object_class().templater.makefile(None, None,
+            makefile_tmp = self.code_object_class().templater.makefile(
+                None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
                 cpp_compiler_flags=cpp_compiler_flags,
@@ -860,7 +941,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 gpu_arch_flags=gpu_arch_flags,
                 disable_warnings=disable_warnings,
                 disable_asserts=disable_asserts,
-                rm_cmd=rm_cmd)
+                rm_cmd=rm_cmd,
+                nvcc_path=nvcc_path,
+            )
             writer.write('makefile', makefile_tmp)
 
     def build(self, directory='output',

@@ -31,9 +31,13 @@ int main(int argc, char **argv)
 
     const std::clock_t _start_time2 = std::clock();
 
+    CUDA_SAFE_CALL(
+            cudaSetDevice({{gpu_id}})
+            );
+
     cudaDeviceProp props;
     CUDA_SAFE_CALL(
-            cudaGetDeviceProperties(&props, 0)
+            cudaGetDeviceProperties(&props, {{gpu_id}})
             );
     size_t limit = {{gpu_heap_size}} * 1024 * 1024;
     CUDA_SAFE_CALL(

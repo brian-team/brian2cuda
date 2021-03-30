@@ -116,17 +116,6 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(compile_args)
         prints.append("Suppressing compiler warnings")
 
-    # TODO: remove once we set CC automatically from hardware
-    if socket.gethostname() == 'elnath':
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
-
-    if socket.gethostname() == 'cognition13':
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
-
-    # cognition14 hat die Tesla K40c, die hat sm 35 (current default?)
-
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'
         if '-j' not in prefs[k]:
