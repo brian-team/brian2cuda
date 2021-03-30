@@ -15,6 +15,8 @@ from brian2.core.variables import ArrayVariable
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
+from brian2.devices import get_device
+from brian2cuda.utils.gputools import select_gpu, get_cuda_runtime_version
 
 
 __all__ = ['CUDACodeGenerator',
@@ -79,72 +81,133 @@ prefs.register_preferences(
 )
 
 
-#TODO: Check from python side the CC and CUDA runtime version and only add
-# atomics which don't have hardware implementations
-# (see genn/lib/src/generateRunner.cc and genn-team/genn#93).
-# For Python side information see e.g.
-# https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#file-cuda_check-py
+# This is a function since this code needs to be generated after user preferences are
+# set (for GPU selection)
+def _generate_atomic_support_code():
+    #            (arg_dtype, int_dtype, name in type cast function)
+    overloads = [('int', 'int', 'int'),
+                 ('float', 'int', 'int'),
+                 ('double', 'unsigned long long int', 'longlong')]
 
-#            (arg_dtype, int_dtype, name in type cast function)
-overloads = [('int', 'int', 'int'),
-             ('float', 'int', 'int'),
-             ('double', 'unsigned long long int', 'longlong')]
-atomicAdd_hw = ['int']
-if True:  # CC >= 2.0, TODO: check for it
-    atomicAdd_hw.append('float')
-if False:  # CC >= 6.0 TODO check for it AND runtime version (see genn #93)
-    atomicAdd_hw.append('double')
-_atomic_support_code = ''
-for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
-    for arg_dtype, int_dtype, val_type_cast in overloads:
-        if op_name == 'Add' and arg_dtype in atomicAdd_hw:
-            # hardware implementations for atomicAdd exist
-            _atomic_support_code += '''
-            inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
-            {{
-                // hardware implementation
-                return atomic{op_name}(address, val);
-            }}
-            '''.format(arg_dtype=arg_dtype, op_name=op_name)
-        elif arg_dtype == 'int':
-            _atomic_support_code += '''
-            inline __device__ int _brian_atomic{op_name}(int* address, int val)
-            {{
-                // software implementation
-                int old = *address, assumed;
+    cuda_runtime_version = get_cuda_runtime_version()
 
-                do {{
-                    assumed = old;
-                    old = atomicCAS(address, assumed, val {op} assumed);
-                }} while (assumed != old);
+    # Note: There are atomic functions that are supported only for compute capability >=
+    # 3.5. We don't check for those as we require at least 3.5. If we ever support
+    # smaller CC, we need to adapt the code here (see Atomic Functions in CUDA
+    # Programming Guide)
+    device = get_device()
+    assert device.minimal_compute_capability >= 3.5, "Need to adapt atomic support code"
 
-                return old;
-            }}
-            '''.format(op_name=op_name, op=op)
-        else:
-            # in the software implementation, we treat all data as integer types
-            # (since atomicCAS is only define
-            # and use atomicCAS to swap the memory with our our desired value
-            _atomic_support_code += '''
-            inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
-            {{
-                // software implementation
-                {int_dtype}* address_as_int = ({int_dtype}*)address;
-                {int_dtype} old = *address_as_int, assumed;
+    software_implementation_float_dtype = '''
+        // software implementation
+        {int_dtype}* address_as_int = ({int_dtype}*)address;
+        {int_dtype} old = *address_as_int, assumed;
 
-                do {{
-                    assumed = old;
-                    old = atomicCAS(address_as_int, assumed,
-                                    __{arg_dtype}_as_{val_type_cast}(val {op}
-                                           __{val_type_cast}_as_{arg_dtype}(assumed)));
+        do {{
+            assumed = old;
+            old = atomicCAS(address_as_int, assumed,
+                            __{arg_dtype}_as_{val_type_cast}(val {op}
+                                   __{val_type_cast}_as_{arg_dtype}(assumed)));
 
-                // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
-                }} while (assumed != old);
+        // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+        }} while (assumed != old);
 
-                return __{val_type_cast}_as_{arg_dtype}(old);
-            }}
-            '''.format(arg_dtype=arg_dtype, int_dtype=int_dtype,
-                       val_type_cast=val_type_cast, op_name=op_name, op=op)
+        return __{val_type_cast}_as_{arg_dtype}(old);
+        '''
+
+    hardware_implementation = '''
+        // hardware implementation
+        return atomic{op_name}(address, val);
+        '''
+
+    atomic_support_code = ''
+    for op_name, op in [('Add', '+'), ('Mul', '*'), ('Div', '/')]:
+        for arg_dtype, int_dtype, val_type_cast in overloads:
+            # atomicAdd had hardware implementations, depending on dtype, compute
+            # capability and CUDA runtime version. This section uses them when possible.
+            if op_name == 'Add':
+                format_sw = True
+                code = '''
+                inline __device__ {arg_dtype} _brian_atomic{op_name}({arg_dtype}* address, {arg_dtype} val)
+                {{
+                '''
+                if arg_dtype in ['int', 'float']:
+                    code += '''
+                    {hardware_implementation}
+                    '''.format(hardware_implementation=hardware_implementation)
+                elif arg_dtype == 'double':
+                    if cuda_runtime_version >= 8.0:
+                        # Check for CC in at runtime to use software or hardware
+                        # implementation.
+                        # Don't need to check for defined __CUDA__ARCH__, it is always defined
+                        # in __device__ and __global__ functions (no host code path).
+                        code += '''
+                        #if (__CUDA_ARCH__ >= 600)
+                        {hardware_implementation}
+                        #else
+                        {software_implementation}
+                        #endif
+                        '''.format(
+                            hardware_implementation=hardware_implementation,
+                            software_implementation=software_implementation_float_dtype
+                        )
+                    else:
+                        # For runtime < 8.0, there is no atomicAdd hardware implementation
+                        # support independent of CC.
+                        code += '''
+                        {software_implementation}
+                        '''.format(
+                            software_implementation=software_implementation_float_dtype
+                        )
+                        format_sw = True
+                code += '''
+                }}
+                '''
+                if format_sw:
+                    code = code.format(
+                        arg_dtype=arg_dtype, int_dtype=int_dtype,
+                        val_type_cast=val_type_cast, op_name=op_name, op=op
+                    )
+                else:
+                    code = code.format(arg_dtype=arg_dtype, op_name=op_name)
+
+                atomic_support_code += code
+            # For other atomic operations on int types, we can use the same template.
+            elif arg_dtype == 'int':
+                atomic_support_code += '''
+                inline __device__ int _brian_atomic{op_name}(int* address, int val)
+                {{
+                    // software implementation
+                    int old = *address, assumed;
+
+                    do {{
+                        assumed = old;
+                        old = atomicCAS(address, assumed, val {op} assumed);
+                    }} while (assumed != old);
+
+                    return old;
+                }}
+                '''.format(op_name=op_name, op=op)
+            # Else (not atomicAdd and not int types) use this template.
+            else:
+                # in the software implementation, we treat all data as integer types
+                # (since atomicCAS is only define
+                # and use atomicCAS to swap the memory with our our desired value
+                code = '''
+                inline __device__ {{arg_dtype}} _brian_atomic{{op_name}}({{arg_dtype}}* address, {{arg_dtype}} val)
+                {{{{
+                    {software_implementation}
+                }}}}
+                '''.format(software_implementation=software_implementation_float_dtype)
+                # above, just add the software_implementation code, below add the other
+                # format variables (also present in software_implementation)
+                code = code.format(
+                    arg_dtype=arg_dtype, int_dtype=int_dtype,
+                    val_type_cast=val_type_cast, op_name=op_name, op=op,
+                )
+                atomic_support_code += code
+
+    return atomic_support_code
 
 
 # CUDA does not support modulo arithmetics for long double. Since we can't give a warning, we let the
@@ -212,9 +275,9 @@ class CUDACodeGenerator(CodeGenerator):
     class_name = 'cuda'
 
     _use_atomics = False
-    universal_support_code = (_hightype_support_code + _mod_support_code +
-                              _floordiv_support_code + _pow_support_code +
-                              _atomic_support_code)
+
+    # This will be generated when the first class instance calls `determine_keywords()`
+    universal_support_code = None
 
     def __init__(self, *args, **kwds):
         super(CUDACodeGenerator, self).__init__(*args, **kwds)
@@ -237,6 +300,7 @@ class CUDACodeGenerator(CodeGenerator):
             self.float_dtype = 'float'
         else:  # np.float32
             self.float_dtype = 'double'
+
 
     @property
     def restrict(self):
@@ -712,7 +776,20 @@ class CUDACodeGenerator(CodeGenerator):
                 pointers.extend(ps)
                 hash_defines.extend(hd)
                 kernel_lines.extend(kl)
-        support_code.append(self.universal_support_code)
+
+        # Generate universal_support_code once when the first codeobject is created.
+        # Can't do it at import time since need access to user preferences
+        # This is a class attribute (not instance attribute).
+        if CUDACodeGenerator.universal_support_code is None:
+            _atomic_support_code = _generate_atomic_support_code()
+            CUDACodeGenerator.universal_support_code = (
+                _hightype_support_code
+                + _mod_support_code
+                + _floordiv_support_code
+                + _pow_support_code
+                + _atomic_support_code
+            )
+        support_code.append(CUDACodeGenerator.universal_support_code)
 
         # Clock variables (t, dt, timestep) are passed by value to kernels and
         # need to be translated back into pointers for scalar/vector code.
