@@ -3,7 +3,6 @@ import traceback
 import time
 import numpy as np
 from itertools import chain, combinations
-import subprocess
 
 
 def powerset(iterable):
@@ -116,33 +115,6 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         compile_args = ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
         prefs['codegen.cuda.extra_compile_args_nvcc'].extend(compile_args)
         prints.append("Suppressing compiler warnings")
-
-    # TODO: remove once we set CC automatically from hardware
-    # Could also just cudaDeviceQuery and grep capability from there?
-    s = subprocess.Popen(
-        "nvidia-smi -q | grep 'Product Name' | awk -F': ' '{print $2}'", shell=True,
-        stdout=subprocess.PIPE
-    )
-    gpu_name = s.communicate()[0]
-    if gpu_name.startswith("Tesla K40"):
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_35'])
-        prints.append("INFO brian2cuda/tools/utils.py: Setting -arch=sm_35")
-
-    if gpu_name.startswith("GeForce RTX 2080"):
-        prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
-        prints.append("INFO brian2cuda/tools/utils.py: Setting -arch=sm_75")
-
-    #if socket.gethostname() == 'elnath':
-    #    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-    #    prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
-
-    #if socket.gethostname() == 'cognition13':
-    #    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_61')
-    #    prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_75'])
-
-    # cognition14 hat die Tesla K40c, die hat sm 35 (current default?)
 
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'

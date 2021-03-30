@@ -1,7 +1,7 @@
 PROGRAM = main
 SRCS_CU  = $(wildcard *.cu */*.cu)
 OBJS_CU  = ${SRCS_CU:.cu=.o}
-CC = @nvcc
+CC = @{{ nvcc_path }}
 DEBUG = -g -G -DTHRUST_DEBUG
 OPTIMISATIONFLAGS = {{ nvcc_optimization_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
 NVCCFLAGS = {% if disable_warnings %}-w{% endif %} {% if disable_asserts %}-DNDEBUG{% endif %} -I. -std=c++11
