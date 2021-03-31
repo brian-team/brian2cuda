@@ -22,7 +22,8 @@ def test_wrong_cuda_path_error():
 
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
-    assert_raises(RuntimeError, run(0*ms))
+    with assert_raises(RuntimeError):
+        run(0*ms)
 
     # restore CUDA_PATH to its previous value
     if cuda_path is None:
@@ -48,7 +49,8 @@ def test_manual_setting_compute_capability():
 @with_setup(teardown=reinit_devices)
 def test_unsupported_compute_capability_error():
     prefs.codegen.generators.cuda.compute_capability = 2.0
-    assert_raises(NotImplementedError, run(0*ms))
+    with assert_raises(NotImplementedError):
+        run(0*ms)
 
 
 @attr('cuda_standalone', 'standalone-only')
