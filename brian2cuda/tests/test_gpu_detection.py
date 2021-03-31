@@ -14,12 +14,21 @@ from brian2.core.preferences import PreferenceError
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_wrong_cuda_path_error():
-    cuda_path = os.environ['CUDA_PATH']
+    try:
+        cuda_path = os.environ['CUDA_PATH']
+    except KeyError:
+        # CUDA_PATH not set
+        cuda_path = None
+
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
     assert_raises(RuntimeError, run(0*ms))
+
     # restore CUDA_PATH to its previous value
-    os.environ['CUDA_PATH'] = cuda_path
+    if cuda_path is None:
+        del os.environ['CUDA_PATH']
+    else:
+        os.environ['CUDA_PATH'] = cuda_path
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
