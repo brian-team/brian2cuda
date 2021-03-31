@@ -857,7 +857,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 "`prefs.codegen.generators.cuda.compute_capability` will be ignored. "
                 "To get rid of this warning, set "
                 "`prefs.codegen.generators.cuda.compute_capability` to it's default "
-                "value `None`)".format(self.minimal_compute_capability)
+                "value `None`".format(self.minimal_compute_capability)
             )
             # Ignore compute capability of chosen GPU and the one manually set via
             # `compute_capability` preferences.
@@ -882,17 +882,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     )
                 )
 
-        if gpu_arch_flags:
-            logger.info(
-                "Found architecture flags in "
-                "`prefs.codegen.cuda.extra_compile_args_nvcc` ({}). Minimal compute "
-                "capability ({}) will not be checked.".format(
-                    gpu_arch_flags, self.minimal_compute_capability
-                )
-            )
-        else:
-            # If GPU architecture is detected automatically or set via `compute_capability`
-            # prefs, we still need to add it as a compile argument
+        # If GPU architecture is detected automatically or set via `compute_capability`
+        # prefs, we still need to add it as a compile argument
+        if not gpu_arch_flags:
             # Turn float (3.5) into string ("35")
             compute_capability_str = ''.join(str(self.compute_capability).split('.'))
             gpu_arch_flags.append("-arch=sm_{}".format(compute_capability_str))
@@ -900,8 +892,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Log compiled GPU architecture
         if self.compute_capability is None:
             logger.info(
-                "Compiling device code with manually set architecture flags: "
-                "{}".format(gpu_arch_flags)
+                "Compiling device code with manually set architecture flags "
+                "({}). Be aware that the minimal supported compute capability is {} "
+                "(we are not checking your compile flags).".format(
+                    gpu_arch_flags, self.minimal_compute_capability
+                )
             )
         else:
             logger.info(
