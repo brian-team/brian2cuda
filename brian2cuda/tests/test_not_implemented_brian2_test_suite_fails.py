@@ -150,6 +150,8 @@ def test_synapses_to_synapses():
 @attr('standalone-compatible')
 @with_setup(teardown=reinit_devices)
 def test_synapses_to_synapses_different_sizes():
+    target_before = prefs.codegen.target
+    # Why are we setting numpy here?
     prefs.codegen.target = 'numpy'
     source = NeuronGroup(100, 'v : 1', threshold='False')
     source.v = 'i'
@@ -163,6 +165,8 @@ def test_synapses_to_synapses_different_sizes():
     modulatory_conn.connect('k_post == 1')  # only second synapse is targeted
     run(0*ms)
     assert_equal(modulatory_conn.w_post, 2*np.arange(100))
+    # restore prefs
+    prefs.codegen.target = target_before
 
 
 #TODO Why do we get a NotImplementedError in this test?

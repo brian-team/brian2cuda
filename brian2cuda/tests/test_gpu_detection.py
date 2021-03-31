@@ -31,9 +31,12 @@ def test_wrong_cuda_path_error():
     else:
         os.environ['CUDA_PATH'] = cuda_path
 
+
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_manual_setting_compute_capability():
+    cc_before = prefs.codegen.generators.cuda.compute_capability
+
     compute_capability_pref = '3.5'
     prefs.codegen.generators.cuda.compute_capability = float(compute_capability_pref)
     with catch_logs(log_level=logging.INFO) as logs:
@@ -45,19 +48,31 @@ def test_manual_setting_compute_capability():
             compute_capability = log[2][log_start_num_chars:log_start_num_chars + 3]
             assert_equal(compute_capability_pref, compute_capability)
 
+    # restore pref
+    prefs.codegen.generators.cuda.compute_capability = cc_before
+
+
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_unsupported_compute_capability_error():
+    cc_before = prefs.codegen.generators.cuda.compute_capability
+
     prefs.codegen.generators.cuda.compute_capability = 2.0
     with assert_raises(NotImplementedError):
         run(0*ms)
+
+    # restore pref
+    prefs.codegen.generators.cuda.compute_capability = cc_before
 
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_warning_compute_capability_set_twice():
+    cc_before = prefs.codegen.generators.cuda.compute_capability
+
     prefs.codegen.generators.cuda.compute_capability = 3.5
-    prefs.codegen.cuda.extra_compile_args_nvcc.append('-arch=sm_37')
+    arch_flag = '-arch=sm_37'
+    prefs.codegen.cuda.extra_compile_args_nvcc.append(arch_flag)
     with catch_logs() as logs:
         run(0*ms)
 
@@ -66,3 +81,7 @@ def test_warning_compute_capability_set_twice():
     assert log[0] == "WARNING"
     assert log[1] == "brian2.devices.cuda_standalone"
     assert log[2].startswith("GPU architecture for compilation was specified via ")
+
+    # restore prefs
+    prefs.codegen.generators.cuda.compute_capability = cc_before
+    prefs.codegen.cuda.extra_compile_args_nvcc.remove(arch_flag)

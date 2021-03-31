@@ -363,6 +363,8 @@ def test_default_function_implementations():
 @with_setup(teardown=reinit_devices)
 def test_default_function_convertion_preference():
 
+    convertion_pref_before = prefs.codegen.generators.cuda.default_functions_integral_convertion
+
     if prefs.core.default_float_dtype is np.float32:
         raise SkipTest('Need double precision for this test')
 
@@ -387,10 +389,15 @@ def test_default_function_convertion_preference():
     assert G.v[0] != unrepresentable_int, G.v[0]
     assert G2.v[0] == unrepresentable_int, '{} != {}'.format(G2.v[0], unrepresentable_int)
 
+    # restore prefs
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = convertion_pref_before
+
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_default_function_convertion_warnings():
+
+    convertion_pref_before = prefs.codegen.generators.cuda.default_functions_integral_convertion
 
     set_device('cuda_standalone', directory=None)
 
@@ -476,6 +483,8 @@ def test_default_function_convertion_warnings():
     assert logs8[0][0] == 'WARNING'
     assert logs8[0][1] == 'brian2.codegen.generators.cuda_generator'
 
+    # restore prefs
+    prefs.codegen.generators.cuda.default_functions_integral_convertion = convertion_pref_before
 
 
 @attr('long', 'cuda_standalone', 'standalone-only')
