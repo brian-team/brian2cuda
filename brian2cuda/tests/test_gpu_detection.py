@@ -19,7 +19,7 @@ from brian2cuda.utils.gputools import (
 def test_wrong_cuda_path_error():
     # store global _cuda_installation and environment variable before changing them
     cuda_installation_backup = get_cuda_installation()
-    cuda_path_env = os.environ['CUDA_PATH']
+    cuda_path_env = os.environ.get('CUDA_PATH', failobj=None)
     # reset cuda installation, such that it will be detected again during `run()`
     reset_cuda_installation()
 
