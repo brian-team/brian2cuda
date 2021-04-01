@@ -5,31 +5,36 @@ from nose import with_setup
 from nose.plugins.attrib import attr
 from numpy.testing import assert_raises, assert_equal
 
-from brian2 import *
+from brian2 import prefs, ms, run
 from brian2.devices.device import reinit_devices
 from brian2.utils.logger import catch_logs
 from brian2.core.preferences import PreferenceError
+from brian2cuda.utils.gputools import (
+    reset_cuda_installation, get_cuda_installation, restore_cuda_installation
+)
 
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_wrong_cuda_path_error():
-    try:
-        cuda_path = os.environ['CUDA_PATH']
-    except KeyError:
-        # CUDA_PATH not set
-        cuda_path = None
+    # store global _cuda_installation and environment variable before changing them
+    cuda_installation_backup = get_cuda_installation()
+    cuda_path_env = os.environ['CUDA_PATH']
+    # reset cuda installation, such that it will be detected again during `run()`
+    reset_cuda_installation()
 
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
     with assert_raises(RuntimeError):
         run(0*ms)
 
-    # restore CUDA_PATH to its previous value
-    if cuda_path is None:
+    # restore the cuda installation
+    restore_cuda_installation(cuda_installation_backup)
+    # reset env variable
+    if cuda_path_env is None:
         del os.environ['CUDA_PATH']
     else:
-        os.environ['CUDA_PATH'] = cuda_path
+        os.environ['CUDA_PATH'] = cuda_path_env
 
 
 @attr('cuda_standalone', 'standalone-only')
