@@ -77,7 +77,9 @@ def get_cuda_installation():
         'runtime_version': get_cuda_runtime_version(),
     }
     global _cuda_installation
-    assert cuda_installation.keys() == _cuda_installation.keys()
+    assert (
+        sorted(cuda_installation.keys()) == sorted(_cuda_installation.keys())
+    ), "{} != {}".format(cuda_installation.keys(), _cuda_installation.keys())
     return cuda_installation
 
 
