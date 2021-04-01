@@ -13,7 +13,7 @@ from brian2.core.preferences import prefs
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.utils.logger import get_logger
 
-logger = get_logger('brian2.devices.cuda_standalone')
+logger = get_logger("brian2.devices.cuda_standalone")
 
 # To list all GPUs: nvidia-smi -L
 
@@ -21,53 +21,147 @@ logger = get_logger('brian2.devices.cuda_standalone')
 # https://github.com/cupy/cupy/blob/e6f8d91ffae7ee241ed235ddbeb725c04f593c33/cupy/_environment.py
 
 
-# global variables
-_cuda_path = None
-_nvcc_path = None
-_cuda_runtime_version = None
-_available_gpus = None
-_selected_gpu_id = None
-_selected_gpu_compute_capability = None
+# To minimize running external commands (`nvidia-smi`, `nvcc`, `deviceQuery`), we define
+# these global variables that are computed from the external commands. This way we only
+# run them once and whenever they are needed again, we use the global variables defined
+# here.
+_cuda_installation = {
+    "cuda_path": None,
+    "nvcc_path": None,
+    "runtime_version": None,
+}
+
+_gpu_selection = {
+    "available_gpus": None,
+    "selected_gpu_id": None,
+    "selected_gpu_compute_capability": None,
+}
 
 
 def get_cuda_path():
-    # Returns the CUDA installation path or None if not found.
-    global _cuda_path
-    if _cuda_path is None:
-        _cuda_path = _get_cuda_path()
-    return _cuda_path
+    """
+    Detect the path to the CUDA installation (e.g. '/usr/local/cuda'). This takes into
+    account user defined environmental variable `CUDA_PATH` and preference
+    `prefs.brian2cuda.cuda_path`.
+    """
+    # If cuda_path was already detected, reuse the global variable
+    global _cuda_installation
+    if _cuda_installation["cuda_path"] is None:
+        _cuda_installation["cuda_path"] = _get_cuda_path()
+    return _cuda_installation["cuda_path"]
 
 
 def get_nvcc_path():
-    # Returns the path to the nvcc command or None if not found.
-    global _nvcc_path
-    if _nvcc_path is None:
-        _nvcc_path = _get_nvcc_path()
-    return _nvcc_path
+    """Return the path to the `nvcc` binary."""
+    # If nvcc_path was already detected, reuse the global variable
+    global _cuda_installation
+    if _cuda_installation["nvcc_path"] is None:
+        _cuda_installation["nvcc_path"] = _get_nvcc_path()
+    return _cuda_installation["nvcc_path"]
 
 
 def get_cuda_runtime_version():
-    # Returns the CUDA runtime version
-    global _cuda_runtime_version
-    if _cuda_runtime_version is None:
-        _cuda_runtime_version = _get_cuda_runtime_version()
-    return _cuda_runtime_version
+    """Return CUDA runtime version (as float, e.g. `11.2`)"""
+    # If runtime_version was already detected, reuse the global variable
+    global _cuda_installation
+    if _cuda_installation["runtime_version"] is None:
+        _cuda_installation["runtime_version"] = _get_cuda_runtime_version()
+    return _cuda_installation["runtime_version"]
+
+
+def get_cuda_installation():
+    """Return new dictionary of cuda installation variables"""
+    cuda_installation = {
+        'cuda_path': get_cuda_path(),
+        'nvcc_path': get_nvcc_path(),
+        'runtime_version': get_cuda_runtime_version(),
+    }
+    global _cuda_installation
+    assert (
+        sorted(cuda_installation.keys()) == sorted(_cuda_installation.keys())
+    ), "{} != {}".format(cuda_installation.keys(), _cuda_installation.keys())
+    return cuda_installation
+
+
+def get_gpu_selection():
+    """Return dictionary of selected gpu variable"""
+    gpu_id, compute_capability = select_gpu()
+    gpu_selection = {
+        'available_gpus': get_available_gpus(),
+        'selected_gpu_id': gpu_id,
+        'selected_gpu_compute_capability': compute_capability,
+    }
+    global _gpu_selection
+    assert gpu_selection.keys() == _gpu_selection.keys()
+    return gpu_selection
 
 
 def get_available_gpus():
-    global _available_gpus
-    if _available_gpus is None:
-        _available_gpus = _get_available_gpus()
-    return _available_gpus
+    """
+    Return list of names of available GPUs, sorted by GPU ID as reported in
+    `nvidia-smi`
+    """
+    global _gpu_selection
+    if _gpu_selection["available_gpus"] is None:
+        _gpu_selection["available_gpus"] = _get_available_gpus()
+    return _gpu_selection["available_gpus"]
 
 
 def select_gpu():
-    global _selected_gpu_id
-    global _selected_gpu_compute_capability
-    if _selected_gpu_id is None:
-        assert _selected_gpu_compute_capability is None
-        _selected_gpu_id, _selected_gpu_compute_capability = _select_gpu()
-    return _selected_gpu_id, _selected_gpu_compute_capability
+    """
+    Select GPU for simulation, based on user preference `prefs.brian2cuda.gpu_id` or (if
+    not provided) pick the GPU with highest compute capability. Returns tuple of
+    (gpu_id, compute_capability) of type (int, float).
+    """
+    global _gpu_selection
+    if _gpu_selection["selected_gpu_id"] is None:
+        assert _gpu_selection["selected_gpu_compute_capability"] is None
+        gpu_id, compute_capability = _select_gpu()
+        _gpu_selection["selected_gpu_id"] = gpu_id
+        _gpu_selection["selected_gpu_compute_capability"] = compute_capability
+    return (
+        _gpu_selection["selected_gpu_id"],
+        _gpu_selection["selected_gpu_compute_capability"]
+    )
+
+
+def reset_cuda_installation():
+    """
+    Reset detected CUDA installation. This will detect the CUDA installation again when
+    it is needed.
+    """
+    global _cuda_installation
+    for key in _cuda_installation.keys():
+        _cuda_installation[key] = None
+
+
+def reset_gpu_selection():
+    """Reset selected GPU. This will select a new GPU the next time it is needed."""
+    global _gpu_selection
+    for key in _gpu_selection.keys():
+        _gpu_selection[key] = None
+
+
+def restore_cuda_installation(cuda_installation):
+    """Set global cuda installation dictionary to `cuda_installation`"""
+    global _cuda_installation
+    if _cuda_installation.keys() != cuda_installation.keys():
+        raise KeyError(
+            "`cuda_installation` has to have the following keys: {}. Got instead: "
+            "{}".format(cuda_installation.keys(), _cuda_installation.keys())
+        )
+    _cuda_installation.update(cuda_installation)
+
+
+def restore_gpu_selection(gpu_selection):
+    """Set global gpu selection dictionary to `gpu_selection`"""
+    global _gpu_selection
+    if _gpu_selection.keys() != gpu_selection.keys():
+        raise KeyError(
+            "`gpu_selection` has to have the following keys: {}. Got instead: "
+            "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+        )
+    _gpu_selection.update(gpu_selection)
 
 
 def _get_cuda_path():
@@ -81,7 +175,7 @@ def _get_cuda_path():
         return cuda_path_pref
 
     # Use environment variable if set
-    cuda_path = os.environ.get('CUDA_PATH', '')  # Nvidia default on Windows
+    cuda_path = os.environ.get("CUDA_PATH", "")  # Nvidia default on Windows
     if os.path.exists(cuda_path):
         logger.info(
             "CUDA installation directory given via environment variable `CUDA_PATH={}`"
@@ -92,15 +186,15 @@ def _get_cuda_path():
     # Use nvcc path if `nvcc` binary in PATH
     # TODO: Remove this and use shutil.which once we moved to Python 3
     def which(pgm):
-        path = os.getenv('PATH')
+        path = os.getenv("PATH")
         for p in path.split(os.path.pathsep):
             p = os.path.join(p, pgm)
             if os.path.exists(p) and os.access(p, os.X_OK):
                 return p
-    nvcc_path = which('nvcc')
+    nvcc_path = which("nvcc")
     import sys
-    assert not sys.version.startswith('3'), 'Update code here for Python 3!'
-    #nvcc_path = shutil.which('nvcc')
+    assert not sys.version.startswith("3"), "Update code here for Python 3!"
+    #nvcc_path = shutil.which("nvcc")
     if nvcc_path is not None:
         cuda_path_nvcc = os.path.dirname(os.path.dirname(nvcc_path))
         logger.info(
@@ -110,8 +204,8 @@ def _get_cuda_path():
         return cuda_path_nvcc
 
     # Use typical path if nothing else worked
-    if os.path.exists('/usr/local/cuda'):
-        cuda_path_usr = '/usr/local/cuda'
+    if os.path.exists("/usr/local/cuda"):
+        cuda_path_usr = "/usr/local/cuda"
         logger.info(
             "CUDA installation directory found in standard location: {}"
             "".format(cuda_path_usr)
@@ -130,17 +224,17 @@ def _get_nvcc_path():
     # TODO: Check if NVCC is specific to cupy and if we want to support it?
     # If so, make sure cuda_path and nvcc_path fit together, see:
     # https://github.com/cupy/cupy/blob/cb29c07ccbae346841adb3c8bfa33aba463e2588/install/build.py#L65-L70
-    #nvcc = os.environ.get('NVCC', None)
+    #nvcc = os.environ.get("NVCC", None)
     #if nvcc:
     #    return distutils.util.split_quoted(nvcc)
 
     cuda_path = get_cuda_path()
 
     compiler, _ = get_compiler_and_args()
-    if compiler == 'msvc':  # Windows
-        nvcc_bin = 'bin/nvcc.exe'
+    if compiler == "msvc":  # Windows
+        nvcc_bin = "bin/nvcc.exe"
     else:  # Unix
-        nvcc_bin = 'bin/nvcc'
+        nvcc_bin = "bin/nvcc"
 
     nvcc_path = os.path.join(cuda_path, nvcc_bin)
     if not os.path.exists(nvcc_path):
@@ -152,15 +246,15 @@ def _get_nvcc_path():
 def _get_cuda_runtime_version():
     """ Get CUDA runtime version form `nvcc --version` """
     nvcc_path = get_nvcc_path()
-    nvcc_output = _run_command_with_output(nvcc_path, '--version')
-    nvcc_lines = nvcc_output.split('\n')
+    nvcc_output = _run_command_with_output(nvcc_path, "--version")
+    nvcc_lines = nvcc_output.split("\n")
     # version_line example: "Cuda compilation tools, release 11.2, V11.2.67"
     version_line = nvcc_lines[3]
     assert version_line.startswith("Cuda compilation tools, release")
     # release_str example: "release 11.2"
-    release_str = version_line.split(', ')[1]
+    release_str = version_line.split(", ")[1]
     # runtime_version example: 11.2
-    runtime_version_str = release_str.split(' ')[1]
+    runtime_version_str = release_str.split(" ")[1]
     # return version as float
     return float(runtime_version_str)
 
@@ -210,7 +304,7 @@ def _get_available_gpus():
     Detect available GPUs and return a list of their names, where list index corresponds
     to GPU id.
     """
-    gpu_info_lines = _run_command_with_output("nvidia-smi -L").split('\n')
+    gpu_info_lines = _run_command_with_output("nvidia-smi -L").split("\n")
     gpu_list = []
     for i, gpu_info in enumerate(gpu_info_lines):
         if gpu_info == "":  # last list item is empty
@@ -281,6 +375,10 @@ def get_compute_capability(gpu_id):
 
 
 def get_best_gpu():
+    """
+    Get the "best" GPU available. This currently chooses the GPU with highest compute
+    capability and lowest GPU ID (as reported by `nvidia-smi`)
+    """
     gpu_list = get_available_gpus()
     best_gpu_id = 0
     best_compute_capability = 0
@@ -293,7 +391,7 @@ def get_best_gpu():
     return best_gpu_id, best_compute_capability
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(get_best_gpu())
     #a = nvidia_smi()
     #print(a)

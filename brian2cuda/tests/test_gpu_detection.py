@@ -5,21 +5,36 @@ from nose import with_setup
 from nose.plugins.attrib import attr
 from numpy.testing import assert_raises, assert_equal
 
-from brian2 import *
+from brian2 import prefs, ms, run
 from brian2.devices.device import reinit_devices
 from brian2.utils.logger import catch_logs
 from brian2.core.preferences import PreferenceError
+from brian2cuda.utils.gputools import (
+    reset_cuda_installation, get_cuda_installation, restore_cuda_installation
+)
 
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_wrong_cuda_path_error():
-    cuda_path = os.environ['CUDA_PATH']
+    # store global _cuda_installation and environment variable before changing them
+    cuda_installation_backup = get_cuda_installation()
+    cuda_path_env = os.environ.get('CUDA_PATH', failobj=None)
+    # reset cuda installation, such that it will be detected again during `run()`
+    reset_cuda_installation()
+
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
-    assert_raises(RuntimeError, run(0*ms))
-    # restore CUDA_PATH to its previous value
-    os.environ['CUDA_PATH'] = cuda_path
+    with assert_raises(RuntimeError):
+        run(0*ms)
+
+    # restore the cuda installation
+    restore_cuda_installation(cuda_installation_backup)
+    # reset env variable
+    if cuda_path_env is None:
+        del os.environ['CUDA_PATH']
+    else:
+        os.environ['CUDA_PATH'] = cuda_path_env
 
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
@@ -39,7 +54,8 @@ def test_manual_setting_compute_capability():
 @with_setup(teardown=reinit_devices)
 def test_unsupported_compute_capability_error():
     prefs.codegen.generators.cuda.compute_capability = 2.0
-    assert_raises(NotImplementedError, run(0*ms))
+    with assert_raises(NotImplementedError):
+        run(0*ms)
 
 
 @attr('cuda_standalone', 'standalone-only')

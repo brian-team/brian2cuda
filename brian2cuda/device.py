@@ -954,21 +954,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 "`prefs.codegen.generators.cuda.compute_capability` and "
                 "`prefs.codegen.cuda.extra_compile_args_nvcc`. "
                 "`prefs.codegen.generators.cuda.compute_capability` will be ignored. "
-                "Minimal supported compute capability will not be checked (it is {}). "
                 "To get rid of this warning, set "
                 "`prefs.codegen.generators.cuda.compute_capability` to it's default "
-                "value `None`)"
+                "value `None`".format(self.minimal_compute_capability)
             )
             # Ignore compute capability of chosen GPU and the one manually set via
             # `compute_capability` preferences.
             self.compute_capability = None
-            logger.info(
-                "Found architecture flags in "
-                "`prefs.codegen.cuda.extra_compile_args_nvcc`. Minimal compute "
-                "capability ({}) will not be checked.".format(
-                    self.minimal_compute_capability
-                )
-            )
         # If GPU architecture was set only via `extra_compile_args_nvcc`, use that
         elif gpu_arch_flags:
             # Ignore compute capability of chosen GPU
@@ -999,8 +991,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Log compiled GPU architecture
         if self.compute_capability is None:
             logger.info(
-                "Compiling device code with manually set architecture flags: "
-                "{}".format(gpu_arch_flags)
+                "Compiling device code with manually set architecture flags "
+                "({}). Be aware that the minimal supported compute capability is {} "
+                "(we are not checking your compile flags).".format(
+                    gpu_arch_flags, self.minimal_compute_capability
+                )
             )
         else:
             logger.info(
