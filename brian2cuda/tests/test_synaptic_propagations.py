@@ -69,10 +69,6 @@ def test_CudaSpikeQueue_push_outer_loop2():
     # leftover of another test and does not have any effect on this test, but
     # I'll leave it as an example.
 
-    # save prefs
-    blocks_pref_before = prefs['devices.cuda_standalone.parallel_blocks']
-    nvcc_pref_before = prefs['codegen.cuda.extra_compile_args_nvcc']
-
     num_blocks = 1
     prefs['devices.cuda_standalone.parallel_blocks'] = num_blocks
     # make sure we don't use less then 1024 threads due to register usage
@@ -157,10 +153,6 @@ def test_CudaSpikeQueue_push_outer_loop2():
                 print('n =', n)
                 print(mon_idx)
                 raise
-
-    # restore prefs
-    prefs['devices.cuda_standalone.parallel_blocks'] = blocks_pref_before
-    prefs['codegen.cuda.extra_compile_args_nvcc'] = nvcc_pref_before
 
 
 @attr('standalone-compatible')
