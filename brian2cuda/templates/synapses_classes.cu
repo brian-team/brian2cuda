@@ -14,10 +14,6 @@
 class SynapticPathway
 {
 public:
-    // total number of neurons in source and target NeuronGroup / Subgroup
-    int Nsource;
-    int Ntarget;
-
     int32_t* dev_sources;
     int32_t* dev_targets;
 
@@ -31,12 +27,13 @@ public:
     bool no_or_const_delay_mode;
 
     //our real constructor
-    __device__ void init(int _Nsource, int _Ntarget, int32_t* _sources,
-                int32_t* _targets, double _dt, int32_t _spikes_start,
-                int32_t _spikes_stop)
+    __device__ void init(
+            int32_t* _sources,
+            int32_t* _targets,
+            double _dt,
+            int32_t _spikes_start,
+            int32_t _spikes_stop)
     {
-        Nsource = _Nsource;
-        Ntarget = _Ntarget;
         dev_sources = _sources;
         dev_targets = _targets;
         dt = _dt;

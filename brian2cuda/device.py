@@ -739,8 +739,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
                     prefix = 'dev'
-                    if codeobj.template_name.startswith("synapses_create"):
-                        # codeobject runs on the host
+                    # These codeobjects run on the host
+                    host_codeobjects = ['synapses_create_generator',
+                                        'synapses_create_array',
+                                        'synapses_initialise_queue']
+                    if codeobj.template_name in host_codeobjects:
                         prefix = ''
                     try:
                         dyn_array_name = self.get_array_name(v,

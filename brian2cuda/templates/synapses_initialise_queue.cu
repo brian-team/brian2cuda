@@ -1,6 +1,6 @@
 {# TEMPLATE INFO
  # This template creates the connectivity matrix for this SynapticPathway
- # ({{pathobj}}). Its form depends on the delay and for heterogeneous delays
+ # ({{pathobj}}). It's form depends on the delay and for heterogeneous delays
  # on the propagation mode.
  #
  # DELAY MODE
@@ -29,7 +29,7 @@
  #}
 
 {% macro cu_file() %}
-{# USES_VARIABLES { delay } #}
+{# USES_VARIABLES { delay, N, _n_sources, _n_targets, _source_dt } #}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <thrust/unique.h>
@@ -153,8 +153,14 @@ void _run_{{pathobj}}_initialise_queue()
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_start = used_device_memory;
 
-    {# we don't use {{N}} to avoid using {{pointer_lines}} which only work inside kernels with %KERNEL_PARAMETERS% #}
-    int64_t syn_N_check = {{get_array_name(owner.variables['N'], access_data=False)}}[0];
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
+
+    ///// pointers_lines /////
+    {{pointers_lines|autoindent}}
+
+    int64_t syn_N_check = {{N}};
+
     if (syn_N_check == 0){
         return;
     }
@@ -166,13 +172,13 @@ void _run_{{pathobj}}_initialise_queue()
     int syn_N = (int)syn_N_check;
 
     // simulation time step
-    double dt = {{owner.clock.name}}.dt[0];
+    double dt = {{_source_dt}};
     // number of neurons in source group
-    int source_N = {{owner.source.N}};
+    int source_N = {{constant_or_scalar('_n_sources', variables['_n_sources'])}};
     // number of neurons in target group
-    int target_N = {{owner.target.N}};
+    int target_N = {{constant_or_scalar('_n_targets', variables['_n_targets'])}};
 
-    //TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
+    // TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
     {% if not no_or_const_delay_mode %}
     // delay (on device) was potentially set in group_variable_set_conditional and needs to be copied to host
     {{_dynamic_delay}} = dev{{_dynamic_delay}};
@@ -288,10 +294,55 @@ void _run_{{pathobj}}_initialise_queue()
     {% endif %}
     for(int syn_id = 0; syn_id < syn_N; syn_id++)  // loop through all synapses
     {
-        // pre/post_neuron_id are integers from 0 to Nsource/Ntarget (from corresponding SynapticPathway)
-        // this is relevant only when using Subgroups where they might be NOT equal to the idx in their NeuronGroup
-        int32_t pre_neuron_id = {{get_array_name(owner.synapse_sources, access_data=False)}}[syn_id] - {{owner.source.start}};
-        int32_t post_neuron_id = {{get_array_name(owner.synapse_targets, access_data=False)}}[syn_id] - {{owner.target.start}};
+        {# We need to handle subgroups here. When source/target of this SynapticPathway
+           is a Subgroup, it will have an `_offset` variable. By checking for its
+           existence, we also makes sure that we don't try to access the
+           source/target.start variable when it doesn't exist (e.g. if source/target
+           is a Synapses object). What we are doing here is the same as is done to set
+           the `_source_offset` and `_target_offset` variables in
+           `Synapses._create_variables()` (but we can't use those variables directly
+           since this codeobjects owner is the a `SynapticPathway`, not a `Synapses`
+           object. And using owner.synapses.variables['_source_offset'] gives only the
+           Synapses source, which doesn't have to the SynapticPathway source (e.g. for
+           `on_post` SynapticPatwhays. Therefore, we define our own source_offset and
+           target_offset for this SynapticPathway #}
+        {% if '_offset' in owner.source.variables %}
+        {% set source_offset = owner.source.variables['_offset'].get_value() %}
+        {% else %}
+        {% set source_offset = 0 %}
+        {% endif %}
+
+        {% if '_offset' in owner.target.variables %}
+        {% set target_offset = owner.target.variables['_offset'].get_value() %}
+        {% else %}
+        {% set target_offset = 0 %}
+        {% endif %}
+
+        {# Sanity check that what I'm doing here is correct:
+           - If the source/target is a Synapse, we can't use subgroups since we
+             can't index the Synapse object before the synapses are created
+           - SynapticPathway.source.start should be the same as
+             SynapticPathway.source.variables['_offset'] #}
+        // Code generation checks
+        {% if owner.source.__class__.__name__ == 'Synapses' %}
+        assert({{source_offset}} == 0);
+        {% else %}
+        assert({{source_offset}} == {{owner.source.start}});
+        {% endif %}
+
+        {% if owner.target.__class__.__name__ == 'Synapses' %}
+        assert({{target_offset}} == 0);
+        {% else %}
+        assert({{target_offset}} == {{owner.target.start}});
+        {% endif %}
+
+        // pre/post_neuron_id are integers from 0 to Nsource/Ntarget (from corresponding
+        // SynapticPathway) this is relevant only when using Subgroups where they might
+        // be NOT equal to the idx in their NeuronGroup
+        {% set source_ids = get_array_name(owner.synapse_sources, access_data=False) %}
+        {% set target_ids = get_array_name(owner.synapse_targets, access_data=False) %}
+        int32_t pre_neuron_id = {{source_ids}}[syn_id] - {{source_offset}};
+        int32_t post_neuron_id = {{target_ids}}[syn_id] - {{target_offset}};
 
         {% if not no_or_const_delay_mode %}
         int delay = (int)({{_dynamic_delay}}[syn_id] / dt + 0.5);
