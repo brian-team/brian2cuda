@@ -228,7 +228,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # a single precision version, for details see #148
         if hasattr(var, 'real_var'):
             return self.get_array_name(var.real_var, access_data=access_data,
-                                       device_data=device_data)
+                                       prefix=prefix)
 
         prefix = prefix or ''
         choices = ['_ptr', 'dev', 'd', '']
