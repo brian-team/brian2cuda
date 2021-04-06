@@ -9,7 +9,7 @@ import shlex
 import re
 import distutils
 
-from brian2.core.preferences import prefs
+from brian2.core.preferences import prefs, PreferenceError
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.utils.logger import get_logger
 
@@ -261,13 +261,43 @@ def _get_cuda_runtime_version():
 
 def _select_gpu():
     gpu_id = prefs.brian2cuda.gpu_id
-    if gpu_id is None:
-        gpu_id, compute_capability = get_best_gpu()
+    compute_capability = prefs.codegen.generators.cuda.compute_capability
+    gpu_list = None
+    print("DEBUG", gpu_id, compute_capability)
+    if prefs.brian2cuda.detect_gpus:
+        if gpu_id is None:
+            gpu_id, compute_capability = get_best_gpu()
+        else:
+            compute_capability = get_compute_capability(gpu_id)
+        gpu_list = get_available_gpus()
     else:
-        compute_capability = get_compute_capability(gpu_id)
+        logger.info(
+            "Automatic detection of GPU names and compute capabilities disabled, using "
+            "manual preferences"
+        )
+        print("DEBUG before raise", gpu_id, compute_capability)
+        if gpu_id is None or compute_capability is None:
+            print("RAISE")
+            raise PreferenceError(
+                "Got `prefs.brian2cuda.detect_gpus` == `False`. Without GPU detection, "
+                "you need to set `prefs.brian2cuda.gpu_id` and "
+                "`prefs.codegen.generators.cuda.compute_capability` (got "
+                "`{prefs.brian2cuda.gpu_id}` and "
+                "`{prefs.codegen.generators.cuda.compute_capability}`).".format(
+                    prefs=prefs
+                )
+            )
 
-    gpu_list = get_available_gpus()
-    logger.info("Running on GPU {}: {}".format(gpu_id, gpu_list[gpu_id]))
+    gpu_name = ""
+    if gpu_list is not None:
+        gpu_name = " ({})".format(gpu_list[gpu_id])
+
+    logger.info(
+        "Compiling device code for GPU {gpu_id}{gpu_name}".format(
+            gpu_id=gpu_id, gpu_name=gpu_name
+        )
+    )
+
     return gpu_id, compute_capability
 
 
@@ -295,6 +325,13 @@ def _run_command_with_output(command, *args):
             "Running `{binary}` failed with error code {err.returncode}: {err.output}"
             "".format(binary=command_split[0], err=err)
         )
+    # TODO: In Python 3 this needs to be FileNotFoundError
+    except OSError as err:
+        raise OSError(
+            "Binary not found: `{binary}` ({err})".format(
+                binary=command_split[0], err=err
+            )
+        )
 
     return output
 
@@ -304,23 +341,40 @@ def _get_available_gpus():
     Detect available GPUs and return a list of their names, where list index corresponds
     to GPU id.
     """
-    gpu_info_lines = _run_command_with_output("nvidia-smi -L").split("\n")
+    command = "nvidia-smi -L"
+    try:
+        gpu_info_lines = _run_command_with_output(command).split("\n")
+    # TODO: In Python 3 version, replace OSError with FileNotFoundError
+    except (RuntimeError, OSError) as excepted_error:
+        new_error = RuntimeError(
+            "Running `{command}` failed. If `nvidia-smi` is not available in your "
+            "system, you can disable automatic detection of GPU name and compute "
+            "capability by setting "
+            "`prefs.devices.brian2cuda.detect_gpus` = `False`".format(
+                command=command
+            )
+        )
+        # TODO: In Python 3, do this:
+        # raise new_error from excepted_error
+        raise new_error
+
     gpu_list = []
-    for i, gpu_info in enumerate(gpu_info_lines):
-        if gpu_info == "":  # last list item is empty
-            continue
+    if gpu_info_lines is not None:
+        for i, gpu_info in enumerate(gpu_info_lines):
+            if gpu_info == "":  # last list item is empty
+                continue
 
-        # `gpu_info` example:
-        # "GPU 0: GeForce MX150 (UUID: GPU-8abe566f-c211-11c1-7b73-8103bfd30198)"
+            # `gpu_info` example:
+            # "GPU 0: GeForce MX150 (UUID: GPU-8abe566f-c211-11c1-7b73-8103bfd30198)"
 
-        # Remove the UUID part
-        gpu_info = gpu_info.split(" (UUID")[0]
-        # Split ID and NAME parts
-        id_str, gpu_name = gpu_info.split(": ")
-        assert id_str.startswith("GPU ")
-        gpu_id = id_str[4]
-        assert int(gpu_id) == i
-        gpu_list.append(gpu_name)
+            # Remove the UUID part
+            gpu_info = gpu_info.split(" (UUID")[0]
+            # Split ID and NAME parts
+            id_str, gpu_name = gpu_info.split(": ")
+            assert id_str.startswith("GPU ")
+            gpu_id = id_str[4]
+            assert int(gpu_id) == i
+            gpu_list.append(gpu_name)
     return gpu_list
 
 
