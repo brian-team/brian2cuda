@@ -75,8 +75,7 @@ kernel_{{codeobj_name}}(
     }
     {% endblock %}
 
-    {% block maincode %}
-    {% block maincode_inner %}
+    {% block kernel_maincode %}
 
     ///// scalar_code /////
     {{scalar_code|autoindent}}
@@ -88,8 +87,7 @@ kernel_{{codeobj_name}}(
         {% block extra_vector_code %}
         {% endblock %}
     }
-    {% endblock maincode_inner %}
-    {% endblock maincode %}
+    {% endblock kernel_maincode %}
 }
 {% endblock kernel %}
 
@@ -114,7 +112,7 @@ void _run_{{codeobj_name}}()
     ///// HOST_CONSTANTS ///////////
     %HOST_CONSTANTS%
 
-    {% block extra_maincode %}
+    {% block host_maincode %}
     {% endblock %}
 
     {% block prepare_kernel %}
@@ -143,6 +141,10 @@ void _run_{{codeobj_name}}()
         }
         num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
         {% endif %}
+
+        {% block modify_kernel_dimensions %}
+        {% endblock %}
+
         {% endblock prepare_kernel_inner %}
 
         {% block occupancy %}

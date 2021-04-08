@@ -4,9 +4,9 @@
 #include "rand.h"
 {% endblock %}
 
-{% block maincode %}
+{% block kernel_maincode %}
     {# USES_VARIABLES { _group_idx } #}
-    ///// block maincode /////
+    ///// block kernel_maincode /////
 
     ///// scalar code /////
     {{scalar_code|autoindent}}
@@ -17,14 +17,14 @@
     ///// vector code /////
     {{vector_code|autoindent}}
 
-    ///// endblock maincode /////
+    ///// endblock kernel_maincode /////
 {% endblock %}
 
 {# _num_group_idx is defined in HOST_CONSTANTS, so we can't set _N before #}
 {% block define_N %}
 {% endblock %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 const int _N = _num_group_idx;
 {% endblock %}
 

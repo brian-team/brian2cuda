@@ -167,7 +167,7 @@ kernel_{{codeobj_name}}(
 
 {% endblock %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 static int num_threads_per_bundle;
 static int num_loops;
 {% endblock %}

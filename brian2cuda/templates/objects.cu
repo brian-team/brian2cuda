@@ -49,6 +49,9 @@ const int brian::_num_{{varname}} = {{var.size}};
 const int brian::_num_{{varname}} = {{var.size}};
 thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
 int brian::current_idx{{varname}} = 0;
+{% if varname in spikegenerator_eventspaces %}
+int brian::previous_idx{{varname}};
+{% endif %}
 {% endfor %}
 
 //////////////// dynamic arrays 1d /////////
@@ -112,18 +115,22 @@ int brian::num_threads_per_warp;
 {% for S in synapses | sort(attribute='name') %}
 {% for path in S._pathways | sort(attribute='name') %}
 __global__ void {{path.name}}_init(
-                int Nsource,
-                int Ntarget,
                 int32_t* sources,
                 int32_t* targets,
                 double dt,
-                int32_t start,
-                int32_t stop
+                int32_t source_start,
+                int32_t source_stop
         )
 {
     using namespace brian;
 
-    {{path.name}}.init(Nsource, Ntarget, sources, targets, dt, start, stop);
+    {{path.name}}.init(
+            sources,
+            targets,
+            dt,
+            // TODO: called source here, spikes in SynapticPathway (use same name)
+            source_start,
+            source_stop);
 }
 {% endfor %}
 {% endfor %}
@@ -216,8 +223,6 @@ void _init_arrays()
     {% for S in synapses | sort(attribute='name') %}
     {% for path in S._pathways | sort(attribute='name') %}
     {{path.name}}_init<<<1,1>>>(
-            {{path.source|length}},
-            {{path.target|length}},
             thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_sources]}}[0]),
             thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
             0,  //was dt, maybe irrelevant?
@@ -570,6 +575,9 @@ extern {{c_data_type(var.dtype)}} * {{varname}};
 extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 extern const int _num_{{varname}};
 extern int current_idx{{varname}};
+{% if varname in spikegenerator_eventspaces %}
+extern int previous_idx{{varname}};
+{% endif %}
 {% endfor %}
 
 //////////////// dynamic arrays 2d /////////

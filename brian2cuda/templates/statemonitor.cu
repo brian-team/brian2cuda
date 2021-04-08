@@ -34,7 +34,7 @@ if (_num__array_{{owner.name}}__indices > 1024)
 }
 {% endblock prepare_kernel_inner %}
 
-{% block extra_maincode %}
+{% block host_maincode %}
 // TODO: this pushes a new value to the device each time step? Looks
 // inefficient, can we keep the t values on the host instead? Do we need them
 // on the device?
@@ -43,7 +43,7 @@ dev_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
 int num_iterations = {{owner.clock.name}}.i_end;
 int current_iteration = {{owner.clock.name}}.timestep[0];
 static int start_offset = current_iteration - _numt;
-{% endblock extra_maincode %}
+{% endblock host_maincode %}
 
 {% block kernel_call %}
 // If the StateMonitor is run outside the MagicNetwork, we need to resize it.
