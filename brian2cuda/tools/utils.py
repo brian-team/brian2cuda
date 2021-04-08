@@ -42,7 +42,16 @@ def parse_arguments(parser):
                               "compilations (passed as -j option to the make "
                               "command. [default: no job limit (make -j)]"))
 
+    parser.add_argument('--dry-run', action='store_true',
+                        help=("Exit script after argument parsing. Used to check "
+                              "validity of arguments"))
+
     args = parser.parse_args()
+
+    if args.dry_run:
+        import sys
+        print("Dry run completed, {} arguments valid.".format(__file__))
+        sys.exit()
 
     return args
 
