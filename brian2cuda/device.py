@@ -647,7 +647,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
-
         # Store the GPU ID and it's compute capability. The latter can be overwritten in
         # self.generate_makefile() via preferces
         self.gpu_id, self.compute_capability = select_gpu()
@@ -996,13 +995,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             logger.info(
                 "Compiling device code with manually set architecture flags "
                 "({}). Be aware that the minimal supported compute capability is {} "
-                "(we are not checking your compile flags).".format(
+                "(we are not checking your compile flags)".format(
                     gpu_arch_flags, self.minimal_compute_capability
                 )
             )
         else:
             logger.info(
-                "Compiling device code for compute capability {} (compiler flags: {})."
+                "Compiling device code for compute capability {} (compiler flags: {})"
                 "".format(self.compute_capability, gpu_arch_flags)
             )
 

@@ -71,3 +71,22 @@ def test_warning_compute_capability_set_twice():
     assert log[0] == "WARNING"
     assert log[1] == "brian2.devices.cuda_standalone"
     assert log[2].startswith("GPU architecture for compilation was specified via ")
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
+def test_no_gpu_detection_preference_error():
+    prefs.brian2cuda.detect_gpus = False
+    # needs setting gpu_id and compute_capability as well
+    with assert_raises(PreferenceError):
+        run(0*ms)
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
+def test_no_gpu_detection_preference():
+    # Test that disabling gpu detection works when setting gpu_id and compute_capability
+    prefs.brian2cuda.detect_gpus = False
+    prefs.brian2cuda.gpu_id = 0
+    prefs.codegen.generators.cuda.compute_capability = 6.1
+    run(0*ms)

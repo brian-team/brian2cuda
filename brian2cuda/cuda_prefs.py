@@ -17,6 +17,14 @@ prefs.register_preferences(
 prefs.register_preferences(
     'brian2cuda',
     'General brian2CUDA preferences',
+
+    detect_gpus=BrianPreference(
+        docs='''Whether to detect names and compute capabilities of all available GPUs.
+        This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
+        default=True,
+        validator=lambda v: isinstance(v, bool)
+    ),
+
     gpu_id=BrianPreference(
         docs='''The ID of the GPU that should be used''',
         default=None,
