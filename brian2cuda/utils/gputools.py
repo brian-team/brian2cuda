@@ -263,7 +263,6 @@ def _select_gpu():
     gpu_id = prefs.brian2cuda.gpu_id
     compute_capability = prefs.codegen.generators.cuda.compute_capability
     gpu_list = None
-    print("DEBUG", gpu_id, compute_capability)
     if prefs.brian2cuda.detect_gpus:
         if gpu_id is None:
             gpu_id, compute_capability = get_best_gpu()
@@ -275,9 +274,7 @@ def _select_gpu():
             "Automatic detection of GPU names and compute capabilities disabled, using "
             "manual preferences"
         )
-        print("DEBUG before raise", gpu_id, compute_capability)
         if gpu_id is None or compute_capability is None:
-            print("RAISE")
             raise PreferenceError(
                 "Got `prefs.brian2cuda.detect_gpus` == `False`. Without GPU detection, "
                 "you need to set `prefs.brian2cuda.gpu_id` and "
