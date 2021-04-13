@@ -1,5 +1,6 @@
 #!/bin/sh
-# Synchronize current directory with remote
+# Synchronize current directory with remote, compile code (with -j) and execute
+# `main` binary. Command line arguments are passed to `make`.
 
 # DEFAULTS
 # remote machine name
@@ -25,3 +26,9 @@ rsync -avzz \
 
 echo
 echo "Uploaded $local_dir to remote directory $remote_dir"
+
+ssh -p 1234 -i ~/.ssh/id_internal localhost "source /cognition/home/local/.init_cuda.sh \
+    && cd \$HOME/$relative_remote_dir \
+    && make -j $@ \
+    && cd \$HOME/$relative_remote_dir \
+    && ./main"
