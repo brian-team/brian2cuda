@@ -8,6 +8,8 @@ with <options>:
     -n|--name <string>        Name for test suite log file
     -g|--gpu <K40|RTX2080>    Which GPU to run on
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
+    -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
+    -l|--log-dir-remote       Remote path to directory where logfiles will be stored
 END
 )
 
@@ -15,10 +17,20 @@ echo_usage() {
     echo "$usage"
 }
 
-# defaults
-task_name=noname
-cuda=1  # empty, will use -l cuda=1 (without specifying a GPU)
-cores=2 # number of cores, with 2 threads per core
+# DEFAULTS
+# remote machine name
+remote="cluster"
+# default task name
+test_suite_task_name=noname
+# -l cuda=$test_suite_gpu
+test_suite_gpu=1
+# number of cores, with 2 threads per core
+test_suite_cores=2
+# where to store the logfile on the remote
+test_suite_remote_logdir="~/projects/brian2cuda/test-suite/results"
+
+# Load configuration file
+source "${BASH_SOURCE%/*}/_load_remote_config.sh" .remote.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
@@ -35,7 +47,7 @@ while true; do
             exit 0
             ;;
         -n | --name )
-            task_name="$2"
+            test_suite_task_name="$2"
             shift 2
             ;;
         -g | --gpu )
@@ -45,11 +57,19 @@ while true; do
                 echo -e "\n$0: error: invalid argument $gpu for $1"
                 exit 1
             fi
-            cuda="\"1($gpu)\""
+            test_suite_gpu="\"1($gpu)\""
             shift 2
             ;;
         -c | --cores )
-            cores="$2"
+            test_suite_cores="$2"
+            shift 2
+            ;;
+        -r | --remote )
+            remote="$2"
+            shift 2
+            ;;
+        -l | --log-dir-remote )
+            test_suite_remote_logdir="$2"
             shift 2
             ;;
         -- )
@@ -78,16 +98,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# remote machine name
-remote="cluster"
-# where to store the logfile on the remote
-remote_logdir="~/projects/brian2cuda/test-suite/results"
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
-run_name="$(date +%y-%m-%d_%T)_$task_name"
+run_name="$(date +%y-%m-%d_%T)_$test_suite_task_name"
 local_logfile="/tmp/$run_name.log"
-remote_logfile="$remote_logdir/$run_name.log"
+remote_logfile="$test_suite_remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}
 qsub_name=b2c-tests__${qsub_name//:/_}
 
@@ -130,7 +146,7 @@ EOL
 
 
 ### Create logdir on remote
-ssh "$remote" "mkdir -p $remote_logdir"
+ssh "$remote" "mkdir -p $test_suite_remote_logdir"
 
 ### Copy local logfile with diff over to remote
 rsync -avzz "$local_logfile" "$remote:$remote_logfile"
@@ -152,9 +168,9 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
     -cwd \
     -q cognition-all.q \
-    -l cuda=$cuda \
+    -l cuda=$test_suite_gpu \
     -N $qsub_name \
-    -binding linear:$cores \
+    -binding linear:$test_suite_cores \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
     $remote_b2c_dir $remote_logfile $test_suite_args
     "
