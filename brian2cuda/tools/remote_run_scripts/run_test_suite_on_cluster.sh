@@ -9,7 +9,7 @@ with <options>:
     -g|--gpu <K40|RTX2080>    Which GPU to run on
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
     -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
-    -l|--log-dir-remote       Remote path to directory where logfiles will be stored
+    -l|--log-dir              Remote path to directory where logfiles will be stored.
 END
 )
 
@@ -27,7 +27,7 @@ test_suite_gpu=1
 # number of cores, with 2 threads per core
 test_suite_cores=2
 # where to store the logfile on the remote
-test_suite_remote_logdir="~/projects/brian2cuda/test-suite/results"
+test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 
 # Load configuration file
 source "${BASH_SOURCE%/*}/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
@@ -68,8 +68,8 @@ while true; do
             remote="$2"
             shift 2
             ;;
-        -l | --log-dir-remote )
-            test_suite_remote_logdir="$2"
+        -l | --log-dir )
+            test_suite_remote_dir="$2"
             shift 2
             ;;
         -- )
@@ -86,6 +86,8 @@ done
 
 # all args after --
 test_suite_args=$@
+
+test_suite_remote_logdir="$test_suite_remote_dir/results"
 
 # Check that test_suite_args are valid arguments for run_test_suite.py
 source /etc/profile.d/conda.sh
@@ -108,7 +110,7 @@ qsub_name=${run_name//_/__}
 qsub_name=b2c-tests__${qsub_name//:/_}
 
 # create tmp folder name for brian2cuda code (in $HOME)
-remote_b2c_dir="~/projects/brian2cuda/test-suite/brian2cuda-synced-repos/$run_name"
+remote_b2c_dir="$test_suite_remote_dir/brian2cuda-synced-repos/$run_name"
 
 
 ### Create git diffs locally
@@ -171,7 +173,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -l cuda=$test_suite_gpu \
     -N $qsub_name \
     -binding linear:$test_suite_cores \
-    $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/on_headnode.sh \
+    $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
     $remote_b2c_dir $remote_logfile $test_suite_args
     "
-    # $1: b2c_dir, # $2: logfile (on_headnode.sh)
+    # $1: b2c_dir, # $2: logfile (_on_headnode.sh)
