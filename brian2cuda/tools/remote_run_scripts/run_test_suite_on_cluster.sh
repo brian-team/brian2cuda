@@ -30,7 +30,7 @@ test_suite_cores=2
 test_suite_remote_logdir="~/projects/brian2cuda/test-suite/results"
 
 # Load configuration file
-source "${BASH_SOURCE%/*}/_load_remote_config.sh" .remote.conf
+source "${BASH_SOURCE%/*}/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)

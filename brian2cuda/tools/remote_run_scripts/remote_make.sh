@@ -8,7 +8,7 @@ remote="cluster"
 make_target_dir_relative_to="$HOME"
 
 # Load configuration file
-source "${BASH_SOURCE%/*}/_load_remote_config.sh" .remote.conf
+source "${BASH_SOURCE%/*}/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 relative_remote_dir=$(realpath --relative-to=$make_target_dir_relative_to $(pwd))
 
