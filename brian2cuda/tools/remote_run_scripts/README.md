@@ -47,18 +47,23 @@ The following scripts are available in this directory:
        `set_device(..., compile=False, directory=<your-directory-name>)`).
        This will generate the CUDA/C++ project in the folder
        `<your-directory-name>` without compiling or running it locally.
-    4. `cd <your-directory-name>` to change directory into the project folder.
-    5. `remote_sync.sh`: This will copy the generated source code to the
+    3. `cd <your-directory-name>` to change directory into the project folder.
+    4. `remote_sync.sh`: This will copy the generated source code to the
        remote into the same directory structure as locally (e.g.
        `~/projects/brian2cuda/example_script/cuda_standalone` will be copied
        to the same path on the remote machine). You need to run this every
        time you change your source code locally.
-    6. `remote_make.sh <make-arguments>`: This will compile the code on the
+    5. `remote_make.sh <make-arguments>`: This will compile the code on the
        remote using `make`. You can pass any arguments to this function (e.g.
        `all`, `debug` or `clean`). By default, commands are run with `-j` option,
        which activates parallel compilation and speeds up the process.
-    7. `remote_execute_main.sh`: This will now execute the compiled
+    6. `remote_execute_main.sh`: This will now execute the compiled
        `main` binary on the remote and you will see the output in your
        terminal.
-    8. If you want to run all of the scripts at once, you can also execute
+    7. If you want to run all of the scripts at once, you can also execute
        `remote_sync_make_execute.sh`.
+3. Files located in the `helper_scripts` directory can be used to synchronize
+   test suite log files from the remote system with the local system. Just
+   copy them into any directory where you would like to store the log files
+   (preferable outside this git repository, as you won't be version controlling
+   them)
