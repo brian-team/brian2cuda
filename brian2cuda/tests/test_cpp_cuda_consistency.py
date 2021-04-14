@@ -170,3 +170,38 @@ def test_stdp_heterog_delays_example():
         assert_allclose(results['cpp_standalone'][key], results['cuda_standalone'][key])
 
     reset_device(previous_device)
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_devices)
+def test_sorted_indices_statemonitor():
+    previous_device = get_device()
+
+    results = {}
+
+    n_cells = 5
+    n_recorded = 10
+    delay = np.arange(n_cells) * defaultclock.dt
+
+    for devicename in ['cpp_standalone', 'cuda_standalone']:
+        set_device(devicename, build_on_run=False, with_output=False)
+        Synapses.__instances__().clear()
+        reinit_devices()
+        P = NeuronGroup(n_cells, model='', threshold='True')
+        S = Synapses(P, P,
+                     model='''w : 1''',
+                     on_pre='''w += 1''')
+        S.connect(j='i')
+        S.pre.delay = delay
+
+        state_mon = StateMonitor(S, 'w', record=range(n_recorded))
+
+        run(defaultclock.dt * (n_cells + 1))
+
+        device.build(directory=None, with_output=False)
+        results[devicename] = state_mon.w.astype(int)
+
+    assert_allclose(results['cpp_standalone'].sum(axis=0), results['cuda_standalone'].sum(axis=0))
+    assert_allclose(results['cpp_standalone'], results['cuda_standalone'])
+
+    reset_device(previous_device)
