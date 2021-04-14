@@ -1,6 +1,7 @@
 {% extends 'common_group.cu' %}
-{# USES_VARIABLES { rate, t, _spikespace, _clock_t, _clock_dt,
+{# USES_VARIABLES { N, rate, t, _spikespace, _clock_t, _clock_dt,
                     _num_source_neurons, _source_start, _source_stop } #}
+{# WRITES_TO_READ_ONLY_VARIABLES { N } #}
 
 {% block define_N %}
 {% endblock %}
@@ -13,12 +14,21 @@ static int start_offset = current_iteration;
 {% block prepare_kernel_inner %}
 int num_iterations = {{owner.clock.name}}.i_end;
 int size_till_now = dev{{_dynamic_t}}.size();
+int new_size = num_iterations + size_till_now - start_offset;
 THRUST_CHECK_ERROR(
-        dev{{_dynamic_t}}.resize(num_iterations + size_till_now - start_offset)
+        dev{{_dynamic_t}}.resize(new_size)
         );
 THRUST_CHECK_ERROR(
-        dev{{_dynamic_rate}}.resize(num_iterations + size_till_now - start_offset)
+        dev{{_dynamic_rate}}.resize(new_size)
         );
+// Update size variables for Python side indexing to work
+// (Note: Need to update device variable which will be copied to host in write_arrays())
+_array_{{owner.name}}_N[0] = new_size;
+CUDA_SAFE_CALL(
+        cudaMemcpy(dev_array_{{owner.name}}_N, _array_{{owner.name}}_N, sizeof(int32_t),
+                   cudaMemcpyHostToDevice)
+        );
+
 num_threads = 1;
 num_blocks = 1;
 {% endblock %}
