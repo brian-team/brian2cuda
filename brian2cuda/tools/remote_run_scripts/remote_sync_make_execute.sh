@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Synchronize current directory with remote, compile code (with -j) and execute
 # `main` binary. Command line arguments are passed to `make`.
 
