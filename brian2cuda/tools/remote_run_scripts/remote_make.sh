@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Execute make on $remote
 # All paramters ($@) are passed to the remote make command
 

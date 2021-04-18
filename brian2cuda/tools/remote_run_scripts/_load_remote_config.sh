@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Load remote paramters stored in $1
 config_file="${BASH_SOURCE%/*}/$1"
 

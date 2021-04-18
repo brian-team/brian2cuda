@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Synchronize current directory with remote
 
 # DEFAULTS

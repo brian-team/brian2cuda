@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Execute `main` binary on $remote
 # All paramters ($@) are passed to the remote `main` command
 
