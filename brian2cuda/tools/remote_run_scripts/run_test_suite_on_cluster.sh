@@ -10,6 +10,8 @@ with <options>:
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
     -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
     -l|--log-dir              Remote path to directory where logfiles will be stored.
+    -s|--remote-conda-sh    Remote path to conda.sh
+    -e|--remote-conda-env   Conda environment name with brian2cuda on remote
 END
 )
 
@@ -26,6 +28,10 @@ test_suite_task_name=noname
 test_suite_gpu=1
 # number of cores, with 2 threads per core
 test_suite_cores=2
+# path to conda.sh on remote
+path_conda_sh_remote="~/anaconda3/etc/profile.d/conda.sh"
+# conda environment for brian2cuda on the remote
+conda_env_remote="b2c"
 # where to store the logfile on the remote
 test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 
@@ -34,9 +40,14 @@ source "${BASH_SOURCE%/*}/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:g:c:
-long_args=help,name:,gpu:,cores
+short_args=hn:g:c:r:l:s:e:
+long_args=help,name:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
+if [ "$?" -ne 0 ]; then
+    echo_usage
+    exit 1
+fi
+
 eval set -- "$opts"
 
 # parse arguments
@@ -70,6 +81,14 @@ while true; do
             ;;
         -l | --log-dir )
             test_suite_remote_dir="$2"
+            shift 2
+            ;;
+        -s | --remote-conda-sh )
+            path_conda_sh_remote="$2"
+            shift 2
+            ;;
+        -e | --remote-conda-env )
+            conda_env_remote="$2"
             shift 2
             ;;
         -- )
@@ -174,6 +193,5 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -N $qsub_name \
     -binding linear:$test_suite_cores \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
-    $remote_b2c_dir $remote_logfile $test_suite_args
-    "
-    # $1: b2c_dir, # $2: logfile (_on_headnode.sh)
+    $remote_b2c_dir $remote_logfile $test_suite_args $path_conda_sh_remote $conda_env_remote"
+    # $1: b2c_dir, $2: logfile, $3 remote conda.sh $4 remote conda env (_on_headnode.sh)
