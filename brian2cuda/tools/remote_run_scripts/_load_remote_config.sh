@@ -1,6 +1,6 @@
 #!/bin/bash
 # Load remote paramters stored in $1
-config_file="${BASH_SOURCE%/*}/$1"
+config_file="$1"
 
 if test -f "$config_file"; then
     source $config_file
