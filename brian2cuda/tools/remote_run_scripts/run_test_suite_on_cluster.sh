@@ -109,8 +109,6 @@ test_suite_args=$@
 test_suite_remote_logdir="$test_suite_remote_dir/results"
 
 # Check that test_suite_args are valid arguments for run_test_suite.py
-source /etc/profile.d/conda.sh
-conda activate b2c
 dry_run_output=$(python ../run_test_suite.py --dry-run $test_suite_args 2>&1)
 if [ $? -ne 0 ]; then
     echo_usage
@@ -122,14 +120,16 @@ fi
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
-run_name="$(date +%y-%m-%d_%T)_$test_suite_task_name"
+run_name="$test_suite_task_name\_$(date +%y-%m-%d_%T)"
 local_logfile="/tmp/$run_name.log"
 remote_logfile="$test_suite_remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}
-qsub_name=b2c-tests__${qsub_name//:/_}
+qsub_name=b2c-${qsub_name//:/_}
 
 # create tmp folder name for brian2cuda code (in $HOME)
 remote_b2c_dir="$test_suite_remote_dir/brian2cuda-synced-repos/$run_name"
+# folder name for qsub .o and .e logs
+remote_ge_log_dir="$test_suite_remote_dir/ge-logs"
 
 
 ### Create git diffs locally
@@ -166,8 +166,8 @@ $brian2_diff
 EOL
 
 
-### Create logdir on remote
-ssh "$remote" "mkdir -p $test_suite_remote_logdir"
+### Create logdirs on remote
+ssh "$remote" "mkdir -p $test_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir"
 
 ### Copy local logfile with diff over to remote
 rsync -avzz "$local_logfile" "$remote:$remote_logfile"
@@ -187,7 +187,7 @@ rsync -avzz \
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
-    -cwd \
+    -wd $remote_ge_log_dir \
     -q cognition-all.q \
     -l cuda=$test_suite_gpu \
     -N $qsub_name \
