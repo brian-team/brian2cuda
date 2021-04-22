@@ -1,0 +1,10 @@
+
+
+HostKey ~/.cluster-sshd/ssh_host_rsa_key
+HostKey ~/.cluster-sshd/ssh_host_ecdsa_key
+HostKey ~/.cluster-sshd/ssh_host_ed25519_key
+
+
+AcceptEnv LANG LC_*
+Subsystem	sftp	/usr/lib/openssh/sftp-server
+
