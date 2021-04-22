@@ -261,7 +261,7 @@ def _get_cuda_runtime_version():
 
 def _select_gpu():
     gpu_id = prefs.brian2cuda.gpu_id
-    compute_capability = prefs.codegen.generators.cuda.compute_capability
+    compute_capability = prefs.devices.cuda_standalone.brian_backend.compute_capability
     gpu_list = None
     if prefs.brian2cuda.detect_gpus:
         if gpu_id is None:
@@ -278,9 +278,9 @@ def _select_gpu():
             raise PreferenceError(
                 "Got `prefs.brian2cuda.detect_gpus` == `False`. Without GPU detection, "
                 "you need to set `prefs.brian2cuda.gpu_id` and "
-                "`prefs.codegen.generators.cuda.compute_capability` (got "
+                "`prefs.devices.cuda_standalone.brian_backend.compute_capability` (got "
                 "`{prefs.brian2cuda.gpu_id}` and "
-                "`{prefs.codegen.generators.cuda.compute_capability}`).".format(
+                "`{prefs.devices.cuda_standalone.brian_backend.compute_capability}`).".format(
                     prefs=prefs
                 )
             )
@@ -393,7 +393,7 @@ def get_compute_capability(gpu_id):
             "the GPU. Please open an issue at "
             "https://github.com/brian-team/brian2cuda/issues/new. To continue, you can "
             "set the compute capability manually via "
-            "`prefs.codegen.generators.cuda.compute_capability` (visit "
+            "`prefs.devices.cuda_standalone.brian_backend.compute_capability` (visit "
             "https://developer.nvidia.com/cuda-gpus to find the compute capability of "
             "your GPU).".format(device_query_path)
         )

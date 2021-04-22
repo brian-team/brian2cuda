@@ -149,7 +149,7 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
 
         if not args.no_atomics:
             all_prefs_list.append(
-                {'codegen.generators.cuda.use_atomics': False})
+                {'devices.cuda_standalone.use_atomics': False})
 
         # create a powerset (all combinations) of the all_prefs_list
         all_prefs_combinations = []
@@ -168,7 +168,7 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         fixed_prefs_dict[k] = v
 
     if args.no_atomics:
-        k = 'codegen.generators.cuda.use_atomics'
+        k = 'devices.cuda_standalone.use_atomics'
         v = False
         prefs[k] = v
         fixed_prefs_dict[k] = v
