@@ -544,7 +544,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
                                                            additional_headers=main_includes,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.gpu_heap_size']
+                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -817,7 +817,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
         )
-        nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
+        nvcc_compiler_flags = prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
         gpu_arch_flags = []
         disable_warnings = False
         for flag in nvcc_compiler_flags:
@@ -835,7 +835,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             logger.warn(
                 "GPU architecture for compilation was specified via "
                 "`prefs.devices.cuda_standalone.brian_backend.compute_capability` and "
-                "`prefs.codegen.cuda.extra_compile_args_nvcc`. "
+                "`prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc`. "
                 "`prefs.devices.cuda_standalone.brian_backend.compute_capability` will be ignored. "
                 "To get rid of this warning, set "
                 "`prefs.devices.cuda_standalone.brian_backend.compute_capability` to it's default "

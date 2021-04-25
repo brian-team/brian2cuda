@@ -23,15 +23,6 @@ def compute_capability_validator(cc):
     return True
 
 prefs.register_preferences(
-    'codegen.cuda',
-    'CUDA compilation preferences',
-    extra_compile_args_nvcc=BrianPreference(
-        docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
-        default=['-w', '-use_fast_math']
-    )
-)
-
-prefs.register_preferences(
     'brian2cuda',
     'General brian2CUDA preferences',
 
@@ -40,20 +31,7 @@ prefs.register_preferences(
         This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
         default=True,
         validator=lambda v: isinstance(v, bool)
-    ),
-
-    gpu_id=BrianPreference(
-        docs='''The ID of the GPU that should be used''',
-        default=None,
-        validator=lambda v: v is None or isinstance(v, int)
-    ),
-
-    cuda_path=BrianPreference(
-        docs='''The path to the CUDA installation. If set, this preferences takes
-        precedence over environment variable `CUDA_PATH`.''',
-        default=None,
-        validator=lambda v: v is None or isinstance(v, str)
-    ),
+    )
 )
 
 # Preferences
@@ -75,17 +53,6 @@ prefs.register_preferences(
         ''',
         validator=lambda v: v is None or (isinstance(v, int) and v > 0),
         default=None),
-
-    gpu_heap_size = BrianPreference(
-        docs='''
-        Size of the heap (in MB) used by malloc() and free() device system calls, which
-        are used in the `cudaVector` implementation. `cudaVectors` are used to
-        dynamically allocate device memory for `SpikeMonitors` and the synapse
-        queues in the `CudaSpikeQueue` implementation for networks with
-        heterogeneously distributed delays.
-        ''',
-        validator=lambda v: isinstance(v, int) and v >= 0,
-        default=128),
 
     launch_bounds=BrianPreference(
         docs='''
@@ -195,5 +162,40 @@ prefs.register_preferences(
         chosen depending on GPU in use. ''',
         validator=compute_capability_validator,
         default=None)
+    
+)
+
+prefs.register_preferences(
+    'devices.cuda_standalone.cuda_backend',
+    'CUDA standalone CUDA backend preferences',
+    
+    gpu_heap_size = BrianPreference(
+        docs='''
+        Size of the heap (in MB) used by malloc() and free() device system calls, which
+        are used in the `cudaVector` implementation. `cudaVectors` are used to
+        dynamically allocate device memory for `SpikeMonitors` and the synapse
+        queues in the `CudaSpikeQueue` implementation for networks with
+        heterogeneously distributed delays.
+        ''',
+        validator=lambda v: isinstance(v, int) and v >= 0,
+        default=128),
+    
+    detect_gpus=BrianPreference(
+        docs='''Whether to detect names and compute capabilities of all available GPUs.
+        This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
+        default=True,
+        validator=lambda v: isinstance(v, bool)
+    ),
+
+    gpu_id=BrianPreference(
+        docs='''The ID of the GPU that should be used''',
+        default=None,
+        validator=lambda v: v is None or isinstance(v, int)
+    ),
+    
+    extra_compile_args_nvcc=BrianPreference(
+        docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
+        default=['-w', '-use_fast_math']
+    )
     
 )

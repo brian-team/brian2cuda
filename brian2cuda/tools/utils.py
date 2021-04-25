@@ -122,7 +122,7 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
     if suppress_warnings:
         # Surpress some warnings from nvcc compiler
         compile_args = ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
-        prefs['codegen.cuda.extra_compile_args_nvcc'].extend(compile_args)
+        prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].extend(compile_args)
         prints.append("Suppressing compiler warnings")
 
     if args.jobs is not None:
