@@ -24,7 +24,7 @@ index b79ce460..7b114602 100644
          net._clocks = {obj.clock for obj in net.objects}
          t_end = net.t+duration
 diff --git a/brian2/input/timedarray.py b/brian2/input/timedarray.py
-index d12e9c00..59f11cb6 100644
+index d12e9c00..9485c569 100644
 --- a/brian2/input/timedarray.py
 +++ b/brian2/input/timedarray.py
 @@ -2,6 +2,7 @@
@@ -35,7 +35,7 @@ index d12e9c00..59f11cb6 100644
  import numpy as np
  
  from brian2.core.clocks import defaultclock
-@@ -32,6 +33,99 @@ def _find_K(group_dt, dt):
+@@ -32,6 +33,101 @@ def _find_K(group_dt, dt):
      return K
  
  
@@ -45,13 +45,14 @@ index d12e9c00..59f11cb6 100644
 +        code = '''
 +        static inline double %NAME%(const double t)
 +        {
++            using namespace brian;
 +            const double epsilon = %DT% / %K%;
 +            int i = (int)((t/epsilon + 0.5)/%K%);
 +            if(i < 0)
 +               i = 0;
 +            if(i >= %NUM_VALUES%)
 +                i = %NUM_VALUES%-1;
-+            return _namespace%NAME%_values[i];
++            return %NAME%_values[i];
 +        }
 +        '''.replace('%NAME%', name).replace('%DT%', '%.18f' % dt).replace(
 +            '%K%', str(K)).replace('%NUM_VALUES%', str(len(values)))
@@ -67,6 +68,7 @@ index d12e9c00..59f11cb6 100644
 +        support_code = '''
 +        static inline double %NAME%(const double t, const int i)
 +        {
++            using namespace brian;
 +            const double epsilon = %DT% / %K%;
 +            if (i < 0 || i >= %COLS%)
 +                return NAN;
@@ -75,7 +77,7 @@ index d12e9c00..59f11cb6 100644
 +               timestep = 0;
 +            else if(timestep >= %ROWS%)
 +                timestep = %ROWS%-1;
-+            return _namespace%NAME%_values[timestep*%COLS% + i];
++            return %NAME%_values[timestep*%COLS% + i];
 +        }
 +        '''
 +        code = replace(support_code, {'%NAME%': name,
@@ -135,7 +137,7 @@ index d12e9c00..59f11cb6 100644
  class TimedArray(Function, Nameable, CacheKey):
      '''
      TimedArray(values, dt, name=None)
-@@ -77,7 +171,7 @@ class TimedArray(Function, Nameable, CacheKey):
+@@ -77,7 +173,7 @@ class TimedArray(Function, Nameable, CacheKey):
      >>> net = Network(G, mon)
      >>> net.run(0.2*ms)  # doctest: +ELLIPSIS
      ...
@@ -144,7 +146,7 @@ index d12e9c00..59f11cb6 100644
      [[ 1.  3.]
       [ 2.  4.]
       [ 1.  3.]
-@@ -85,6 +179,21 @@ class TimedArray(Function, Nameable, CacheKey):
+@@ -85,6 +181,21 @@ class TimedArray(Function, Nameable, CacheKey):
      '''
      _cache_irrelevant_attributes = {'_id', 'values', 'pyfunc',
                                      'implementations'}
@@ -166,7 +168,7 @@ index d12e9c00..59f11cb6 100644
      @check_units(dt=second)
      def __init__(self, values, dt, name=None):
          if name is None:
-@@ -143,58 +252,15 @@ def unitless_timed_array_func(t):
+@@ -143,58 +254,15 @@ def unitless_timed_array_func(t):
  
          self.implementations.add_dynamic_implementation('numpy',
                                                          create_numpy_implementation)
@@ -233,7 +235,7 @@ index d12e9c00..59f11cb6 100644
  
      def _init_2d(self):
          dimensions = self.dim
-@@ -235,77 +301,18 @@ def unitless_timed_array_func(t, i):
+@@ -235,77 +303,18 @@ def unitless_timed_array_func(t, i):
  
          self.implementations.add_dynamic_implementation('numpy',
                                                          create_numpy_implementation)
@@ -754,3 +756,17 @@ index 75f3410c..9e58abdc 100644
  
  
  if __name__ == '__main__':
+diff --git a/brian2/tests/test_monitor.py b/brian2/tests/test_monitor.py
+index 3ec972db..983d12db 100644
+--- a/brian2/tests/test_monitor.py
++++ b/brian2/tests/test_monitor.py
+@@ -434,6 +434,9 @@ def test_rate_monitor_1():
+     assert_allclose(rate_mon.t_, np.arange(10) * defaultclock.dt_)
+     assert_allclose(rate_mon.rate, np.ones(10) / defaultclock.dt)
+     assert_allclose(rate_mon.rate_, np.asarray(np.ones(10) / defaultclock.dt_))
++    # Check that indexing into the VariableView works (this fails if we do not
++    # update the N variable correctly)
++    assert_allclose(rate_mon.t[:5], np.arange(5) * defaultclock.dt)
+ 
+ @attr('standalone-compatible')
+ @with_setup(teardown=reinit_devices)
