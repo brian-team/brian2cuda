@@ -1087,9 +1087,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
 
-        logger.debug("Logging the preferences")
-        for pref in prefs:
-            logger.debug("The preferences are {}".format(pref))
+        logger.info("Using the following preferences for CUDA standalone:")
+        for pref_name in prefs:
+            if "devices.cuda_standalone" in pref_name:
+                logger.info("{} = {}".format(pref_name,prefs[pref_name]))
+            else:
+                logger.debug("{} = {}".format(pref_name,prefs[pref_name]))
 
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
