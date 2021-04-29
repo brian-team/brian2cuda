@@ -109,7 +109,7 @@ def get_available_gpus():
 
 def select_gpu():
     """
-    Select GPU for simulation, based on user preference `prefs.brian2cuda.gpu_id` or (if
+    Select GPU for simulation, based on user preference `prefs.devices.cuda_standalone.cuda_backend.gpu_id` or (if
     not provided) pick the GPU with highest compute capability. Returns tuple of
     (gpu_id, compute_capability) of type (int, float).
     """
@@ -260,10 +260,10 @@ def _get_cuda_runtime_version():
 
 
 def _select_gpu():
-    gpu_id = prefs.brian2cuda.gpu_id
+    gpu_id = prefs.devices.cuda_standalone.cuda_backend.gpu_id
     compute_capability = prefs.devices.cuda_standalone.cuda_backend.compute_capability
     gpu_list = None
-    if prefs.cuda_standalone.cuda_backend.detect_gpus:
+    if prefs.devices.cuda_standalone.cuda_backend.detect_gpus:
         if gpu_id is None:
             gpu_id, compute_capability = get_best_gpu()
         else:
@@ -276,10 +276,10 @@ def _select_gpu():
         )
         if gpu_id is None or compute_capability is None:
             raise PreferenceError(
-                "Got `prefs.cuda_standalone.cuda_backend.detect_gpus` == `False`. Without GPU detection, "
-                "you need to set `prefs.brian2cuda.gpu_id` and "
+                "Got `prefs.devices.cuda_standalone.cuda_backend.detect_gpus` == `False`. Without GPU detection, "
+                "you need to set `prefs.devices.cuda_standalone.cuda_backend.gpu_id` and "
                 "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (got "
-                "`{prefs.brian2cuda.gpu_id}` and "
+                "`{prefs.devices.cuda_standalone.cuda_backend.gpu_id}` and "
                 "`{prefs.devices.cuda_standalone.cuda_backend.compute_capability}`).".format(
                     prefs=prefs
                 )

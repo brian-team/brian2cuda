@@ -76,7 +76,7 @@ def test_warning_compute_capability_set_twice():
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_no_gpu_detection_preference_error():
-    prefs.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     # needs setting gpu_id and compute_capability as well
     with assert_raises(PreferenceError):
         run(0*ms)
@@ -86,7 +86,7 @@ def test_no_gpu_detection_preference_error():
 @with_setup(teardown=reinit_devices)
 def test_no_gpu_detection_preference():
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
-    prefs.cuda_standalone.cuda_backend.detect_gpus = False
-    prefs.brian2cuda.gpu_id = 0
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
     run(0*ms)
