@@ -8,7 +8,8 @@ remote="cluster"
 make_target_dir_relative_to="$HOME"
 
 # Load configuration file
-source "${BASH_SOURCE%/*}/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
+script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 remote_home=$(ssh $remote 'echo $HOME')
 local_dir=$(pwd)
