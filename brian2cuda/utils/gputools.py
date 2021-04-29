@@ -42,7 +42,7 @@ def get_cuda_path():
     """
     Detect the path to the CUDA installation (e.g. '/usr/local/cuda'). This takes into
     account user defined environmental variable `CUDA_PATH` and preference
-    `prefs.brian2cuda.cuda_path`.
+    `prefs.devices.cuda_standalone.cuda_backend.cuda_path`.
     """
     # If cuda_path was already detected, reuse the global variable
     global _cuda_installation
@@ -166,11 +166,11 @@ def restore_gpu_selection(gpu_selection):
 
 def _get_cuda_path():
     # Use preference if set
-    cuda_path_pref = prefs.brian2cuda.cuda_path
+    cuda_path_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_path
     if cuda_path_pref is not None:
         logger.info(
             "CUDA installation directory given via preference "
-            "`prefs.brian2cuda.cuda_path={}`".format(cuda_path_pref)
+            "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
         )
         return cuda_path_pref
 

@@ -179,6 +179,13 @@ prefs.register_preferences(
         compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
         chosen depending on GPU in use. ''',
         validator=compute_capability_validator,
-        default=None)
+        default=None),
+
+    cuda_path=BrianPreference(
+        docs='''The path to the CUDA installation. If set, this preferences takes
+        precedence over environment variable `CUDA_PATH`.''',
+        default=None,
+        validator=lambda v: v is None or isinstance(v, str)
+    )
     
 )
