@@ -13,7 +13,7 @@ def compute_capability_validator(cc):
     larger than the minimal supported compute capability.
     """
     if cc is not None:
-        pref_name = "prefs.devices.cuda_standalone.brian_backend.compute_capability"
+        pref_name = "prefs.devices.cuda_standalone.cuda_backend.compute_capability"
         if not isinstance(cc, float):
             raise PreferenceError(
                 "Preference `{}` has to be of type float "
@@ -22,17 +22,6 @@ def compute_capability_validator(cc):
 
     return True
 
-prefs.register_preferences(
-    'brian2cuda',
-    'General brian2CUDA preferences',
-
-    detect_gpus=BrianPreference(
-        docs='''Whether to detect names and compute capabilities of all available GPUs.
-        This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
-        default=True,
-        validator=lambda v: isinstance(v, bool)
-    )
-)
 
 # Preferences
 prefs.register_preferences(
@@ -153,19 +142,6 @@ prefs.register_preferences(
 )
 
 prefs.register_preferences(
-    'devices.cuda_standalone.brian_backend',
-    'CUDA standalone brian backend preferences',
-    
-    compute_capability=BrianPreference(
-        docs='''Manually set the compute capability for which CUDA code will be
-        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
-        chosen depending on GPU in use. ''',
-        validator=compute_capability_validator,
-        default=None)
-    
-)
-
-prefs.register_preferences(
     'devices.cuda_standalone.cuda_backend',
     'CUDA standalone CUDA backend preferences',
     
@@ -196,6 +172,13 @@ prefs.register_preferences(
     extra_compile_args_nvcc=BrianPreference(
         docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
         default=['-w', '-use_fast_math']
-    )
+    ),
+    
+    compute_capability=BrianPreference(
+        docs='''Manually set the compute capability for which CUDA code will be
+        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
+        chosen depending on GPU in use. ''',
+        validator=compute_capability_validator,
+        default=None)
     
 )

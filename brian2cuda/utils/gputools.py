@@ -261,9 +261,9 @@ def _get_cuda_runtime_version():
 
 def _select_gpu():
     gpu_id = prefs.brian2cuda.gpu_id
-    compute_capability = prefs.devices.cuda_standalone.brian_backend.compute_capability
+    compute_capability = prefs.devices.cuda_standalone.cuda_backend.compute_capability
     gpu_list = None
-    if prefs.brian2cuda.detect_gpus:
+    if prefs.cuda_standalone.cuda_backend.detect_gpus:
         if gpu_id is None:
             gpu_id, compute_capability = get_best_gpu()
         else:
@@ -276,11 +276,11 @@ def _select_gpu():
         )
         if gpu_id is None or compute_capability is None:
             raise PreferenceError(
-                "Got `prefs.brian2cuda.detect_gpus` == `False`. Without GPU detection, "
+                "Got `prefs.cuda_standalone.cuda_backend.detect_gpus` == `False`. Without GPU detection, "
                 "you need to set `prefs.brian2cuda.gpu_id` and "
-                "`prefs.devices.cuda_standalone.brian_backend.compute_capability` (got "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (got "
                 "`{prefs.brian2cuda.gpu_id}` and "
-                "`{prefs.devices.cuda_standalone.brian_backend.compute_capability}`).".format(
+                "`{prefs.devices.cuda_standalone.cuda_backend.compute_capability}`).".format(
                     prefs=prefs
                 )
             )
@@ -347,7 +347,7 @@ def _get_available_gpus():
             "Running `{command}` failed. If `nvidia-smi` is not available in your "
             "system, you can disable automatic detection of GPU name and compute "
             "capability by setting "
-            "`prefs.devices.brian2cuda.detect_gpus` = `False`".format(
+            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`".format(
                 command=command
             )
         )
@@ -393,7 +393,7 @@ def get_compute_capability(gpu_id):
             "the GPU. Please open an issue at "
             "https://github.com/brian-team/brian2cuda/issues/new. To continue, you can "
             "set the compute capability manually via "
-            "`prefs.devices.cuda_standalone.brian_backend.compute_capability` (visit "
+            "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (visit "
             "https://developer.nvidia.com/cuda-gpus to find the compute capability of "
             "your GPU).".format(device_query_path)
         )

@@ -828,15 +828,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 disable_warnings = True
                 nvcc_compiler_flags.remove(flag)
         # Check if compute capability was set manually via preference
-        compute_capability_pref = prefs.devices.cuda_standalone.brian_backend.compute_capability
+        compute_capability_pref = prefs.devices.cuda_standalone.cuda_backend.compute_capability
         # If GPU architecture was set via `extra_compile_args_nvcc` and
         # `compute_capability`, ignore `compute_capability`
         if gpu_arch_flags and compute_capability_pref is not None:
             logger.warn(
                 "GPU architecture for compilation was specified via "
-                "`prefs.devices.cuda_standalone.brian_backend.compute_capability` and "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` and "
                 "`prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc`. "
-                "`prefs.devices.cuda_standalone.brian_backend.compute_capability` will be ignored. "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` will be ignored. "
                 "To get rid of this warning, set "
                 "`prefs.devices.cuda_standalone.brian_backend.compute_capability` to it's default "
                 "value `None`".format(self.minimal_compute_capability)
@@ -1086,6 +1086,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.header_files.extend(additional_header_files)
 
         self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
+
+        logger.debug("Logging the preferences")
+        for pref in prefs:
+            logger.debug("The preferences are {}".format(pref))
 
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
