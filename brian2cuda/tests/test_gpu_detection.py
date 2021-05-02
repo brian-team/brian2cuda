@@ -40,7 +40,7 @@ def test_wrong_cuda_path_error():
 @with_setup(teardown=reinit_devices)
 def test_manual_setting_compute_capability():
     compute_capability_pref = '3.5'
-    prefs.codegen.generators.cuda.compute_capability = float(compute_capability_pref)
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = float(compute_capability_pref)
     with catch_logs(log_level=logging.INFO) as logs:
         run(0*ms)
     log_start = "Compiling device code for compute capability "
@@ -53,7 +53,7 @@ def test_manual_setting_compute_capability():
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_unsupported_compute_capability_error():
-    prefs.codegen.generators.cuda.compute_capability = 2.0
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 2.0
     with assert_raises(NotImplementedError):
         run(0*ms)
 
@@ -61,7 +61,7 @@ def test_unsupported_compute_capability_error():
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_warning_compute_capability_set_twice():
-    prefs.codegen.generators.cuda.compute_capability = 3.5
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
     prefs.codegen.cuda.extra_compile_args_nvcc.append('-arch=sm_37')
     with catch_logs() as logs:
         run(0*ms)
@@ -76,7 +76,7 @@ def test_warning_compute_capability_set_twice():
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_devices)
 def test_no_gpu_detection_preference_error():
-    prefs.brian2cuda.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     # needs setting gpu_id and compute_capability as well
     with assert_raises(PreferenceError):
         run(0*ms)
@@ -86,7 +86,7 @@ def test_no_gpu_detection_preference_error():
 @with_setup(teardown=reinit_devices)
 def test_no_gpu_detection_preference():
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
-    prefs.brian2cuda.detect_gpus = False
-    prefs.brian2cuda.gpu_id = 0
-    prefs.codegen.generators.cuda.compute_capability = 6.1
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
     run(0*ms)

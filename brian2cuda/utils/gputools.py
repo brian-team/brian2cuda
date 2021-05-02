@@ -42,7 +42,7 @@ def get_cuda_path():
     """
     Detect the path to the CUDA installation (e.g. '/usr/local/cuda'). This takes into
     account user defined environmental variable `CUDA_PATH` and preference
-    `prefs.brian2cuda.cuda_path`.
+    `prefs.devices.cuda_standalone.cuda_backend.cuda_path`.
     """
     # If cuda_path was already detected, reuse the global variable
     global _cuda_installation
@@ -109,7 +109,7 @@ def get_available_gpus():
 
 def select_gpu():
     """
-    Select GPU for simulation, based on user preference `prefs.brian2cuda.gpu_id` or (if
+    Select GPU for simulation, based on user preference `prefs.devices.cuda_standalone.cuda_backend.gpu_id` or (if
     not provided) pick the GPU with highest compute capability. Returns tuple of
     (gpu_id, compute_capability) of type (int, float).
     """
@@ -166,11 +166,11 @@ def restore_gpu_selection(gpu_selection):
 
 def _get_cuda_path():
     # Use preference if set
-    cuda_path_pref = prefs.brian2cuda.cuda_path
+    cuda_path_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_path
     if cuda_path_pref is not None:
         logger.info(
             "CUDA installation directory given via preference "
-            "`prefs.brian2cuda.cuda_path={}`".format(cuda_path_pref)
+            "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
         )
         return cuda_path_pref
 
@@ -260,10 +260,10 @@ def _get_cuda_runtime_version():
 
 
 def _select_gpu():
-    gpu_id = prefs.brian2cuda.gpu_id
-    compute_capability = prefs.codegen.generators.cuda.compute_capability
+    gpu_id = prefs.devices.cuda_standalone.cuda_backend.gpu_id
+    compute_capability = prefs.devices.cuda_standalone.cuda_backend.compute_capability
     gpu_list = None
-    if prefs.brian2cuda.detect_gpus:
+    if prefs.devices.cuda_standalone.cuda_backend.detect_gpus:
         if gpu_id is None:
             gpu_id, compute_capability = get_best_gpu()
         else:
@@ -276,11 +276,11 @@ def _select_gpu():
         )
         if gpu_id is None or compute_capability is None:
             raise PreferenceError(
-                "Got `prefs.brian2cuda.detect_gpus` == `False`. Without GPU detection, "
-                "you need to set `prefs.brian2cuda.gpu_id` and "
-                "`prefs.codegen.generators.cuda.compute_capability` (got "
-                "`{prefs.brian2cuda.gpu_id}` and "
-                "`{prefs.codegen.generators.cuda.compute_capability}`).".format(
+                "Got `prefs.devices.cuda_standalone.cuda_backend.detect_gpus` == `False`. Without GPU detection, "
+                "you need to set `prefs.devices.cuda_standalone.cuda_backend.gpu_id` and "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (got "
+                "`{prefs.devices.cuda_standalone.cuda_backend.gpu_id}` and "
+                "`{prefs.devices.cuda_standalone.cuda_backend.compute_capability}`).".format(
                     prefs=prefs
                 )
             )
@@ -347,7 +347,7 @@ def _get_available_gpus():
             "Running `{command}` failed. If `nvidia-smi` is not available in your "
             "system, you can disable automatic detection of GPU name and compute "
             "capability by setting "
-            "`prefs.devices.brian2cuda.detect_gpus` = `False`".format(
+            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`".format(
                 command=command
             )
         )
@@ -393,7 +393,7 @@ def get_compute_capability(gpu_id):
             "the GPU. Please open an issue at "
             "https://github.com/brian-team/brian2cuda/issues/new. To continue, you can "
             "set the compute capability manually via "
-            "`prefs.codegen.generators.cuda.compute_capability` (visit "
+            "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (visit "
             "https://developer.nvidia.com/cuda-gpus to find the compute capability of "
             "your GPU).".format(device_query_path)
         )

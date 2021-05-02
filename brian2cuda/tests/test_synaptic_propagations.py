@@ -72,7 +72,7 @@ def test_CudaSpikeQueue_push_outer_loop2():
     num_blocks = 1
     prefs['devices.cuda_standalone.parallel_blocks'] = num_blocks
     # make sure we don't use less then 1024 threads due to register usage
-    prefs['codegen.cuda.extra_compile_args_nvcc'] += ['-maxrregcount=64']
+    prefs['devices.cuda_standalone.cuda_backendextra_compile_args_nvcc'] += ['-maxrregcount=64']
 
     threads_per_block = 1024
     neurons_per_block = 2 * threads_per_block
