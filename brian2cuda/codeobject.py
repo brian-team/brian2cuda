@@ -34,12 +34,13 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
                           env_globals={'c_data_type': c_data_type,
                                        'constant_or_scalar': constant_or_scalar})
     generator_class = CUDACodeGenerator
-    no_or_const_delay_mode = False
-    serializing_form = "syn"
-    runs_every_tick = True  #default True, set False in generate_main_source
-    rand_calls = 0
-    randn_calls = 0
-    binomial_function = False
+
+    def __init__(self, *args, **kwargs):
+        super(CUDAStandaloneCodeObject, self).__init__(*args, **kwargs)
+        self.runs_every_tick = True  #default True, set False in generate_main_source
+        self.rand_calls = 0
+        self.randn_calls = 0
+        self.binomial_function = False
 
     def __call__(self, **kwds):
         return self.run()
