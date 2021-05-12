@@ -83,7 +83,7 @@ configs = [# configuration                          project_directory
            'cuda_standalone'),
 
           (DynamicConfigCreator("CUDA standalone (no atomics)",
-                                prefs={'codegen.generators.cuda.use_atomics': False}),
+                                prefs={'devices.cuda_standalone.use_atomics': False}),
            'cuda_standalone'),
 
           (DynamicConfigCreator("CUDA standalone (1 post block)",
@@ -91,12 +91,12 @@ configs = [# configuration                          project_directory
            'cuda_standalone'),
 
           #(DynamicConfigCreator("CUDA standalone (no atomics, no bundles)",
-          #                      prefs={'codegen.generators.cuda.use_atomics': False,
+          #                      prefs={'devices.cuda_standalone.use_atomics': False,
           #                             'devices.cuda_standalone.push_synapse_bundles': False}),
           # 'cuda_standalone'),
 
           #(DynamicConfigCreator("CUDA standalone (no atomics, 1 post block)",
-          #                      prefs={'codegen.generators.cuda.use_atomics': False,
+          #                      prefs={'devices.cuda_standalone.use_atomics': False,
           #                             'devices.cuda_standalone.parallel_blocks': 1}),
           # 'cuda_standalone'),
 

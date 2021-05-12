@@ -140,7 +140,7 @@ def set_prefs(params, prefs):
             prefs['devices.cuda_standalone.push_synapse_bundles'] = False
 
         if not params['atomics']:
-            prefs['codegen.generators.cuda.use_atomics'] = False
+            prefs['devices.cuda_standalone.use_atomics'] = False
 
     if params['single_precision']:
         from numpy import float32

@@ -79,11 +79,11 @@ configs = [# configuration                          project_directory
            'cuda_standalone'),
 
           (DynamicConfigCreator('CUDA standalone (15 blocks, no atomics)',
-                                prefs={'codegen.generators.cuda.use_atomics': False}),
+                                prefs={'devices.cuda_standalone.use_atomics': False}),
            'cuda_standalone'),
 
           (DynamicConfigCreator('CUDA standalone (1 block, no atomics)',
-                                prefs={'codegen.generators.cuda.use_atomics': False,
+                                prefs={'devices.cuda_standalone.use_atomics': False,
                                        'devices.cuda_standalone.parallel_blocks': 1}),
            'cuda_standalone'),
 

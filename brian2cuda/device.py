@@ -2,7 +2,6 @@
 Module implementing the CUDA "standalone" device.
 '''
 import os
-import shutil
 import inspect
 from collections import defaultdict
 import tempfile
@@ -11,16 +10,12 @@ from itertools import chain
 
 import numpy as np
 
-import brian2
-
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.codegen.translation import make_statements
 from brian2.core.clocks import Clock, defaultclock
 from brian2.core.namespace import get_local_namespace
-from brian2.core.network import Network
-from brian2.core.preferences import prefs, BrianPreference, PreferenceError
+from brian2.core.preferences import prefs, PreferenceError
 from brian2.core.variables import ArrayVariable, DynamicArrayVariable
-from brian2.core.functions import Function
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
@@ -31,9 +26,6 @@ from brian2.utils.logger import get_logger
 from brian2.units import second
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
-from brian2.monitors.statemonitor import StateMonitor
-from brian2.groups.neurongroup import Thresholder
-from brian2.input.timedarray import TimedArray
 from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
@@ -45,117 +37,6 @@ from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObjec
 __all__ = []
 
 logger = get_logger('brian2.devices.cuda_standalone')
-
-
-# Preferences
-prefs.register_preferences(
-    'devices.cuda_standalone',
-    'CUDA standalone preferences',
-
-    SM_multiplier = BrianPreference(
-        default=1,
-        docs='''
-        The number of blocks per SM. By default, this value is set to 1.
-        ''',
-        ),
-
-    parallel_blocks = BrianPreference(
-        docs='''
-        The total number of parallel blocks to use. The default is the number
-        of streaming multiprocessors.
-        ''',
-        validator=lambda v: v is None or (isinstance(v, int) and v > 0),
-        default=None),
-
-    gpu_heap_size = BrianPreference(
-        docs='''
-        Size of the heap (in MB) used by malloc() and free() device system calls, which
-        are used in the `cudaVector` implementation. `cudaVectors` are used to
-        dynamically allocate device memory for `SpikeMonitors` and the synapse
-        queues in the `CudaSpikeQueue` implementation for networks with
-        heterogeneously distributed delays.
-        ''',
-        validator=lambda v: isinstance(v, int) and v >= 0,
-        default=128),
-
-    launch_bounds=BrianPreference(
-        docs='''
-        Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
-        ''',
-        default=False),
-
-    syn_launch_bounds=BrianPreference(
-        docs='''
-        Weather or not to use `__launch_bounds__` in synapses and synapses_push to optimise register usage in kernels.
-        ''',
-        default=False),
-
-    calc_occupancy=BrianPreference(
-        docs='''
-        Weather or not to use cuda occupancy api to choose num_threads and num_blocks.
-        ''',
-        default=True),
-
-    extra_threshold_kernel=BrianPreference(
-        docs='''
-        Weather or not to use a extra threshold kernel for resetting or not.
-        ''',
-        default=True),
-
-    random_number_generator_type=BrianPreference(
-        docs='''Generator type (str) that cuRAND uses for random number generation.
-            Setting the generator type automatically resets the generator ordering
-            (prefs.devices.cuda_standalone.random_number_generator_ordering) to its default value.
-            See cuRAND documentation for more details on generator types and orderings.''',
-        validator=lambda v: v in ['CURAND_RNG_PSEUDO_DEFAULT',
-                                  'CURAND_RNG_PSEUDO_XORWOW',
-                                  'CURAND_RNG_PSEUDO_MRG32K3A',
-                                  'CURAND_RNG_PSEUDO_MTGP32',
-                                  'CURAND_RNG_PSEUDO_PHILOX4_32_10',
-                                  'CURAND_RNG_PSEUDO_MT19937',
-                                  'CURAND_RNG_QUASI_DEFAULT',
-                                  'CURAND_RNG_QUASI_SOBOL32',
-                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL32',
-                                  'CURAND_RNG_QUASI_SOBOL64',
-                                  'CURAND_RNG_QUASI_SCRAMBLED_SOBOL64'],
-        default='CURAND_RNG_PSEUDO_DEFAULT'),
-
-    random_number_generator_ordering=BrianPreference(
-        docs='''The ordering parameter (str) used to choose how the results of cuRAND
-            random number generation are ordered in global memory.
-            See cuRAND documentation for more details on generator types and orderings.''',
-        validator=lambda v: not v or v in ['CURAND_ORDERING_PSEUDO_DEFAULT',
-                                           'CURAND_ORDERING_PSEUDO_BEST',
-                                           'CURAND_ORDERING_PSEUDO_SEEDED',
-                                           'CURAND_ORDERING_QUASI_DEFAULT'],
-        default=False),  # False will prevent setting ordering in objects.cu (-> curRAND will uset the correct ..._DEFAULT)
-
-    push_synapse_bundles=BrianPreference(
-        docs='''If True, synaptic events are propagated by pushing bundles of
-        synapse IDs with same delays into the corresponding delay queue. If
-        False, each synapse of a spiking neuron is pushed in the corresponding
-        queue individually. For very small bundle sizes (number of synapses
-        with same delay, connected to a single neuron), pushing single Synapses
-        can be faster. This option only has effect for `Synapses` objects ith
-        heterogenous delays.''',
-        default=True),
-
-    no_pre_references=BrianPreference(
-        docs='''Set this preference if you don't need access to ``i`` in any
-        synaptic code string and no Synapses object applies effects to
-        presynaptic variables. This preference is for memory optimization until
-        unnecassary device memory allocations in synapse creation are fixed, it
-        is only relevant if your network uses close to all memory.''',
-        default=False),
-
-    no_post_references=BrianPreference(
-        docs='''Set this preference if you don't need access to ``j`` in any
-        synaptic code string and no Synapses object applies effects to
-        postsynaptic variables. This preference is for memory optimization until
-        unnecassary device memory allocations in synapse creation are fixed, it
-        is only relevant if your network uses close to all memory.''',
-        default=False)
-)
 
 
 class CUDAWriter(CPPWriter):
@@ -425,7 +306,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
             # use atomics if possible (except for `synapses` mode, where we cann parallelise without)
             # TODO: this overwrites if somebody sets a codeobject in the Synapses(..., codeobj_class=...)
-            if prefs['codegen.generators.cuda.use_atomics'] and synaptic_effects != 'synapses':
+            if prefs['devices.cuda_standalone.use_atomics'] and synaptic_effects != 'synapses':
                 codeobj_class = CUDAStandaloneAtomicsCodeObject
                 logger.debug("Using atomics in synaptic effect application of "
                              "Synapses object {syn}".format(syn=name))
@@ -663,7 +544,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
                                                            additional_headers=main_includes,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.gpu_heap_size']
+                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -936,7 +817,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
         )
-        nvcc_compiler_flags = prefs.codegen.cuda.extra_compile_args_nvcc
+        nvcc_compiler_flags = prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
         gpu_arch_flags = []
         disable_warnings = False
         for flag in nvcc_compiler_flags:
@@ -947,17 +828,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 disable_warnings = True
                 nvcc_compiler_flags.remove(flag)
         # Check if compute capability was set manually via preference
-        compute_capability_pref = prefs.codegen.generators.cuda.compute_capability
+        compute_capability_pref = prefs.devices.cuda_standalone.cuda_backend.compute_capability
         # If GPU architecture was set via `extra_compile_args_nvcc` and
         # `compute_capability`, ignore `compute_capability`
         if gpu_arch_flags and compute_capability_pref is not None:
             logger.warn(
                 "GPU architecture for compilation was specified via "
-                "`prefs.codegen.generators.cuda.compute_capability` and "
-                "`prefs.codegen.cuda.extra_compile_args_nvcc`. "
-                "`prefs.codegen.generators.cuda.compute_capability` will be ignored. "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` and "
+                "`prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc`. "
+                "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` will be ignored. "
                 "To get rid of this warning, set "
-                "`prefs.codegen.generators.cuda.compute_capability` to it's default "
+                "`prefs.devices.cuda_standalone.brian_backend.compute_capability` to it's default "
                 "value `None`".format(self.minimal_compute_capability)
             )
             # Ignore compute capability of chosen GPU and the one manually set via
@@ -1205,6 +1086,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.header_files.extend(additional_header_files)
 
         self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
+
+        logger.info("Using the following preferences for CUDA standalone:")
+        for pref_name in prefs:
+            if "devices.cuda_standalone" in pref_name:
+                logger.info("\t{} = {}".format(pref_name,prefs[pref_name]))
+ 
+        logger.debug("Using the following brian preferences:")
+        for pref_name in prefs:
+            if pref_name not in prefs:
+                logger.debug("\t{} = {}".format(pref_name,prefs[pref_name]))
 
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)

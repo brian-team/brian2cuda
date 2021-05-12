@@ -10,13 +10,12 @@ from brian2.utils.stringtools import get_identifiers
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.clocks import Clock
-from brian2.core.preferences import prefs, BrianPreference, PreferenceError
+from brian2.core.preferences import prefs
 from brian2.core.variables import ArrayVariable
-from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 from brian2.devices import get_device
-from brian2cuda.utils.gputools import select_gpu, get_cuda_runtime_version
+from brian2cuda.utils.gputools import get_cuda_runtime_version
 
 
 __all__ = ['CUDACodeGenerator',
@@ -30,55 +29,6 @@ logger = get_logger('brian2.codegen.generators.cuda_generator')
 
 class ParallelisationError(Exception):
     pass
-
-
-def compute_capability_validator(cc):
-    """
-    This function checks compute capability preference and raises an error if it is
-    larger than the minimal supported compute capability.
-    """
-    if cc is not None:
-        pref_name = "prefs.codegen.generators.cuda.compute_capability"
-        if not isinstance(cc, float):
-            raise PreferenceError(
-                "Preference `{}` has to be of type float "
-                "(e.g. `6.1`), got `{}`".format(pref_name, type(cc))
-            )
-
-    return True
-
-
-# Preferences
-prefs.register_preferences(
-    'codegen.generators.cuda',
-    'CUDA codegen preferences',
-
-    default_functions_integral_convertion=BrianPreference(
-        docs='''The floating point precision to which integral types will be converted when
-        passed as arguments to default functions that have no integral type overload in device
-        code (sin, cos, tan, sinh, cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)."
-        NOTE: Convertion from 32bit and 64bit integral types to single precision (32bit) floating-point
-        types is not type safe. And convertion from 64bit integral types to double precision (64bit)
-        floating-point types neither. In those cases the closest higher or lower (implementation
-        defined) representable value will be selected.''',
-        validator=default_float_dtype_validator,
-        representor=dtype_repr,
-        default=np.float64),
-
-    use_atomics=BrianPreference(
-        docs='''Weather to try to use atomic operations for synaptic effect
-        application. Since this avoids race conditions, effect application can
-        be parallelised.''',
-        validator=lambda v: isinstance(v, bool),
-        default=True),
-
-    compute_capability=BrianPreference(
-        docs='''Manually set the compute capability for which CUDA code will be
-        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
-        chosen depending on GPU in use. ''',
-        validator=compute_capability_validator,
-        default=None),
-)
 
 
 # This is a function since this code needs to be generated after user preferences are
@@ -288,7 +238,7 @@ class CUDACodeGenerator(CodeGenerator):
 
         # Set convertion types for standard C99 functions in device code
         # These are used in _add_user_function to format the function code
-        if prefs.codegen.generators.cuda.default_functions_integral_convertion == np.float64:
+        if prefs.devices.cuda_standalone.default_functions_integral_convertion == np.float64:
             self.default_func_type = 'double'
             self.other_func_type = 'float'
         else:  # np.float32
@@ -477,7 +427,7 @@ class CUDACodeGenerator(CodeGenerator):
         # possibly nested paranthesis inside function paranthesis.
         statement_lines = self.translate_to_statements(statements,
                                                        conditional_write_vars)
-        convertion_pref = prefs.codegen.generators.cuda.default_functions_integral_convertion
+        convertion_pref = prefs.devices.cuda_standalone.default_functions_integral_convertion
         # only check if there was no warning yet or if convertion preference has changed
         if not self.warned_integral_convertion or self.previous_convertion_pref != convertion_pref:
             for line in statement_lines:
