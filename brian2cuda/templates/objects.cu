@@ -215,12 +215,12 @@ void _init_arrays()
             );
 
     CUDA_SAFE_CALL(
-            curandCreateGenerator(&curand_generator, {{curand_generator_type}}
-                );
+            curandCreateGenerator(&curand_generator, {{curand_generator_type}})
+            );
 
     {% if curand_generator_ordering %}
     CUDA_SAFE_CALL(
-        curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}}
+        curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}})
             );
     {% endif %}
 

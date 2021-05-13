@@ -894,7 +894,11 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              name='_rand')
 
 poisson_code = '''
-    #define _poisson(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_poisson[vectorisation_idx])
+    __host__ __device__
+    int32_t _poisson(int32_t* _poisson_numbers, int32_t _idx) {
+        // curand generated unsigned int, brian uses int32_t
+        return _poisson_numbers[_idx];
+    }
     '''
 DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(CUDACodeGenerator,
                                                                 code=poisson_code,

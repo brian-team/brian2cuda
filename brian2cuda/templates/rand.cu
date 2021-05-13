@@ -69,8 +69,8 @@ void RandomNumberBuffer::init()
     {
         // number of time steps each codeobject is executed during current Network::run() call
         // XXX: we are assuming here that this function is only run in the first time step of a Network::run()
-        {% for co in code_objects_per_run[run_i]['rng'] | sort(attribute='name') %}
-        int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - *({{co.owner.clock.name}}.timestep);
+        {% for co in code_objects_per_run[run_i]['all'] | sort(attribute='name') %}
+        int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - *{{co.owner.clock.name}}.timestep;
         {% endfor %}
 
         {% for type in rng_types %}
@@ -424,7 +424,7 @@ void RandomNumberBuffer::next_time_step()
         {% for type in rng_types %}
         {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
 
-        // uniform numbers for {{co.name}}
+        // random numbers ({{type}}) for {{co.name}}
         if (idx_{{type}}_{{co.name}} == {{type}}_interval_{{co.name}})
         {
             {% if type == 'rand' %}
@@ -433,7 +433,7 @@ void RandomNumberBuffer::next_time_step()
             refill_normal_numbers(
             {% else %}{# poisson distributions #}
             refill_poisson_numbers(
-                    {{poisson_lamdas[type]}},
+                    {{all_poisson_lamdas[co.name][type]}},
             {% endif %}
                     dev_{{co.name}}_{{type}}_allocator,
                     dev_{{co.name}}_{{type}},
@@ -508,16 +508,18 @@ class RandomNumberBuffer
     // for all runs that need random numbers.
 
     {% for run_i in range(number_run_calls) %}
-    ////// run {run_i}
+    ////// run {{run_i}}
 
     {% for type in rng_types %}
 
+    {% if code_objects_per_run[run_i][type]|length > 0 %}
     {% if type == 'rand' %}
     //// uniform distributed random numbers (rand)
     {% elif type == 'randn' %}
     //// normal distributed random numbers (randn)
     {% else %}
-    //// poisson distributed random number (lambda = {{poisson_lamdas[type]}})
+    //// poisson distributed random number ({{type}})
+    {% endif %}
     {% endif %}
 
     {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
@@ -530,8 +532,8 @@ class RandomNumberBuffer
     int {{type}}_floats_per_obj_{{co.name}};
 
     {% endfor %}{# co #}
-    {% endfor %} {# type #}
-    {% endfor %} {# run_i #}
+    {% endfor %}{# type #}
+    {% endfor %}{# run_i #}
 
     void init();
     void allocate_device_curand_states();
@@ -539,7 +541,7 @@ class RandomNumberBuffer
     void set_curand_device_api_states(bool);
     void refill_uniform_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
     void refill_normal_numbers(randomNumber_t*, randomNumber_t*&, int, int&);
-    void refill_poisson_numbers(double lambda, unsigned int*, randomNumber_t*&, int, int&);
+    void refill_poisson_numbers(double lambda, unsigned int*, unsigned int*&, int, int&);
 
 public:
     void next_time_step();

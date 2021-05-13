@@ -765,8 +765,9 @@ def test_random_values_set_synapses_fixed_seed():
 
 
 if __name__ == '__main__':
-    test_rand()
-    test_random_number_generation_with_multiple_runs()
-    test_random_values_fixed_and_random()
-    test_random_values_codeobject_every_tick()
-    test_rand_randn_regex()
+    #test_rand()
+    #test_random_number_generation_with_multiple_runs()
+    #test_random_values_fixed_and_random()
+    #test_random_values_codeobject_every_tick()
+    #test_rand_randn_regex()
+    test_poisson_regex()

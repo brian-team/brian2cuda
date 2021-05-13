@@ -81,7 +81,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # states need to be initalized only once in the beginning of all runs)
         self.code_objects_per_run = []
         # dictionary for all needed poisson distributions
-        self.all_poisson_lamdas = defaultdict(float)
+        # all_poisson_lamdas[codeobj.name][poisson_name] = lamda
+        self.all_poisson_lamdas = defaultdict(lambda: defaultdict(float))
         # and a dictionary with the same across all run calls
         # keys: 'rand', 'randn', 'poisson-<lambda>', 'all' (union of all)
         self.all_code_objects_host_rng = defaultdict(list)
@@ -400,7 +401,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 codeobj.runs_every_tick = False
                 # need to check for rand/randn/binomial for objects only run
                 # once, stored in `code_object.rand(n)_calls`.
-                uses_binomial = check_codeobj_for_rng(codeobj, check_curand_states=True)
+                uses_binomial = self.check_codeobj_for_rng(codeobj, check_curand_states=True)
                 if uses_binomial:
                     self.code_object_with_binomial_separate_call.append(codeobj)
                     if isinstance(codeobj.owner, Synapses) \
@@ -720,7 +721,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 host_parameters_lines.append("dev_{name}_randn".format(name=codeobj.name))
                 kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
                                                                                 name=codeobj.name))
-            # TODO POISSON
+            # TODO: explain, different from buffer above
+            for rng_type in codeobj.rng_calls.keys():
+                if rng_type not in ["rand", "randn"] and codeobj.runs_every_tick:
+                    assert rng_type.startswith("poisson")
+                    if codeobj.rng_calls[rng_type] >= 1:
+                        host_parameters_lines.append(
+                            "dev_{name}_{poisson}".format(
+                                name=codeobj.name, poisson=rng_type
+                            )
+                        )
+                        kernel_parameters_lines.append(
+                            "int32_t* _ptr_array_{name}_{poisson}".format(
+                                name=codeobj.name, poisson=rng_type
+                            )
+                        )
 
             # Sometimes an array is referred to by to different keys in our
             # dictionary -- make sure to never add a line twice
@@ -800,7 +815,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            code_objects_per_run=self.code_objects_per_run,
                                                            rng_types=self.all_code_objects_host_rng.keys(),
-                                                           poisson_lamdas=self.all_poisson_lamdas,
+                                                           all_poisson_lamdas=self.all_poisson_lamdas,
                                                            binomial_codeobjects=binomial_codeobjects,
                                                            number_run_calls=len(self.code_objects_per_run),
                                                            profiled=self.enable_profiling,
@@ -1249,7 +1264,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         code_object_rng = defaultdict(list)
 
         for _, co in code_objects:  # (clock, code_object)
-            binomial_match = check_codeobj_for_rng(co, check_curand_states=True)
+            binomial_match = self.check_codeobj_for_rng(co, check_curand_states=True)
             if co.rng_calls["rand"] > 0:
                 code_object_rng['rand'].append(co)
                 code_object_rng['all'].append(co)
@@ -1260,9 +1275,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code_object_rng['all'].append(co)
             for name, lamda in co.poisson_lamdas.items():
                 code_object_rng[name].append(co)
-                self.all_poisson_lamdas[name] = lamda
                 # only add if it wasn't already added before
-                if code_object_rng['all'] and code_object_rng[-1] != co:
+                if len(code_object_rng['all']) == 0 or code_object_rng['all'][-1] != co:
                     code_object_rng['all'].append(co)
             if binomial_match:
                 if co not in self.all_code_objects_device_rng['binomial']:
@@ -1373,142 +1387,148 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.first_run = False
 
 
-def check_codeobj_for_rng(codeobj, check_curand_states=False):
-    '''
-    Count the number of `"rand()"`, `"randn()"` and "poisson(<lambda>) appearances in
-    `codeobj.code.cu_file` and store them as attributes in `codeobj.rng_calls["rand"]`,
-    `codeobj.rng_calls["randn"]` and `codeobj.rng_calls["poisson"]`.
+    def check_codeobj_for_rng(self, codeobj, check_curand_states=False):
+        '''
+        Count the number of `"rand()"`, `"randn()"` and "poisson(<lambda>) appearances in
+        `codeobj.code.cu_file` and store them as attributes in `codeobj.rng_calls["rand"]`,
+        `codeobj.rng_calls["randn"]` and `codeobj.rng_calls["poisson"]`.
 
-    Parameters
-    ----------
-    codeobj: CodeObjects
-        Codeobject with generated CUDA code in `codeobj.code.cu_file`.
-    check_curand_states: bool, optional
-        Wether to also check if `"binomial()"` appears. Default is False.
+        Parameters
+        ----------
+        codeobj: CodeObjects
+            Codeobject with generated CUDA code in `codeobj.code.cu_file`.
+        check_curand_states: bool, optional
+            Wether to also check if `"binomial()"` appears. Default is False.
 
-    Returns
-    -------
-    binomial_match: bool or None
-        If `check_curand_states` is True, this tells if `binomial(const int
-        vectorisation_idx)` is appearing in `code`, else `None`.
-    '''
-    # synapses_create_generator uses host side random number generation
-    if codeobj.template_name == 'synapses_create_generator':
-        if check_curand_states:
-            return False
-        else:
-            return None
+        Returns
+        -------
+        binomial_match: bool or None
+            If `check_curand_states` is True, this tells if `binomial(const int
+            vectorisation_idx)` is appearing in `code`, else `None`.
+        '''
+        # synapses_create_generator uses host side random number generation
+        if codeobj.template_name == 'synapses_create_generator':
+            if check_curand_states:
+                return False
+            else:
+                return None
 
-    # regex explained
-    # (?<!...) negative lookbehind: don't match if ... preceeds
-    #     XXX: This only excludes #define lines which have exactly one space to '_rand'.
-    #          As long is we don't have '#define  _rand' with 2 spaces, thats fine.
-    # \b - non-alphanumeric character (word boundary, does not consume a character)
-    rand_pattern = r'(?<!#define )\b_rand\(_vectorisation_idx\)'
-    matches_rand = re.findall(rand_pattern, codeobj.code.cu_file)
-    codeobj.rng_calls["rand"] = len(matches_rand)
+        # regex explained
+        # (?<!...) negative lookbehind: don't match if ... preceeds
+        #     XXX: This only excludes #define lines which have exactly one space to '_rand'.
+        #          As long is we don't have '#define  _rand' with 2 spaces, thats fine.
+        # \b - non-alphanumeric character (word boundary, does not consume a character)
+        rand_pattern = r'(?<!#define )\b_rand\(_vectorisation_idx\)'
+        matches_rand = re.findall(rand_pattern, codeobj.code.cu_file)
+        codeobj.rng_calls["rand"] = len(matches_rand)
 
-    randn_pattern = r'(?<!#define )\b_randn\(_vectorisation_idx\)'
-    matches_randn = re.findall(randn_pattern, codeobj.code.cu_file)
-    codeobj.rng_calls["randn"] = len(matches_randn)
+        randn_pattern = r'(?<!#define )\b_randn\(_vectorisation_idx\)'
+        matches_randn = re.findall(randn_pattern, codeobj.code.cu_file)
+        codeobj.rng_calls["randn"] = len(matches_randn)
 
-    # Additional regex:
-    # (.*?) Returns whatever is matched inside the brackets instead of the entire
-    #       string. .*? does a non-greedy match of everything. This is the lambda
-    #       value. Could also used named group, but with `re.findall` the return value
-    #       is the same as in non-named group: (?P<lambda>*?)
-    poisson_pattern = r'(?<!#define )\b_poisson\((?P<lamda>.*?), _vectorisation_idx\)'
-    matches_poisson = re.findall(poisson_pattern, codeobj.code.cu_file)
-    # Collect the number of poisson calls separated by lambda values (we need to
-    # generate poisson values separately for each lambda value when using cuRAND host
-    # API. This is how the dictionaries structure looks like:
-    # codeobj.rng_calls["poisson"] = {
-    #   lamda: {
-    #       "name": ...,
-    #       "num_calls: ...,
-    #       "match": ...
-    #   }
-    # }
-    ### TODO: rng_calls[keys] should alsways give # calls, keys should be rand/n, poisson-<lambda>,
-    #         such that they can be used in rand.cu like currently coded
-    #   TODO: Add another CUDAStandaloneCodeObject attribute for poisson_name -> lamda
-    #   TODO: Get rid of lines
-    lamda_matches = {}
-    for i, lamda_str in enumerate(set(matches_poisson)):
-        try:
-            lamda = float(lamda_str)
-        except ValueError:
-            lamda = lamda_str
-        name = "poisson_{i}".format(i=i)
-        assert lamda not in codeobj.poisson_lamdas.items()
-        assert name not in codeobj.poisson_lamdas.keys()
-        codeobj.poisson_lamdas[name] = lamda
-        codeobj.rng_calls[name] = matches_poisson.count(lamda_str)
-        lamda_matches[name] = lamda_str
-        #if lamda not in codeobj.rng_calls["poisson"]:
-        #    codeobj.rng_calls["poisson"][lamda] = {
-        #        "name": "poisson_{}".format(num_poissons),
-        #        "num_calls": 0,
-        #        "match": lamda_str
-        #    }
-        #codeobj.rng_calls["poisson"][lamda]["num_calls"] += 1
+        # Additional regex:
+        # (.*?) Returns whatever is matched inside the brackets instead of the entire
+        #       string. .*? does a non-greedy match of everything. This is the lambda
+        #       value. Could also used named group, but with `re.findall` the return value
+        #       is the same as in non-named group: (?P<lambda>*?)
+        poisson_pattern = r'(?<!#define )\b_poisson\((?P<lamda>.*?), _vectorisation_idx\)'
+        matches_poisson = re.findall(poisson_pattern, codeobj.code.cu_file)
+        # Collect the number of poisson calls separated by lambda values (we need to
+        # generate poisson values separately for each lambda value when using cuRAND host
+        # API. This is how the dictionaries structure looks like:
+        # codeobj.rng_calls["poisson"] = {
+        #   lamda: {
+        #       "name": ...,
+        #       "num_calls: ...,
+        #       "match": ...
+        #   }
+        # }
+        ### TODO: rng_calls[keys] should alsways give # calls, keys should be rand/n, poisson-<lambda>,
+        #         such that they can be used in rand.cu like currently coded
+        #   TODO: Add another CUDAStandaloneCodeObject attribute for poisson_name -> lamda
+        #   TODO: Get rid of lines
+        lamda_matches = {}
+        for i, lamda_str in enumerate(set(matches_poisson)):
+            try:
+                lamda = float(lamda_str)
+            except ValueError:
+                lamda = lamda_str
+            name = "poisson_{i}".format(i=i)
+            self.all_poisson_lamdas[codeobj.name][name] = lamda
+            assert lamda not in codeobj.poisson_lamdas.values()
+            assert name not in codeobj.poisson_lamdas.keys()
+            codeobj.poisson_lamdas[name] = lamda
+            codeobj.rng_calls[name] = matches_poisson.count(lamda_str)
+            lamda_matches[name] = lamda_str
+            #if lamda not in codeobj.rng_calls["poisson"]:
+            #    codeobj.rng_calls["poisson"][lamda] = {
+            #        "name": "poisson_{}".format(num_poissons),
+            #        "num_calls": 0,
+            #        "match": lamda_str
+            #    }
+            #codeobj.rng_calls["poisson"][lamda]["num_calls"] += 1
+            print("LAM", codeobj.name, name, lamda)
 
-    if codeobj.template_name == 'synapses':
-        # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
-        # therefore we have twice as much matches for rand/randn
-        assert codeobj.rng_calls["rand"] % 2 == 0
-        assert codeobj.rng_calls["randn"] % 2 == 0
-        codeobj.rng_calls["randn"] /= 2
-        codeobj.rng_calls["rand"] /= 2
-        for poisson_dict in codeobj.rng_calls["poisson"].values():
-            assert poisson_dict["num_calls"] % 2 == 0
-            poisson_dict["num_calls"] /= 2
+        if codeobj.template_name == 'synapses':
+            # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
+            # therefore we have twice as much matches for rand/randn
+            assert codeobj.rng_calls["rand"] % 2 == 0
+            assert codeobj.rng_calls["randn"] % 2 == 0
+            codeobj.rng_calls["randn"] /= 2
+            codeobj.rng_calls["rand"] /= 2
+            for poisson_dict in codeobj.rng_calls["poisson"].values():
+                assert poisson_dict["num_calls"] % 2 == 0
+                poisson_dict["num_calls"] /= 2
 
-    repeat = 2 if codeobj.template_name == 'synapses' else 1
-    if codeobj.rng_calls["rand"] > 0:
-        # substitute rand/n arguments twice for synapses templates
-        for _ in range(repeat):
-            for i in range(codeobj.rng_calls["rand"]):
-                codeobj.code.cu_file = re.sub(
-                    rand_pattern,
-                    "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
-                    codeobj.code.cu_file,
-                    count=1)
-
-    if codeobj.rng_calls["randn"] > 0:
-        # substitute rand/n arguments twice for synapses templates
-        for _ in range(repeat):
-            for i in range(codeobj.rng_calls["randn"]):
-                codeobj.code.cu_file = re.sub(
-                    randn_pattern,
-                    "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
-                    codeobj.code.cu_file,
-                    count=1)
-
-    for name, lamda_match in lamda_matches.items():
-        if codeobj.rng_calls[name] > 0:
-            # substitute poisson arguments twice for synapses templates
+        repeat = 2 if codeobj.template_name == 'synapses' else 1
+        if codeobj.rng_calls["rand"] > 0:
+            # substitute rand/n arguments twice for synapses templates
             for _ in range(repeat):
-                for i in range(codeobj.rng_calls[name]):
+                for i in range(codeobj.rng_calls["rand"]):
                     codeobj.code.cu_file = re.sub(
-                        poisson_pattern.replace(
-                            # use the correct lamda instead of matching the lamda
-                            "(?P<lamda>.*?)", lamda_match
-                        ),
-                        "_poisson({lamda}, _vectorisation_idx + {i} * _N)".format(
-                            lamda=lamda_match, i=i
-                        ),
+                        rand_pattern,
+                        "_rand(_vectorisation_idx + {i} * _N)".format(i=i),
                         codeobj.code.cu_file,
                         count=1)
 
-    binomial = None
-    if check_curand_states:
-        binomial = False
-        match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
-        if match is not None:
-            binomial = True
+        if codeobj.rng_calls["randn"] > 0:
+            # substitute rand/n arguments twice for synapses templates
+            for _ in range(repeat):
+                for i in range(codeobj.rng_calls["randn"]):
+                    codeobj.code.cu_file = re.sub(
+                        randn_pattern,
+                        "_randn(_vectorisation_idx + {i} * _N)".format(i=i),
+                        codeobj.code.cu_file,
+                        count=1)
 
-    return binomial
+        for poisson_name, lamda_match in lamda_matches.items():
+            if codeobj.rng_calls[poisson_name] > 0:
+                # Name of pointer variable passed as kernel parameter
+                poisson_ptr = "_ptr_array_{codeobj.name}_{poisson_name}".format(
+                    codeobj=codeobj, poisson_name=poisson_name
+                )
+                # substitute poisson arguments twice for synapses templates
+                for _ in range(repeat):
+                    for i in range(codeobj.rng_calls[poisson_name]):
+                        codeobj.code.cu_file = re.sub(
+                            poisson_pattern.replace(
+                                # use the correct lamda instead of matching the lamda
+                                "(?P<lamda>.*?)", lamda_match
+                            ),
+                            "_poisson({poisson_ptr}, _vectorisation_idx + {i} * _N)".format(
+                                poisson_ptr=poisson_ptr, i=i
+                            ),
+                            codeobj.code.cu_file,
+                            count=1)
+
+        binomial = None
+        if check_curand_states:
+            binomial = False
+            match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+            if match is not None:
+                binomial = True
+
+        return binomial
 
 
 cuda_standalone_device = CUDAStandaloneDevice()
