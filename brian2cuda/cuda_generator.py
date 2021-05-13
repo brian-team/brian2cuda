@@ -893,6 +893,13 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=rand_code,
                                                              name='_rand')
 
+poisson_code = '''
+    #define _poisson(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_poisson[vectorisation_idx])
+    '''
+DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(CUDACodeGenerator,
+                                                                code=poisson_code,
+                                                                name='_poisson')
+
 
 # Add support for the `timestep` function added in Brian 2.3.1
 timestep_code = '''

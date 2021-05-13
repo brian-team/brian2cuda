@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from nose import with_setup
 from nose.plugins.attrib import attr
 from numpy.testing.utils import assert_equal, assert_raises, assert_allclose
@@ -25,8 +27,11 @@ def test_rand_randn_regex():
             self.name = 'Name'
             self.code = lambda: 0
             self.code.cu_file = string
-            self.rand_calls = 0
-            self.randn_calls = 0
+            self.rng_calls = {
+                "rand": 0,
+                "randn": 0,
+                "poisson": OrderedDict()
+            }
 
     # should match
     m = []
@@ -54,13 +59,90 @@ def test_rand_randn_regex():
 
     for i, co in enumerate(m):
         check_codeobj_for_rng(co)
-        assert co.rand_calls == 1, \
-            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
+        assert co.rng_calls["rand"] == 1, \
+            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
     for i, co in enumerate(n):
         check_codeobj_for_rng(co)
-        assert co.rand_calls == 0, \
-            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
+        assert co.rng_calls["rand"] == 0, \
+            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+
+
+@attr('cuda_standalone', 'standalone-only')
+def test_poisson_regex():
+    # Since we don't build anython but only test a Python function in
+    # device.py, we can run this standalone-only test without set_device and
+    # device.build
+
+    # dummy class to fit with check_codeobj_for_rng function
+    class DummyCodeobj():
+        def __init__(self, string):
+            self.template_name = 'TemplateName'
+            self.name = 'Name'
+            self.code = lambda: 0
+            self.code.cu_file = string
+            self.rng_calls = {
+                "rand": 0,
+                "randn": 0,
+                "poisson": OrderedDict()
+            }
+
+    co = DummyCodeobj('''
+        _rand(_vectorisation_idx)
+        _poisson(l, _vectorisation_idx)
+        _poisson(5, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(5, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(l, _vectorisation_idx)
+        ''')
+    check_codeobj_for_rng(co)
+    replaced_code = '''
+        _rand(_vectorisation_idx + 0 * _N)
+        _poisson(l, _vectorisation_idx + 0 * _N)
+        _poisson(5, _vectorisation_idx + 0 * _N)
+        _poisson(.01, _vectorisation_idx + 0 * _N)
+        _poisson(5, _vectorisation_idx + 1 * _N)
+        _poisson(.01, _vectorisation_idx + 1 * _N)
+        _poisson(.01, _vectorisation_idx + 2 * _N)
+        _poisson(l, _vectorisation_idx + 1 * _N)
+        '''
+    assert_equal(co.code.cu_file, replaced_code)
+    assert co.code.cu_file == replaced_code, replaced_code
+    ## should match
+    #m = []
+    #m.append(DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
+    #m.append(DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
+    #m.append(DummyCodeobj(' _rand(_vectorisation_idx)'))
+    #m.append(DummyCodeobj('_rand(_vectorisation_idx)'))
+    #m.append(DummyCodeobj('*_rand(_vectorisation_idx)'))
+    #m.append(DummyCodeobj('_rand(_vectorisation_idx)-'))
+    #m.append(DummyCodeobj('+_rand(_vectorisation_idx)-'))
+
+    ## should not match
+    #n = []
+    #n.append(DummyCodeobj('h_rand(_vectorisation_idx)'))
+    #n.append(DummyCodeobj('_rand_h(_vectorisation_idx)'))
+    #n.append(DummyCodeobj('#_rand_h(_vectorisation_idx)'))
+    #n.append(DummyCodeobj('# _rand_h(_vectorisation_idx)'))
+    #n.append(DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
+    #n.append(DummyCodeobj('#define _rand(_vectorisation_idx)'))
+    #n.append(DummyCodeobj(' #define _rand(_vectorisation_idx)'))
+    #n.append(DummyCodeobj('  #define _rand(_vectorisation_idx)'))
+
+    ## this one is matched currently (double space)
+    ##n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
+
+    #for i, co in enumerate(m):
+    #    check_codeobj_for_rng(co)
+    #    assert co.rng_calls["rand"] == 1, \
+    #        "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+
+    #for i, co in enumerate(n):
+    #    check_codeobj_for_rng(co)
+    #    assert co.rng_calls["rand"] == 0, \
+    #        "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
 
 @attr('cuda_standalone', 'standalone-only')
@@ -82,12 +164,12 @@ def test_rand_randn_occurence_counting():
     assert len(device.all_code_objects['binomial']) == 0
 
     for code_object in device.all_code_objects['rand']:
-        assert code_object.rand_calls == 1
-        assert code_object.randn_calls == 0
+        assert code_object.rng_calls["rand"] == 1
+        assert code_object.rng_calls["randn"] == 0
 
     for code_object in device.all_code_objects['randn']:
-        assert code_object.rand_calls == 0
-        assert code_object.randn_calls == 1
+        assert code_object.rng_calls["rand"] == 0
+        assert code_object.rng_calls["randn"] == 1
 
     for code_object in device.all_code_objects['rand_or_randn']:
         assert code_object not in device.code_object_with_binomial_separate_call

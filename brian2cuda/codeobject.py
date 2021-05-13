@@ -6,6 +6,8 @@ effect application if race conditions are possible.
 `CUDAStandaloneAtomicsCodeObject` uses atomic operations which allows parallel
 effect applications even when race conditions are possible.
 '''
+from collections import defaultdict
+
 from brian2.codegen.codeobject import CodeObject, constant_or_scalar
 from brian2.codegen.targets import codegen_targets
 from brian2.codegen.templates import Templater
@@ -38,8 +40,8 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     def __init__(self, *args, **kwargs):
         super(CUDAStandaloneCodeObject, self).__init__(*args, **kwargs)
         self.runs_every_tick = True  #default True, set False in generate_main_source
-        self.rand_calls = 0
-        self.randn_calls = 0
+        self.rng_calls = defaultdict(int)
+        self.poisson_lamdas = defaultdict(float)
         self.binomial_function = False
 
     def __call__(self, **kwds):
