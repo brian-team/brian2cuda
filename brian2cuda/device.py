@@ -70,25 +70,28 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     '''
 
     def __init__(self):
-        self.minimal_compute_capability = 3.5
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
+        # GPU compute capability:w
+        self.minimal_compute_capability = 3.5
         # list of pre/post ID arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
         # for each run, store a dictionary of codeobjects using rand, randn, poisson
         # (not binomial, which we don't need separate per run since device side curand
         # states need to be initalized only once in the beginning of all runs)
-        self.code_objects_per_run = []
+        self.rng_code_objects_per_run_dicts = []
         # dictionary for all needed poisson distributions
         # all_poisson_lamdas[codeobj.name][poisson_name] = lamda
-        self.all_poisson_lamdas = defaultdict(lambda: defaultdict(float))
+        self.all_poisson_lamdas = {}
         # and a dictionary with the same across all run calls
-        # keys: 'rand', 'randn', 'poisson-<lambda>', 'all' (union of all)
+        # keys: 'rand', 'randn', 'poisson-<idx>', 'all' (union of all)
         self.all_code_objects_host_rng = defaultdict(list)
-        self.all_code_objects_device_rng = {"binomial": []}
-        # and collect codeobjects run only once with binomial in separate list
-        self.code_object_with_binomial_separate_call = []
+        # this list collects all codeobjects that use curand device api (binomial or
+        # poisson with variable lambda)
+        self.all_code_objects_device_rng = []
+        # and collect codeobjects run only once with curand device api in separate list
+        self.code_object_with_device_api_rng_separate_call = []
         # store gpu_id and compute capability
         self.gpu_id = None
         self.compute_capability = None
@@ -391,6 +394,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer, main_includes):
+
         main_lines = []
         procedures = [('', main_lines)]
         runfuncs = {}
@@ -401,9 +405,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 codeobj.runs_every_tick = False
                 # need to check for rand/randn/binomial for objects only run
                 # once, stored in `code_object.rand(n)_calls`.
-                uses_binomial = self.check_codeobj_for_rng(codeobj, check_curand_states=True)
-                if uses_binomial:
-                    self.code_object_with_binomial_separate_call.append(codeobj)
+                uses_binomial, uses_poisson_device_api = self.check_codeobj_for_rng(codeobj)
+                if uses_binomial or uses_poisson_device_api:
+                    self.code_object_with_device_api_rng_separate_call.append(codeobj)
                     if isinstance(codeobj.owner, Synapses) \
                             and codeobj.template_name in ['group_variable_set_conditional', 'group_variable_set']:
                         # At curand state initalization, synapses are not generated yet.
@@ -732,7 +736,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             )
                         )
                         kernel_parameters_lines.append(
-                            "int32_t* _ptr_array_{name}_{poisson}".format(
+                            "unsigned int* _ptr_array_{name}_{poisson}".format(
                                 name=codeobj.name, poisson=rng_type
                             )
                         )
@@ -797,10 +801,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
     def generate_rand_source(self, writer):
-        binomial_codeobjects = {}
-        for co in self.all_code_objects_device_rng['binomial']:
+        curand_device_api_codeobjects = {}
+        for co in self.all_code_objects_device_rng:
             name = co.owner.name
-            if name not in binomial_codeobjects:
+            if name not in curand_device_api_codeobjects:
                 if isinstance(co.owner, Synapses):
                     # this is the pointer to the synapse object's N, which is a
                     # null pointer before synapses are generated and an int ptr
@@ -811,13 +815,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 else:
                     test_ptr = None
                     N = co.owner._N
-                binomial_codeobjects[name] = {'test_ptr': test_ptr, 'N': N}
+                curand_device_api_codeobjects[name] = {'test_ptr': test_ptr, 'N': N}
+        print("LAMDAS", self.all_poisson_lamdas)
+        all_rng_code_objects_per_run = []
+        for code_objects_dict in self.rng_code_objects_per_run_dicts:
+            all_code_codeobj_dict = code_objects_dict.pop('all')
+            all_rng_code_objects_per_run.append(all_code_codeobj_dict)
+        print("DEBUG")
+#        print "\tall_rng_code_objects_per_run:\n\t\t{}".format(all_rng_code_objects_per_run)
+#        print "\tself.all_code_objects_host_rng:\n\t\t{}".format(self.all_code_objects_host_rng)
+        for run_i in range(len(self.rng_code_objects_per_run_dicts)):
+            print(run_i, self.rng_code_objects_per_run_dicts[run_i].keys())
+
         rand_tmp = self.code_object_class().templater.rand(None, None,
-                                                           code_objects_per_run=self.code_objects_per_run,
-                                                           rng_types=self.all_code_objects_host_rng.keys(),
+                                                           rng_code_objects_per_run_dicts=self.rng_code_objects_per_run_dicts,
+                                                           all_rng_code_objects_per_run=all_rng_code_objects_per_run,
                                                            all_poisson_lamdas=self.all_poisson_lamdas,
-                                                           binomial_codeobjects=binomial_codeobjects,
-                                                           number_run_calls=len(self.code_objects_per_run),
+                                                           curand_device_api_codeobjects=curand_device_api_codeobjects,
+                                                           number_run_calls=len(self.rng_code_objects_per_run_dicts),
                                                            profiled=self.enable_profiling,
                                                            curand_float_type=c_data_type(prefs['core.default_float_dtype']))
         writer.write('rand.*', rand_tmp)
@@ -1109,11 +1124,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         #   - Variables needed for device side rand/randn/poisson are declared in objects.cu:
         #     all_code_objects_host_rng['rand'/'rand'/'poisson'] are needed in `generate_objects_source`
         #   - Variables needed for device side binomial functions are initialized in rand.cu:
-        #     all_code_objects_device_rng['binomial'] is needed in `generate_rand_source`
-        for run_codeobj in self.code_objects_per_run:
+        #     all_code_objects_device_rng is needed in `generate_rand_source`
+        for run_codeobj in self.rng_code_objects_per_run_dicts:
             for key in run_codeobj.keys():
                 # keys: 'rand', 'randn', 'poisson-<lambda>', 'all', 'binomial'
-                self.all_code_objects_host_rng[key].extend(run_codeobj[key])
+                if key != "all":
+                    self.all_code_objects_host_rng[key].extend(run_codeobj[key])
         # Device side binomial functions use curand device api. The curand states (one per thread
         # executed in parallel) are initialized in rand.cu. The `run_codeobj` dictionary above only
         # collects codeobjects run every tick in the network. Here, we add those codeobjects that
@@ -1121,10 +1137,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # variables before run). For rand/randn, the codeobject themselves take care of the
         # initialization. For binomial, we need to initialize them in rand.cu.
         # This line needs to be after `self.generate_main_source`, which populates
-        # `self.code_object_with_binomial_separate_call` and before `self.generate_rand_source`
-        for codeobj in self.code_object_with_binomial_separate_call:
-            if codeobj not in self.all_code_objects_device_rng['binomial']:
-                self.all_code_objects_device_rng['binomial'].append(codeobj)
+        # `self.code_object_with_device_api_rng_separate_call` and before `self.generate_rand_source`
+        for codeobj in self.code_object_with_device_api_rng_separate_call:
+            if codeobj not in self.all_code_objects_device_rng:
+                self.all_code_objects_device_rng.append(codeobj)
 
         self.generate_codeobj_source(self.writer)
         self.generate_objects_source(self.writer, self.arange_arrays,
@@ -1264,7 +1280,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         code_object_rng = defaultdict(list)
 
         for _, co in code_objects:  # (clock, code_object)
-            binomial_match = self.check_codeobj_for_rng(co, check_curand_states=True)
+            binomial_match, uses_poisson_device_api = self.check_codeobj_for_rng(co)
             if co.rng_calls["rand"] > 0:
                 code_object_rng['rand'].append(co)
                 code_object_rng['all'].append(co)
@@ -1278,12 +1294,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # only add if it wasn't already added before
                 if len(code_object_rng['all']) == 0 or code_object_rng['all'][-1] != co:
                     code_object_rng['all'].append(co)
-            if binomial_match:
-                if co not in self.all_code_objects_device_rng['binomial']:
-                    self.all_code_objects_device_rng['binomial'].append(co)
+            if binomial_match or uses_poisson_device_api:
+                if co not in self.all_code_objects_device_rng:
+                    self.all_code_objects_device_rng.append(co)
 
         # store the codeobject dictionary for each run
-        self.code_objects_per_run.append(code_object_rng)
+        self.rng_code_objects_per_run_dicts.append(code_object_rng)
 
         # To profile SpeedTests, we need to be able to set `profile` in
         # `set_device`. Here we catch that case.
@@ -1387,7 +1403,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.first_run = False
 
 
-    def check_codeobj_for_rng(self, codeobj, check_curand_states=False):
+    def check_codeobj_for_rng(self, codeobj):
         '''
         Count the number of `"rand()"`, `"randn()"` and "poisson(<lambda>) appearances in
         `codeobj.code.cu_file` and store them as attributes in `codeobj.rng_calls["rand"]`,
@@ -1397,8 +1413,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ----------
         codeobj: CodeObjects
             Codeobject with generated CUDA code in `codeobj.code.cu_file`.
-        check_curand_states: bool, optional
-            Wether to also check if `"binomial()"` appears. Default is False.
 
         Returns
         -------
@@ -1408,10 +1422,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         '''
         # synapses_create_generator uses host side random number generation
         if codeobj.template_name == 'synapses_create_generator':
-            if check_curand_states:
-                return False
-            else:
-                return None
+            return (False, False)
 
         # regex explained
         # (?<!...) negative lookbehind: don't match if ... preceeds
@@ -1448,26 +1459,65 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         #   TODO: Add another CUDAStandaloneCodeObject attribute for poisson_name -> lamda
         #   TODO: Get rid of lines
         lamda_matches = {}
-        for i, lamda_str in enumerate(set(matches_poisson)):
+        self.all_poisson_lamdas[codeobj.name] = {}
+        poisson_device_api = False
+        poisson_with_lamda_zero = []
+        for i, lamda_match in enumerate(set(matches_poisson)):
             try:
-                lamda = float(lamda_str)
+                lamda = float(lamda_match)
+                lamda_is_scalar = True
             except ValueError:
-                lamda = lamda_str
-            name = "poisson_{i}".format(i=i)
-            self.all_poisson_lamdas[codeobj.name][name] = lamda
-            assert lamda not in codeobj.poisson_lamdas.values()
-            assert name not in codeobj.poisson_lamdas.keys()
-            codeobj.poisson_lamdas[name] = lamda
-            codeobj.rng_calls[name] = matches_poisson.count(lamda_str)
-            lamda_matches[name] = lamda_str
+                # lamda is not a float but a variable
+                # Check if lamda is scalar
+                if lamda_match in codeobj.variables and codeobj.variables[lamda_match].scalar:
+                    lamda = codeobj.variables[lamda_match].value
+                    lamda_is_scalar = True
+                else:
+                    # lamda is an array variable
+                    lamda = lamda_match
+                    lamda_is_scalar = False
+
+            poisson_name = "poisson_{i}".format(i=i)
+
+#            # We don't want to generate random numbers on the host for lambda <= 0,
+#            # which should return 0 anyways. We use the _poisson(double, ...) function,
+#            # which checks for lambda <= 0 before callind the curand devica API. Hence
+#            # we don't need host side RNG or curand states.
+#            if lamda_is_scalar and lamda == 0:
+#                print("DEBUG LAMBDA IS SCALAR")
+#                # We need to replace '0' with '0.0' (double literal) for lambda in this
+#                # case, see comment below
+#                poisson_with_lamda_zero.append(poisson_name)
+#                continue
+
+            if lamda_is_scalar:
+                # We don't want to generate random numbers on the host for lambda <= 0,
+                # which should return 0 anyways. We use the _poisson(double, ...) function,
+                # which checks for lambda <= 0 before callind the curand devica API. Hence
+                # we don't need host side RNG or curand states.
+                lamda_matches[poisson_name] = lamda_match
+                if lamda <= 0:
+                    # We need to replace '0' with '0.0' (double literal) for lambda in this
+                    # case, see comment below
+                    poisson_with_lamda_zero.append(poisson_name)
+                    continue
+                self.all_poisson_lamdas[codeobj.name][poisson_name] = lamda
+                assert lamda not in codeobj.poisson_lamdas.values()
+                assert poisson_name not in codeobj.poisson_lamdas.keys()
+                codeobj.poisson_lamdas[poisson_name] = lamda
+                codeobj.rng_calls[poisson_name] = matches_poisson.count(lamda_match)
+            else:
+                codeobj.poisson_variable = True
+                poisson_device_api = True
+
             #if lamda not in codeobj.rng_calls["poisson"]:
             #    codeobj.rng_calls["poisson"][lamda] = {
             #        "name": "poisson_{}".format(num_poissons),
             #        "num_calls": 0,
-            #        "match": lamda_str
+            #        "match": lamda_match
             #    }
             #codeobj.rng_calls["poisson"][lamda]["num_calls"] += 1
-            print("LAM", codeobj.name, name, lamda)
+            print("LAM", codeobj.name, poisson_name, lamda)
 
         if codeobj.template_name == 'synapses':
             # We have two if/else code paths in synapses code (homog. / heterog. delay mode),
@@ -1502,33 +1552,42 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         count=1)
 
         for poisson_name, lamda_match in lamda_matches.items():
+            sub_pattern = poisson_pattern.replace(
+                # use the correct lamda instead of matching the lamda
+                "(?P<lamda>.*?)", lamda_match
+            )
             if codeobj.rng_calls[poisson_name] > 0:
-                # Name of pointer variable passed as kernel parameter
-                poisson_ptr = "_ptr_array_{codeobj.name}_{poisson_name}".format(
-                    codeobj=codeobj, poisson_name=poisson_name
-                )
-                # substitute poisson arguments twice for synapses templates
                 for _ in range(repeat):
                     for i in range(codeobj.rng_calls[poisson_name]):
+                        sub_repl = "_poisson(_ptr_array_{codeobj.name}_{poisson_name}, _vectorisation_idx + {i} * _N)".format(
+                            codeobj=codeobj, poisson_name=poisson_name, i=i
+                        )
                         codeobj.code.cu_file = re.sub(
-                            poisson_pattern.replace(
-                                # use the correct lamda instead of matching the lamda
-                                "(?P<lamda>.*?)", lamda_match
-                            ),
-                            "_poisson({poisson_ptr}, _vectorisation_idx + {i} * _N)".format(
-                                poisson_ptr=poisson_ptr, i=i
-                            ),
+                            sub_pattern,
+                            sub_repl,
                             codeobj.code.cu_file,
-                            count=1)
+                            count=1
+                        )
+            elif poisson_name in poisson_with_lamda_zero:
+                # Make sure the _poisson argument is a double literal. "0" fails since
+                # it can be interpreted as both, null pointer or double and the _poisson
+                # implementation is overloaded for `unsigned int *` and `double`.
+                sub_repl= "_poisson({lamda_match:.1f}, _vectorisation_idx)".format(
+                    lamda_match=float(lamda_match)
+                )
+                codeobj.code.cu_file = re.sub(
+                    sub_pattern,
+                    sub_repl,
+                    codeobj.code.cu_file,
+                    count=0  # replace all ocurrences at once
+                )
 
-        binomial = None
-        if check_curand_states:
-            binomial = False
-            match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
-            if match is not None:
-                binomial = True
+        binomial = False
+        match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+        if match is not None:
+            binomial = True
 
-        return binomial
+        return binomial, poisson_device_api
 
 
 cuda_standalone_device = CUDAStandaloneDevice()

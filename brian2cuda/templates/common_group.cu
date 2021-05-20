@@ -15,15 +15,21 @@ namespace {
     {% block random_functions %}
     // Implement dummy functions such that the host compiled code of binomial
     // functions works. Hacky, hacky ...
-    double host_rand(const int _vectorisation_idx)
+    double _host_rand(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
-    double host_randn(const int _vectorisation_idx)
+    double _host_randn(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+                __LINE__);
+        exit(EXIT_FAILURE);
+    }
+    int32_t _host_poisson(double _lambda, const int _vectorisation_idx)
+    {
+        printf("ERROR: Called dummy function `_host_poisson` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }

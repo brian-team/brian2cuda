@@ -69,14 +69,15 @@ void RandomNumberBuffer::init()
     {
         // number of time steps each codeobject is executed during current Network::run() call
         // XXX: we are assuming here that this function is only run in the first time step of a Network::run()
-        {% for co in code_objects_per_run[run_i]['all'] | sort(attribute='name') %}
+        {% for co in all_rng_code_objects_per_run[run_i] | sort(attribute='name') %}
         int64_t num_steps_this_run_{{co.name}} = {{co.owner.clock.name}}.i_end - *{{co.owner.clock.name}}.timestep;
         {% endfor %}
 
+        {% set rng_types = rng_code_objects_per_run_dicts[run_i].keys() %}
         {% for type in rng_types %}
         {# no binomial, it doesn't use a buffer but on the fly rng #}
 
-        {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
+        {% for co in rng_code_objects_per_run_dicts[run_i][type] | sort(attribute='name') %}
         {# TODO: pass isinstance to Jinja template to make it available here #}
         {% if co.owner.__class__.__name__ == 'Synapses' %}
         {% set N = '_array_' + co.owner.name + '_N[0]' %}
@@ -141,13 +142,13 @@ void RandomNumberBuffer::init()
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&dev_{{co.name}}_{{type}}_allocator, sizeof({{dtype}})*num_per_gen_{{type}}_{{co.name}})
                 );
-        {% endfor %}{# for co in code_objects_per_run[run_i][type] #}
+        {% endfor %}{# for co in rng_code_objects_per_run_dicts[run_i][type] #}
         {% endfor %}{# for type in rng_types #}
 
         // now check if the total number of generated floats fit into available memory
         int total_num_generated_floats = 0;
         {% for type in rng_types %}
-        {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
+        {% for co in rng_code_objects_per_run_dicts[run_i][type] | sort(attribute='name') %}
         total_num_generated_floats += num_per_gen_{{type}}_{{co.name}};
         {% endfor %}
         {% endfor %}
@@ -199,10 +200,10 @@ void RandomNumberBuffer::update_needed_number_curand_states()
     // using the cuRAND device API. For synapses objects, the number of
     // synapses might not be known yet. This is the case when the first random
     // seed is set and for any seed() call before the synapses creation.
-    {% for co_name in binomial_codeobjects %}
+    {% for co_name in curand_device_api_codeobjects %}
 
     // codeobject with binomial: {{co_name}}
-    {% set co = binomial_codeobjects[co_name] %}
+    {% set co = curand_device_api_codeobjects[co_name] %}
 
     {% if co['test_ptr'] %}
     // test if synapses are already created (else this is a NULL pointer)
@@ -378,6 +379,7 @@ void RandomNumberBuffer::refill_poisson_numbers(
 {
     // generate poisson distributed random numbers and reset buffer index
 
+    printf("num_per_gen_poisson %d, lambda %f\n", num_per_gen_poisson, lambda);
     CUDA_SAFE_CALL(
             curandGeneratePoisson(curand_generator, dev_poisson_allocator, num_per_gen_poisson, lambda)
             );
@@ -394,15 +396,16 @@ void RandomNumberBuffer::next_time_step()
         if (run_counter > 0)
         {
             {% for run_i in range(number_run_calls) %}
+            {% set rng_types = rng_code_objects_per_run_dicts[run_i].keys() %}
             {% set need_cleanup = False %}
             {% for type in rng_types %}
-            {% set need_cleanup = need_cleanup or code_objects_per_run[run_i][type] %}
+            {% set need_cleanup = need_cleanup or rng_code_objects_per_run_dicts[run_i][type] %}
             {% endfor %}
             {% if need_cleanup %}
             if (run_counter == {{run_i}})
             {
                 {% for type in rng_types %}
-                {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
+                {% for co in rng_code_objects_per_run_dicts[run_i][type] | sort(attribute='name') %}
                 CUDA_SAFE_CALL(
                         cudaFree(dev_{{co.name}}_{{type}}_allocator)
                         );
@@ -421,8 +424,9 @@ void RandomNumberBuffer::next_time_step()
     {% for run_i in range(number_run_calls) %}
     if (run_counter == {{run_i}})
     {
+        {% set rng_types = rng_code_objects_per_run_dicts[run_i].keys() %}
         {% for type in rng_types %}
-        {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
+        {% for co in rng_code_objects_per_run_dicts[run_i][type] | sort(attribute='name') %}
 
         // random numbers ({{type}}) for {{co.name}}
         if (idx_{{type}}_{{co.name}} == {{type}}_interval_{{co.name}})
@@ -510,9 +514,10 @@ class RandomNumberBuffer
     {% for run_i in range(number_run_calls) %}
     ////// run {{run_i}}
 
+    {% set rng_types = rng_code_objects_per_run_dicts[run_i].keys() %}
     {% for type in rng_types %}
 
-    {% if code_objects_per_run[run_i][type]|length > 0 %}
+    {% if rng_code_objects_per_run_dicts[run_i][type]|length > 0 %}
     {% if type == 'rand' %}
     //// uniform distributed random numbers (rand)
     {% elif type == 'randn' %}
@@ -522,7 +527,7 @@ class RandomNumberBuffer
     {% endif %}
     {% endif %}
 
-    {% for co in code_objects_per_run[run_i][type] | sort(attribute='name') %}
+    {% for co in rng_code_objects_per_run_dicts[run_i][type] | sort(attribute='name') %}
 
     // {{co.name}}
     int num_per_cycle_{{type}}_{{co.name}};

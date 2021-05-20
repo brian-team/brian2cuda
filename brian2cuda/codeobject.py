@@ -41,7 +41,12 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
         super(CUDAStandaloneCodeObject, self).__init__(*args, **kwargs)
         self.runs_every_tick = True  #default True, set False in generate_main_source
         self.rng_calls = defaultdict(int)
+        # {name: lambda} dictionary for all poisson functions with same lamda for all
+        # units of an codeobject (will be generated using the curand host side API)
         self.poisson_lamdas = defaultdict(float)
+        # [name] list for all poisson functions where lamda is a variable itself (these
+        # will we generated on the fly using the curand device API)
+        self.poisson_variable = False
         self.binomial_function = False
 
     def __call__(self, **kwds):

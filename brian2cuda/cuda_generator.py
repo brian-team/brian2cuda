@@ -894,15 +894,55 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              name='_rand')
 
 poisson_code = '''
+    // Few notes on the poisson function:
+    //   - Curand generates unsigned int, brian uses int32_t, casting is happening here
+    //   - The only codeobject that uses host side random numbers is
+    //     synapses_create_generator.cu. There, a C++ poisson function (same as used
+    //     in C++ Standalone) is implemented and used via _host_poisson(...)
+    //   - For synapses_create_generator.cu tempaltes, the _poisson calls are unchanged
+    //     (no regex substitution) and hence just use the C++ implementation
+    //   - For device side poisson, we have two cases.
+    //       - If the lambda is constant across
+    //         the codeobject, we use host side RNG in rand.cu and pass the data pointer
+    //         to _poisson (first overloaded definition).
+    //       - If the lambda is a variable itself that might be different for each unit
+    //         in the codeobject, we instead use device side RNG (device code path in
+    //         the second overloaded _poisson definition.
+    __device__
+    int32_t _poisson(unsigned int* _poisson_numbers, int32_t _idx)
+    {
+        // poisson with constant lambda are generated with curand host API in rand.cu
+        return (int32_t) _poisson_numbers[_idx];
+    }
     __host__ __device__
-    int32_t _poisson(int32_t* _poisson_numbers, int32_t _idx) {
-        // curand generated unsigned int, brian uses int32_t
-        return _poisson_numbers[_idx];
+    int32_t _poisson(double _lambda, int32_t _idx)
+    {
+    #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
+        if (_lambda <= 0)
+        {
+            return 0;
+        }
+        else
+        {
+            // poisson with variable lambda are generated with curand device API on-the-fly
+            curandState localState = brian::d_curand_states[_idx];
+            unsigned int poisson_number = curand_poisson(&localState, _lambda);
+            brian::d_curand_states[_idx] = localState;
+            return (int32_t) poisson_number;
+        }
+    #else
+        // use C++ implementation defined in synapses_create_generator.cu
+        return _host_poisson(_lambda, _idx);
+    #endif
     }
     '''
-DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(CUDACodeGenerator,
-                                                                code=poisson_code,
-                                                                name='_poisson')
+DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(
+    CUDACodeGenerator,
+    code=poisson_code,
+    #namespace=lambda owner: {},
+    name='_poisson',
+    compiler_kwds={"headers": ["<curand.h>"]}
+)
 
 
 # Add support for the `timestep` function added in Brian 2.3.1

@@ -16,7 +16,7 @@ from brian2cuda.device import check_codeobj_for_rng
 
 @attr('cuda_standalone', 'standalone-only')
 def test_rand_randn_regex():
-    # Since we don't build anython but only test a Python function in
+    # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
@@ -70,7 +70,7 @@ def test_rand_randn_regex():
 
 @attr('cuda_standalone', 'standalone-only')
 def test_poisson_regex():
-    # Since we don't build anython but only test a Python function in
+    # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
