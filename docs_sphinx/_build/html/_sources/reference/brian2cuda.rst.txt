@@ -1,0 +1,57 @@
+brian2cuda package
+==================
+
+.. automodule:: brian2cuda.__init__
+    :show-inheritance:
+
+
+:mod:`binomial` module
+----------------------
+
+.. automodule:: brian2cuda.binomial
+    :show-inheritance:
+
+
+:mod:`codeobject` module
+------------------------
+
+.. automodule:: brian2cuda.codeobject
+    :show-inheritance:
+
+
+:mod:`cuda_generator` module
+----------------------------
+
+.. automodule:: brian2cuda.cuda_generator
+    :show-inheritance:
+
+
+:mod:`cuda_prefs` module
+------------------------
+
+.. automodule:: brian2cuda.cuda_prefs
+    :show-inheritance:
+
+
+:mod:`device` module
+--------------------
+
+.. automodule:: brian2cuda.device
+    :show-inheritance:
+
+
+:mod:`timedarray` module
+------------------------
+
+.. automodule:: brian2cuda.timedarray
+    :show-inheritance:
+
+
+Subpackages
+-----------
+
+.. toctree::
+    :maxdepth: 2
+
+    brian2cuda.utils
+

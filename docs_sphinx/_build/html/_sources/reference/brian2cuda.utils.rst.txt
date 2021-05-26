@@ -1,0 +1,28 @@
+utils package
+=============
+
+.. automodule:: brian2cuda.utils
+    :show-inheritance:
+
+
+:mod:`gputools` module
+----------------------
+
+.. automodule:: brian2cuda.utils.gputools
+    :show-inheritance:
+
+
+:mod:`logger` module
+--------------------
+
+.. automodule:: brian2cuda.utils.logger
+    :show-inheritance:
+
+
+:mod:`stringtools` module
+-------------------------
+
+.. automodule:: brian2cuda.utils.stringtools
+    :show-inheritance:
+
+
