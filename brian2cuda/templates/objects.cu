@@ -164,7 +164,7 @@ unsigned long long* brian::dev_curand_seed;
 {% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
 {% if rng_type in ['rand', 'randn'] %}
 {% set dtype = 'randomNumber_t' %}
-{% else %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
 {% set dtype = 'unsigned int' %}
 {% endif %}
 {{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
@@ -655,7 +655,7 @@ extern __device__ unsigned long long* d_curand_seed;
 {% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
 {% if rng_type in ['rand', 'randn'] %}
 {% set dtype = 'randomNumber_t' %}
-{% else %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
 {% set dtype = 'unsigned int' %}
 {% endif %}
 // pointer to start of generated random numbers array

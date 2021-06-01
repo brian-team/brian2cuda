@@ -39,15 +39,19 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
 
     def __init__(self, *args, **kwargs):
         super(CUDAStandaloneCodeObject, self).__init__(*args, **kwargs)
-        self.runs_every_tick = True  #default True, set False in generate_main_source
+        # Whether this code object runs on a clock or only once. Default is True, set
+        # False in `CUDAStandaloneDevice.generate_main_source()`
+        self.runs_every_tick = True
+        # Dictionary collectin the number of RNG function calls in this code object.
+        # Keys are: "rand", "randn", "poisson-<idx>" with one <idx> for each `poisson`
+        # with different (scalar) lambda
         self.rng_calls = defaultdict(int)
-        # {name: lambda} dictionary for all poisson functions with same lamda for all
-        # units of an codeobject (will be generated using the curand host side API)
+        # {name: lambda} dictionary for all poisson functions with scalar lambda
+        # (these random numbers will be generated using the curand host side API)
         self.poisson_lamdas = defaultdict(float)
-        # [name] list for all poisson functions where lamda is a variable itself (these
-        # will we generated on the fly using the curand device API)
-        self.poisson_variable = False
-        self.binomial_function = False
+        # Whether this codeobject uses curand device API (for binomial functions or
+        # poisson with vectorized lambda) and needs curand states
+        self.needs_curand_states = False
 
     def __call__(self, **kwds):
         return self.run()
