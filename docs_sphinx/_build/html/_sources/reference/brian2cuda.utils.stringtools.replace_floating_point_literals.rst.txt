@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.stringtools
+
+replace_floating_point_literals function
+========================================
+
+(*Shortest import*: ``from brian2cuda.utils import replace_floating_point_literals)``
+
+.. autofunction:: replace_floating_point_literals
+

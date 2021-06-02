@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+get_best_gpu function
+=====================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import get_best_gpu)``
+
+.. autofunction:: get_best_gpu
+

@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.stringtools
+
+append_f function
+=================
+
+(*Shortest import*: ``from brian2cuda.utils import append_f)``
+
+.. autofunction:: append_f
+

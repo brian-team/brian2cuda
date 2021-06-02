@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.device
+
+CUDAWriter class
+================
+
+(*Shortest import*: ``from brian2cuda.device import CUDAWriter)``
+
+.. autoclass:: CUDAWriter
+

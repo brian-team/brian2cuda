@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.device
+
+CUDAStandaloneDevice class
+==========================
+
+(*Shortest import*: ``from brian2cuda.device import CUDAStandaloneDevice)``
+
+.. autoclass:: CUDAStandaloneDevice
+

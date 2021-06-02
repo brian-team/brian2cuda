@@ -16,7 +16,6 @@
 # -- Path setup --------------------------------------------------------------
 
 import sys, os, shutil
-#TODO change this to brian2cuda
 import brian2cuda.sphinxext.generate_reference as generate_reference
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -24,7 +23,7 @@ import brian2cuda.sphinxext.generate_reference as generate_reference
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('.'))
 
-# Mock the scipy module
+# Mock the module
 class Mock(object):
     def __init__(self, *args, **kwargs):
         pass

@@ -1,0 +1,165 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example: cuba_cuda &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Example: mushroombody" href="mushroombody.html" />
+    <link rel="prev" title="Example: cuba" href="cuba.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="example-cuba-cuda">
+<h1>Example: cuba_cuda<a class="headerlink" href="#example-cuba-cuda" title="Permalink to this headline">¶</a></h1>
+<p>Run the <code class="docutils literal notranslate"><span class="pre">cuba.py</span></code> example with OpenMP threads.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">brian2</span> <span class="k">import</span> <span class="o">*</span>
+
+<span class="kn">import</span> <span class="nn">brian2cuda</span>
+<span class="n">set_device</span><span class="p">(</span><span class="s1">&#39;cuda_standalone&#39;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s1">&#39;code/CUBA_CUDA_sp&#39;</span><span class="p">,</span><span class="nb">compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;core.default_float_dtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">float32</span>
+
+<span class="n">taum</span> <span class="o">=</span> <span class="mi">20</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">taue</span> <span class="o">=</span> <span class="mi">5</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">taui</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">Vt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">50</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">Vr</span> <span class="o">=</span> <span class="o">-</span><span class="mi">60</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">El</span> <span class="o">=</span> <span class="o">-</span><span class="mi">49</span><span class="o">*</span><span class="n">mV</span>
+
+<span class="n">eqs</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">dv/dt  = (ge+gi-(v-El))/taum : volt (unless refractory)</span>
+<span class="s1">dge/dt = -ge/taue : volt (unless refractory)</span>
+<span class="s1">dgi/dt = -gi/taui : volt (unless refractory)</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+<span class="n">P</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="mi">4000</span><span class="p">,</span> <span class="n">eqs</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;v&gt;Vt&#39;</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="s1">&#39;v = Vr&#39;</span><span class="p">,</span> <span class="n">refractory</span><span class="o">=</span><span class="mi">5</span><span class="o">*</span><span class="n">ms</span><span class="p">)</span>
+<span class="n">P</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="s1">&#39;Vr + rand() * (Vt - Vr)&#39;</span>
+<span class="n">P</span><span class="o">.</span><span class="n">ge</span> <span class="o">=</span> <span class="mi">0</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">P</span><span class="o">.</span><span class="n">gi</span> <span class="o">=</span> <span class="mi">0</span><span class="o">*</span><span class="n">mV</span>
+
+<span class="n">we</span> <span class="o">=</span> <span class="p">(</span><span class="mi">60</span><span class="o">*</span><span class="mf">0.27</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span><span class="o">*</span><span class="n">mV</span> <span class="c1"># excitatory synaptic weight (voltage)</span>
+<span class="n">wi</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">20</span><span class="o">*</span><span class="mf">4.5</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span><span class="o">*</span><span class="n">mV</span> <span class="c1"># inhibitory synaptic weight</span>
+<span class="n">Ce</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;ge += we&#39;</span><span class="p">)</span>
+<span class="n">Ci</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;gi += wi&#39;</span><span class="p">)</span>
+<span class="n">Ce</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;i&lt;3200&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
+<span class="n">Ci</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;i&gt;=3200&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
+
+<span class="n">s_mon</span> <span class="o">=</span> <span class="n">SpikeMonitor</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
+
+<span class="n">run</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">second</span><span class="p">,</span> <span class="n">report</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">)</span>
+
+<span class="n">plot</span><span class="p">(</span><span class="n">s_mon</span><span class="o">.</span><span class="n">t</span><span class="o">/</span><span class="n">ms</span><span class="p">,</span> <span class="n">s_mon</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;.k&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">title</span><span class="p">(</span><span class="s1">&#39;CUBA_CUDA&#39;</span><span class="p">)</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (ms)&#39;</span><span class="p">)</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Neuron index&#39;</span><span class="p">)</span>
+<span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;code/CUBA_CUDA/CUBA_CUDA_rasterplot.png&#39;</span><span class="p">)</span>
+<span class="c1">#show()</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Example documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples</a><ul>
+      <li>Previous: <a href="cuba.html" title="previous chapter">Example: cuba</a></li>
+      <li>Next: <a href="mushroombody.html" title="next chapter">Example: mushroombody</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/examples/cuba_cuda.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.device
+
+check_codeobj_for_rng function
+==============================
+
+(*Shortest import*: ``from brian2cuda.device import check_codeobj_for_rng)``
+
+.. autofunction:: check_codeobj_for_rng
+

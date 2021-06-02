@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+restore_cuda_installation function
+==================================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import restore_cuda_installation)``
+
+.. autofunction:: restore_cuda_installation
+

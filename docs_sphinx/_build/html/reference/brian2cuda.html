@@ -16,8 +16,8 @@
     <script type="text/javascript" src="../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="utils package" href="brian2cuda.utils.html" />
-    <link rel="prev" title="Introduction" href="../introduction/index.html" />
+    <link rel="next" title="CUDAStandaloneAtomicsCodeObject class" href="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject.html" />
+    <link rel="prev" title="Brian2cuda specific preferences" href="../introduction/preferences.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -36,7 +36,7 @@
             
   <div class="section" id="module-brian2cuda.__init__">
 <span id="brian2cuda-package"></span><h1>brian2cuda package<a class="headerlink" href="#module-brian2cuda.__init__" title="Permalink to this headline">¶</a></h1>
-<p>x.__init__(…) initializes x; see help(type(x)) for signature</p>
+<p>Package implementing the CUDA “standalone” <code class="xref py py-obj docutils literal notranslate"><span class="pre">Device</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code>.</p>
 <div class="section" id="module-brian2cuda.binomial">
 <span id="binomial-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">binomial</span></code> module<a class="headerlink" href="#module-brian2cuda.binomial" title="Permalink to this headline">¶</a></h2>
 <p>CUDA implementation of <code class="xref py py-obj docutils literal notranslate"><span class="pre">BinomialFunction</span></code></p>
@@ -44,26 +44,143 @@
 <div class="section" id="module-brian2cuda.codeobject">
 <span id="codeobject-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">codeobject</span></code> module<a class="headerlink" href="#module-brian2cuda.codeobject" title="Permalink to this headline">¶</a></h2>
 <p>Module implementing the CUDA “standalone” <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code>. Brian2CUDA implements
-two different code objects. <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code> is the standard
+two different code objects. <a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneCodeObject.html#brian2cuda.codeobject.CUDAStandaloneCodeObject" title="brian2cuda.codeobject.CUDAStandaloneCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code></a> is the standard
 implementation, which does not use atomic operations but serialized synaptic
 effect application if race conditions are possible.
-<code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneAtomicsCodeObject</span></code> uses atomic operations which allows parallel
+<a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject.html#brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject" title="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneAtomicsCodeObject</span></code></a> uses atomic operations which allows parallel
 effect applications even when race conditions are possible.</p>
 <p><em>Exported members:</em> 
-<code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneAtomicsCodeObject</span></code></p>
+<a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneCodeObject.html#brian2cuda.codeobject.CUDAStandaloneCodeObject" title="brian2cuda.codeobject.CUDAStandaloneCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code></a>, <a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject.html#brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject" title="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneAtomicsCodeObject</span></code></a></p>
+<p><strong>Classes</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject.html#brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject" title="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneAtomicsCodeObject</span></code></a>(owner,&nbsp;code,&nbsp;…)</td>
+<td>CUDA standalone code object which uses atomic operations for parallel execution</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.codeobject.CUDAStandaloneCodeObject.html#brian2cuda.codeobject.CUDAStandaloneCodeObject" title="brian2cuda.codeobject.CUDAStandaloneCodeObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code></a>(owner,&nbsp;code,&nbsp;…[,&nbsp;…])</td>
+<td>CUDA standalone code object</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.cuda_generator">
 <span id="cuda-generator-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">cuda_generator</span></code> module<a class="headerlink" href="#module-brian2cuda.cuda_generator" title="Permalink to this headline">¶</a></h2>
 <p><em>Exported members:</em> 
-<code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDACodeGenerator</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAAtomicsCodeGeneratorc_data_type</span></code></p>
+<a class="reference internal" href="brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator" title="brian2cuda.cuda_generator.CUDACodeGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDACodeGenerator</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAAtomicsCodeGeneratorc_data_type</span></code></p>
+<p><strong>Classes</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator.html#brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator" title="brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAAtomicsCodeGenerator</span></code></a>(*args,&nbsp;**kwds)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator" title="brian2cuda.cuda_generator.CUDACodeGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDACodeGenerator</span></code></a>(*args,&nbsp;**kwds)</td>
+<td>C++ language with CUDA library</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.cuda_generator.ParallelisationError.html#brian2cuda.cuda_generator.ParallelisationError" title="brian2cuda.cuda_generator.ParallelisationError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ParallelisationError</span></code></a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.cuda_prefs">
 <span id="cuda-prefs-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">cuda_prefs</span></code> module<a class="headerlink" href="#module-brian2cuda.cuda_prefs" title="Permalink to this headline">¶</a></h2>
 <p>Preferences that relate to the brian2cuda interface.</p>
+<p><strong>Functions</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.cuda_prefs.compute_capability_validator.html#brian2cuda.cuda_prefs.compute_capability_validator" title="brian2cuda.cuda_prefs.compute_capability_validator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_capability_validator</span></code></a>(cc)</td>
+<td>This function checks compute capability preference and raises an error if it is larger than the minimal supported compute capability.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.device">
 <span id="device-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">device</span></code> module<a class="headerlink" href="#module-brian2cuda.device" title="Permalink to this headline">¶</a></h2>
 <p>Module implementing the CUDA “standalone” device.</p>
+<p><strong>Classes</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.device.CUDAStandaloneDevice.html#brian2cuda.device.CUDAStandaloneDevice" title="brian2cuda.device.CUDAStandaloneDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneDevice</span></code></a>()</td>
+<td>The <code class="xref py py-obj docutils literal notranslate"><span class="pre">Device</span></code> used for CUDA standalone simulations.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.device.CUDAWriter.html#brian2cuda.device.CUDAWriter" title="brian2cuda.device.CUDAWriter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAWriter</span></code></a>(project_dir)</td>
+<td><p class="rubric">Methods</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functions</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.device.check_codeobj_for_rng.html#brian2cuda.device.check_codeobj_for_rng" title="brian2cuda.device.check_codeobj_for_rng"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_codeobj_for_rng</span></code></a>(codeobj[,&nbsp;check_binomial])</td>
+<td>Count the number of <code class="xref py py-obj docutils literal notranslate"><span class="pre">&quot;rand()&quot;</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">&quot;randn()&quot;</span></code> appearances in <code class="xref py py-obj docutils literal notranslate"><span class="pre">codeobj.code.cu_file</span></code> and store them as attributes in <code class="xref py py-obj docutils literal notranslate"><span class="pre">codeobj.rand_calls</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">codeobj.randn_calls</span></code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Objects</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.device.cuda_standalone_device.html#brian2cuda.device.cuda_standalone_device" title="brian2cuda.device.cuda_standalone_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuda_standalone_device</span></code></a></td>
+<td>The <code class="xref py py-obj docutils literal notranslate"><span class="pre">Device</span></code> used for CUDA standalone simulations.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.timedarray">
 <span id="timedarray-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">timedarray</span></code> module<a class="headerlink" href="#module-brian2cuda.timedarray" title="Permalink to this headline">¶</a></h2>
@@ -103,17 +220,19 @@ effect applications even when race conditions are possible.</p>
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/preferences.html">Brian2cuda specific preferences</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../introduction/index.html" title="previous chapter">Introduction</a></li>
-      <li>Next: <a href="brian2cuda.utils.html" title="next chapter">utils package</a></li>
+      <li>Previous: <a href="../introduction/preferences.html" title="previous chapter">Brian2cuda specific preferences</a></li>
+      <li>Next: <a href="brian2cuda.codeobject.CUDAStandaloneAtomicsCodeObject.html" title="next chapter">CUDAStandaloneAtomicsCodeObject class</a></li>
   </ul></li>
 </ul>
 </div>

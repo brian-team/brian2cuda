@@ -18,12 +18,31 @@ brian2cuda package
 .. automodule:: brian2cuda.codeobject
     :show-inheritance:
 
+**Classes**
+
+.. autosummary:: CUDAStandaloneAtomicsCodeObject
+    :toctree:
+
+.. autosummary:: CUDAStandaloneCodeObject
+    :toctree:
+
 
 :mod:`cuda_generator` module
 ----------------------------
 
 .. automodule:: brian2cuda.cuda_generator
     :show-inheritance:
+
+**Classes**
+
+.. autosummary:: CUDAAtomicsCodeGenerator
+    :toctree:
+
+.. autosummary:: CUDACodeGenerator
+    :toctree:
+
+.. autosummary:: ParallelisationError
+    :toctree:
 
 
 :mod:`cuda_prefs` module
@@ -32,12 +51,35 @@ brian2cuda package
 .. automodule:: brian2cuda.cuda_prefs
     :show-inheritance:
 
+**Functions**
+
+.. autosummary:: compute_capability_validator
+    :toctree:
+
 
 :mod:`device` module
 --------------------
 
 .. automodule:: brian2cuda.device
     :show-inheritance:
+
+**Classes**
+
+.. autosummary:: CUDAStandaloneDevice
+    :toctree:
+
+.. autosummary:: CUDAWriter
+    :toctree:
+
+**Functions**
+
+.. autosummary:: check_codeobj_for_rng
+    :toctree:
+
+**Objects**
+
+.. autosummary:: cuda_standalone_device
+    :toctree:
 
 
 :mod:`timedarray` module

@@ -1,0 +1,367 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example: mushroombody &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Example: stdp" href="stdp.html" />
+    <link rel="prev" title="Example: cuba_cuda" href="cuba_cuda.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="example-mushroombody">
+<h1>Example: mushroombody<a class="headerlink" href="#example-mushroombody" title="Permalink to this headline">¶</a></h1>
+<p>this model example is taken from <a class="reference external" href="https://github.com/brian-team/brian2genn_benchmarks/blob/master/Mbody_example.py">https://github.com/brian-team/brian2genn_benchmarks/blob/master/Mbody_example.py</a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">###############################################################################</span>
+<span class="c1">## PARAMETERS</span>
+
+<span class="c1"># select code generation standalone device</span>
+<span class="n">devicename</span> <span class="o">=</span> <span class="s1">&#39;cuda_standalone&#39;</span>
+<span class="c1"># devicename = &#39;cpp_standalone&#39;</span>
+
+<span class="c1"># number of mushroom body neurons (N_MB)</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">2500</span>
+
+<span class="c1"># whether to profile run</span>
+<span class="n">profiling</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># folder to store plots and profiling information</span>
+<span class="n">resultsfolder</span> <span class="o">=</span> <span class="s1">&#39;results&#39;</span>
+
+<span class="c1"># folder for the code</span>
+<span class="n">codefolder</span> <span class="o">=</span> <span class="s1">&#39;code&#39;</span>
+
+<span class="c1"># monitors (neede for plot generation)</span>
+<span class="n">monitors</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># single precision</span>
+<span class="n">single_precision</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># number of post blocks (None is default)</span>
+<span class="n">num_blocks</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># atomic operations</span>
+<span class="n">atomics</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># push synapse bundles</span>
+<span class="n">bundle_mode</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">## CONFIGURATION</span>
+
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;devicename&#39;</span><span class="p">:</span> <span class="n">devicename</span><span class="p">,</span>
+          <span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="n">N</span><span class="p">,</span>
+          <span class="s1">&#39;resultsfolder&#39;</span><span class="p">:</span> <span class="n">resultsfolder</span><span class="p">,</span>
+          <span class="s1">&#39;codefolder&#39;</span><span class="p">:</span> <span class="n">codefolder</span><span class="p">,</span>
+          <span class="s1">&#39;profiling&#39;</span><span class="p">:</span> <span class="n">profiling</span><span class="p">,</span>
+          <span class="s1">&#39;monitors&#39;</span><span class="p">:</span> <span class="n">monitors</span><span class="p">,</span>
+          <span class="s1">&#39;single_precision&#39;</span><span class="p">:</span> <span class="n">single_precision</span><span class="p">,</span>
+          <span class="s1">&#39;num_blocks&#39;</span><span class="p">:</span> <span class="n">num_blocks</span><span class="p">,</span>
+          <span class="s1">&#39;atomics&#39;</span><span class="p">:</span> <span class="n">atomics</span><span class="p">,</span>
+          <span class="s1">&#39;bundle_mode&#39;</span><span class="p">:</span> <span class="n">bundle_mode</span><span class="p">}</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">set_prefs</span><span class="p">,</span> <span class="n">update_from_command_line</span>
+
+<span class="c1"># update params from command line</span>
+<span class="n">update_from_command_line</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="c1"># do the imports after parsing command line arguments (quicker --help)</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">random</span> <span class="k">as</span> <span class="nn">py_random</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">brian2</span> <span class="k">import</span> <span class="o">*</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;cuda_standalone&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">brian2cuda</span>
+
+<span class="c1"># set brian2 prefs from params dict</span>
+<span class="n">name</span> <span class="o">=</span> <span class="n">set_prefs</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">prefs</span><span class="p">)</span>
+
+<span class="n">codefolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;codefolder&#39;</span><span class="p">],</span> <span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;runing example </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;compiling model in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">codefolder</span><span class="p">))</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">## SIMULATION</span>
+
+<span class="n">set_device</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">],</span> <span class="n">directory</span><span class="o">=</span><span class="n">codefolder</span><span class="p">,</span> <span class="nb">compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+           <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">runtime</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">second</span>
+<span class="c1"># Number of neurons</span>
+<span class="n">N_MB</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">]</span>
+<span class="n">N_AL</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">N_LB</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="c1"># Constants</span>
+<span class="n">g_Na</span> <span class="o">=</span> <span class="mf">7.15</span><span class="o">*</span><span class="n">uS</span>
+<span class="n">E_Na</span> <span class="o">=</span> <span class="mi">50</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">g_K</span> <span class="o">=</span> <span class="mf">1.43</span><span class="o">*</span><span class="n">uS</span>
+<span class="n">E_K</span> <span class="o">=</span> <span class="o">-</span><span class="mi">95</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">g_leak</span> <span class="o">=</span> <span class="mf">0.0267</span><span class="o">*</span><span class="n">uS</span>
+<span class="n">E_leak</span> <span class="o">=</span> <span class="o">-</span><span class="mf">63.56</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">C</span> <span class="o">=</span> <span class="mf">0.3</span><span class="o">*</span><span class="n">nF</span>
+<span class="n">VT</span> <span class="o">=</span> <span class="o">-</span><span class="mi">63</span><span class="o">*</span><span class="n">mV</span>
+<span class="c1"># Those two constants are dummy constants, only used when populations only have</span>
+<span class="c1"># either inhibitory or excitatory inputs</span>
+<span class="n">E_e</span> <span class="o">=</span> <span class="mi">0</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">E_i</span> <span class="o">=</span> <span class="o">-</span><span class="mi">92</span><span class="o">*</span><span class="n">mV</span>
+<span class="c1"># Actual constants used for synapses</span>
+<span class="n">NKCKC</span><span class="o">=</span> <span class="n">N_MB</span>
+<span class="k">if</span> <span class="n">NKCKC</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">:</span>
+    <span class="n">NKCKC</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">g_scaling</span> <span class="o">=</span> <span class="n">NKCKC</span><span class="o">/</span><span class="mi">2500</span>
+<span class="k">if</span> <span class="n">g_scaling</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">g_scaling</span><span class="o">=</span> <span class="mi">1</span>
+<span class="n">tau_PN_LHI</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">tau_LHI_iKC</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">tau_PN_iKC</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">tau_iKC_eKC</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">tau_eKC_eKC</span> <span class="o">=</span> <span class="mi">5</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">w_LHI_iKC</span> <span class="o">=</span> <span class="mf">8.75</span><span class="o">*</span><span class="n">nS</span>
+<span class="n">w_eKC_eKC</span> <span class="o">=</span> <span class="mi">75</span><span class="o">*</span><span class="n">nS</span>
+<span class="n">tau_pre</span> <span class="o">=</span> <span class="n">tau_post</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">dApre</span> <span class="o">=</span> <span class="mf">0.1</span><span class="o">*</span><span class="n">nS</span><span class="o">/</span><span class="n">g_scaling</span>
+<span class="n">dApost</span> <span class="o">=</span> <span class="o">-</span><span class="n">dApre</span>
+<span class="n">g_max</span> <span class="o">=</span> <span class="mf">3.75</span><span class="o">*</span><span class="n">nS</span><span class="o">/</span><span class="n">g_scaling</span>
+
+<span class="n">scale</span> <span class="o">=</span> <span class="o">.</span><span class="mi">675</span>
+
+<span class="n">traub_miles</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">dV/dt = -(1/C)*(g_Na*m**3*h*(V - E_Na) +</span>
+<span class="s1">                g_K*n**4*(V - E_K) +</span>
+<span class="s1">                g_leak*(V - E_leak) +</span>
+<span class="s1">                I_syn) : volt</span>
+<span class="s1">dm/dt = alpha_m*(1 - m) - beta_m*m : 1</span>
+<span class="s1">dn/dt = alpha_n*(1 - n) - beta_n*n : 1</span>
+<span class="s1">dh/dt = alpha_h*(1 - h) - beta_h*h : 1</span>
+<span class="s1">alpha_m = 0.32*(mV**-1)*(13*mV-V+VT)/</span>
+<span class="s1">         (exp((13*mV-V+VT)/(4*mV))-1.)/ms : Hz</span>
+<span class="s1">beta_m = 0.28*(mV**-1)*(V-VT-40*mV)/</span>
+<span class="s1">        (exp((V-VT-40*mV)/(5*mV))-1)/ms : Hz</span>
+<span class="s1">alpha_h = 0.128*exp((17*mV-V+VT)/(18*mV))/ms : Hz</span>
+<span class="s1">beta_h = 4./(1+exp((40*mV-V+VT)/(5*mV)))/ms : Hz</span>
+<span class="s1">alpha_n = 0.032*(mV**-1)*(15*mV-V+VT)/</span>
+<span class="s1">         (exp((15*mV-V+VT)/(5*mV))-1.)/ms : Hz</span>
+<span class="s1">beta_n = .5*exp((10*mV-V+VT)/(40*mV))/ms : Hz</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+<span class="c1"># Principal neurons (Antennal Lobe)</span>
+<span class="n">n_patterns</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">n_repeats</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">runtime</span><span class="o">/</span><span class="n">second</span><span class="o">*</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">p_perturb</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">N_AL</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">N_AL</span><span class="p">),</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_patterns</span><span class="p">)]),</span> <span class="n">n_repeats</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1"># Make variants of the patterns</span>
+<span class="n">to_replace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">N_AL</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="n">p_perturb</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_patterns</span><span class="o">*</span><span class="n">n_repeats</span><span class="p">)</span>
+<span class="n">variants</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">patterns</span><span class="p">):</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">variant</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">to_replace</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">variant</span> <span class="o">=</span> <span class="n">variant</span><span class="p">[:</span><span class="o">-</span><span class="n">to_replace</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
+    <span class="n">new_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">N_AL</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">to_replace</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+    <span class="n">variant</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">variant</span><span class="p">,</span> <span class="n">new_indices</span><span class="p">]))</span>
+    <span class="n">variants</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">variant</span><span class="p">)</span>
+
+<span class="n">training_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_repeats</span><span class="o">-</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">training_variants</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_patterns</span><span class="p">):</span>
+    <span class="n">training_variants</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">variants</span><span class="p">[</span><span class="n">n_repeats</span> <span class="o">*</span> <span class="n">p</span><span class="p">:</span><span class="n">n_repeats</span> <span class="o">*</span> <span class="n">p</span> <span class="o">+</span> <span class="n">training_size</span><span class="p">])</span>
+<span class="n">py_random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">training_variants</span><span class="p">)</span>
+<span class="n">sorted_variants</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">training_variants</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_patterns</span><span class="p">):</span>
+    <span class="n">sorted_variants</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">variants</span><span class="p">[</span><span class="n">n_repeats</span> <span class="o">*</span> <span class="n">p</span> <span class="o">+</span> <span class="n">training_size</span><span class="p">:</span><span class="n">n_repeats</span> <span class="o">*</span> <span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+
+<span class="n">spike_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_patterns</span><span class="o">*</span><span class="n">n_repeats</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="o">*</span><span class="n">ms</span> <span class="o">+</span> <span class="mi">1</span><span class="o">*</span><span class="n">ms</span> <span class="o">+</span> <span class="n">rand</span><span class="p">(</span><span class="n">n_patterns</span><span class="o">*</span><span class="n">n_repeats</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">spike_times</span> <span class="o">=</span> <span class="n">spike_times</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">sorted_variants</span><span class="p">])</span>
+<span class="n">spike_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">sorted_variants</span><span class="p">)</span>
+
+<span class="n">PN</span> <span class="o">=</span> <span class="n">SpikeGeneratorGroup</span><span class="p">(</span><span class="n">N_AL</span><span class="p">,</span> <span class="n">spike_indices</span><span class="p">,</span> <span class="n">spike_times</span><span class="p">)</span>
+
+<span class="c1"># iKC of the mushroom body</span>
+<span class="n">I_syn</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;I_syn = g_PN_iKC*(V - E_e): amp</span>
+<span class="s1">           dg_PN_iKC/dt = -g_PN_iKC/tau_PN_iKC : siemens&#39;&#39;&#39;</span>
+<span class="n">eqs_iKC</span> <span class="o">=</span> <span class="n">Equations</span><span class="p">(</span><span class="n">traub_miles</span><span class="p">)</span> <span class="o">+</span> <span class="n">Equations</span><span class="p">(</span><span class="n">I_syn</span><span class="p">)</span>
+<span class="n">iKC</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="n">N_MB</span><span class="p">,</span> <span class="n">eqs_iKC</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;V&gt;0*mV&#39;</span><span class="p">,</span> <span class="n">refractory</span><span class="o">=</span><span class="s1">&#39;V&gt;0*mV&#39;</span><span class="p">,</span>
+                  <span class="n">method</span><span class="o">=</span><span class="s1">&#39;exponential_euler&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># eKCs of the mushroom body lobe</span>
+<span class="n">I_syn</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;I_syn = g_iKC_eKC*(V - E_e) + g_eKC_eKC*(V - E_i): amp</span>
+<span class="s1">           dg_iKC_eKC/dt = -g_iKC_eKC/tau_iKC_eKC : siemens</span>
+<span class="s1">           dg_eKC_eKC/dt = -g_eKC_eKC/tau_eKC_eKC : siemens&#39;&#39;&#39;</span>
+<span class="n">eqs_eKC</span> <span class="o">=</span> <span class="n">Equations</span><span class="p">(</span><span class="n">traub_miles</span><span class="p">)</span> <span class="o">+</span> <span class="n">Equations</span><span class="p">(</span><span class="n">I_syn</span><span class="p">)</span>
+<span class="n">eKC</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="n">N_LB</span><span class="p">,</span> <span class="n">eqs_eKC</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;V&gt;0*mV&#39;</span><span class="p">,</span> <span class="n">refractory</span><span class="o">=</span><span class="s1">&#39;V&gt;0*mV&#39;</span><span class="p">,</span>
+                  <span class="n">method</span><span class="o">=</span><span class="s1">&#39;exponential_euler&#39;</span><span class="p">)</span>
+
+<span class="c1"># Synapses</span>
+<span class="n">PN_iKC</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">PN</span><span class="p">,</span> <span class="n">iKC</span><span class="p">,</span> <span class="s1">&#39;weight : siemens&#39;</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;g_PN_iKC += scale*weight&#39;</span><span class="p">)</span>
+<span class="n">iKC_eKC</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">iKC</span><span class="p">,</span> <span class="n">eKC</span><span class="p">,</span>
+                   <span class="sd">&#39;&#39;&#39;g_raw : siemens</span>
+<span class="sd">                      dApre/dt = -Apre / tau_pre : siemens (event-driven)</span>
+<span class="sd">                      dApost/dt = -Apost / tau_post : siemens (event-driven)</span>
+<span class="sd">                      &#39;&#39;&#39;</span><span class="p">,</span>
+                   <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;g_iKC_eKC += g_raw</span>
+<span class="s1">                             Apre += dApre</span>
+<span class="s1">                             g_raw = clip(g_raw + Apost, 0, g_max)</span>
+<span class="s1">                             &#39;&#39;&#39;</span><span class="p">,</span>
+                   <span class="n">on_post</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                              Apost += dApost</span>
+<span class="s1">                              g_raw = clip(g_raw + Apre, 0, g_max)&#39;&#39;&#39;</span><span class="p">,</span>
+                   <span class="p">)</span>
+<span class="n">eKC_eKC</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">eKC</span><span class="p">,</span> <span class="n">eKC</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;g_eKC_eKC += scale*w_eKC_eKC&#39;</span><span class="p">)</span>
+<span class="n">PN_iKC</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">N_MB</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">):</span>
+    <span class="n">iKC_eKC</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span><span class="o">/</span><span class="n">N_MB</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">iKC_eKC</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+<span class="n">eKC_eKC</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="c1"># First set all synapses as &quot;inactive&quot;, then set 20% to active</span>
+<span class="n">PN_iKC</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="s1">&#39;10*nS + 1.25*nS*randn()&#39;</span>
+<span class="n">iKC_eKC</span><span class="o">.</span><span class="n">g_raw</span> <span class="o">=</span> <span class="s1">&#39;rand()*g_max/10/g_scaling&#39;</span>
+<span class="n">iKC_eKC</span><span class="o">.</span><span class="n">g_raw</span><span class="p">[</span><span class="s1">&#39;rand() &lt; 0.2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;(2.5*nS + 0.5*nS*randn())/g_scaling&#39;</span>
+<span class="n">iKC</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">E_leak</span>
+<span class="n">iKC</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">iKC</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">iKC</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="o">.</span><span class="mi">5</span>
+<span class="n">eKC</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">E_leak</span>
+<span class="n">eKC</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">eKC</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">eKC</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="o">.</span><span class="mi">5</span>
+
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;monitors&#39;</span><span class="p">]:</span>
+    <span class="n">PN_spikes</span> <span class="o">=</span> <span class="n">SpikeMonitor</span><span class="p">(</span><span class="n">PN</span><span class="p">)</span>
+    <span class="n">iKC_spikes</span> <span class="o">=</span> <span class="n">SpikeMonitor</span><span class="p">(</span><span class="n">iKC</span><span class="p">)</span>
+    <span class="n">eKC_spikes</span> <span class="o">=</span> <span class="n">SpikeMonitor</span><span class="p">(</span><span class="n">eKC</span><span class="p">)</span>
+
+
+<span class="n">run</span><span class="p">(</span><span class="n">runtime</span><span class="p">,</span> <span class="n">report</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;profiling&#39;</span><span class="p">])</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">]):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">])</span> <span class="c1"># for plots and profiling txt file</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;profiling&#39;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">profiling_summary</span><span class="p">())</span>
+    <span class="n">profilingpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">profilingpath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">profiling_file</span><span class="p">:</span>
+        <span class="n">profiling_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">profiling_summary</span><span class="p">()))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;profiling information saved in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">profilingpath</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;monitors&#39;</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">M</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">PN_spikes</span><span class="p">,</span> <span class="n">iKC_spikes</span><span class="p">,</span> <span class="n">eKC_spikes</span><span class="p">]):</span>
+        <span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">p</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">plot</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">t</span><span class="o">/</span><span class="n">ms</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;,k&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;SpikeMon </span><span class="si">%d</span><span class="s1">, average rate </span><span class="si">%.1f</span><span class="s1"> sp/s&#39;</span> <span class="o">%</span>
+              <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">num_spikes</span><span class="o">/</span><span class="p">(</span><span class="n">runtime</span><span class="o">/</span><span class="n">second</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">source</span><span class="p">))))</span>
+    <span class="c1">#show()</span>
+
+    <span class="n">plotpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.png&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="n">savefig</span><span class="p">(</span><span class="n">plotpath</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;plot saved in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">plotpath</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;the generated model in </span><span class="si">{}</span><span class="s1"> needs to removed manually if wanted&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">codefolder</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Example documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples</a><ul>
+      <li>Previous: <a href="cuba_cuda.html" title="previous chapter">Example: cuba_cuda</a></li>
+      <li>Next: <a href="stdp.html" title="next chapter">Example: stdp</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/examples/mushroombody.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

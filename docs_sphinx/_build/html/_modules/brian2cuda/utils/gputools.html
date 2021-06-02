@@ -1,0 +1,558 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>brian2cuda.utils.gputools &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for brian2cuda.utils.gputools</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Tools to get information about available GPUs.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">shlex</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">distutils</span>
+
+<span class="kn">from</span> <span class="nn">brian2.core.preferences</span> <span class="k">import</span> <span class="n">prefs</span><span class="p">,</span> <span class="n">PreferenceError</span>
+<span class="kn">from</span> <span class="nn">brian2.codegen.cpp_prefs</span> <span class="k">import</span> <span class="n">get_compiler_and_args</span>
+<span class="kn">from</span> <span class="nn">brian2.utils.logger</span> <span class="k">import</span> <span class="n">get_logger</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s2">&quot;brian2.devices.cuda_standalone&quot;</span><span class="p">)</span>
+
+<span class="c1"># To list all GPUs: nvidia-smi -L</span>
+
+<span class="c1"># Some code here is adapted from</span>
+<span class="c1"># https://github.com/cupy/cupy/blob/e6f8d91ffae7ee241ed235ddbeb725c04f593c33/cupy/_environment.py</span>
+
+
+<span class="c1"># To minimize running external commands (`nvidia-smi`, `nvcc`, `deviceQuery`), we define</span>
+<span class="c1"># these global variables that are computed from the external commands. This way we only</span>
+<span class="c1"># run them once and whenever they are needed again, we use the global variables defined</span>
+<span class="c1"># here.</span>
+<span class="n">_cuda_installation</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;cuda_path&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;nvcc_path&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;runtime_version&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_gpu_selection</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;available_gpus&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;selected_gpu_id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;selected_gpu_compute_capability&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="get_cuda_path"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_cuda_path.html#brian2cuda.utils.gputools.get_cuda_path">[docs]</a><span class="k">def</span> <span class="nf">get_cuda_path</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Detect the path to the CUDA installation (e.g. &#39;/usr/local/cuda&#39;). This takes into</span>
+<span class="sd">    account user defined environmental variable `CUDA_PATH` and preference</span>
+<span class="sd">    `prefs.devices.cuda_standalone.cuda_backend.cuda_path`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># If cuda_path was already detected, reuse the global variable</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">if</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;cuda_path&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;cuda_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_get_cuda_path</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;cuda_path&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_nvcc_path"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_nvcc_path.html#brian2cuda.utils.gputools.get_nvcc_path">[docs]</a><span class="k">def</span> <span class="nf">get_nvcc_path</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return the path to the `nvcc` binary.&quot;&quot;&quot;</span>
+    <span class="c1"># If nvcc_path was already detected, reuse the global variable</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">if</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;nvcc_path&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;nvcc_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_get_nvcc_path</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;nvcc_path&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_cuda_runtime_version"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_cuda_runtime_version.html#brian2cuda.utils.gputools.get_cuda_runtime_version">[docs]</a><span class="k">def</span> <span class="nf">get_cuda_runtime_version</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return CUDA runtime version (as float, e.g. `11.2`)&quot;&quot;&quot;</span>
+    <span class="c1"># If runtime_version was already detected, reuse the global variable</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">if</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;runtime_version&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;runtime_version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_get_cuda_runtime_version</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_cuda_installation</span><span class="p">[</span><span class="s2">&quot;runtime_version&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_cuda_installation"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_cuda_installation.html#brian2cuda.utils.gputools.get_cuda_installation">[docs]</a><span class="k">def</span> <span class="nf">get_cuda_installation</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return new dictionary of cuda installation variables&quot;&quot;&quot;</span>
+    <span class="n">cuda_installation</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;cuda_path&#39;</span><span class="p">:</span> <span class="n">get_cuda_path</span><span class="p">(),</span>
+        <span class="s1">&#39;nvcc_path&#39;</span><span class="p">:</span> <span class="n">get_nvcc_path</span><span class="p">(),</span>
+        <span class="s1">&#39;runtime_version&#39;</span><span class="p">:</span> <span class="n">get_cuda_runtime_version</span><span class="p">(),</span>
+    <span class="p">}</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="nb">sorted</span><span class="p">(</span><span class="n">cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="p">),</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> != </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">_cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">cuda_installation</span></div>
+
+
+<div class="viewcode-block" id="get_gpu_selection"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_gpu_selection.html#brian2cuda.utils.gputools.get_gpu_selection">[docs]</a><span class="k">def</span> <span class="nf">get_gpu_selection</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return dictionary of selected gpu variable&quot;&quot;&quot;</span>
+    <span class="n">gpu_id</span><span class="p">,</span> <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">select_gpu</span><span class="p">()</span>
+    <span class="n">gpu_selection</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;available_gpus&#39;</span><span class="p">:</span> <span class="n">get_available_gpus</span><span class="p">(),</span>
+        <span class="s1">&#39;selected_gpu_id&#39;</span><span class="p">:</span> <span class="n">gpu_id</span><span class="p">,</span>
+        <span class="s1">&#39;selected_gpu_compute_capability&#39;</span><span class="p">:</span> <span class="n">compute_capability</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">global</span> <span class="n">_gpu_selection</span>
+    <span class="k">assert</span> <span class="n">gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">_gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">gpu_selection</span></div>
+
+
+<div class="viewcode-block" id="get_available_gpus"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_available_gpus.html#brian2cuda.utils.gputools.get_available_gpus">[docs]</a><span class="k">def</span> <span class="nf">get_available_gpus</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return list of names of available GPUs, sorted by GPU ID as reported in</span>
+<span class="sd">    `nvidia-smi`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_gpu_selection</span>
+    <span class="k">if</span> <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;available_gpus&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;available_gpus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_get_available_gpus</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;available_gpus&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="select_gpu"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.select_gpu.html#brian2cuda.utils.gputools.select_gpu">[docs]</a><span class="k">def</span> <span class="nf">select_gpu</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Select GPU for simulation, based on user preference `prefs.devices.cuda_standalone.cuda_backend.gpu_id` or (if</span>
+<span class="sd">    not provided) pick the GPU with highest compute capability. Returns tuple of</span>
+<span class="sd">    (gpu_id, compute_capability) of type (int, float).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_gpu_selection</span>
+    <span class="k">if</span> <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_id&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_compute_capability&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="n">gpu_id</span><span class="p">,</span> <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">_select_gpu</span><span class="p">()</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gpu_id</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_compute_capability&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_capability</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_id&quot;</span><span class="p">],</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="s2">&quot;selected_gpu_compute_capability&quot;</span><span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="reset_cuda_installation"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.reset_cuda_installation.html#brian2cuda.utils.gputools.reset_cuda_installation">[docs]</a><span class="k">def</span> <span class="nf">reset_cuda_installation</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reset detected CUDA installation. This will detect the CUDA installation again when</span>
+<span class="sd">    it is needed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">_cuda_installation</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="reset_gpu_selection"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.reset_gpu_selection.html#brian2cuda.utils.gputools.reset_gpu_selection">[docs]</a><span class="k">def</span> <span class="nf">reset_gpu_selection</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Reset selected GPU. This will select a new GPU the next time it is needed.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_gpu_selection</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">_gpu_selection</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="restore_cuda_installation"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.restore_cuda_installation.html#brian2cuda.utils.gputools.restore_cuda_installation">[docs]</a><span class="k">def</span> <span class="nf">restore_cuda_installation</span><span class="p">(</span><span class="n">cuda_installation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Set global cuda installation dictionary to `cuda_installation`&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_cuda_installation</span>
+    <span class="k">if</span> <span class="n">_cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">!=</span> <span class="n">cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="s2">&quot;`cuda_installation` has to have the following keys: </span><span class="si">{}</span><span class="s2">. Got instead: &quot;</span>
+            <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">_cuda_installation</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">)</span>
+    <span class="n">_cuda_installation</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cuda_installation</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="restore_gpu_selection"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.restore_gpu_selection.html#brian2cuda.utils.gputools.restore_gpu_selection">[docs]</a><span class="k">def</span> <span class="nf">restore_gpu_selection</span><span class="p">(</span><span class="n">gpu_selection</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Set global gpu selection dictionary to `gpu_selection`&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_gpu_selection</span>
+    <span class="k">if</span> <span class="n">_gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">!=</span> <span class="n">gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="s2">&quot;`gpu_selection` has to have the following keys: </span><span class="si">{}</span><span class="s2">. Got instead: &quot;</span>
+            <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">_gpu_selection</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">)</span>
+    <span class="n">_gpu_selection</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">gpu_selection</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_get_cuda_path</span><span class="p">():</span>
+    <span class="c1"># Use preference if set</span>
+    <span class="n">cuda_path_pref</span> <span class="o">=</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">cuda_backend</span><span class="o">.</span><span class="n">cuda_path</span>
+    <span class="k">if</span> <span class="n">cuda_path_pref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;CUDA installation directory given via preference &quot;</span>
+            <span class="s2">&quot;`prefs.devices.cuda_standalone.cuda_backend.cuda_path=</span><span class="si">{}</span><span class="s2">`&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_path_pref</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">cuda_path_pref</span>
+
+    <span class="c1"># Use environment variable if set</span>
+    <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;CUDA_PATH&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Nvidia default on Windows</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;CUDA installation directory given via environment variable `CUDA_PATH=</span><span class="si">{}</span><span class="s2">`&quot;</span>
+            <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">cuda_path</span>
+
+    <span class="c1"># Use nvcc path if `nvcc` binary in PATH</span>
+    <span class="c1"># TODO: Remove this and use shutil.which once we moved to Python 3</span>
+    <span class="k">def</span> <span class="nf">which</span><span class="p">(</span><span class="n">pgm</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;PATH&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">pathsep</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">pgm</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">X_OK</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">p</span>
+    <span class="n">nvcc_path</span> <span class="o">=</span> <span class="n">which</span><span class="p">(</span><span class="s2">&quot;nvcc&quot;</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;3&quot;</span><span class="p">),</span> <span class="s2">&quot;Update code here for Python 3!&quot;</span>
+    <span class="c1">#nvcc_path = shutil.which(&quot;nvcc&quot;)</span>
+    <span class="k">if</span> <span class="n">nvcc_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cuda_path_nvcc</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">nvcc_path</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;CUDA installation directory detected via location of `nvcc` binary: </span><span class="si">{}</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_path_nvcc</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">cuda_path_nvcc</span>
+
+    <span class="c1"># Use typical path if nothing else worked</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;/usr/local/cuda&quot;</span><span class="p">):</span>
+        <span class="n">cuda_path_usr</span> <span class="o">=</span> <span class="s2">&quot;/usr/local/cuda&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;CUDA installation directory found in standard location: </span><span class="si">{}</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cuda_path_usr</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">cuda_path_usr</span>
+
+    <span class="c1"># Raise error if cuda path not found</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="s2">&quot;Couldn&#39;t find the CUDA installation. Please set the environment variable &quot;</span>
+        <span class="s2">&quot;`CUDA_PATH` to point to your CUDA installation directory (this should be the &quot;</span>
+        <span class="s2">&quot;directory, where `./bin/nvcc` is located, e.g. `/usr/local/cuda`)&quot;</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_nvcc_path</span><span class="p">():</span>
+    <span class="c1"># TODO: Check if NVCC is specific to cupy and if we want to support it?</span>
+    <span class="c1"># If so, make sure cuda_path and nvcc_path fit together, see:</span>
+    <span class="c1"># https://github.com/cupy/cupy/blob/cb29c07ccbae346841adb3c8bfa33aba463e2588/install/build.py#L65-L70</span>
+    <span class="c1">#nvcc = os.environ.get(&quot;NVCC&quot;, None)</span>
+    <span class="c1">#if nvcc:</span>
+    <span class="c1">#    return distutils.util.split_quoted(nvcc)</span>
+
+    <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">get_cuda_path</span><span class="p">()</span>
+
+    <span class="n">compiler</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_compiler_and_args</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">compiler</span> <span class="o">==</span> <span class="s2">&quot;msvc&quot;</span><span class="p">:</span>  <span class="c1"># Windows</span>
+        <span class="n">nvcc_bin</span> <span class="o">=</span> <span class="s2">&quot;bin/nvcc.exe&quot;</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Unix</span>
+        <span class="n">nvcc_bin</span> <span class="o">=</span> <span class="s2">&quot;bin/nvcc&quot;</span>
+
+    <span class="n">nvcc_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">,</span> <span class="n">nvcc_bin</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">nvcc_path</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Couldn&#39;t find `nvcc` binary in </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nvcc_path</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">nvcc_path</span>
+
+
+<span class="k">def</span> <span class="nf">_get_cuda_runtime_version</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Get CUDA runtime version form `nvcc --version` &quot;&quot;&quot;</span>
+    <span class="n">nvcc_path</span> <span class="o">=</span> <span class="n">get_nvcc_path</span><span class="p">()</span>
+    <span class="n">nvcc_output</span> <span class="o">=</span> <span class="n">_run_command_with_output</span><span class="p">(</span><span class="n">nvcc_path</span><span class="p">,</span> <span class="s2">&quot;--version&quot;</span><span class="p">)</span>
+    <span class="n">nvcc_lines</span> <span class="o">=</span> <span class="n">nvcc_output</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># version_line example: &quot;Cuda compilation tools, release 11.2, V11.2.67&quot;</span>
+    <span class="n">version_line</span> <span class="o">=</span> <span class="n">nvcc_lines</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">version_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Cuda compilation tools, release&quot;</span><span class="p">)</span>
+    <span class="c1"># release_str example: &quot;release 11.2&quot;</span>
+    <span class="n">release_str</span> <span class="o">=</span> <span class="n">version_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># runtime_version example: 11.2</span>
+    <span class="n">runtime_version_str</span> <span class="o">=</span> <span class="n">release_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># return version as float</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">runtime_version_str</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_select_gpu</span><span class="p">():</span>
+    <span class="n">gpu_id</span> <span class="o">=</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">cuda_backend</span><span class="o">.</span><span class="n">gpu_id</span>
+    <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">cuda_backend</span><span class="o">.</span><span class="n">compute_capability</span>
+    <span class="n">gpu_list</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">cuda_backend</span><span class="o">.</span><span class="n">detect_gpus</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">gpu_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">gpu_id</span><span class="p">,</span> <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">get_best_gpu</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">get_compute_capability</span><span class="p">(</span><span class="n">gpu_id</span><span class="p">)</span>
+        <span class="n">gpu_list</span> <span class="o">=</span> <span class="n">get_available_gpus</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Automatic detection of GPU names and compute capabilities disabled, using &quot;</span>
+            <span class="s2">&quot;manual preferences&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">gpu_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">compute_capability</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PreferenceError</span><span class="p">(</span>
+                <span class="s2">&quot;Got `prefs.devices.cuda_standalone.cuda_backend.detect_gpus` == `False`. Without GPU detection, &quot;</span>
+                <span class="s2">&quot;you need to set `prefs.devices.cuda_standalone.cuda_backend.gpu_id` and &quot;</span>
+                <span class="s2">&quot;`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (got &quot;</span>
+                <span class="s2">&quot;`</span><span class="si">{prefs.devices.cuda_standalone.cuda_backend.gpu_id}</span><span class="s2">` and &quot;</span>
+                <span class="s2">&quot;`</span><span class="si">{prefs.devices.cuda_standalone.cuda_backend.compute_capability}</span><span class="s2">`).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">prefs</span><span class="o">=</span><span class="n">prefs</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="n">gpu_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">gpu_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">gpu_name</span> <span class="o">=</span> <span class="s2">&quot; (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gpu_list</span><span class="p">[</span><span class="n">gpu_id</span><span class="p">])</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="s2">&quot;Compiling device code for GPU </span><span class="si">{gpu_id}{gpu_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">gpu_id</span><span class="o">=</span><span class="n">gpu_id</span><span class="p">,</span> <span class="n">gpu_name</span><span class="o">=</span><span class="n">gpu_name</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">gpu_id</span><span class="p">,</span> <span class="n">compute_capability</span>
+
+
+<span class="k">def</span> <span class="nf">_run_command_with_output</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the stdout from `command` run in a subprocess and produce meaningful error</span>
+<span class="sd">    message if it fails. If `args` is empty, `command` can be a string with multiple</span>
+<span class="sd">    arguments (e.g. `ls -l -a`). If `args` are given, `command` has to be just the</span>
+<span class="sd">    binary (e.g. `ls`) and each `args` item needs to be a single argument.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _run_command_with_output(&quot;ls -a -l&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; _run_command_with_output(&quot;ls&quot;, &quot;-a&quot;, &quot;-l&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+        <span class="n">command_split</span> <span class="o">=</span> <span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">command_split</span> <span class="o">=</span> <span class="p">[</span><span class="n">command</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="n">command_split</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;Running `</span><span class="si">{binary}</span><span class="s2">` failed with error code </span><span class="si">{err.returncode}</span><span class="s2">: </span><span class="si">{err.output}</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">binary</span><span class="o">=</span><span class="n">command_split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">err</span><span class="o">=</span><span class="n">err</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="c1"># TODO: In Python 3 this needs to be FileNotFoundError</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
+            <span class="s2">&quot;Binary not found: `</span><span class="si">{binary}</span><span class="s2">` (</span><span class="si">{err}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">binary</span><span class="o">=</span><span class="n">command_split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">err</span><span class="o">=</span><span class="n">err</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output</span>
+
+
+<span class="k">def</span> <span class="nf">_get_available_gpus</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Detect available GPUs and return a list of their names, where list index corresponds</span>
+<span class="sd">    to GPU id.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;nvidia-smi -L&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">gpu_info_lines</span> <span class="o">=</span> <span class="n">_run_command_with_output</span><span class="p">(</span><span class="n">command</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># TODO: In Python 3 version, replace OSError with FileNotFoundError</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">excepted_error</span><span class="p">:</span>
+        <span class="n">new_error</span> <span class="o">=</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;Running `</span><span class="si">{command}</span><span class="s2">` failed. If `nvidia-smi` is not available in your &quot;</span>
+            <span class="s2">&quot;system, you can disable automatic detection of GPU name and compute &quot;</span>
+            <span class="s2">&quot;capability by setting &quot;</span>
+            <span class="s2">&quot;`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">command</span><span class="o">=</span><span class="n">command</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># TODO: In Python 3, do this:</span>
+        <span class="c1"># raise new_error from excepted_error</span>
+        <span class="k">raise</span> <span class="n">new_error</span>
+
+    <span class="n">gpu_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">gpu_info_lines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">gpu_info</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gpu_info_lines</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">gpu_info</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>  <span class="c1"># last list item is empty</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># `gpu_info` example:</span>
+            <span class="c1"># &quot;GPU 0: GeForce MX150 (UUID: GPU-8abe566f-c211-11c1-7b73-8103bfd30198)&quot;</span>
+
+            <span class="c1"># Remove the UUID part</span>
+            <span class="n">gpu_info</span> <span class="o">=</span> <span class="n">gpu_info</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; (UUID&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># Split ID and NAME parts</span>
+            <span class="n">id_str</span><span class="p">,</span> <span class="n">gpu_name</span> <span class="o">=</span> <span class="n">gpu_info</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;: &quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">id_str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;GPU &quot;</span><span class="p">)</span>
+            <span class="n">gpu_id</span> <span class="o">=</span> <span class="n">id_str</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="k">assert</span> <span class="nb">int</span><span class="p">(</span><span class="n">gpu_id</span><span class="p">)</span> <span class="o">==</span> <span class="n">i</span>
+            <span class="n">gpu_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpu_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gpu_list</span>
+
+
+<div class="viewcode-block" id="get_compute_capability"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_compute_capability.html#brian2cuda.utils.gputools.get_compute_capability">[docs]</a><span class="k">def</span> <span class="nf">get_compute_capability</span><span class="p">(</span><span class="n">gpu_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get compute capability of GPU with ID `gpu_id`. Returns a float (e.g. `6.1`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gpu_list</span> <span class="o">=</span> <span class="n">get_available_gpus</span><span class="p">()</span>
+    <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">get_cuda_path</span><span class="p">()</span>
+    <span class="n">device_query_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">,</span> <span class="s2">&quot;extras&quot;</span><span class="p">,</span> <span class="s2">&quot;demo_suite&quot;</span><span class="p">,</span> <span class="s2">&quot;deviceQuery&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">device_query_path</span><span class="p">):</span>
+        <span class="c1"># Note: If `deviceQuery` is not reliably available of user systems, we could</span>
+        <span class="c1"># 1. use this github gist to scrape compute capabilities for GPU names from the</span>
+        <span class="c1">#    nvidia website:</span>
+        <span class="c1">#    https://gist.github.com/huitseeker/b2c79e5b763d58b06b9985de2b3c0d4d</span>
+        <span class="c1"># 2. add a preference to point to the self-compiled binary?</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;Couldn&#39;t find `</span><span class="si">{}</span><span class="s2">` binary to detect the compute capability of &quot;</span>
+            <span class="s2">&quot;the GPU. Please open an issue at &quot;</span>
+            <span class="s2">&quot;https://github.com/brian-team/brian2cuda/issues/new. To continue, you can &quot;</span>
+            <span class="s2">&quot;set the compute capability manually via &quot;</span>
+            <span class="s2">&quot;`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (visit &quot;</span>
+            <span class="s2">&quot;https://developer.nvidia.com/cuda-gpus to find the compute capability of &quot;</span>
+            <span class="s2">&quot;your GPU).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device_query_path</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">device_query_output</span> <span class="o">=</span> <span class="n">_run_command_with_output</span><span class="p">(</span><span class="n">device_query_path</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">device_query_output</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">compute_capability</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Device &quot;</span><span class="p">):</span>
+            <span class="c1"># example line:</span>
+            <span class="c1"># `Device 0: &quot;GeForce MX150&quot;`</span>
+            <span class="n">this_gpu_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>  <span class="c1"># &quot;Device i ...&quot;  &lt;- i in position 7</span>
+            <span class="k">if</span> <span class="n">this_gpu_id</span> <span class="o">==</span> <span class="n">gpu_id</span><span class="p">:</span>
+                <span class="c1"># Get GPU name: word in quotation</span>
+                <span class="n">gpu_name</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\&quot;(.+?)\&quot;&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># Make sure we got the right GPU here</span>
+                <span class="k">assert</span> <span class="n">gpu_list</span><span class="p">[</span><span class="n">gpu_id</span><span class="p">]</span> <span class="o">==</span> <span class="n">gpu_name</span>
+                <span class="c1"># The compute capability is shown 2 lines after the &quot;Device ...&quot; line</span>
+                <span class="c1"># Example line:</span>
+                <span class="c1"># `  CUDA Capability Major/Minor version number:    6.1`</span>
+                <span class="n">compute_capability_line</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span>
+                <span class="k">assert</span> <span class="n">compute_capability_line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                    <span class="s2">&quot;CUDA Capability Major/Minor version number&quot;</span>
+                <span class="p">),</span> <span class="s2">&quot;Unexpected line parsed: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compute_capability_line</span><span class="p">)</span>
+                <span class="c1"># Last 3 chars are the compute capability</span>
+                <span class="n">major</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">compute_capability_line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+                <span class="n">minor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">compute_capability_line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="c1"># Turn into float</span>
+                <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">major</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">minor</span>
+    <span class="k">return</span> <span class="n">compute_capability</span></div>
+
+
+<div class="viewcode-block" id="get_best_gpu"><a class="viewcode-back" href="../../../reference/brian2cuda.utils.gputools.get_best_gpu.html#brian2cuda.utils.gputools.get_best_gpu">[docs]</a><span class="k">def</span> <span class="nf">get_best_gpu</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the &quot;best&quot; GPU available. This currently chooses the GPU with highest compute</span>
+<span class="sd">    capability and lowest GPU ID (as reported by `nvidia-smi`)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gpu_list</span> <span class="o">=</span> <span class="n">get_available_gpus</span><span class="p">()</span>
+    <span class="n">best_gpu_id</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">best_compute_capability</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">gpu_id</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gpu_list</span><span class="p">):</span>
+        <span class="n">compute_capability</span> <span class="o">=</span> <span class="n">get_compute_capability</span><span class="p">(</span><span class="n">gpu_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">compute_capability</span> <span class="o">&gt;</span> <span class="n">best_compute_capability</span><span class="p">:</span>
+            <span class="n">best_compute_capability</span> <span class="o">=</span> <span class="n">compute_capability</span>
+            <span class="n">best_gpu_id</span> <span class="o">=</span> <span class="n">gpu_id</span>
+
+    <span class="k">return</span> <span class="n">best_gpu_id</span><span class="p">,</span> <span class="n">best_compute_capability</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">get_best_gpu</span><span class="p">())</span>
+    <span class="c1">#a = nvidia_smi()</span>
+    <span class="c1">#print(a)</span>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction/preferences.html">Brian2cuda specific preferences</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

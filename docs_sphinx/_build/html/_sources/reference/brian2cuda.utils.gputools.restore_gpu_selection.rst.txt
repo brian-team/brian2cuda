@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+restore_gpu_selection function
+==============================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import restore_gpu_selection)``
+
+.. autofunction:: restore_gpu_selection
+

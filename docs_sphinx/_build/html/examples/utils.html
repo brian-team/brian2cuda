@@ -1,0 +1,268 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example: utils &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Example: bipolar_cell_cpp" href="compartmental.bipolar_cell_cpp.html" />
+    <link rel="prev" title="Example: stdp" href="stdp.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="example-utils">
+<h1>Example: utils<a class="headerlink" href="#example-utils" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">__main__</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+
+<span class="k">def</span> <span class="nf">update_from_command_line</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Use argparse to overwrite parameters in the `params` dictionary with command</span>
+<span class="sd">    line options. Try to import as little modules before calling this function</span>
+<span class="sd">    as possible. This gives a much faster response to the `--help` flag.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    params : dict</span>
+<span class="sd">        Dictionary with experiment parameters.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;`choices` needs to be dict, got &quot;</span>
+                        <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">choices</span><span class="p">)))</span>
+
+    <span class="c1"># make a copy such that we can delete used keys without modifying choices</span>
+    <span class="n">choices_copy</span> <span class="o">=</span> <span class="n">choices</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Run brian2cuda example&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="nb">int</span>
+        <span class="n">choice</span> <span class="o">=</span> <span class="n">choices_copy</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">cmd_arg</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">choice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t have choices for bool arguments&quot;</span>
+            <span class="n">feature_parser</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_mutually_exclusive_group</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">feature_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cmd_arg</span><span class="p">),</span>
+                                        <span class="n">dest</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+            <span class="n">feature_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cmd_arg</span><span class="p">),</span>
+                                        <span class="n">dest</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_false&#39;</span><span class="p">)</span>
+            <span class="n">parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cmd_arg</span><span class="p">),</span> <span class="nb">type</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                                <span class="n">choices</span><span class="o">=</span><span class="n">choice</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">choices_copy</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;Undefined keys in choices: &quot;</span>
+                             <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">choices_copy</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--name-suffix&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">name_suffix</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;name_suffix&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">name_suffix</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="n">arg</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">arg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;Setting </span><span class="si">{}</span><span class="s2"> from command line to </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">arg</span>
+
+
+<span class="k">def</span> <span class="nf">set_prefs</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">prefs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Set brian2 preferences depending on parameter dictionary and create a</span>
+<span class="sd">    experiment name from the parameters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    params : dict</span>
+<span class="sd">        Dictionary with experiment parameters.</span>
+<span class="sd">    prefs : BrianGlobalPreferences</span>
+<span class="sd">        Brian&#39;s preferences object (accesible from brian2.prefs).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Experiment name deduced from the `params` dictionary.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">socket</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">__main__</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.py&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_standalone&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">ignores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">,</span> <span class="s1">&#39;resultsfolder&#39;</span><span class="p">,</span> <span class="s1">&#39;codefolder&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ignores</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># add the parameter value to the name</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="n">string</span> <span class="o">=</span> <span class="n">key</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="s1">&#39;no-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">string</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">string</span>
+
+    <span class="k">if</span> <span class="s1">&#39;name_suffix&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;name_suffix&#39;</span><span class="p">]</span>
+
+    <span class="n">hostname</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span>
+    <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">hostname</span>
+
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;cuda_standalone&#39;</span><span class="p">:</span>
+        <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">hostname</span> <span class="o">==</span> <span class="s1">&#39;merope&#39;</span><span class="p">:</span>
+            <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;35&#39;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">hostname</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;elnath&#39;</span><span class="p">,</span> <span class="s1">&#39;adhara&#39;</span><span class="p">]:</span>
+            <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;20&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">hostname</span> <span class="o">==</span> <span class="s1">&#39;sabik&#39;</span><span class="p">:</span>
+            <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;61&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;52&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">hostname</span> <span class="o">==</span> <span class="s1">&#39;eltanin&#39;</span><span class="p">:</span>
+            <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;52&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;61&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;61&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;61&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">hostname</span> <span class="o">==</span> <span class="s1">&#39;risha&#39;</span><span class="p">:</span>
+            <span class="n">dev_no_to_cc</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;70&#39;</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;WARNING: can&#39;t recognize hostname. Compiling with &quot;</span>\
+                    <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;codegen.cuda.extra_compile_args_nvcc&#39;</span><span class="p">])</span>
+
+        <span class="c1"># TODO make this a preference</span>
+        <span class="c1">#prefs[&#39;devices.cuda_standalone.default_device&#39;] = gpu_device</span>
+        <span class="k">if</span> <span class="n">dev_no_to_cc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">gpu_device</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="c1"># default</span>
+                <span class="n">gpu_device</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cc</span> <span class="o">=</span> <span class="n">dev_no_to_cc</span><span class="p">[</span><span class="n">gpu_device</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;unknown device number: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+
+            <span class="nb">print</span> <span class="s2">&quot;Compiling device code for compute capability &quot;</span>\
+                    <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cc</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;codegen.cuda.extra_compile_args_nvcc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;-arch=sm_35&#39;</span><span class="p">)</span>
+            <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;codegen.cuda.extra_compile_args_nvcc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-arch=sm_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cc</span><span class="p">)])</span>
+
+        <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;num_blocks&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;devices.cuda_standalone.parallel_blocks&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;num_blocks&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;bundle_mode&#39;</span><span class="p">]:</span>
+            <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;devices.cuda_standalone.push_synapse_bundles&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;atomics&#39;</span><span class="p">]:</span>
+            <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;devices.cuda_standalone.use_atomics&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;single_precision&#39;</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">float32</span>
+        <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;core.default_float_dtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">float32</span>
+
+    <span class="k">return</span> <span class="n">name</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Example documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples</a><ul>
+      <li>Previous: <a href="stdp.html" title="previous chapter">Example: stdp</a></li>
+      <li>Next: <a href="compartmental.bipolar_cell_cpp.html" title="next chapter">Example: bipolar_cell_cpp</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/examples/utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

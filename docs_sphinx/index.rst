@@ -11,6 +11,7 @@ Welcome to brian2cuda's documentation!
    :titlesonly:
 
    introduction/index
+   introduction/preferences
 
 
 .. toctree::
@@ -18,6 +19,7 @@ Welcome to brian2cuda's documentation!
    :titlesonly:
 
    Reference documentation <reference/brian2cuda>
+   examples/index
 
 Indices and tables
 ==================

@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+get_nvcc_path function
+======================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import get_nvcc_path)``
+
+.. autofunction:: get_nvcc_path
+

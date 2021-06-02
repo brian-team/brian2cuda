@@ -45,7 +45,7 @@ def format_heading(level, text):
     return '%s\n%s\n\n' % (text, underlining)
 
 
-def format_directive(module, destdir, package=None, basename='brian2genn'):
+def format_directive(module, destdir, package=None, basename='brian2cuda'):
     """Create the automodule directive and add the options."""
     directive = '.. automodule:: %s\n' % makename(package, module)
     for option in OPTIONS:

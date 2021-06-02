@@ -1,0 +1,300 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>brian2cuda.cuda_prefs &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for brian2cuda.cuda_prefs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Preferences that relate to the brian2cuda interface.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">brian2.core.preferences</span> <span class="k">import</span> <span class="n">prefs</span><span class="p">,</span> <span class="n">BrianPreference</span><span class="p">,</span> <span class="n">PreferenceError</span>
+<span class="kn">from</span> <span class="nn">brian2.core.core_preferences</span> <span class="k">import</span> <span class="n">default_float_dtype_validator</span><span class="p">,</span> <span class="n">dtype_repr</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="compute_capability_validator"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_prefs.compute_capability_validator.html#brian2cuda.cuda_prefs.compute_capability_validator">[docs]</a><span class="k">def</span> <span class="nf">compute_capability_validator</span><span class="p">(</span><span class="n">cc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function checks compute capability preference and raises an error if it is</span>
+<span class="sd">    larger than the minimal supported compute capability.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">cc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pref_name</span> <span class="o">=</span> <span class="s2">&quot;prefs.devices.cuda_standalone.cuda_backend.compute_capability&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cc</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PreferenceError</span><span class="p">(</span>
+                <span class="s2">&quot;Preference `</span><span class="si">{}</span><span class="s2">` has to be of type float &quot;</span>
+                <span class="s2">&quot;(e.g. `6.1`), got `</span><span class="si">{}</span><span class="s2">`&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pref_name</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">cc</span><span class="p">))</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="c1"># Preferences</span>
+<span class="n">prefs</span><span class="o">.</span><span class="n">register_preferences</span><span class="p">(</span>
+    <span class="s1">&#39;devices.cuda_standalone&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CUDA standalone preferences&#39;</span><span class="p">,</span>
+
+    <span class="n">SM_multiplier</span> <span class="o">=</span> <span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        The number of blocks per SM. By default, this value is set to 1.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="p">),</span>
+
+    <span class="n">parallel_blocks</span> <span class="o">=</span> <span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        The total number of parallel blocks to use. The default is the number</span>
+<span class="s1">        of streaming multiprocessors.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+
+    <span class="n">launch_bounds</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        Weather or not to use `__launch_bounds__` to optimise register usage in kernels.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+
+    <span class="n">syn_launch_bounds</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        Weather or not to use `__launch_bounds__` in synapses and synapses_push to optimise register usage in kernels.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+
+    <span class="n">calc_occupancy</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        Weather or not to use cuda occupancy api to choose num_threads and num_blocks.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+
+    <span class="n">extra_threshold_kernel</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        Weather or not to use a extra threshold kernel for resetting or not.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+
+    <span class="n">random_number_generator_type</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Generator type (str) that cuRAND uses for random number generation.</span>
+<span class="s1">            Setting the generator type automatically resets the generator ordering</span>
+<span class="s1">            (prefs.devices.cuda_standalone.random_number_generator_ordering) to its default value.</span>
+<span class="s1">            See cuRAND documentation for more details on generator types and orderings.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;CURAND_RNG_PSEUDO_DEFAULT&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_PSEUDO_XORWOW&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_PSEUDO_MRG32K3A&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_PSEUDO_MTGP32&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_PSEUDO_PHILOX4_32_10&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_PSEUDO_MT19937&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_QUASI_DEFAULT&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_QUASI_SOBOL32&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_QUASI_SCRAMBLED_SOBOL32&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_QUASI_SOBOL64&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;CURAND_RNG_QUASI_SCRAMBLED_SOBOL64&#39;</span><span class="p">],</span>
+        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;CURAND_RNG_PSEUDO_DEFAULT&#39;</span><span class="p">),</span>
+
+    <span class="n">random_number_generator_ordering</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;The ordering parameter (str) used to choose how the results of cuRAND</span>
+<span class="s1">            random number generation are ordered in global memory.</span>
+<span class="s1">            See cuRAND documentation for more details on generator types and orderings.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="ow">not</span> <span class="n">v</span> <span class="ow">or</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;CURAND_ORDERING_PSEUDO_DEFAULT&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;CURAND_ORDERING_PSEUDO_BEST&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;CURAND_ORDERING_PSEUDO_SEEDED&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;CURAND_ORDERING_QUASI_DEFAULT&#39;</span><span class="p">],</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>  <span class="c1"># False will prevent setting ordering in objects.cu (-&gt; curRAND will uset the correct ..._DEFAULT)</span>
+
+    <span class="n">push_synapse_bundles</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;If True, synaptic events are propagated by pushing bundles of</span>
+<span class="s1">        synapse IDs with same delays into the corresponding delay queue. If</span>
+<span class="s1">        False, each synapse of a spiking neuron is pushed in the corresponding</span>
+<span class="s1">        queue individually. For very small bundle sizes (number of synapses</span>
+<span class="s1">        with same delay, connected to a single neuron), pushing single Synapses</span>
+<span class="s1">        can be faster. This option only has effect for `Synapses` objects ith</span>
+<span class="s1">        heterogenous delays.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+
+    <span class="n">no_pre_references</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Set this preference if you don&#39;t need access to ``i`` in any</span>
+<span class="s1">        synaptic code string and no Synapses object applies effects to</span>
+<span class="s1">        presynaptic variables. This preference is for memory optimization until</span>
+<span class="s1">        unnecassary device memory allocations in synapse creation are fixed, it</span>
+<span class="s1">        is only relevant if your network uses close to all memory.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+
+    <span class="n">no_post_references</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Set this preference if you don&#39;t need access to ``j`` in any</span>
+<span class="s1">        synaptic code string and no Synapses object applies effects to</span>
+<span class="s1">        postsynaptic variables. This preference is for memory optimization until</span>
+<span class="s1">        unnecassary device memory allocations in synapse creation are fixed, it</span>
+<span class="s1">        is only relevant if your network uses close to all memory.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    
+    <span class="n">default_functions_integral_convertion</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;The floating point precision to which integral types will be converted when</span>
+<span class="s1">        passed as arguments to default functions that have no integral type overload in device</span>
+<span class="s1">        code (sin, cos, tan, sinh, cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan).&quot;</span>
+<span class="s1">        NOTE: Convertion from 32bit and 64bit integral types to single precision (32bit) floating-point</span>
+<span class="s1">        types is not type safe. And convertion from 64bit integral types to double precision (64bit)</span>
+<span class="s1">        floating-point types neither. In those cases the closest higher or lower (implementation</span>
+<span class="s1">        defined) representable value will be selected.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="n">default_float_dtype_validator</span><span class="p">,</span>
+        <span class="n">representor</span><span class="o">=</span><span class="n">dtype_repr</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+
+    <span class="n">use_atomics</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Weather to try to use atomic operations for synaptic effect</span>
+<span class="s1">        application. Since this avoids race conditions, effect application can</span>
+<span class="s1">        be parallelised.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">prefs</span><span class="o">.</span><span class="n">register_preferences</span><span class="p">(</span>
+    <span class="s1">&#39;devices.cuda_standalone.cuda_backend&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CUDA standalone CUDA backend preferences&#39;</span><span class="p">,</span>
+    
+    <span class="n">gpu_heap_size</span> <span class="o">=</span> <span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        Size of the heap (in MB) used by malloc() and free() device system calls, which</span>
+<span class="s1">        are used in the `cudaVector` implementation. `cudaVectors` are used to</span>
+<span class="s1">        dynamically allocate device memory for `SpikeMonitors` and the synapse</span>
+<span class="s1">        queues in the `CudaSpikeQueue` implementation for networks with</span>
+<span class="s1">        heterogeneously distributed delays.</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">128</span><span class="p">),</span>
+    
+    <span class="n">detect_gpus</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Whether to detect names and compute capabilities of all available GPUs.</span>
+<span class="s1">        This needs access to `nvidia-smi` and `deviceQuery` binaries.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+    <span class="p">),</span>
+
+    <span class="n">gpu_id</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;The ID of the GPU that should be used&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="p">),</span>
+    
+    <span class="n">extra_compile_args_nvcc</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Extra compile arguments (a list of strings) to pass to the nvcc compiler.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;-w&#39;</span><span class="p">,</span> <span class="s1">&#39;-use_fast_math&#39;</span><span class="p">]</span>
+    <span class="p">),</span>
+    
+    <span class="n">compute_capability</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Manually set the compute capability for which CUDA code will be</span>
+<span class="s1">        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is</span>
+<span class="s1">        chosen depending on GPU in use. &#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="n">compute_capability_validator</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+
+    <span class="n">cuda_path</span><span class="o">=</span><span class="n">BrianPreference</span><span class="p">(</span>
+        <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;The path to the CUDA installation. If set, this preferences takes</span>
+<span class="s1">        precedence over environment variable `CUDA_PATH`.&#39;&#39;&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">validator</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+<span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction/preferences.html">Brian2cuda specific preferences</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

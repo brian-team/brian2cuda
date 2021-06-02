@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+get_cuda_path function
+======================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import get_cuda_path)``
+
+.. autofunction:: get_cuda_path
+

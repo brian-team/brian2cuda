@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.logger
+
+suppress_brian2_logs function
+=============================
+
+(*Shortest import*: ``from brian2cuda.utils import suppress_brian2_logs)``
+
+.. autofunction:: suppress_brian2_logs
+

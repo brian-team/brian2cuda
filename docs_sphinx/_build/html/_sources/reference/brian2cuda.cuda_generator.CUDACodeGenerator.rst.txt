@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.cuda_generator
+
+CUDACodeGenerator class
+=======================
+
+(*Shortest import*: ``from brian2cuda.cuda_generator import CUDACodeGenerator)``
+
+.. autoclass:: CUDACodeGenerator
+

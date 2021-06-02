@@ -16,7 +16,8 @@
     <script type="text/javascript" src="../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="brian2cuda package" href="brian2cuda.html" />
+    <link rel="next" title="get_available_gpus function" href="brian2cuda.utils.gputools.get_available_gpus.html" />
+    <link rel="prev" title="cuda_standalone_device object" href="brian2cuda.device.cuda_standalone_device.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -39,16 +40,195 @@
 <div class="section" id="module-brian2cuda.utils.gputools">
 <span id="gputools-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">gputools</span></code> module<a class="headerlink" href="#module-brian2cuda.utils.gputools" title="Permalink to this headline">¶</a></h2>
 <p>Tools to get information about available GPUs.</p>
+<p><strong>Functions</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_available_gpus.html#brian2cuda.utils.gputools.get_available_gpus" title="brian2cuda.utils.gputools.get_available_gpus"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_available_gpus</span></code></a>()</td>
+<td>Return list of names of available GPUs, sorted by GPU ID as reported in <code class="xref py py-obj docutils literal notranslate"><span class="pre">nvidia-smi</span></code></td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_best_gpu.html#brian2cuda.utils.gputools.get_best_gpu" title="brian2cuda.utils.gputools.get_best_gpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_best_gpu</span></code></a>()</td>
+<td>Get the “best” GPU available.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_compute_capability.html#brian2cuda.utils.gputools.get_compute_capability" title="brian2cuda.utils.gputools.get_compute_capability"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_compute_capability</span></code></a>(gpu_id)</td>
+<td>Get compute capability of GPU with ID <code class="xref py py-obj docutils literal notranslate"><span class="pre">gpu_id</span></code>.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_cuda_installation.html#brian2cuda.utils.gputools.get_cuda_installation" title="brian2cuda.utils.gputools.get_cuda_installation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cuda_installation</span></code></a>()</td>
+<td>Return new dictionary of cuda installation variables</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_cuda_path.html#brian2cuda.utils.gputools.get_cuda_path" title="brian2cuda.utils.gputools.get_cuda_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cuda_path</span></code></a>()</td>
+<td>Detect the path to the CUDA installation (e.g.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_cuda_runtime_version.html#brian2cuda.utils.gputools.get_cuda_runtime_version" title="brian2cuda.utils.gputools.get_cuda_runtime_version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cuda_runtime_version</span></code></a>()</td>
+<td>Return CUDA runtime version (as float, e.g.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_gpu_selection.html#brian2cuda.utils.gputools.get_gpu_selection" title="brian2cuda.utils.gputools.get_gpu_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_gpu_selection</span></code></a>()</td>
+<td>Return dictionary of selected gpu variable</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.get_nvcc_path.html#brian2cuda.utils.gputools.get_nvcc_path" title="brian2cuda.utils.gputools.get_nvcc_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_nvcc_path</span></code></a>()</td>
+<td>Return the path to the <code class="xref py py-obj docutils literal notranslate"><span class="pre">nvcc</span></code> binary.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.reset_cuda_installation.html#brian2cuda.utils.gputools.reset_cuda_installation" title="brian2cuda.utils.gputools.reset_cuda_installation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset_cuda_installation</span></code></a>()</td>
+<td>Reset detected CUDA installation.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.reset_gpu_selection.html#brian2cuda.utils.gputools.reset_gpu_selection" title="brian2cuda.utils.gputools.reset_gpu_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset_gpu_selection</span></code></a>()</td>
+<td>Reset selected GPU.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.restore_cuda_installation.html#brian2cuda.utils.gputools.restore_cuda_installation" title="brian2cuda.utils.gputools.restore_cuda_installation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_cuda_installation</span></code></a>(cuda_installation)</td>
+<td>Set global cuda installation dictionary to <code class="xref py py-obj docutils literal notranslate"><span class="pre">cuda_installation</span></code></td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.restore_gpu_selection.html#brian2cuda.utils.gputools.restore_gpu_selection" title="brian2cuda.utils.gputools.restore_gpu_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_gpu_selection</span></code></a>(gpu_selection)</td>
+<td>Set global gpu selection dictionary to <code class="xref py py-obj docutils literal notranslate"><span class="pre">gpu_selection</span></code></td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.gputools.select_gpu.html#brian2cuda.utils.gputools.select_gpu" title="brian2cuda.utils.gputools.select_gpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">select_gpu</span></code></a>()</td>
+<td>Select GPU for simulation, based on user preference <code class="xref py py-obj docutils literal notranslate"><span class="pre">prefs.devices.cuda_standalone.cuda_backend.gpu_id</span></code> or (if not provided) pick the GPU with highest compute capability.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.utils.logger">
 <span id="logger-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">logger</span></code> module<a class="headerlink" href="#module-brian2cuda.utils.logger" title="Permalink to this headline">¶</a></h2>
 <p>Brian2CUDA’s logging system extensions</p>
 <p><em>Exported members:</em> 
-<code class="xref py py-obj docutils literal notranslate"><span class="pre">suppress_brian2_logs</span></code></p>
+<a class="reference internal" href="brian2cuda.utils.logger.suppress_brian2_logs.html#brian2cuda.utils.logger.suppress_brian2_logs" title="brian2cuda.utils.logger.suppress_brian2_logs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">suppress_brian2_logs</span></code></a></p>
+<p><strong>Functions</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.logger.suppress_brian2_logs.html#brian2cuda.utils.logger.suppress_brian2_logs" title="brian2cuda.utils.logger.suppress_brian2_logs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">suppress_brian2_logs</span></code></a>()</td>
+<td>Suppress all logs coming from brian2.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="module-brian2cuda.utils.stringtools">
 <span id="stringtools-module"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">stringtools</span></code> module<a class="headerlink" href="#module-brian2cuda.utils.stringtools" title="Permalink to this headline">¶</a></h2>
 <p>Brian2CUDA regex functions.</p>
+<p><strong>Functions</strong></p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.stringtools.append_f.html#brian2cuda.utils.stringtools.append_f" title="brian2cuda.utils.stringtools.append_f"><code class="xref py py-obj docutils literal notranslate"><span class="pre">append_f</span></code></a>(match)</td>
+<td>Append <code class="docutils literal notranslate"><span class="pre">'f'</span></code> to the string in <code class="docutils literal notranslate"><span class="pre">match</span></code> if it doesn’t end with <code class="docutils literal notranslate"><span class="pre">'f'</span></code>.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="brian2cuda.utils.stringtools.replace_floating_point_literals.html#brian2cuda.utils.stringtools.replace_floating_point_literals" title="brian2cuda.utils.stringtools.replace_floating_point_literals"><code class="xref py py-obj docutils literal notranslate"><span class="pre">replace_floating_point_literals</span></code></a>(code)</td>
+<td>Replace double-precision floating-point literals in <code class="docutils literal notranslate"><span class="pre">code</span></code> by single-precision literals.</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 
@@ -71,9 +251,11 @@
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/preferences.html">Brian2cuda specific preferences</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
 </ul>
 
 <div class="relations">
@@ -81,7 +263,8 @@
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="brian2cuda.html">brian2cuda package</a><ul>
-      <li>Previous: <a href="brian2cuda.html" title="previous chapter">brian2cuda package</a></li>
+      <li>Previous: <a href="brian2cuda.device.cuda_standalone_device.html" title="previous chapter">cuda_standalone_device object</a></li>
+      <li>Next: <a href="brian2cuda.utils.gputools.get_available_gpus.html" title="next chapter">get_available_gpus function</a></li>
   </ul></li>
   </ul></li>
 </ul>

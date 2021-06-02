@@ -1,0 +1,301 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>CUDACodeGenerator class &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ParallelisationError class" href="brian2cuda.cuda_generator.ParallelisationError.html" />
+    <link rel="prev" title="CUDAAtomicsCodeGenerator class" href="brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="cudacodegenerator-class">
+<h1>CUDACodeGenerator class<a class="headerlink" href="#cudacodegenerator-class" title="Permalink to this headline">¶</a></h1>
+<p>(<em>Shortest import</em>: <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">brian2cuda.cuda_generator</span> <span class="pre">import</span> <span class="pre">CUDACodeGenerator)</span></code></p>
+<dl class="class">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator">
+<em class="property">class </em><code class="descclassname">brian2cuda.cuda_generator.</code><code class="descname">CUDACodeGenerator</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwds</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">brian2.codegen.generators.base.CodeGenerator</span></code></p>
+<p>C++ language with CUDA library</p>
+<p>CUDA code templates should provide Jinja2 macros with the following names:</p>
+<dl class="docutils">
+<dt><code class="docutils literal notranslate"><span class="pre">main</span></code></dt>
+<dd>The main loop.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">support_code</span></code></dt>
+<dd>The support code (function definitions, etc.), compiled in a separate
+file.</dd>
+</dl>
+<p>For user-defined functions, there are two keys to provide:</p>
+<dl class="docutils">
+<dt><code class="docutils literal notranslate"><span class="pre">support_code</span></code></dt>
+<dd>The function definition which will be added to the support code.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hashdefine_code</span></code></dt>
+<dd>The <code class="docutils literal notranslate"><span class="pre">#define</span></code> code added to the main loop.</dd>
+</dl>
+<p>See <code class="xref py py-obj docutils literal notranslate"><span class="pre">TimedArray</span></code> for an example of these keys.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.flush_denormals" title="brian2cuda.cuda_generator.CUDACodeGenerator.flush_denormals"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush_denormals</span></code></a></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.restrict" title="brian2cuda.cuda_generator.CUDACodeGenerator.restrict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restrict</span></code></a></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.universal_support_code" title="brian2cuda.cuda_generator.CUDACodeGenerator.universal_support_code"><code class="xref py py-obj docutils literal notranslate"><span class="pre">universal_support_code</span></code></a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.atomics_parallelisation" title="brian2cuda.cuda_generator.CUDACodeGenerator.atomics_parallelisation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">atomics_parallelisation</span></code></a>(statement,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.conditional_write" title="brian2cuda.cuda_generator.CUDACodeGenerator.conditional_write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">conditional_write</span></code></a>(line,&nbsp;statement,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.denormals_to_zero_code" title="brian2cuda.cuda_generator.CUDACodeGenerator.denormals_to_zero_code"><code class="xref py py-obj docutils literal notranslate"><span class="pre">denormals_to_zero_code</span></code></a>()</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.determine_keywords" title="brian2cuda.cuda_generator.CUDACodeGenerator.determine_keywords"><code class="xref py py-obj docutils literal notranslate"><span class="pre">determine_keywords</span></code></a>()</td>
+<td>A dictionary of values that is made available to the templated.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.get_array_name" title="brian2cuda.cuda_generator.CUDACodeGenerator.get_array_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_array_name</span></code></a>(var[,&nbsp;access_data,&nbsp;prefix])</td>
+<td>Return a globally unique name for <code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.parallelise_code" title="brian2cuda.cuda_generator.CUDACodeGenerator.parallelise_code"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parallelise_code</span></code></a>(statements)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_expression" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_expression"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_expression</span></code></a>(expr)</td>
+<td>Translate the given expression string into a string in the target language, returns a string.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_one_statement_sequence" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_one_statement_sequence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_one_statement_sequence</span></code></a>(statements)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_statement" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_statement"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_statement</span></code></a>(statement)</td>
+<td>Translate a single line <code class="xref py py-obj docutils literal notranslate"><span class="pre">Statement</span></code> into the target language, returns a string.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_declarations" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_declarations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_to_declarations</span></code></a>(read,&nbsp;write,&nbsp;indices)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_read_arrays" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_read_arrays"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_to_read_arrays</span></code></a>(read,&nbsp;write,&nbsp;indices)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_statements" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_statements"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_to_statements</span></code></a>(statements,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_write_arrays" title="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_write_arrays"><code class="xref py py-obj docutils literal notranslate"><span class="pre">translate_to_write_arrays</span></code></a>(write)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Details</p>
+<dl class="attribute">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.flush_denormals">
+<code class="descname">flush_denormals</code><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.flush_denormals" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.restrict">
+<code class="descname">restrict</code><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.restrict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.universal_support_code">
+<code class="descname">universal_support_code</code><em class="property"> = None</em><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.universal_support_code" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.atomics_parallelisation">
+<code class="descname">atomics_parallelisation</code><span class="sig-paren">(</span><em>statement</em>, <em>conditional_write_vars</em>, <em>used_variables</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.atomics_parallelisation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.atomics_parallelisation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.conditional_write">
+<code class="descname">conditional_write</code><span class="sig-paren">(</span><em>line</em>, <em>statement</em>, <em>conditional_write_vars</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.conditional_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.conditional_write" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.denormals_to_zero_code">
+<code class="descname">denormals_to_zero_code</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.denormals_to_zero_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.denormals_to_zero_code" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.determine_keywords">
+<code class="descname">determine_keywords</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.determine_keywords"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.determine_keywords" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dictionary of values that is made available to the templated. This is
+used for example by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">CPPCodeGenerator</span></code> to set up all the supporting
+code</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.get_array_name">
+<em class="property">static </em><code class="descname">get_array_name</code><span class="sig-paren">(</span><em>var</em>, <em>access_data=True</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.get_array_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.get_array_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a globally unique name for <code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>.
+See CUDAStandaloneDevice.get_array_name for parameters.</p>
+<p>Here, <code class="xref py py-obj docutils literal notranslate"><span class="pre">prefix</span></code> defaults to <code class="xref py py-obj docutils literal notranslate"><span class="pre">'_ptr'</span></code> when <code class="xref py py-obj docutils literal notranslate"><span class="pre">access_data=True</span></code>.</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">prefix='_ptr'</span></code> is used since the CUDACodeGenerator generates the
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">scalar_code</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">vector_code</span></code> snippets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.parallelise_code">
+<code class="descname">parallelise_code</code><span class="sig-paren">(</span><em>statements</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.parallelise_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.parallelise_code" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_expression">
+<code class="descname">translate_expression</code><span class="sig-paren">(</span><em>expr</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_expression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_expression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translate the given expression string into a string in the target
+language, returns a string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_one_statement_sequence">
+<code class="descname">translate_one_statement_sequence</code><span class="sig-paren">(</span><em>statements</em>, <em>scalar=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_one_statement_sequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_one_statement_sequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_statement">
+<code class="descname">translate_statement</code><span class="sig-paren">(</span><em>statement</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_statement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_statement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translate a single line <code class="xref py py-obj docutils literal notranslate"><span class="pre">Statement</span></code> into the target language, returns
+a string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_declarations">
+<code class="descname">translate_to_declarations</code><span class="sig-paren">(</span><em>read</em>, <em>write</em>, <em>indices</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_to_declarations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_declarations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_read_arrays">
+<code class="descname">translate_to_read_arrays</code><span class="sig-paren">(</span><em>read</em>, <em>write</em>, <em>indices</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_to_read_arrays"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_read_arrays" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_statements">
+<code class="descname">translate_to_statements</code><span class="sig-paren">(</span><em>statements</em>, <em>conditional_write_vars</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_to_statements"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_statements" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_write_arrays">
+<code class="descname">translate_to_write_arrays</code><span class="sig-paren">(</span><em>write</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/cuda_generator.html#CUDACodeGenerator.translate_to_write_arrays"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_write_arrays" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/preferences.html">Brian2cuda specific preferences</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="brian2cuda.html">brian2cuda package</a><ul>
+      <li>Previous: <a href="brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator.html" title="previous chapter">CUDAAtomicsCodeGenerator class</a></li>
+      <li>Next: <a href="brian2cuda.cuda_generator.ParallelisationError.html" title="next chapter">ParallelisationError class</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/brian2cuda.cuda_generator.CUDACodeGenerator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

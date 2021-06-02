@@ -1,0 +1,1016 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>brian2cuda.cuda_generator &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for brian2cuda.cuda_generator</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">brian2.utils.stringtools</span> <span class="k">import</span> <span class="p">(</span><span class="n">deindent</span><span class="p">,</span> <span class="n">stripped_deindented_lines</span><span class="p">,</span>
+                                      <span class="n">word_substitute</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">brian2.utils.logger</span> <span class="k">import</span> <span class="n">get_logger</span>
+<span class="kn">from</span> <span class="nn">brian2.utils.stringtools</span> <span class="k">import</span> <span class="n">get_identifiers</span>
+<span class="kn">from</span> <span class="nn">brian2.parsing.rendering</span> <span class="k">import</span> <span class="n">CPPNodeRenderer</span>
+<span class="kn">from</span> <span class="nn">brian2.core.functions</span> <span class="k">import</span> <span class="n">Function</span><span class="p">,</span> <span class="n">DEFAULT_FUNCTIONS</span>
+<span class="kn">from</span> <span class="nn">brian2.core.clocks</span> <span class="k">import</span> <span class="n">Clock</span>
+<span class="kn">from</span> <span class="nn">brian2.core.preferences</span> <span class="k">import</span> <span class="n">prefs</span>
+<span class="kn">from</span> <span class="nn">brian2.core.variables</span> <span class="k">import</span> <span class="n">ArrayVariable</span>
+<span class="kn">from</span> <span class="nn">brian2.codegen.generators.cpp_generator</span> <span class="k">import</span> <span class="n">c_data_type</span>
+<span class="kn">from</span> <span class="nn">brian2.codegen.generators.base</span> <span class="k">import</span> <span class="n">CodeGenerator</span>
+<span class="kn">from</span> <span class="nn">brian2.devices</span> <span class="k">import</span> <span class="n">get_device</span>
+<span class="kn">from</span> <span class="nn">brian2cuda.utils.gputools</span> <span class="k">import</span> <span class="n">get_cuda_runtime_version</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CUDACodeGenerator&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;CUDAAtomicsCodeGenerator&#39;</span>
+           <span class="s1">&#39;c_data_type&#39;</span>
+           <span class="p">]</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s1">&#39;brian2.codegen.generators.cuda_generator&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ParallelisationError"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.ParallelisationError.html#brian2cuda.cuda_generator.ParallelisationError">[docs]</a><span class="k">class</span> <span class="nc">ParallelisationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># This is a function since this code needs to be generated after user preferences are</span>
+<span class="c1"># set (for GPU selection)</span>
+<span class="k">def</span> <span class="nf">_generate_atomic_support_code</span><span class="p">():</span>
+    <span class="c1">#            (arg_dtype, int_dtype, name in type cast function)</span>
+    <span class="n">overloads</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">),</span>
+                 <span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">),</span>
+                 <span class="p">(</span><span class="s1">&#39;double&#39;</span><span class="p">,</span> <span class="s1">&#39;unsigned long long int&#39;</span><span class="p">,</span> <span class="s1">&#39;longlong&#39;</span><span class="p">)]</span>
+
+    <span class="n">cuda_runtime_version</span> <span class="o">=</span> <span class="n">get_cuda_runtime_version</span><span class="p">()</span>
+
+    <span class="c1"># Note: There are atomic functions that are supported only for compute capability &gt;=</span>
+    <span class="c1"># 3.5. We don&#39;t check for those as we require at least 3.5. If we ever support</span>
+    <span class="c1"># smaller CC, we need to adapt the code here (see Atomic Functions in CUDA</span>
+    <span class="c1"># Programming Guide)</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">get_device</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">device</span><span class="o">.</span><span class="n">minimal_compute_capability</span> <span class="o">&gt;=</span> <span class="mf">3.5</span><span class="p">,</span> <span class="s2">&quot;Need to adapt atomic support code&quot;</span>
+
+    <span class="n">software_implementation_float_dtype</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        // software implementation</span>
+<span class="s1">        </span><span class="si">{int_dtype}</span><span class="s1">* address_as_int = (</span><span class="si">{int_dtype}</span><span class="s1">*)address;</span>
+<span class="s1">        </span><span class="si">{int_dtype}</span><span class="s1"> old = *address_as_int, assumed;</span>
+
+<span class="s1">        do {{</span>
+<span class="s1">            assumed = old;</span>
+<span class="s1">            old = atomicCAS(address_as_int, assumed,</span>
+<span class="s1">                            __</span><span class="si">{arg_dtype}</span><span class="s1">_as_</span><span class="si">{val_type_cast}</span><span class="s1">(val </span><span class="si">{op}</span><span class="s1"></span>
+<span class="s1">                                   __</span><span class="si">{val_type_cast}</span><span class="s1">_as_</span><span class="si">{arg_dtype}</span><span class="s1">(assumed)));</span>
+
+<span class="s1">        // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)</span>
+<span class="s1">        }} while (assumed != old);</span>
+
+<span class="s1">        return __</span><span class="si">{val_type_cast}</span><span class="s1">_as_</span><span class="si">{arg_dtype}</span><span class="s1">(old);</span>
+<span class="s1">        &#39;&#39;&#39;</span>
+
+    <span class="n">hardware_implementation</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        // hardware implementation</span>
+<span class="s1">        return atomic</span><span class="si">{op_name}</span><span class="s1">(address, val);</span>
+<span class="s1">        &#39;&#39;&#39;</span>
+
+    <span class="n">atomic_support_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">op_name</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;Add&#39;</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;Mul&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;Div&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)]:</span>
+        <span class="k">for</span> <span class="n">arg_dtype</span><span class="p">,</span> <span class="n">int_dtype</span><span class="p">,</span> <span class="n">val_type_cast</span> <span class="ow">in</span> <span class="n">overloads</span><span class="p">:</span>
+            <span class="c1"># atomicAdd had hardware implementations, depending on dtype, compute</span>
+            <span class="c1"># capability and CUDA runtime version. This section uses them when possible.</span>
+            <span class="k">if</span> <span class="n">op_name</span> <span class="o">==</span> <span class="s1">&#39;Add&#39;</span><span class="p">:</span>
+                <span class="n">format_sw</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                inline __device__ </span><span class="si">{arg_dtype}</span><span class="s1"> _brian_atomic</span><span class="si">{op_name}</span><span class="s1">(</span><span class="si">{arg_dtype}</span><span class="s1">* address, </span><span class="si">{arg_dtype}</span><span class="s1"> val)</span>
+<span class="s1">                {{</span>
+<span class="s1">                &#39;&#39;&#39;</span>
+                <span class="k">if</span> <span class="n">arg_dtype</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;float&#39;</span><span class="p">]:</span>
+                    <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                    </span><span class="si">{hardware_implementation}</span><span class="s1"></span>
+<span class="s1">                    &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">hardware_implementation</span><span class="o">=</span><span class="n">hardware_implementation</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">arg_dtype</span> <span class="o">==</span> <span class="s1">&#39;double&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">cuda_runtime_version</span> <span class="o">&gt;=</span> <span class="mf">8.0</span><span class="p">:</span>
+                        <span class="c1"># Check for CC in at runtime to use software or hardware</span>
+                        <span class="c1"># implementation.</span>
+                        <span class="c1"># Don&#39;t need to check for defined __CUDA__ARCH__, it is always defined</span>
+                        <span class="c1"># in __device__ and __global__ functions (no host code path).</span>
+                        <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                        #if (__CUDA_ARCH__ &gt;= 600)</span>
+<span class="s1">                        </span><span class="si">{hardware_implementation}</span><span class="s1"></span>
+<span class="s1">                        #else</span>
+<span class="s1">                        </span><span class="si">{software_implementation}</span><span class="s1"></span>
+<span class="s1">                        #endif</span>
+<span class="s1">                        &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">hardware_implementation</span><span class="o">=</span><span class="n">hardware_implementation</span><span class="p">,</span>
+                            <span class="n">software_implementation</span><span class="o">=</span><span class="n">software_implementation_float_dtype</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># For runtime &lt; 8.0, there is no atomicAdd hardware implementation</span>
+                        <span class="c1"># support independent of CC.</span>
+                        <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                        </span><span class="si">{software_implementation}</span><span class="s1"></span>
+<span class="s1">                        &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">software_implementation</span><span class="o">=</span><span class="n">software_implementation_float_dtype</span>
+                        <span class="p">)</span>
+                        <span class="n">format_sw</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                }}</span>
+<span class="s1">                &#39;&#39;&#39;</span>
+                <span class="k">if</span> <span class="n">format_sw</span><span class="p">:</span>
+                    <span class="n">code</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">arg_dtype</span><span class="o">=</span><span class="n">arg_dtype</span><span class="p">,</span> <span class="n">int_dtype</span><span class="o">=</span><span class="n">int_dtype</span><span class="p">,</span>
+                        <span class="n">val_type_cast</span><span class="o">=</span><span class="n">val_type_cast</span><span class="p">,</span> <span class="n">op_name</span><span class="o">=</span><span class="n">op_name</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">code</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">arg_dtype</span><span class="o">=</span><span class="n">arg_dtype</span><span class="p">,</span> <span class="n">op_name</span><span class="o">=</span><span class="n">op_name</span><span class="p">)</span>
+
+                <span class="n">atomic_support_code</span> <span class="o">+=</span> <span class="n">code</span>
+            <span class="c1"># For other atomic operations on int types, we can use the same template.</span>
+            <span class="k">elif</span> <span class="n">arg_dtype</span> <span class="o">==</span> <span class="s1">&#39;int&#39;</span><span class="p">:</span>
+                <span class="n">atomic_support_code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                inline __device__ int _brian_atomic</span><span class="si">{op_name}</span><span class="s1">(int* address, int val)</span>
+<span class="s1">                {{</span>
+<span class="s1">                    // software implementation</span>
+<span class="s1">                    int old = *address, assumed;</span>
+
+<span class="s1">                    do {{</span>
+<span class="s1">                        assumed = old;</span>
+<span class="s1">                        old = atomicCAS(address, assumed, val </span><span class="si">{op}</span><span class="s1"> assumed);</span>
+<span class="s1">                    }} while (assumed != old);</span>
+
+<span class="s1">                    return old;</span>
+<span class="s1">                }}</span>
+<span class="s1">                &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">op_name</span><span class="o">=</span><span class="n">op_name</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op</span><span class="p">)</span>
+            <span class="c1"># Else (not atomicAdd and not int types) use this template.</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># in the software implementation, we treat all data as integer types</span>
+                <span class="c1"># (since atomicCAS is only define</span>
+                <span class="c1"># and use atomicCAS to swap the memory with our our desired value</span>
+                <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                inline __device__ {{arg_dtype}} _brian_atomic{{op_name}}({{arg_dtype}}* address, {{arg_dtype}} val)</span>
+<span class="s1">                {{{{</span>
+<span class="s1">                    </span><span class="si">{software_implementation}</span><span class="s1"></span>
+<span class="s1">                }}}}</span>
+<span class="s1">                &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">software_implementation</span><span class="o">=</span><span class="n">software_implementation_float_dtype</span><span class="p">)</span>
+                <span class="c1"># above, just add the software_implementation code, below add the other</span>
+                <span class="c1"># format variables (also present in software_implementation)</span>
+                <span class="n">code</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">arg_dtype</span><span class="o">=</span><span class="n">arg_dtype</span><span class="p">,</span> <span class="n">int_dtype</span><span class="o">=</span><span class="n">int_dtype</span><span class="p">,</span>
+                    <span class="n">val_type_cast</span><span class="o">=</span><span class="n">val_type_cast</span><span class="p">,</span> <span class="n">op_name</span><span class="o">=</span><span class="n">op_name</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">atomic_support_code</span> <span class="o">+=</span> <span class="n">code</span>
+
+    <span class="k">return</span> <span class="n">atomic_support_code</span>
+
+
+<span class="c1"># CUDA does not support modulo arithmetics for long double. Since we can&#39;t give a warning, we let the</span>
+<span class="c1"># compilation fail, which gives an error message of type</span>
+<span class="c1"># error: more than one instance of overloaded function &quot;_brian_mod&quot; matches the argument list: ...</span>
+<span class="c1"># TODO: can we produce a more informative error message?</span>
+<span class="n">_typestrs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="s1">&#39;long long&#39;</span><span class="p">,</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;double&#39;</span><span class="p">]</span><span class="c1">#, &#39;long double&#39;]</span>
+<span class="n">_hightype_support_code</span> <span class="o">=</span> <span class="s1">&#39;template &lt; typename T1, typename T2 &gt; struct _higher_type;</span><span class="se">\n</span><span class="s1">&#39;</span>
+<span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">xtype</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_typestrs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">iy</span><span class="p">,</span> <span class="n">ytype</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_typestrs</span><span class="p">):</span>
+        <span class="n">hightype</span> <span class="o">=</span> <span class="n">_typestrs</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">)]</span>
+        <span class="n">_hightype_support_code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">template &lt; &gt; struct _higher_type&lt;</span><span class="si">{xtype}</span><span class="s1">,</span><span class="si">{ytype}</span><span class="s1">&gt; {{ typedef </span><span class="si">{hightype}</span><span class="s1"> type; }};</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">hightype</span><span class="o">=</span><span class="n">hightype</span><span class="p">,</span> <span class="n">xtype</span><span class="o">=</span><span class="n">xtype</span><span class="p">,</span> <span class="n">ytype</span><span class="o">=</span><span class="n">ytype</span><span class="p">)</span>
+
+<span class="n">_mod_support_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">template &lt; typename T1, typename T2 &gt;</span>
+<span class="s1">__host__ __device__ static inline typename _higher_type&lt;T1,T2&gt;::type</span>
+<span class="s1">_brian_mod(T1 x, T2 y)</span>
+<span class="s1">{{</span>
+<span class="s1">    return x-y*floor(1.0*x/y);</span>
+<span class="s1">}}</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+<span class="n">_floordiv_support_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">template &lt; typename T1, typename T2 &gt;</span>
+<span class="s1">__host__ __device__ static inline typename _higher_type&lt;T1,T2&gt;::type</span>
+<span class="s1">_brian_floordiv(T1 x, T2 y)</span>
+<span class="s1">{{</span>
+<span class="s1">    return floor(1.0*x/y);</span>
+<span class="s1">}}</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+<span class="n">_pow_support_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">#ifdef _MSC_VER</span>
+<span class="s1">#define _brian_pow(x, y) (pow((double)(x), (y)))</span>
+<span class="s1">#else</span>
+<span class="s1">#define _brian_pow(x, y) (pow((x), (y)))</span>
+<span class="s1">#endif</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+
+<div class="viewcode-block" id="CUDACodeGenerator"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator">[docs]</a><span class="k">class</span> <span class="nc">CUDACodeGenerator</span><span class="p">(</span><span class="n">CodeGenerator</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    C++ language with CUDA library</span>
+
+<span class="sd">    CUDA code templates should provide Jinja2 macros with the following names:</span>
+
+<span class="sd">    ``main``</span>
+<span class="sd">        The main loop.</span>
+<span class="sd">    ``support_code``</span>
+<span class="sd">        The support code (function definitions, etc.), compiled in a separate</span>
+<span class="sd">        file.</span>
+
+<span class="sd">    For user-defined functions, there are two keys to provide:</span>
+
+<span class="sd">    ``support_code``</span>
+<span class="sd">        The function definition which will be added to the support code.</span>
+<span class="sd">    ``hashdefine_code``</span>
+<span class="sd">        The ``#define`` code added to the main loop.</span>
+
+<span class="sd">    See `TimedArray` for an example of these keys.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">class_name</span> <span class="o">=</span> <span class="s1">&#39;cuda&#39;</span>
+
+    <span class="n">_use_atomics</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># This will be generated when the first class instance calls `determine_keywords()`</span>
+    <span class="n">universal_support_code</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span> <span class="o">=</span> <span class="n">c_data_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warned_integral_convertion</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">previous_convertion_pref</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uses_atomics</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Set convertion types for standard C99 functions in device code</span>
+        <span class="c1"># These are used in _add_user_function to format the function code</span>
+        <span class="k">if</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">default_functions_integral_convertion</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_func_type</span> <span class="o">=</span> <span class="s1">&#39;double&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">other_func_type</span> <span class="o">=</span> <span class="s1">&#39;float&#39;</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># np.float32</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_func_type</span> <span class="o">=</span> <span class="s1">&#39;float&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">other_func_type</span> <span class="o">=</span> <span class="s1">&#39;double&#39;</span>
+        <span class="c1"># set clip function to either use all float or all double arguments</span>
+        <span class="c1"># see #51 for details</span>
+        <span class="k">if</span> <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;core.default_float_dtype&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">float_dtype</span> <span class="o">=</span> <span class="s1">&#39;float&#39;</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># np.float32</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">float_dtype</span> <span class="o">=</span> <span class="s1">&#39;double&#39;</span>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;codegen.generators.cpp.restrict_keyword&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">flush_denormals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">prefs</span><span class="p">[</span><span class="s1">&#39;codegen.generators.cpp.flush_denormals&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="CUDACodeGenerator.get_array_name"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.get_array_name">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">access_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a globally unique name for `var`.</span>
+<span class="sd">        See CUDAStandaloneDevice.get_array_name for parameters.</span>
+
+<span class="sd">        Here, `prefix` defaults to `&#39;_ptr&#39;` when `access_data=True`.</span>
+
+<span class="sd">        `prefix=&#39;_ptr&#39;` is used since the CUDACodeGenerator generates the</span>
+<span class="sd">        `scalar_code` and `vector_code` snippets.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># We have to do the import here to avoid circular import dependencies.</span>
+        <span class="kn">from</span> <span class="nn">brian2.devices.device</span> <span class="k">import</span> <span class="n">get_device</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">get_device</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">access_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prefix</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;_ptr&#39;</span>
+            <span class="k">return</span> <span class="n">device</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">access_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">device</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">access_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_expression"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_expression">[docs]</a>    <span class="k">def</span> <span class="nf">translate_expression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">):</span>
+        <span class="n">expr</span> <span class="o">=</span> <span class="n">word_substitute</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">func_name_replacements</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CPPNodeRenderer</span><span class="p">()</span><span class="o">.</span><span class="n">render_expr</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_statement"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_statement">[docs]</a>    <span class="k">def</span> <span class="nf">translate_statement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement</span><span class="p">):</span>
+        <span class="n">var</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">expr</span><span class="p">,</span> <span class="n">comment</span> <span class="o">=</span> <span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span><span class="p">,</span>
+                                  <span class="n">statement</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">statement</span><span class="o">.</span><span class="n">comment</span><span class="p">)</span>
+        <span class="c1"># For C++ we replace complex expressions involving boolean variables into a sequence of</span>
+        <span class="c1"># if/then expressions with simpler expressions. This is provided by the optimise_statements</span>
+        <span class="c1"># function.</span>
+        <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">used_boolean_variables</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">used_boolean_variables</span><span class="p">):</span>
+            <span class="n">used_boolvars</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">used_boolean_variables</span>
+            <span class="n">bool_simp</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">boolean_simplified_expressions</span>
+            <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;:=&#39;</span><span class="p">:</span>
+                <span class="c1"># we have to declare the variable outside the if/then statement (which</span>
+                <span class="c1"># unfortunately means we can&#39;t make it const but the optimisation is worth</span>
+                <span class="c1"># it anyway).</span>
+                <span class="n">codelines</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span><span class="p">]</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;=&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">codelines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">firstline</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># bool assigns is a sequence of (var, value) pairs giving the conditions under</span>
+            <span class="c1"># which the simplified expression simp_expr holds</span>
+            <span class="k">for</span> <span class="n">bool_assigns</span><span class="p">,</span> <span class="n">simp_expr</span> <span class="ow">in</span> <span class="n">bool_simp</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c1"># generate a boolean expression like ``var1 &amp;&amp; var2 &amp;&amp; !var3``</span>
+                <span class="n">atomics</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">boolvar</span><span class="p">,</span> <span class="n">boolval</span> <span class="ow">in</span> <span class="n">bool_assigns</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">boolval</span><span class="p">:</span>
+                        <span class="n">atomics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">boolvar</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">atomics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;!&#39;</span><span class="o">+</span><span class="n">boolvar</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">firstline</span><span class="p">:</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;else &#39;</span>
+                <span class="c1"># only need another if statement when we have more than one boolean variables</span>
+                <span class="k">if</span> <span class="n">firstline</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">used_boolvars</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;if(&#39;</span><span class="o">+</span><span class="p">(</span><span class="s1">&#39; &amp;&amp; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">atomics</span><span class="p">))</span><span class="o">+</span><span class="s1">&#39;)&#39;</span>
+                <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span>
+                <span class="n">line</span> <span class="o">+=</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_expression</span><span class="p">(</span><span class="n">simp_expr</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>
+                <span class="n">codelines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                <span class="n">firstline</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">codelines</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;:=&#39;</span><span class="p">:</span>
+                <span class="n">decl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;=&#39;</span>
+                <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">constant</span><span class="p">:</span>
+                    <span class="n">decl</span> <span class="o">=</span> <span class="s1">&#39;const &#39;</span> <span class="o">+</span> <span class="n">decl</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">decl</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="n">decl</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_expression</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">):</span>
+            <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39; // &#39;</span> <span class="o">+</span> <span class="n">comment</span>
+        <span class="k">return</span> <span class="n">code</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_to_read_arrays"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_read_arrays">[docs]</a>    <span class="k">def</span> <span class="nf">translate_to_read_arrays</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># index and read arrays (index arrays first)</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">read</span><span class="p">):</span>
+            <span class="n">index_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">varname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">write</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;const &#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39; = &#39;</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;[&#39;</span> <span class="o">+</span> <span class="n">index_var</span> <span class="o">+</span> <span class="s1">&#39;];&#39;</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_to_declarations"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_declarations">[docs]</a>    <span class="k">def</span> <span class="nf">translate_to_declarations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># simply declare variables that will be written but not read</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">write</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">varname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">read</span> <span class="ow">and</span> <span class="n">varname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>
+                <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.conditional_write"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.conditional_write">[docs]</a>    <span class="k">def</span> <span class="nf">conditional_write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">statement</span><span class="p">,</span> <span class="n">conditional_write_vars</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">var</span> <span class="ow">in</span> <span class="n">conditional_write_vars</span><span class="p">:</span>
+            <span class="n">subs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">condvar</span> <span class="o">=</span> <span class="n">conditional_write_vars</span><span class="p">[</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">]</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;if(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">condvar</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;    &#39;</span> <span class="o">+</span> <span class="n">line</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_to_statements"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_statements">[docs]</a>    <span class="k">def</span> <span class="nf">translate_to_statements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statements</span><span class="p">,</span> <span class="n">conditional_write_vars</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># the actual code</span>
+        <span class="k">for</span> <span class="n">stmt</span> <span class="ow">in</span> <span class="n">statements</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_statement</span><span class="p">(</span><span class="n">stmt</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conditional_write</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">stmt</span><span class="p">,</span>
+                                                <span class="n">conditional_write_vars</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_to_write_arrays"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_to_write_arrays">[docs]</a>    <span class="k">def</span> <span class="nf">translate_to_write_arrays</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">write</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># write arrays</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">write</span><span class="p">:</span>
+            <span class="n">index_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;[&#39;</span> <span class="o">+</span> <span class="n">index_var</span> <span class="o">+</span> <span class="s1">&#39;] = &#39;</span> <span class="o">+</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.translate_one_statement_sequence"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.translate_one_statement_sequence">[docs]</a>    <span class="k">def</span> <span class="nf">translate_one_statement_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statements</span><span class="p">,</span> <span class="n">scalar</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># This function is refactored into four functions which perform the</span>
+        <span class="c1"># four necessary operations. It&#39;s done like this so that code</span>
+        <span class="c1"># deriving from this class can overwrite specific parts.</span>
+        <span class="n">all_unique</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_repeated_indices</span><span class="p">(</span><span class="n">statements</span><span class="p">)</span>
+
+        <span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">conditional_write_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arrays_helper</span><span class="p">(</span><span class="n">statements</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># try to use atomics</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_atomics</span> <span class="ow">or</span> <span class="n">scalar</span> <span class="ow">or</span> <span class="n">all_unique</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ParallelisationError</span><span class="p">()</span>
+            <span class="c1"># more complex translations to deal with repeated indices, which</span>
+            <span class="c1"># could lead to race conditions when applied in parallel</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parallelise_code</span><span class="p">(</span><span class="n">statements</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">uses_atomics</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">ParallelisationError</span><span class="p">:</span>
+            <span class="c1"># don&#39;t use atomics</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># index and read arrays (index arrays first)</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_to_read_arrays</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+            <span class="c1"># simply declare variables that will be written but not read</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_to_declarations</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+            <span class="c1"># the actual code</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_to_statements</span><span class="p">(</span><span class="n">statements</span><span class="p">,</span>
+                                                  <span class="n">conditional_write_vars</span><span class="p">)</span>
+            <span class="c1"># write arrays</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_to_write_arrays</span><span class="p">(</span><span class="n">write</span><span class="p">)</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+
+        <span class="c1"># Check if 64bit integer types occur in the same line as a default function.</span>
+        <span class="c1"># We can&#39;t get the arguments of the function call directly with regex due to</span>
+        <span class="c1"># possibly nested paranthesis inside function paranthesis.</span>
+        <span class="n">statement_lines</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_to_statements</span><span class="p">(</span><span class="n">statements</span><span class="p">,</span>
+                                                       <span class="n">conditional_write_vars</span><span class="p">)</span>
+        <span class="n">convertion_pref</span> <span class="o">=</span> <span class="n">prefs</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">cuda_standalone</span><span class="o">.</span><span class="n">default_functions_integral_convertion</span>
+        <span class="c1"># only check if there was no warning yet or if convertion preference has changed</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">warned_integral_convertion</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">previous_convertion_pref</span> <span class="o">!=</span> <span class="n">convertion_pref</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">statement_lines</span><span class="p">:</span>
+                <span class="n">brian_funcs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;_brian_(&#39;</span> <span class="o">+</span> <span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">functions_C99</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">brian_funcs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">identifier</span> <span class="ow">in</span> <span class="n">get_identifiers</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">convertion_pref</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+                            <span class="c1"># 64bit integer to floating-point conversions are not type safe</span>
+                            <span class="n">int64_type</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\bu?int64_t\s*</span><span class="si">{}</span><span class="s1">\b&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">identifier</span><span class="p">),</span> <span class="n">code</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">int64_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                                <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Detected code statement with default function and 64bit integer type in the same line. &quot;</span>
+                                            <span class="s2">&quot;Using 64bit integer types as default function arguments is not type safe due to convertion of &quot;</span>
+                                            <span class="s2">&quot;integer to 64bit floating-point types in device code. (relevant functions: sin, cos, tan, sinh, &quot;</span>
+                                            <span class="s2">&quot;cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)</span><span class="se">\n</span><span class="s2">Detected code &quot;</span>
+                                            <span class="s2">&quot;statement:</span><span class="se">\n\t</span><span class="si">{}</span><span class="se">\n</span><span class="s2">Generated from abstract code statements:</span><span class="se">\n\t</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">statements</span><span class="p">),</span>
+                                            <span class="n">once</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">warned_integral_convertion</span> <span class="o">=</span> <span class="kc">True</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">previous_convertion_pref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+                        <span class="k">else</span><span class="p">:</span>  <span class="c1"># convertion_pref = np.float32</span>
+                            <span class="c1"># 32bit and 64bit integer to floating-point conversions are not type safe</span>
+                            <span class="n">int32_64_type</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\bu?int(32|64)_t\s*</span><span class="si">{}</span><span class="s1">\b&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">identifier</span><span class="p">),</span> <span class="n">code</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">int32_64_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                                <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Detected code statement with default function and 32bit or 64bit integer type in the same line and the &quot;</span>
+                                            <span class="s2">&quot;preference for default_functions_integral_convertion is &#39;float32&#39;. &quot;</span>
+                                            <span class="s2">&quot;Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of &quot;</span>
+                                            <span class="s2">&quot;integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, &quot;</span>
+                                            <span class="s2">&quot;cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)</span><span class="se">\n</span><span class="s2">Detected code &quot;</span>
+                                            <span class="s2">&quot;statement:</span><span class="se">\n\t</span><span class="si">{}</span><span class="se">\n</span><span class="s2">Generated from abstract code statements:</span><span class="se">\n\t</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">statements</span><span class="p">),</span>
+                                            <span class="n">once</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">warned_integral_convertion</span> <span class="o">=</span> <span class="kc">True</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">previous_convertion_pref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+        <span class="k">return</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="n">code</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.atomics_parallelisation"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.atomics_parallelisation">[docs]</a>    <span class="k">def</span> <span class="nf">atomics_parallelisation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement</span><span class="p">,</span> <span class="n">conditional_write_vars</span><span class="p">,</span>
+                                <span class="n">used_variables</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_atomics</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParallelisationError</span><span class="p">()</span>
+        <span class="c1"># Avoids circular import</span>
+        <span class="kn">from</span> <span class="nn">brian2.devices.device</span> <span class="k">import</span> <span class="n">device</span>
+
+        <span class="c1"># See https://github.com/brian-team/brian2/pull/531 for explanation</span>
+        <span class="n">used</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">get_identifiers</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">expr</span><span class="p">))</span>
+        <span class="n">used</span> <span class="o">=</span> <span class="n">used</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                                 <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span>
+                                 <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;_idx&#39;</span><span class="p">)</span>
+        <span class="n">used_variables</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">used</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">var</span> <span class="ow">in</span> <span class="n">used_variables</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParallelisationError</span><span class="p">()</span>
+
+        <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_expression</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">expr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;:=&#39;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;_idx&#39;</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">statement</span><span class="o">.</span><span class="n">inplace</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;:=&#39;</span><span class="p">:</span>
+                <span class="n">decl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;=&#39;</span>
+                <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">constant</span><span class="p">:</span>
+                    <span class="n">decl</span> <span class="o">=</span> <span class="s1">&#39;const &#39;</span> <span class="o">+</span> <span class="n">decl</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">decl</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{decl}{var}</span><span class="s1"> </span><span class="si">{op}</span><span class="s1"> </span><span class="si">{expr}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">decl</span><span class="o">=</span><span class="n">decl</span><span class="p">,</span>
+                                                     <span class="n">var</span><span class="o">=</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op</span><span class="p">,</span>
+                                                     <span class="n">expr</span><span class="o">=</span><span class="n">expr</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">statement</span><span class="o">.</span><span class="n">inplace</span><span class="p">:</span>
+            <span class="n">sign</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;+=&#39;</span><span class="p">:</span>
+                <span class="n">atomic_op</span> <span class="o">=</span> <span class="s1">&#39;_brian_atomicAdd&#39;</span>
+            <span class="k">elif</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;-=&#39;</span><span class="p">:</span>
+                <span class="c1"># CUDA has hardware implementations for float (and for CC&gt;=6.0</span>
+                <span class="c1"># for double) only for atomicAdd, which is faster then our</span>
+                <span class="c1"># software implementation</span>
+                <span class="n">atomic_op</span> <span class="o">=</span> <span class="s1">&#39;_brian_atomicAdd&#39;</span>
+                <span class="n">sign</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span>
+            <span class="k">elif</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;*=&#39;</span><span class="p">:</span>
+                <span class="n">atomic_op</span> <span class="o">=</span> <span class="s1">&#39;_brian_atomicMul&#39;</span>
+            <span class="k">elif</span> <span class="n">statement</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;/=&#39;</span><span class="p">:</span>
+                <span class="n">atomic_op</span> <span class="o">=</span> <span class="s1">&#39;_brian_atomicDiv&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># TODO: what other inplace operations are possible? Can we</span>
+                <span class="c1"># implement them with atomicCAS ?</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Atomic operation for operation </span><span class="si">{op}</span><span class="s2"> is not implemented.&quot;</span>
+                            <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">op</span><span class="o">=</span><span class="n">statement</span><span class="o">.</span><span class="n">op</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">ParallelisationError</span><span class="p">()</span>
+
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{atomic_op}</span><span class="s1">(&amp;</span><span class="si">{array_name}</span><span class="s1">[</span><span class="si">{idx}</span><span class="s1">], (</span><span class="si">{array_dtype}</span><span class="s1">)</span><span class="si">{sign}</span><span class="s1">(</span><span class="si">{expr}</span><span class="s1">));&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">atomic_op</span><span class="o">=</span><span class="n">atomic_op</span><span class="p">,</span>
+                <span class="n">array_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">]),</span>
+                <span class="n">idx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">],</span>
+                <span class="n">array_dtype</span><span class="o">=</span><span class="n">c_data_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">statement</span><span class="o">.</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+                <span class="n">sign</span><span class="o">=</span><span class="n">sign</span><span class="p">,</span> <span class="n">expr</span><span class="o">=</span><span class="n">expr</span><span class="p">)</span>
+            <span class="c1"># this is now a list of 1 or 2 lines (potentially with if(...))</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_write</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">statement</span><span class="p">,</span> <span class="n">conditional_write_vars</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParallelisationError</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">comment</span><span class="p">):</span>
+            <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="s1">&#39; // &#39;</span> <span class="o">+</span> <span class="n">statement</span><span class="o">.</span><span class="n">comment</span>
+
+        <span class="k">return</span> <span class="n">line</span></div>
+
+<div class="viewcode-block" id="CUDACodeGenerator.parallelise_code"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.parallelise_code">[docs]</a>    <span class="k">def</span> <span class="nf">parallelise_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statements</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">used_variables</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">all_read</span><span class="p">,</span> <span class="n">all_write</span><span class="p">,</span> <span class="n">all_indices</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arrays_helper</span><span class="p">(</span><span class="n">statements</span><span class="p">)</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># we are collecting all reads, which are not only loaded because</span>
+            <span class="c1"># of in-place atomic operations and all writes, which are not</span>
+            <span class="c1"># written to by atomics</span>
+            <span class="n">collected_reads</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">collected_writes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">atomic_lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">stmt</span> <span class="ow">in</span> <span class="n">statements</span><span class="p">:</span>
+                <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;//  Abstract code:  </span><span class="si">{var}</span><span class="s1"> </span><span class="si">{op}</span><span class="s1"> </span><span class="si">{expr}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="n">stmt</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
+                                                                            <span class="n">op</span><span class="o">=</span><span class="n">stmt</span><span class="o">.</span><span class="n">op</span><span class="p">,</span>
+                                                                            <span class="n">expr</span><span class="o">=</span><span class="n">stmt</span><span class="o">.</span><span class="n">expr</span><span class="p">))</span>
+                <span class="c1"># We treat every statement individually with its own read and write code</span>
+                <span class="c1"># to be on the safe side</span>
+                <span class="n">read</span><span class="p">,</span> <span class="n">write</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">conditional_write_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arrays_helper</span><span class="p">([</span><span class="n">stmt</span><span class="p">])</span>
+                <span class="c1"># No need to load a variable if it is only in read because of</span>
+                <span class="c1"># the in-place operation, but still load the index var, we</span>
+                <span class="c1"># need it for the atomics</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">stmt</span><span class="o">.</span><span class="n">inplace</span> <span class="ow">and</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">stmt</span><span class="o">.</span><span class="n">var</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;_idx&#39;</span> <span class="ow">and</span>
+                        <span class="n">stmt</span><span class="o">.</span><span class="n">var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">get_identifiers</span><span class="p">(</span><span class="n">stmt</span><span class="o">.</span><span class="n">expr</span><span class="p">)):</span>
+                    <span class="n">read</span> <span class="o">=</span> <span class="n">read</span> <span class="o">-</span> <span class="p">{</span><span class="n">stmt</span><span class="o">.</span><span class="n">var</span><span class="p">}</span>
+                <span class="n">collected_reads</span> <span class="o">=</span> <span class="n">collected_reads</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">read</span><span class="p">)</span>
+                <span class="n">atomic_lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atomics_parallelisation</span><span class="p">(</span><span class="n">stmt</span><span class="p">,</span>
+                                                                 <span class="n">conditional_write_vars</span><span class="p">,</span>
+                                                                 <span class="n">used_variables</span><span class="p">))</span>
+                <span class="c1"># Do not write back such values, the atomic functions have</span>
+                <span class="c1"># modified the underlying array already</span>
+                <span class="k">if</span> <span class="n">stmt</span><span class="o">.</span><span class="n">inplace</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_indices</span><span class="p">[</span><span class="n">stmt</span><span class="o">.</span><span class="n">var</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;_idx&#39;</span><span class="p">:</span>
+                    <span class="n">write</span> <span class="o">=</span> <span class="n">write</span> <span class="o">-</span> <span class="p">{</span><span class="n">stmt</span><span class="o">.</span><span class="n">var</span><span class="p">}</span>
+                <span class="n">collected_writes</span> <span class="o">=</span> <span class="n">collected_writes</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">write</span><span class="p">)</span>
+
+            <span class="c1"># we translate to read arrays altogether, otherwise we end up with</span>
+            <span class="c1"># multiple declarations for statement identifiers</span>
+
+            <span class="c1"># pass all_write here, since this determines the `const` keyword</span>
+            <span class="c1"># (otherwise the variables written to by atomics would be `const`)</span>
+            <span class="c1"># and all_indices, since we need those for the atomic calls</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate_to_read_arrays</span><span class="p">(</span><span class="n">collected_reads</span><span class="p">,</span>
+                                                       <span class="n">all_write</span><span class="p">,</span>
+                                                       <span class="n">all_indices</span><span class="p">))</span>
+            <span class="c1"># we need to declare variables which will be written to but not</span>
+            <span class="c1"># read (e.g. in assigmenets like `v_post = 1`) and which are not</span>
+            <span class="c1"># used in atomics (hence we use `collected_writes`)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate_to_declarations</span><span class="p">(</span><span class="n">all_read</span><span class="p">,</span>
+                                                        <span class="n">collected_writes</span><span class="p">,</span>
+                                                        <span class="n">all_indices</span><span class="p">))</span>
+            <span class="c1"># add the atomic operations and statements</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">atomic_lines</span><span class="p">)</span>
+            <span class="c1"># only write variables which are not written to by atomics</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate_to_write_arrays</span><span class="p">(</span><span class="n">collected_writes</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">ParallelisationError</span><span class="p">:</span>
+            <span class="c1"># logg info here, since this means we tried, but failed to use atomics</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Failed to parallelise code by using atomic operations. &quot;</span>
+                        <span class="s2">&quot;Falling back to serialized effect application. This &quot;</span>
+                        <span class="s2">&quot;might be slow. Switching to `cpp_standalone` might be &quot;</span>
+                        <span class="s2">&quot;faster. Code object name is </span><span class="si">{}</span><span class="s2"> and first line in &quot;</span>
+                        <span class="s2">&quot;abstract code is: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">statements</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                        <span class="n">once</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+        <span class="k">return</span> <span class="n">lines</span></div>
+
+
+<div class="viewcode-block" id="CUDACodeGenerator.denormals_to_zero_code"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.denormals_to_zero_code">[docs]</a>    <span class="k">def</span> <span class="nf">denormals_to_zero_code</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">flush_denormals</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            #define CSR_FLUSH_TO_ZERO         (1 &lt;&lt; 15)</span>
+<span class="s1">            unsigned csr = __builtin_ia32_stmxcsr();</span>
+<span class="s1">            csr |= CSR_FLUSH_TO_ZERO;</span>
+<span class="s1">            __builtin_ia32_ldmxcsr(csr);</span>
+<span class="s1">            &#39;&#39;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;&#39;</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_user_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">,</span> <span class="n">variable</span><span class="p">):</span>
+        <span class="n">impl</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">implementations</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">codeobj_class</span><span class="p">]</span>
+        <span class="n">support_code</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">hash_defines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">pointers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">kernel_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">user_functions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">varname</span><span class="p">,</span> <span class="n">variable</span><span class="p">)]</span>
+        <span class="n">funccode</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">get_code</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">owner</span><span class="p">)</span>
+
+        <span class="c1">### Different from CPPCodeGenerator: We format the funccode dtypes here</span>
+        <span class="kn">from</span> <span class="nn">brian2.devices.device</span> <span class="k">import</span> <span class="n">get_device</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">get_device</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">functions_C99</span><span class="p">:</span>
+            <span class="n">funccode</span> <span class="o">=</span> <span class="n">funccode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">default_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">default_func_type</span><span class="p">,</span>
+                                       <span class="n">other_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">other_func_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">varname</span> <span class="o">==</span> <span class="s1">&#39;clip&#39;</span><span class="p">:</span>
+            <span class="n">funccode</span> <span class="o">=</span> <span class="n">funccode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">float_dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">float_dtype</span><span class="p">)</span>
+        <span class="c1">###</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">funccode</span><span class="p">,</span> <span class="n">basestring</span><span class="p">):</span>
+            <span class="n">funccode</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;support_code&#39;</span><span class="p">:</span> <span class="n">funccode</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">funccode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># To make namespace variables available to functions, we</span>
+            <span class="c1"># create global variables and assign to them in the main</span>
+            <span class="c1"># code</span>
+            <span class="n">func_namespace</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">get_namespace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">owner</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">ns_key</span><span class="p">,</span> <span class="n">ns_value</span> <span class="ow">in</span> <span class="n">func_namespace</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c1"># This section is adapted from CPPCodeGenerator such that file</span>
+                <span class="c1"># global namespace pointers can be used in both host and device</span>
+                <span class="c1"># code.</span>
+                <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ns_value</span><span class="p">,</span> <span class="s1">&#39;dtype&#39;</span><span class="p">),</span> \
+                    <span class="s1">&#39;This should not have happened. Please report at &#39;</span> \
+                    <span class="s1">&#39;https://github.com/brian-team/brian2cuda/issues/new&#39;</span>
+                <span class="k">if</span> <span class="n">ns_value</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">((</span>
+                    <span class="s1">&#39;Directly replace scalar values in the function &#39;</span>
+                    <span class="s1">&#39;instead of providing them via the namespace&#39;</span><span class="p">))</span>
+                <span class="n">type_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">ns_value</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;*&#39;</span>
+                <span class="n">namespace_ptr</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                    #if (defined(__CUDA_ARCH__) &amp;&amp; (__CUDA_ARCH__ &gt; 0))</span>
+<span class="s1">                    __device__ </span><span class="si">{dtype}</span><span class="s1"> _namespace</span><span class="si">{name}</span><span class="s1">;</span>
+<span class="s1">                    #else</span>
+<span class="s1">                    </span><span class="si">{dtype}</span><span class="s1"> _namespace</span><span class="si">{name}</span><span class="s1">;</span>
+<span class="s1">                    #endif</span>
+<span class="s1">                    &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">type_str</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">ns_key</span><span class="p">)</span>
+                <span class="n">support_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">namespace_ptr</span><span class="p">)</span>
+                <span class="c1"># pointer lines will be used in codeobjects running on the host</span>
+                <span class="n">pointers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;_namespace</span><span class="si">{name}</span><span class="s1"> = </span><span class="si">{name}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">ns_key</span><span class="p">))</span>
+                <span class="c1"># kernel lines will be used in codeobjects running on the device</span>
+                <span class="n">kernel_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                    #if (defined(__CUDA_ARCH__) &amp;&amp; (__CUDA_ARCH__ &gt; 0))</span>
+<span class="s1">                    _namespace</span><span class="si">{name}</span><span class="s1"> = d</span><span class="si">{name}</span><span class="s1">;</span>
+<span class="s1">                    #else</span>
+<span class="s1">                    _namespace</span><span class="si">{name}</span><span class="s1"> = </span><span class="si">{name}</span><span class="s1">;</span>
+<span class="s1">                    #endif</span>
+<span class="s1">                    &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">ns_key</span><span class="p">))</span>
+            <span class="n">support_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">deindent</span><span class="p">(</span><span class="n">funccode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;support_code&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)))</span>
+            <span class="n">hash_defines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">deindent</span><span class="p">(</span><span class="n">funccode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hashdefine_code&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)))</span>
+
+        <span class="n">dep_hash_defines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">dep_pointers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">dep_support_code</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">dep_kernel_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">impl</span><span class="o">.</span><span class="n">dependencies</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">dep_name</span><span class="p">,</span> <span class="n">dep</span> <span class="ow">in</span> <span class="n">impl</span><span class="o">.</span><span class="n">dependencies</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">dep_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">dep_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">dep</span>
+                    <span class="n">hd</span><span class="p">,</span> <span class="n">ps</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">uf</span><span class="p">,</span> <span class="n">kl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_user_function</span><span class="p">(</span><span class="n">dep_name</span><span class="p">,</span> <span class="n">dep</span><span class="p">)</span>
+                    <span class="n">dep_hash_defines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">hd</span><span class="p">)</span>
+                    <span class="n">dep_pointers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ps</span><span class="p">)</span>
+                    <span class="n">dep_support_code</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+                    <span class="n">user_functions</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">uf</span><span class="p">)</span>
+                    <span class="n">dep_kernel_lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">kl</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">dep_hash_defines</span> <span class="o">+</span> <span class="n">hash_defines</span><span class="p">,</span>
+                <span class="n">dep_pointers</span> <span class="o">+</span> <span class="n">pointers</span><span class="p">,</span>
+                <span class="n">dep_support_code</span> <span class="o">+</span> <span class="n">support_code</span><span class="p">,</span>
+                <span class="n">user_functions</span><span class="p">,</span>
+                <span class="n">dep_kernel_lines</span> <span class="o">+</span> <span class="n">kernel_lines</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CUDACodeGenerator.determine_keywords"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDACodeGenerator.html#brian2cuda.cuda_generator.CUDACodeGenerator.determine_keywords">[docs]</a>    <span class="k">def</span> <span class="nf">determine_keywords</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># set up the restricted pointers, these are used so that the compiler</span>
+        <span class="c1"># knows there is no aliasing in the pointers, for optimisation</span>
+        <span class="n">pointers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Add additional lines inside the kernel functions</span>
+        <span class="n">kernel_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># It is possible that several different variable names refer to the</span>
+        <span class="c1"># same array. E.g. in gapjunction code, v_pre and v_post refer to the</span>
+        <span class="c1"># same array if a group is connected to itself</span>
+        <span class="n">handled_pointers</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">template_kwds</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Again, do the import here to avoid a circular dependency.</span>
+        <span class="kn">from</span> <span class="nn">brian2.devices.device</span> <span class="k">import</span> <span class="n">get_device</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">get_device</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">ArrayVariable</span><span class="p">):</span>
+                <span class="c1"># This is the &quot;true&quot; array name, not the restricted pointer.</span>
+                <span class="n">array_name</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+                <span class="n">pointer_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">pointer_name</span> <span class="ow">in</span> <span class="n">handled_pointers</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="s1">&#39;ndim&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">continue</span>  <span class="c1"># multidimensional (dynamic) arrays have to be treated differently</span>
+                <span class="n">restrict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">restrict</span>
+                <span class="c1"># turn off restricted pointers for scalars for safety</span>
+                <span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="n">scalar</span><span class="p">:</span>
+                    <span class="n">restrict</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">* </span><span class="si">{1}</span><span class="s1"> </span><span class="si">{2}</span><span class="s1"> = </span><span class="si">{3}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+                                                    <span class="n">restrict</span><span class="p">,</span>
+                                                    <span class="n">pointer_name</span><span class="p">,</span>
+                                                    <span class="n">array_name</span><span class="p">)</span>
+                <span class="n">pointers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                <span class="n">handled_pointers</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pointer_name</span><span class="p">)</span>
+
+        <span class="c1"># set up the functions</span>
+        <span class="n">user_functions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">support_code</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">hash_defines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">variable</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">Function</span><span class="p">):</span>
+                <span class="n">hd</span><span class="p">,</span> <span class="n">ps</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">uf</span><span class="p">,</span> <span class="n">kl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_user_function</span><span class="p">(</span><span class="n">varname</span><span class="p">,</span> <span class="n">variable</span><span class="p">)</span>
+                <span class="n">user_functions</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">uf</span><span class="p">)</span>
+                <span class="n">support_code</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+                <span class="n">pointers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ps</span><span class="p">)</span>
+                <span class="n">hash_defines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">hd</span><span class="p">)</span>
+                <span class="n">kernel_lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">kl</span><span class="p">)</span>
+
+        <span class="c1"># Generate universal_support_code once when the first codeobject is created.</span>
+        <span class="c1"># Can&#39;t do it at import time since need access to user preferences</span>
+        <span class="c1"># This is a class attribute (not instance attribute).</span>
+        <span class="k">if</span> <span class="n">CUDACodeGenerator</span><span class="o">.</span><span class="n">universal_support_code</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_atomic_support_code</span> <span class="o">=</span> <span class="n">_generate_atomic_support_code</span><span class="p">()</span>
+            <span class="n">CUDACodeGenerator</span><span class="o">.</span><span class="n">universal_support_code</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_hightype_support_code</span>
+                <span class="o">+</span> <span class="n">_mod_support_code</span>
+                <span class="o">+</span> <span class="n">_floordiv_support_code</span>
+                <span class="o">+</span> <span class="n">_pow_support_code</span>
+                <span class="o">+</span> <span class="n">_atomic_support_code</span>
+            <span class="p">)</span>
+        <span class="n">support_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="o">.</span><span class="n">universal_support_code</span><span class="p">)</span>
+
+        <span class="c1"># Clock variables (t, dt, timestep) are passed by value to kernels and</span>
+        <span class="c1"># need to be translated back into pointers for scalar/vector code.</span>
+        <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">variable</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="s1">&#39;owner&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">variable</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">Clock</span><span class="p">):</span>
+                <span class="c1"># get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)</span>
+                <span class="n">arrayname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_array_name</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s2">&quot;const </span><span class="si">{dtype}</span><span class="s2">* _ptr</span><span class="si">{arrayname}</span><span class="s2"> = &amp;_value</span><span class="si">{arrayname}</span><span class="s2">;&quot;</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">c_data_type</span><span class="p">(</span><span class="n">variable</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">arrayname</span><span class="o">=</span><span class="n">arrayname</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">line</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kernel_lines</span><span class="p">:</span>
+                    <span class="n">kernel_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">keywords</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;pointers_lines&#39;</span><span class="p">:</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pointers</span><span class="p">)),</span>
+                    <span class="s1">&#39;support_code_lines&#39;</span><span class="p">:</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">support_code</span><span class="p">)),</span>
+                    <span class="s1">&#39;hashdefine_lines&#39;</span><span class="p">:</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">hash_defines</span><span class="p">)),</span>
+                    <span class="s1">&#39;denormals_code_lines&#39;</span><span class="p">:</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">denormals_to_zero_code</span><span class="p">())),</span>
+                    <span class="s1">&#39;kernel_lines&#39;</span><span class="p">:</span> <span class="n">stripped_deindented_lines</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">kernel_lines</span><span class="p">)),</span>
+                    <span class="s1">&#39;uses_atomics&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">uses_atomics</span>
+                    <span class="p">}</span>
+        <span class="n">keywords</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">template_kwds</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">keywords</span></div></div>
+
+
+<div class="viewcode-block" id="CUDAAtomicsCodeGenerator"><a class="viewcode-back" href="../../reference/brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator.html#brian2cuda.cuda_generator.CUDAAtomicsCodeGenerator">[docs]</a><span class="k">class</span> <span class="nc">CUDAAtomicsCodeGenerator</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">):</span>
+
+    <span class="n">_use_atomics</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Implement functions</span>
+<span class="c1">################################################################################</span>
+
+<span class="c1"># The CUDA Math library suports all C99 standard float and double math functions.</span>
+<span class="c1"># To have support for integral types in device code, we need to wrap these functions</span>
+<span class="c1"># and convert integral types to floating-point types. In host code, we can just use</span>
+<span class="c1"># the standard math functions directly.</span>
+
+<span class="c1">### Functions available in the C99 standard</span>
+<span class="n">functions_C99</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">func_translations</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c1"># Functions that exist under the same name in C++</span>
+<span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;sin&#39;</span><span class="p">,</span> <span class="s1">&#39;cos&#39;</span><span class="p">,</span> <span class="s1">&#39;tan&#39;</span><span class="p">,</span> <span class="s1">&#39;sinh&#39;</span><span class="p">,</span> <span class="s1">&#39;cosh&#39;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">,</span> <span class="s1">&#39;exp&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;log10&#39;</span><span class="p">,</span> <span class="s1">&#39;sqrt&#39;</span><span class="p">,</span> <span class="s1">&#39;ceil&#39;</span><span class="p">,</span> <span class="s1">&#39;floor&#39;</span><span class="p">]:</span>
+    <span class="n">func_translations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">func</span><span class="p">,</span> <span class="n">func</span><span class="p">))</span>
+
+<span class="c1"># Functions that exist under a different name in C++</span>
+<span class="k">for</span> <span class="n">func</span><span class="p">,</span> <span class="n">func_cuda</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;arcsin&#39;</span><span class="p">,</span> <span class="s1">&#39;asin&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;arccos&#39;</span><span class="p">,</span> <span class="s1">&#39;acos&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;arctan&#39;</span><span class="p">,</span> <span class="s1">&#39;atan&#39;</span><span class="p">)]:</span>
+    <span class="n">func_translations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">func</span><span class="p">,</span> <span class="n">func_cuda</span><span class="p">))</span>
+
+<span class="k">for</span> <span class="n">func</span><span class="p">,</span> <span class="n">func_cuda</span> <span class="ow">in</span> <span class="n">func_translations</span><span class="p">:</span>
+    <span class="n">functions_C99</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="n">cuda_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        template &lt;typename T&gt;</span>
+<span class="s1">        __host__ __device__</span>
+<span class="s1">        {{default_type}} _brian_</span><span class="si">{func}</span><span class="s1">(T value)</span>
+<span class="s1">        {{{{</span>
+<span class="s1">        #if (defined(__CUDA_ARCH__) &amp;&amp; (__CUDA_ARCH__ &gt; 0))</span>
+<span class="s1">            return </span><span class="si">{func}</span><span class="s1">(({{default_type}})value);</span>
+<span class="s1">        #else</span>
+<span class="s1">            return </span><span class="si">{func}</span><span class="s1">(value);</span>
+<span class="s1">        #endif</span>
+<span class="s1">        }}}}</span>
+<span class="s1">        inline __host__ __device__</span>
+<span class="s1">        {{other_type}} _brian_</span><span class="si">{func}</span><span class="s1">({{other_type}} value)</span>
+<span class="s1">        {{{{</span>
+<span class="s1">            return </span><span class="si">{func}</span><span class="s1">(value);</span>
+<span class="s1">        }}}}</span>
+<span class="s1">        &#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">func_cuda</span><span class="p">)</span>
+        <span class="c1"># {default_type} and {other_type} will be formatted in CUDACodeGenerator.determine_keywords()</span>
+        <span class="c1"># depending on user prefs (which are not yet set when this code snippet is created)</span>
+    <span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="n">func</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                               <span class="n">code</span><span class="o">=</span><span class="n">cuda_code</span><span class="p">,</span>
+                                                               <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_brian_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">func_cuda</span><span class="p">)</span>
+                                                               <span class="p">)</span>
+
+<span class="c1"># std::abs is available and already overloaded for integral types in device code</span>
+<span class="n">abs_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    #define _brian_abs std::abs</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;abs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                            <span class="n">code</span><span class="o">=</span><span class="n">abs_code</span><span class="p">,</span>
+                                                            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_brian_abs&#39;</span><span class="p">)</span>
+
+<span class="c1">### Functions that need to be implemented specifically</span>
+<span class="n">int_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    template &lt;typename T&gt;</span>
+<span class="s1">    __host__ __device__</span>
+<span class="s1">    int _brian_int(T value)</span>
+<span class="s1">    {</span>
+<span class="s1">        return (int)value;</span>
+<span class="s1">    }</span>
+<span class="s1">    template &lt;&gt;</span>
+<span class="s1">    inline __host__ __device__</span>
+<span class="s1">    int _brian_int(bool value)</span>
+<span class="s1">    {</span>
+<span class="s1">        return value ? 1 : 0;</span>
+<span class="s1">    }</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;int&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                            <span class="n">code</span><span class="o">=</span><span class="n">int_code</span><span class="p">,</span>
+                                                            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_brian_int&#39;</span><span class="p">)</span>
+
+<span class="c1"># TODO: make float version type safe or print warning (see #51)</span>
+<span class="n">clip_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    inline __host__ __device__</span>
+<span class="s1">    </span><span class="si">{float_dtype}</span><span class="s1"> _brian_clip(const </span><span class="si">{float_dtype}</span><span class="s1"> value,</span>
+<span class="s1">                              const </span><span class="si">{float_dtype}</span><span class="s1"> a_min,</span>
+<span class="s1">                              const </span><span class="si">{float_dtype}</span><span class="s1"> a_max)</span>
+<span class="s1">    {{</span>
+<span class="s1">        if (value &lt; a_min)</span>
+<span class="s1">            return a_min;</span>
+<span class="s1">        if (value &gt; a_max)</span>
+<span class="s1">            return a_max;</span>
+<span class="s1">        return value;</span>
+<span class="s1">    }}</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;clip&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                             <span class="n">code</span><span class="o">=</span><span class="n">clip_code</span><span class="p">,</span>
+                                                             <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_brian_clip&#39;</span><span class="p">)</span>
+
+<span class="n">sign_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    template &lt;typename T&gt;</span>
+<span class="s1">    __host__ __device__</span>
+<span class="s1">    int _brian_sign(T val)</span>
+<span class="s1">    {</span>
+<span class="s1">        return (T(0) &lt; val) - (val &lt; T(0));</span>
+<span class="s1">    }</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;sign&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                             <span class="n">code</span><span class="o">=</span><span class="n">sign_code</span><span class="p">,</span>
+                                                             <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_brian_sign&#39;</span><span class="p">)</span>
+
+<span class="n">randn_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    #define _randn(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_randn[vectorisation_idx])</span>
+<span class="s1">        &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;randn&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                              <span class="n">code</span><span class="o">=</span><span class="n">randn_code</span><span class="p">,</span>
+                                                              <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_randn&#39;</span><span class="p">)</span>
+
+<span class="n">rand_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    #define _rand(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_rand[vectorisation_idx])</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;rand&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                             <span class="n">code</span><span class="o">=</span><span class="n">rand_code</span><span class="p">,</span>
+                                                             <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_rand&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># Add support for the `timestep` function added in Brian 2.3.1</span>
+<span class="n">timestep_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">    __host__ __device__</span>
+<span class="s1">    static inline int64_t _timestep(double t, double dt)</span>
+<span class="s1">    {</span>
+<span class="s1">        return (int64_t)((t + 1e-3*dt)/dt);</span>
+<span class="s1">    }</span>
+<span class="s1">    &#39;&#39;&#39;</span>
+<span class="n">DEFAULT_FUNCTIONS</span><span class="p">[</span><span class="s1">&#39;timestep&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">implementations</span><span class="o">.</span><span class="n">add_implementation</span><span class="p">(</span><span class="n">CUDACodeGenerator</span><span class="p">,</span>
+                                                                 <span class="n">code</span><span class="o">=</span><span class="n">timestep_code</span><span class="p">,</span>
+                                                                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;_timestep&#39;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction/preferences.html">Brian2cuda specific preferences</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

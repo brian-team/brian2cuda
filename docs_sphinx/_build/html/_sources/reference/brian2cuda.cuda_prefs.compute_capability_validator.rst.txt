@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.cuda_prefs
+
+compute_capability_validator function
+=====================================
+
+(*Shortest import*: ``from brian2cuda.cuda_prefs import compute_capability_validator)``
+
+.. autofunction:: compute_capability_validator
+

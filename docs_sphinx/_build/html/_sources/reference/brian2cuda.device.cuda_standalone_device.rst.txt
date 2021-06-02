@@ -1,0 +1,8 @@
+.. currentmodule:: brian2cuda.device
+
+cuda_standalone_device object
+=============================
+
+(*Shortest import*: ``from brian2cuda.device import cuda_standalone_device)``
+
+.. autodata:: cuda_standalone_device

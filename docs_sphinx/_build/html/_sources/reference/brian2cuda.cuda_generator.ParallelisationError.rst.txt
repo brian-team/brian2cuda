@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.cuda_generator
+
+ParallelisationError class
+==========================
+
+(*Shortest import*: ``from brian2cuda.cuda_generator import ParallelisationError)``
+
+.. autoclass:: ParallelisationError
+

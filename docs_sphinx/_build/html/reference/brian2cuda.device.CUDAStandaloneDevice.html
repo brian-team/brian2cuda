@@ -1,0 +1,377 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>CUDAStandaloneDevice class &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CUDAWriter class" href="brian2cuda.device.CUDAWriter.html" />
+    <link rel="prev" title="compute_capability_validator function" href="brian2cuda.cuda_prefs.compute_capability_validator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="cudastandalonedevice-class">
+<h1>CUDAStandaloneDevice class<a class="headerlink" href="#cudastandalonedevice-class" title="Permalink to this headline">¶</a></h1>
+<p>(<em>Shortest import</em>: <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">brian2cuda.device</span> <span class="pre">import</span> <span class="pre">CUDAStandaloneDevice)</span></code></p>
+<dl class="class">
+<dt id="brian2cuda.device.CUDAStandaloneDevice">
+<em class="property">class </em><code class="descclassname">brian2cuda.device.</code><code class="descname">CUDAStandaloneDevice</code><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">brian2.devices.cpp_standalone.device.CPPStandaloneDevice</span></code></p>
+<p>The <code class="xref py py-obj docutils literal notranslate"><span class="pre">Device</span></code> used for CUDA standalone simulations.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.build" title="brian2cuda.device.CUDAStandaloneDevice.build"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build</span></code></a>([directory,&nbsp;compile,&nbsp;run,&nbsp;debug,&nbsp;…])</td>
+<td>Build the project</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.check_openmp_compatible" title="brian2cuda.device.CUDAStandaloneDevice.check_openmp_compatible"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_openmp_compatible</span></code></a>(nb_threads)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.code_object" title="brian2cuda.device.CUDAStandaloneDevice.code_object"><code class="xref py py-obj docutils literal notranslate"><span class="pre">code_object</span></code></a>(owner,&nbsp;name,&nbsp;abstract_code,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.code_object_class" title="brian2cuda.device.CUDAStandaloneDevice.code_object_class"><code class="xref py py-obj docutils literal notranslate"><span class="pre">code_object_class</span></code></a>([codeobj_class,&nbsp;fallback_pref])</td>
+<td>Return <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code> class (either <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code> class or input)</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.copy_source_files" title="brian2cuda.device.CUDAStandaloneDevice.copy_source_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_source_files</span></code></a>(writer,&nbsp;directory)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_codeobj_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_codeobj_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_codeobj_source</span></code></a>(writer)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_main_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_main_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_main_source</span></code></a>(writer,&nbsp;main_includes)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_makefile" title="brian2cuda.device.CUDAStandaloneDevice.generate_makefile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_makefile</span></code></a>(writer,&nbsp;cpp_compiler,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_network_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_network_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_network_source</span></code></a>(writer)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_objects_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_objects_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_objects_source</span></code></a>(writer,&nbsp;…)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_rand_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_rand_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_rand_source</span></code></a>(writer)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_run_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_run_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_run_source</span></code></a>(writer,&nbsp;run_includes)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.generate_synapses_classes_source" title="brian2cuda.device.CUDAStandaloneDevice.generate_synapses_classes_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_synapses_classes_source</span></code></a>(writer)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.get_array_name" title="brian2cuda.device.CUDAStandaloneDevice.get_array_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_array_name</span></code></a>(var[,&nbsp;access_data,&nbsp;prefix])</td>
+<td>Return a globally unique name for <code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.get_array_read_write" title="brian2cuda.device.CUDAStandaloneDevice.get_array_read_write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_array_read_write</span></code></a>(abstract_code,&nbsp;variables)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#brian2cuda.device.CUDAStandaloneDevice.network_run" title="brian2cuda.device.CUDAStandaloneDevice.network_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">network_run</span></code></a>(net,&nbsp;duration[,&nbsp;report,&nbsp;…])</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Details</p>
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>directory='output'</em>, <em>compile=True</em>, <em>run=True</em>, <em>debug=False</em>, <em>clean=False</em>, <em>with_output=True</em>, <em>disable_asserts=False</em>, <em>additional_source_files=None</em>, <em>additional_header_files=None</em>, <em>main_includes=None</em>, <em>run_includes=None</em>, <em>run_args=None</em>, <em>direct_call=True</em>, <em>**kwds</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the project</p>
+<p>TODO: more details</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>directory</strong> : str, optional</p>
+<blockquote>
+<div><p>The output directory to write the project to, any existing files
+will be overwritten. If the given directory name is <code class="docutils literal notranslate"><span class="pre">None</span></code>, then
+a temporary directory will be used (used in the test suite to avoid
+problems when running several tests in parallel). Defaults to
+<code class="docutils literal notranslate"><span class="pre">'output'</span></code>.</p>
+</div></blockquote>
+<p><strong>compile</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not to attempt to compile the project. Defaults to
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div></blockquote>
+<p><strong>run</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not to attempt to run the built project if it
+successfully builds. Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div></blockquote>
+<p><strong>debug</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether to compile in debug mode. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</div></blockquote>
+<p><strong>with_output</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not to show the <code class="docutils literal notranslate"><span class="pre">stdout</span></code> of the built program when run.
+Output will be shown in case of compilation or runtime error.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div></blockquote>
+<p><strong>clean</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not to clean the project before building. Defaults to
+<code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</div></blockquote>
+<p><strong>additional_source_files</strong> : list of str, optional</p>
+<blockquote>
+<div><p>A list of additional <code class="docutils literal notranslate"><span class="pre">.cu</span></code> files to include in the build.</p>
+</div></blockquote>
+<p><strong>additional_header_files</strong> : list of str</p>
+<blockquote>
+<div><p>A list of additional <code class="docutils literal notranslate"><span class="pre">.h</span></code> files to include in the build.</p>
+</div></blockquote>
+<p><strong>main_includes</strong> : list of str</p>
+<blockquote>
+<div><p>A list of additional header files to include in <code class="docutils literal notranslate"><span class="pre">main.cu</span></code>.</p>
+</div></blockquote>
+<p><strong>run_includes</strong> : list of str</p>
+<blockquote>
+<div><p>A list of additional header files to include in <code class="docutils literal notranslate"><span class="pre">run.cu</span></code>.</p>
+</div></blockquote>
+<p><strong>direct_call</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>Whether this function was called directly. Is used internally to
+distinguish an automatic build due to the <code class="docutils literal notranslate"><span class="pre">build_on_run</span></code> option
+from a manual <code class="docutils literal notranslate"><span class="pre">device.build</span></code> call.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.check_openmp_compatible">
+<code class="descname">check_openmp_compatible</code><span class="sig-paren">(</span><em>nb_threads</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.check_openmp_compatible"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.check_openmp_compatible" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.code_object">
+<code class="descname">code_object</code><span class="sig-paren">(</span><em>owner</em>, <em>name</em>, <em>abstract_code</em>, <em>variables</em>, <em>template_name</em>, <em>variable_indices</em>, <em>codeobj_class=None</em>, <em>template_kwds=None</em>, <em>override_conditional_write=None</em>, <em>**kwds</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.code_object"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.code_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.code_object_class">
+<code class="descname">code_object_class</code><span class="sig-paren">(</span><em>codeobj_class=None</em>, <em>fallback_pref=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.code_object_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.code_object_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code> class (either <code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code> class or input)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>codeobj_class</strong> : a <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code> class, optional</p>
+<blockquote>
+<div><p>If this is keyword is set to None or no arguments are given, this method will return
+the default (<code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAStandaloneCodeObject</span></code> class).</p>
+</div></blockquote>
+<p><strong>fallback_pref</strong> : str, optional</p>
+<blockquote>
+<div><p>For the cuda_standalone device this option is ignored.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>codeobj_class</strong> : class</p>
+<blockquote class="last">
+<div><p>The <code class="xref py py-obj docutils literal notranslate"><span class="pre">CodeObject</span></code> class that should be used</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.copy_source_files">
+<code class="descname">copy_source_files</code><span class="sig-paren">(</span><em>writer</em>, <em>directory</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.copy_source_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.copy_source_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_codeobj_source">
+<code class="descname">generate_codeobj_source</code><span class="sig-paren">(</span><em>writer</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_codeobj_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_codeobj_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_main_source">
+<code class="descname">generate_main_source</code><span class="sig-paren">(</span><em>writer</em>, <em>main_includes</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_main_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_main_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_makefile">
+<code class="descname">generate_makefile</code><span class="sig-paren">(</span><em>writer</em>, <em>cpp_compiler</em>, <em>cpp_compiler_flags</em>, <em>nb_threads</em>, <em>disable_asserts=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_makefile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_makefile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_network_source">
+<code class="descname">generate_network_source</code><span class="sig-paren">(</span><em>writer</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_network_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_network_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_objects_source">
+<code class="descname">generate_objects_source</code><span class="sig-paren">(</span><em>writer</em>, <em>arange_arrays</em>, <em>synapses</em>, <em>static_array_specs</em>, <em>networks</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_objects_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_objects_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_rand_source">
+<code class="descname">generate_rand_source</code><span class="sig-paren">(</span><em>writer</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_rand_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_rand_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_run_source">
+<code class="descname">generate_run_source</code><span class="sig-paren">(</span><em>writer</em>, <em>run_includes</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_run_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_run_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.generate_synapses_classes_source">
+<code class="descname">generate_synapses_classes_source</code><span class="sig-paren">(</span><em>writer</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.generate_synapses_classes_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.generate_synapses_classes_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.get_array_name">
+<code class="descname">get_array_name</code><span class="sig-paren">(</span><em>var</em>, <em>access_data=True</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.get_array_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.get_array_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a globally unique name for <code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>access_data</strong> : bool, optional</p>
+<blockquote>
+<div><p>For <code class="xref py py-obj docutils literal notranslate"><span class="pre">DynamicArrayVariable</span></code> objects, specifying <a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a> here means the
+name for the underlying data is returned. If specifying <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">False</span></code></a>,
+the name of object itself is returned (e.g. to allow resizing).</p>
+</div></blockquote>
+<p><strong>prefix: {‘_ptr’, ‘dev’, ‘d’}, optional</strong> :</p>
+<blockquote class="last">
+<div><p>Prefix for array name. Host pointers to device memory are prefixed
+with <code class="xref py py-obj docutils literal notranslate"><span class="pre">dev</span></code>, device pointers to device memory are prefixed with <code class="xref py py-obj docutils literal notranslate"><span class="pre">d</span></code>
+and pointers used in <code class="xref py py-obj docutils literal notranslate"><span class="pre">scalar_code</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">vector_code</span></code> are prefixed
+with <code class="xref py py-obj docutils literal notranslate"><span class="pre">_ptr</span></code> (independent of whether they are used in host or device
+code). The <code class="xref py py-obj docutils literal notranslate"><span class="pre">_ptr</span></code> variables are declared as parameters in the
+kernel definition (KERNEL_PARAMETERS).</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.get_array_read_write">
+<code class="descname">get_array_read_write</code><span class="sig-paren">(</span><em>abstract_code</em>, <em>variables</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.get_array_read_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.get_array_read_write" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brian2cuda.device.CUDAStandaloneDevice.network_run">
+<code class="descname">network_run</code><span class="sig-paren">(</span><em>net</em>, <em>duration</em>, <em>report=None</em>, <em>report_period=10. * second</em>, <em>namespace=None</em>, <em>profile=False</em>, <em>level=0</em>, <em>**kwds</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/brian2cuda/device.html#CUDAStandaloneDevice.network_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brian2cuda.device.CUDAStandaloneDevice.network_run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/preferences.html">Brian2cuda specific preferences</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="brian2cuda.html">brian2cuda package</a><ul>
+      <li>Previous: <a href="brian2cuda.cuda_prefs.compute_capability_validator.html" title="previous chapter">compute_capability_validator function</a></li>
+      <li>Next: <a href="brian2cuda.device.CUDAWriter.html" title="next chapter">CUDAWriter class</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/brian2cuda.device.CUDAStandaloneDevice.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

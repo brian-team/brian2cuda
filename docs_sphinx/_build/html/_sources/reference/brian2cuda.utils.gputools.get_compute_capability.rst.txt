@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+get_compute_capability function
+===============================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import get_compute_capability)``
+
+.. autofunction:: get_compute_capability
+

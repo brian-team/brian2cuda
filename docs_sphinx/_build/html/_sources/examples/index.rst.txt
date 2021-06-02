@@ -1,0 +1,44 @@
+Examples
+========
+
+.. toctree::
+   :maxdepth: 1
+
+   brunelhakim <brunelhakim>
+   cobahh <cobahh>
+   cuba <cuba>
+   cuba_cuda <cuba_cuda>
+   mushroombody <mushroombody>
+   stdp <stdp>
+   utils <utils>
+
+compartmental
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   bipolar_cell_cpp <compartmental.bipolar_cell_cpp>
+   bipolar_cell_cuda <compartmental.bipolar_cell_cuda>
+   bipolar_with_inputs2_cpp <compartmental.bipolar_with_inputs2_cpp>
+   bipolar_with_inputs2_cuda <compartmental.bipolar_with_inputs2_cuda>
+   bipolar_with_inputs_cpp <compartmental.bipolar_with_inputs_cpp>
+   bipolar_with_inputs_cuda <compartmental.bipolar_with_inputs_cuda>
+   hh_with_spikes_cpp <compartmental.hh_with_spikes_cpp>
+   hh_with_spikes_cuda <compartmental.hh_with_spikes_cuda>
+   hodgkin_huxley_1952_cpp <compartmental.hodgkin_huxley_1952_cpp>
+   hodgkin_huxley_1952_cuda <compartmental.hodgkin_huxley_1952_cuda>
+   lfp_cpp <compartmental.lfp_cpp>
+   lfp_cuda <compartmental.lfp_cuda>
+   rall_cpp <compartmental.rall_cpp>
+   rall_cuda <compartmental.rall_cuda>
+   spike_initiation_cpp <compartmental.spike_initiation_cpp>
+   spike_initiation_cuda <compartmental.spike_initiation_cuda>
+
+compartmental/plots
+-------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   hh_with_spikes_checkresults <compartmental.plots.hh_with_spikes_checkresults>

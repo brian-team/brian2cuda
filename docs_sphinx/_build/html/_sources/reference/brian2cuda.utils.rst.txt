@@ -11,6 +11,47 @@ utils package
 .. automodule:: brian2cuda.utils.gputools
     :show-inheritance:
 
+**Functions**
+
+.. autosummary:: get_available_gpus
+    :toctree:
+
+.. autosummary:: get_best_gpu
+    :toctree:
+
+.. autosummary:: get_compute_capability
+    :toctree:
+
+.. autosummary:: get_cuda_installation
+    :toctree:
+
+.. autosummary:: get_cuda_path
+    :toctree:
+
+.. autosummary:: get_cuda_runtime_version
+    :toctree:
+
+.. autosummary:: get_gpu_selection
+    :toctree:
+
+.. autosummary:: get_nvcc_path
+    :toctree:
+
+.. autosummary:: reset_cuda_installation
+    :toctree:
+
+.. autosummary:: reset_gpu_selection
+    :toctree:
+
+.. autosummary:: restore_cuda_installation
+    :toctree:
+
+.. autosummary:: restore_gpu_selection
+    :toctree:
+
+.. autosummary:: select_gpu
+    :toctree:
+
 
 :mod:`logger` module
 --------------------
@@ -18,11 +59,24 @@ utils package
 .. automodule:: brian2cuda.utils.logger
     :show-inheritance:
 
+**Functions**
+
+.. autosummary:: suppress_brian2_logs
+    :toctree:
+
 
 :mod:`stringtools` module
 -------------------------
 
 .. automodule:: brian2cuda.utils.stringtools
     :show-inheritance:
+
+**Functions**
+
+.. autosummary:: append_f
+    :toctree:
+
+.. autosummary:: replace_floating_point_literals
+    :toctree:
 
 

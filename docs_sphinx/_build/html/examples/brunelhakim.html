@@ -1,0 +1,301 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example: brunelhakim &#8212; brian2cuda 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Example: cobahh" href="cobahh.html" />
+    <link rel="prev" title="Examples" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="example-brunelhakim">
+<h1>Example: brunelhakim<a class="headerlink" href="#example-brunelhakim" title="Permalink to this headline">¶</a></h1>
+<p>Dynamics of a network of sparsely connected inhibitory current-based
+integrate-and-fire neurons. Individual neurons fire irregularly at
+low rate but the network is in an oscillatory global activity regime
+where neurons are weakly synchronized.</p>
+<dl class="docutils">
+<dt>Reference:</dt>
+<dd>“Fast Global Oscillations in Networks of Integrate-and-Fire
+Neurons with Low Firing Rates”
+Nicolas Brunel &amp; Vincent Hakim
+Neural Computation 11, 1621-1671 (1999)</dd>
+<dt>Modification to original brian2 example: changed delay from constant to</dt>
+<dd>sampled from uniform distribution; remark: widening the delay
+distribution reduces the oscillatory power of the network
+(cf. with bifurcation diagrams in  figs 8 of reference above)</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#####################################################################################################</span>
+<span class="c1">## PARAMETERS</span>
+
+<span class="c1"># select code generation standalone device</span>
+<span class="n">devicename</span> <span class="o">=</span> <span class="s1">&#39;cuda_standalone&#39;</span>
+<span class="c1">#devicename = &#39;cpp_standalone&#39;</span>
+
+<span class="c1"># select homogeneous (constant/identical) or heterogeneous (distributed) delays</span>
+<span class="n">heterog_delays</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="c1">#heterog_delays = True</span>
+
+<span class="c1"># select heterogeneous delays distribution:</span>
+<span class="c1"># the following flag enables to have a very narrow delay distribution [2ms-dt,</span>
+<span class="c1"># 2ms+dt] such that network behaviour is almost identical to the constant delay</span>
+<span class="c1"># case but we force usage of the heterogeneous delay synapse propagation</span>
+<span class="c1"># mechanism</span>
+<span class="c1"># remark: disabling leads to a wider delay distribution [0, 4ms] producing less</span>
+<span class="c1"># network oscillations</span>
+<span class="c1"># further remark: to have the network operate in a similar activity regime</span>
+<span class="c1"># (particular w.r.t. oscillations) we change the sigmaext based on inspecting</span>
+<span class="c1"># fig. 8 from (Brunel &amp; Hakim 1999)</span>
+<span class="n">narrow_delaydistr</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="c1">#narrow_delaydistr = True</span>
+
+<span class="c1"># number of neurons</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">5000</span>
+
+<span class="c1"># whether to profile run</span>
+<span class="n">profiling</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># folder to store plots and profiling information</span>
+<span class="n">resultsfolder</span> <span class="o">=</span> <span class="s1">&#39;results&#39;</span>
+
+<span class="c1"># folder for the code</span>
+<span class="n">codefolder</span> <span class="o">=</span> <span class="s1">&#39;code&#39;</span>
+
+<span class="c1"># monitors (neede for plot generation)</span>
+<span class="n">monitors</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># single precision</span>
+<span class="n">single_precision</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1">## the preferences below only apply for cuda_standalone</span>
+
+<span class="c1"># number of post blocks (None is default)</span>
+<span class="n">num_blocks</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># atomic operations</span>
+<span class="n">atomics</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># push synapse bundles</span>
+<span class="n">bundle_mode</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">## CONFIGURATION</span>
+
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;devicename&#39;</span><span class="p">:</span> <span class="n">devicename</span><span class="p">,</span>
+          <span class="s1">&#39;heterog_delays&#39;</span><span class="p">:</span> <span class="n">heterog_delays</span><span class="p">,</span>
+          <span class="s1">&#39;narrow_delaydistr&#39;</span><span class="p">:</span> <span class="n">narrow_delaydistr</span><span class="p">,</span>
+          <span class="s1">&#39;resultsfolder&#39;</span><span class="p">:</span> <span class="n">resultsfolder</span><span class="p">,</span>
+          <span class="s1">&#39;codefolder&#39;</span><span class="p">:</span> <span class="n">codefolder</span><span class="p">,</span>
+          <span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="n">N</span><span class="p">,</span>
+          <span class="s1">&#39;profiling&#39;</span><span class="p">:</span> <span class="n">profiling</span><span class="p">,</span>
+          <span class="s1">&#39;monitors&#39;</span><span class="p">:</span> <span class="n">monitors</span><span class="p">,</span>
+          <span class="s1">&#39;single_precision&#39;</span><span class="p">:</span> <span class="n">single_precision</span><span class="p">,</span>
+          <span class="s1">&#39;num_blocks&#39;</span><span class="p">:</span> <span class="n">num_blocks</span><span class="p">,</span>
+          <span class="s1">&#39;atomics&#39;</span><span class="p">:</span> <span class="n">atomics</span><span class="p">,</span>
+          <span class="s1">&#39;bundle_mode&#39;</span><span class="p">:</span> <span class="n">bundle_mode</span><span class="p">}</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">set_prefs</span><span class="p">,</span> <span class="n">update_from_command_line</span>
+
+<span class="c1"># update params from command line</span>
+<span class="n">update_from_command_line</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="c1"># do the imports after parsing command line arguments (quicker --help)</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">brian2</span> <span class="k">import</span> <span class="o">*</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;cuda_standalone&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">brian2cuda</span>
+
+<span class="c1"># set brian2 prefs from params dict</span>
+<span class="n">name</span> <span class="o">=</span> <span class="n">set_prefs</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">prefs</span><span class="p">)</span>
+
+<span class="n">codefolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;codefolder&#39;</span><span class="p">],</span> <span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;runing example </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;compiling model in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">codefolder</span><span class="p">))</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">## SIMULATION</span>
+
+<span class="n">set_device</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;devicename&#39;</span><span class="p">],</span> <span class="n">directory</span><span class="o">=</span><span class="n">codefolder</span><span class="p">,</span> <span class="nb">compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+           <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">Vr</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">theta</span> <span class="o">=</span> <span class="mi">20</span><span class="o">*</span><span class="n">mV</span>
+<span class="n">tau</span> <span class="o">=</span> <span class="mi">20</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">delta</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">taurefr</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">ms</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span><span class="o">*</span><span class="n">second</span>
+<span class="n">C</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">sparseness</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">/</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">]</span>
+<span class="n">J</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span><span class="o">*</span><span class="n">mV</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;heterog_delays&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;narrow_delaydistr&#39;</span><span class="p">]:</span>
+    <span class="c1"># to have a similar network activity regime as for const delays (or narrow</span>
+    <span class="c1"># delay distribution)</span>
+    <span class="n">sigmaext</span> <span class="o">=</span> <span class="mf">0.33</span><span class="o">*</span><span class="n">mV</span>
+    <span class="n">muext</span> <span class="o">=</span> <span class="mi">27</span><span class="o">*</span><span class="n">mV</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># default values from brian2 example (say &#39;reference&#39; regime)</span>
+    <span class="n">sigmaext</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">mV</span>
+    <span class="n">muext</span> <span class="o">=</span> <span class="mi">25</span><span class="o">*</span><span class="n">mV</span>
+
+<span class="n">eqs</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">group</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">],</span> <span class="n">eqs</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;V&gt;theta&#39;</span><span class="p">,</span>
+                    <span class="n">reset</span><span class="o">=</span><span class="s1">&#39;V=Vr&#39;</span><span class="p">,</span> <span class="n">refractory</span><span class="o">=</span><span class="n">taurefr</span><span class="p">)</span>
+<span class="n">group</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">Vr</span>
+
+<span class="c1"># delayed synapses</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;heterog_delays&#39;</span><span class="p">]:</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;V += -J&#39;</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">sparseness</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;narrow_delaydistr&#39;</span><span class="p">]:</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="s2">&quot;delta + 2 * dt * rand() - dt&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="s2">&quot;2 * delta * rand()&quot;</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">Synapses</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">on_pre</span><span class="o">=</span><span class="s1">&#39;V += -J&#39;</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">sparseness</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;monitors&#39;</span><span class="p">]:</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">SpikeMonitor</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+    <span class="n">LFP</span> <span class="o">=</span> <span class="n">PopulationRateMonitor</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+
+<span class="n">run</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">report</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;profiling&#39;</span><span class="p">])</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">## RESULTS COLLECTION</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">]):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">])</span> <span class="c1"># for plots and profiling txt file</span>
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;profiling&#39;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">profiling_summary</span><span class="p">())</span>
+    <span class="n">profilingpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">profilingpath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">profiling_file</span><span class="p">:</span>
+        <span class="n">profiling_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">profiling_summary</span><span class="p">()))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;profiling information saved in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">profilingpath</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;monitors&#39;</span><span class="p">]:</span>
+    <span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+    <span class="n">plot</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">t</span><span class="o">/</span><span class="n">ms</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+    <span class="n">xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration</span><span class="o">/</span><span class="n">ms</span><span class="p">)</span>
+
+    <span class="n">subplot</span><span class="p">(</span><span class="mi">212</span><span class="p">)</span>
+    <span class="n">plot</span><span class="p">(</span><span class="n">LFP</span><span class="o">.</span><span class="n">t</span><span class="o">/</span><span class="n">ms</span><span class="p">,</span> <span class="n">LFP</span><span class="o">.</span><span class="n">smooth_rate</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">0.5</span><span class="o">*</span><span class="n">ms</span><span class="p">)</span><span class="o">/</span><span class="n">Hz</span><span class="p">)</span>
+    <span class="n">xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration</span><span class="o">/</span><span class="n">ms</span><span class="p">)</span>
+    <span class="c1">#show()</span>
+
+    <span class="n">plotpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;resultsfolder&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.png&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="n">savefig</span><span class="p">(</span><span class="n">plotpath</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;plot saved in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">plotpath</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;the generated model in </span><span class="si">{}</span><span class="s1"> needs to removed manually if wanted&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">codefolder</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">brian2cuda</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Introduction</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../reference/brian2cuda.html">Reference documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Example documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Examples</a></li>
+      <li>Next: <a href="cobahh.html" title="next chapter">Example: cobahh</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-, Brian2Cuda authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/examples/brunelhakim.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

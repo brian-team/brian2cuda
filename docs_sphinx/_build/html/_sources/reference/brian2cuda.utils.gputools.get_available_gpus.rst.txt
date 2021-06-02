@@ -1,0 +1,9 @@
+.. currentmodule:: brian2cuda.utils.gputools
+
+get_available_gpus function
+===========================
+
+(*Shortest import*: ``from brian2cuda.utils.gputools import get_available_gpus)``
+
+.. autofunction:: get_available_gpus
+
