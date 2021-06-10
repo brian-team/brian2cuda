@@ -6,6 +6,12 @@
 Welcome to brian2cuda's documentation!
 ======================================
 
+🚧🚧🚧 This documentation is currently under construction  🚧🚧🚧
+
+It will soon document the ins and outs of `Brian2CUDA
+<https://github.com/brian-team/brian2cuda>`_ - a Brian2 extension to simulate
+spiking neural networks on GPUs!
+
 .. toctree::
    :maxdepth: 2
    :titlesonly:
