@@ -113,6 +113,12 @@ benchmark_suite_remote_logdir="$benchmark_suite_remote_dir/results"
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
+run_name="$benchmark_suite_task_name\_$(date +%y-%m-%d_%T)"
+local_logfile="/tmp/$run_name.log"
+remote_logfile="$benchmark_suite_remote_logdir/$run_name.log"
+qsub_name=${run_name//_/__}
+qsub_name=b2c-${qsub_name//:/_}
+
 # create tmp folder name for brian2cuda code (in $HOME)
 remote_b2c_dir="$benchmark_suite_remote_dir/brian2cuda-synced-repos/$run_name"
 # folder name for qsub .o and .e logs
@@ -121,7 +127,6 @@ remote_ge_log_dir="$benchmark_suite_remote_dir/ge-logs"
 ### Create logdirs on remote
 ssh "$remote" "mkdir -p $benchmark_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir"
 
-echo "Copying brian2cuda repository to server"
 ### Copy brian2cuda repo over to remote
 rsync -avzz \
     --exclude '*.o' \
@@ -131,7 +136,6 @@ rsync -avzz \
     --exclude '.git' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
-echo $remote_b2c_dir/brian2cuda/tools/run_benchmark_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
