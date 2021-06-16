@@ -63,14 +63,6 @@ if len(sys.argv) == 2:
 else:
     additional_dir_name = ''
 
-prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j12']
-
-# host specific settings
-if socket.gethostname() == 'elnath':
-    prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j24']
-    prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-    prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_20'])
-
 configs = [# configuration                          project_directory
           #(NumpyConfiguration,                     None),
           #(WeaveConfiguration,                     None),
@@ -177,16 +169,16 @@ configs = [# configuration                          project_directory
 speed_tests = [# feature_test                     name                                  n_slice
 
                # paper benchmarks
-               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(None)         ),
-               (COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
-               (COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
-               (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
-               (MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
-               (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
-               (BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(None)         ),
-               (STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(None)         ),
-               (STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(None)         ),
-               (STDPCUDA,                                       'STDPCUDA',                                     slice(None)         ),
+               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0,1,None)         ),
+               #(COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
+               #(COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
+               #(COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
+               #(MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
+               #(BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
+               #(BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(None)         ),
+               #(STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(None)         ),
+               #(STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(None)         ),
+               #(STDPCUDA,                                       'STDPCUDA',                                     slice(None)         ),
 
                ## other benchmarks
                #(CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
