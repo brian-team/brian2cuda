@@ -51,7 +51,7 @@ PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH"
 
 cd ../..
 
-python dev/benchmarks/run_manunscript_runtime_vs_N_benchmarks.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
+python dev/benchmarks/run_manuscript_runtime_vs_N_benchmarks.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
 
 runtime=$(( $(date +%s) - $start_time ))
 min=$(( $runtime / 60 ))
