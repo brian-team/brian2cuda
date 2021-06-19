@@ -46,11 +46,14 @@ logfile="$logdir/$run_name"
 
 start_time=`date +%s`
 
+echo "Current Directory ${PWD}"
 
-PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH"
+PYTHONPATH="../..:../../frozen_repos/brian2genn:$PYTHONPATH"
+echo "The python path ${PYTHONPATH}"
 
 cd ../..
 
+echo "The current directory of execution ${PWD}"
 python dev/benchmarks/run_manuscript_runtime_vs_N_benchmarks.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
 
 runtime=$(( $(date +%s) - $start_time ))
