@@ -25,8 +25,8 @@ echo_usage() {
 remote="cluster"
 # default task name
 benchmark_suite_task_name=noname
-# -l cuda=$test_suite_gpu
-benchmark_suite_gpu=1
+# -l cuda=$benchmark_suite_gpu (default RTX2080)
+benchmark_suite_gpu="\"1(RTX2080)\""
 # number of cores, with 2 threads per core
 benchmark_suite_cores=2
 # path to conda.sh on remote
