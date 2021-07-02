@@ -185,6 +185,7 @@ rsync -avzz \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 
+bash_script=brian2cuda/tools/test_suite/_run_test_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
@@ -194,5 +195,5 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -N $qsub_name \
     -binding linear:$test_suite_cores \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
-    $remote_b2c_dir $remote_logfile $test_suite_args $path_conda_sh_remote $conda_env_remote"
-    # $1: b2c_dir, $2: logfile, $3 remote conda.sh $4 remote conda env (_on_headnode.sh)
+    $bash_script $remote_b2c_dir $remote_logfile $test_suite_args $path_conda_sh_remote $conda_env_remote"
+    # $1: bash_script $2: b2c_dir, $3: logfile, $4 remote conda.sh $5 remote conda env (_on_headnode.sh)
