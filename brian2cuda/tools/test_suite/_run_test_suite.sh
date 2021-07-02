@@ -16,7 +16,7 @@ logfile="$logdir/$task_name"
 
 start_time=`date +%s`
 
-PYTHONPATH="../..:../../frozen_repos/brian2:$PYTHONPATH" \
+PYTHONPATH="../../..:../../../frozen_repos/brian2:$PYTHONPATH" \
     python run_test_suite.py --notify-slack $test_suite_args 2>&1 | tee -a "$logfile"
 
 runtime=$(( $(date +%s) - $start_time ))

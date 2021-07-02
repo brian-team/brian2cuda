@@ -110,7 +110,7 @@ test_suite_args=$@
 test_suite_remote_logdir="$test_suite_remote_dir/results"
 
 # Check that test_suite_args are valid arguments for run_test_suite.py
-dry_run_output=$(python ../run_test_suite.py --dry-run $test_suite_args 2>&1)
+dry_run_output=$(python ../test_suite/run_test_suite.py --dry-run $test_suite_args 2>&1)
 if [ $? -ne 0 ]; then
     echo_usage
     echo -e "$0: error: invalid <run_test_suite.py arguments>\n"
