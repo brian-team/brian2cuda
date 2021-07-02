@@ -132,8 +132,8 @@ rsync -avzz \
     --exclude '*.o' \
     --exclude 'tags' \
     --exclude 'examples' \
+    --exclude 'dev' \
     --exclude '.eggs'\
-    --exclude '.git' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 # submit test suite script through qsub on cluster headnote
