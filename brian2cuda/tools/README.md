@@ -4,17 +4,19 @@
 ### Run locally
 To run the test suite locally, run
 ```bash
+cd test_suite
 bash run_test_suite.sh <task-name> <log-dir>
 ```
-The script needs to be run from the `tools` directory.
+The script needs to be run from the `tools/test_suite` directory.
 This will run the full test suite and store a log file of the format
 `<timestemp>__<task-name>` in the `log_dir` folder. Arguments are optional,
 defaults are `task-name=noname` and `log_dir=test_suite_logs`.
 
-This will use the brian2CUDA and brian2 installation from this repository. If
-you are modifying files in this repository while the test suite is running,
-this will affect the test suite run. If you want to continue development and
-run the test suite on a clone of the current state of the repository, run
+This will use the brian2CUDA and brian2 installation from this repository (by
+setting `PYTHONPATH`). If you are modifying files in this repository while the
+test suite is running, this will affect the test suite run. If you want to
+continue development and run the test suite on a clone of the current state of
+the repository, run
 ```bash
 bash run_test_suite_on_current_state.sh
 ```
@@ -34,3 +36,5 @@ cluster using the queue system. And it uses `rsync` to copy the repo over,
 therefore uncommited changes are also tested. The results end up in
 `/cognition/home/denis/projects/brian2cuda/test-suite`.
 
+TODO: Update README with changes made when Sudeshna joined ->
+remote_run_scripts with config file etc.
