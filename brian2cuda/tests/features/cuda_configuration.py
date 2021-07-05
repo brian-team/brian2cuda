@@ -10,7 +10,11 @@ import brian2
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 from brian2.utils.logger import get_logger
-import brian2genn
+
+try:
+    import brian2genn
+except ImportError:
+    pass
 
 logger = get_logger('brian2.devices.cuda_standalone.cuda_configuration')
 
