@@ -196,5 +196,5 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -N $qsub_name \
     -binding linear:$test_suite_cores \
     $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
-    $bash_script $remote_b2c_dir $remote_logfile $test_suite_args $path_conda_sh_remote $conda_env_remote"
+    $bash_script $remote_b2c_dir $remote_logfile $path_conda_sh_remote $conda_env_remote $test_suite_args"
     # $1: bash_script $2: b2c_dir, $3: logfile, $4 remote conda.sh $5 remote conda env (_on_headnode.sh)
