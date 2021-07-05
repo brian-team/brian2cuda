@@ -182,6 +182,7 @@ rsync -avzz \
     --exclude 'dev'\
     --exclude '.eggs'\
     --exclude '.git' \
+    --exclude 'worktrees' \  # folder used by Denis to store branches via git worktree
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 
