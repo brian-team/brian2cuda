@@ -1,3 +1,24 @@
+import argparse
+
+parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
+
+parser.add_argument('-n', '--name', default=None,
+                    help="Name of run, appended to results directory")
+
+parser.add_argument('-d', '--results-dir', default='./',
+                    help="Directory where results folders will be stored")
+
+parser.add_argument('--dry-run', action='store_true',
+                    help=("Exit script after argument parsing. Used to check "
+                          "validity of arguments"))
+
+args = parser.parse_args()
+
+if args.dry_run:
+    import sys
+    print("Dry run completed, {} arguments valid.".format(__file__))
+    sys.exit()
+
 import os
 import shutil
 import glob
@@ -56,12 +77,6 @@ from helpers import pickle_results, translate_pkl_to_csv
 
 suppress_brian2_logs()
 BrianLogger.log_level_diagnostic()
-
-assert len(sys.argv)<= 2, 'Only one command line argument supported! Got {}'.format(len(sys.argv)-1)
-if len(sys.argv) == 2:
-    additional_dir_name = '_' + sys.argv[1]
-else:
-    additional_dir_name = ''
 
 configs = [# configuration                          project_directory
           #(NumpyConfiguration,                     None),
@@ -223,7 +238,12 @@ for proj_dir in project_dirs:
 time_stemp = time.time()
 date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y_%m_%d')
 
-directory = 'results_{}{}'.format(date_str, additional_dir_name)
+if args.name:
+    additional_dir_name = '_' + args.name
+else:
+    additional_dir_name = ''
+
+directory = os.path.join(args.results_dir, 'results_{}{}'.format(date_str, additional_dir_name))
 if os.path.exists(directory):
     new_dir = directory + '_bak_' + str(int(time.time()))
     print("Directory with name `{}` already exists. Renaming it to `{}`.".format(directory, new_dir))
