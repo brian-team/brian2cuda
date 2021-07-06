@@ -12,6 +12,7 @@
 # $4:    path to conda.sh
 # $5:    conda env name
 # $6...: the rest is passed as args to run_test_suite.py
+echo "On headnode"
 bash_script="$1"
 b2c_dir="$2"
 logfile="$3"
@@ -50,5 +51,6 @@ script_path="$b2c_dir/$bash_script"
 script_folder="$(dirname $script_path)"
 script_name="$(basename $script_path)"
 # XXX: needs to cd into the tools directory for PYTHONPATH setup to work
+echo "About to call script in $script_folder"
 cd "$script_folder"
 bash "$script_name" "$run_name" "$logdir" "$test_suite_args"

@@ -35,6 +35,8 @@ path_conda_sh_remote="~/anaconda3/etc/profile.d/conda.sh"
 conda_env_remote="b2c"
 # where to store the logfile on the remote
 benchmark_suite_remote_dir="~/projects/brian2cuda/benchmark-suite"
+# result directory
+benchmark_result_dir="~/projects/brian2cuda/benchmark-results/"
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -106,7 +108,7 @@ while true; do
 done
 
 # all args after --
-benchmark_suite_args=$@
+benchmark_suite_args="-d $benchmark_result_dir $@"
 
 benchmark_suite_remote_logdir="$benchmark_suite_remote_dir/results"
 
@@ -125,7 +127,7 @@ remote_b2c_dir="$benchmark_suite_remote_dir/brian2cuda-synced-repos/$run_name"
 remote_ge_log_dir="$benchmark_suite_remote_dir/ge-logs"
 
 ### Create logdirs on remote
-ssh "$remote" "mkdir -p $benchmark_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir"
+ssh "$remote" "mkdir -p $benchmark_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir $benchmark_result_dir"
 
 ### Copy brian2cuda repo over to remote
 rsync -avzz \
@@ -134,8 +136,13 @@ rsync -avzz \
     --exclude 'examples' \
     --exclude 'dev' \
     --exclude '.eggs'\
+    --exclude 'worktrees' \
+    --exclude '.git/modules' \
+    --exclude '.git/worktrees' \
+    --exclude '.git/objects' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
+bash_script=brian2cuda/tools/benchmarking/_run_benchmark_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
@@ -144,6 +151,6 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
     -l cuda=$benchmark_suite_gpu \
     -N $qsub_name \
     -binding linear:$benchmark_suite_cores \
-    $remote_b2c_dir/brian2cuda/tools/run_benchmark_suite.sh \
-    $remote_b2c_dir $remote_logfile $benchmark_suite_args $path_conda_sh_remote $conda_env_remote"
-    # $1: b2c_dir, $2: logfile, $3 remote conda.sh $4 remote conda env (run_benchmark_suite.sh)
+    $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
+    $bash_script $remote_b2c_dir $remote_logfile $path_conda_sh_remote $conda_env_remote $benchmark_suite_args"
+    # $1: bash_script $2: b2c_dir, $3: logfile, $4 remote conda.sh $5 remote conda env (_run_benchmark_suite.sh)

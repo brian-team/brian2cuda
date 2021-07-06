@@ -91,9 +91,9 @@ configs = [# configuration                          project_directory
           (DynamicConfigCreator('CUDA standalone (max blocks, atomics)'),
            'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone (single precision, max blocks, atomics)',
-                                prefs={'core.default_float_dtype': float32}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (single precision, max blocks, atomics)',
+          #                       prefs={'core.default_float_dtype': float32}),
+          #  'cuda_standalone'),
 
 
           # 1 block
@@ -101,43 +101,43 @@ configs = [# configuration                          project_directory
                                 prefs={'devices.cuda_standalone.parallel_blocks': 1}),
            'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
-                                prefs={'core.default_float_dtype': float32,
-                                       'devices.cuda_standalone.parallel_blocks': 1}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
+          #                       prefs={'core.default_float_dtype': float32,
+          #                              'devices.cuda_standalone.parallel_blocks': 1}),
+          #  'cuda_standalone'),
 
 
           # 20 blocks
-          (DynamicConfigCreator('CUDA standalone (20 blocks, atomics)',
-                                prefs={'devices.cuda_standalone.parallel_blocks': 20}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (20 blocks, atomics)',
+          #                       prefs={'devices.cuda_standalone.parallel_blocks': 20}),
+          #  'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone (single precision, 20 blocks, atomics)',
-                                prefs={'core.default_float_dtype': float32,
-                                       'devices.cuda_standalone.parallel_blocks': 20}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (single precision, 20 blocks, atomics)',
+          #                       prefs={'core.default_float_dtype': float32,
+          #                              'devices.cuda_standalone.parallel_blocks': 20}),
+          #  'cuda_standalone'),
 
 
           # 40 blocks
-          (DynamicConfigCreator('CUDA standalone (40 blocks, atomics)',
-                                prefs={'devices.cuda_standalone.parallel_blocks': 40}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (40 blocks, atomics)',
+          #                       prefs={'devices.cuda_standalone.parallel_blocks': 40}),
+          #  'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone (single precision, 40 blocks, atomics)',
-                                prefs={'core.default_float_dtype': float32,
-                                       'devices.cuda_standalone.parallel_blocks': 40}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (single precision, 40 blocks, atomics)',
+          #                       prefs={'core.default_float_dtype': float32,
+          #                              'devices.cuda_standalone.parallel_blocks': 40}),
+          #  'cuda_standalone'),
 
 
           # 60 blocks
-          (DynamicConfigCreator('CUDA standalone (60 blocks, atomics)',
-                                prefs={'devices.cuda_standalone.parallel_blocks': 60}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (60 blocks, atomics)',
+          #                       prefs={'devices.cuda_standalone.parallel_blocks': 60}),
+          #  'cuda_standalone'),
 
-          (DynamicConfigCreator('CUDA standalone (single precision, 60 blocks, atomics)',
-                                prefs={'core.default_float_dtype': float32,
-                                       'devices.cuda_standalone.parallel_blocks': 60}),
-           'cuda_standalone'),
+          # (DynamicConfigCreator('CUDA standalone (single precision, 60 blocks, atomics)',
+          #                       prefs={'core.default_float_dtype': float32,
+          #                              'devices.cuda_standalone.parallel_blocks': 60}),
+          #  'cuda_standalone'),
 
 
           #(DynamicConfigCreator('CUDA standalone (max blocks, no atomics)',
@@ -175,16 +175,16 @@ configs = [# configuration                          project_directory
           #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
           #(GeNNConfiguration,                       'GeNNworkspace'),
           #(GeNNConfigurationCPU,                    'GeNNworkspace'),
-          (GeNNConfigurationOptimized,              'GeNNworkspace'),
-          (GeNNConfigurationOptimizedSinglePrecision,'GeNNworkspace'),
-          (GeNNConfigurationOptimizedSpanTypePre,   'GeNNworkspace'),
-          (GeNNConfigurationOptimizedSinglePrecisionSpanTypePre, 'GeNNworkspace'),
+          # (GeNNConfigurationOptimized,              'GeNNworkspace'),
+          # (GeNNConfigurationOptimizedSinglePrecision,'GeNNworkspace'),
+          # (GeNNConfigurationOptimizedSpanTypePre,   'GeNNworkspace'),
+          # (GeNNConfigurationOptimizedSinglePrecisionSpanTypePre, 'GeNNworkspace'),
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
 
                # paper benchmarks
-               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0,1,None)         ),
+               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0,2,None)         ),
                #(COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
                #(COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
                #(COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
