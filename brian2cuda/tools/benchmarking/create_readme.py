@@ -50,7 +50,7 @@ def create_readme(result_dir, description=''):
         plots_md = []
         for plot_file in sorted(glob.glob(result_dir+ "/plots/speed_test_{}_*".format(name))):
             plot_path = os.path.join(*(plot_file.split(os.path.sep)[1:]))
-            md = "![]({plot})".format(plot=plot_path)
+            md = "![]({plot})".format(plot=os.path.relpath(plot_path, result_dir))
             plots_md.append(md)
         profile_md = []
         for nvprof_file in sorted(glob.glob(result_dir + "/nvprof/nvprof_{}_*".format(name))):
