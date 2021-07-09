@@ -83,9 +83,9 @@ configs = [# configuration                          project_directory
           #(WeaveConfiguration,                     None),
           #(LocalConfiguration,                     None),
           (CPPStandaloneConfiguration,              'cpp_standalone'),
-          (CPPStandaloneConfigurationSinglePrecision,              'cpp_standalone'),
+          #(CPPStandaloneConfigurationSinglePrecision,              'cpp_standalone'),
           (CPPStandaloneConfigurationOpenMPMaxThreads,        'cpp_standalone'),
-          (CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision,        'cpp_standalone'),
+          #(CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision,        'cpp_standalone'),
 
           # max blocks
           (DynamicConfigCreator('CUDA standalone (max blocks, atomics)'),
@@ -175,25 +175,25 @@ configs = [# configuration                          project_directory
           #(CUDAStandaloneConfigurationProfileCPU,   'cuda_standalone'),
           #(GeNNConfiguration,                       'GeNNworkspace'),
           #(GeNNConfigurationCPU,                    'GeNNworkspace'),
-          # (GeNNConfigurationOptimized,              'GeNNworkspace'),
+          (GeNNConfigurationOptimized,              'GeNNworkspace'),
           # (GeNNConfigurationOptimizedSinglePrecision,'GeNNworkspace'),
-          # (GeNNConfigurationOptimizedSpanTypePre,   'GeNNworkspace'),
-          # (GeNNConfigurationOptimizedSinglePrecisionSpanTypePre, 'GeNNworkspace'),
+          (GeNNConfigurationOptimizedSpanTypePre,   'GeNNworkspace'),
+          #(GeNNConfigurationOptimizedSinglePrecisionSpanTypePre, 'GeNNworkspace'),
           ]
 
 speed_tests = [# feature_test                     name                                  n_slice
 
                # paper benchmarks
-               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0,2,None)         ),
-               #(COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
-               #(COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
-               #(COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(None)         ),
-               #(MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
-               #(BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
-               #(BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(None)         ),
-               #(STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(None)         ),
-               #(STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(None)         ),
-               #(STDPCUDA,                                       'STDPCUDA',                                     slice(None)         ),
+               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0, -1)         ),
+               (COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(0, -1)         ),
+               (COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(0, -1)         ),
+               (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(0, -1)         ),
+               (MushroomBody,                                   'MushroomBody',                                 slice(0, -1)         ),
+               (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(0, -1)         ),
+               (BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(0, -1)         ),
+               (STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(0, -1)         ),
+               (STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(0, -1)         ),
+               (STDPCUDA,                                       'STDPCUDA',                                     slice(0, -1)         ),
 
                ## other benchmarks
                #(CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
