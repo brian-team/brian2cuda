@@ -2,8 +2,8 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
 
-parser.add_argument('-n', '--name', default=None,
-                    help="Name of run, appended to results directory")
+#parser.add_argument('-n', '--name', default=None,
+#                    help="Name of run, appended to results directory")
 
 parser.add_argument('-d', '--results-dir', default='./',
                     help="Directory where results folders will be stored")
@@ -236,19 +236,20 @@ for proj_dir in project_dirs:
         last_idx[proj_dir] = last_i
 
 time_stemp = time.time()
-date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y_%m_%d')
+date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y-%m-%d_%T')
 
-if args.name:
-    additional_dir_name = '_' + args.name
-else:
-    additional_dir_name = ''
+#if args.name:
+#    additional_dir_name = '_' + args.name
+#else:
+#    additional_dir_name = ''
 
-directory = os.path.join(args.results_dir, 'results_{}{}'.format(date_str, additional_dir_name))
-if os.path.exists(directory):
-    new_dir = directory + '_bak_' + str(int(time.time()))
-    print("Directory with name `{}` already exists. Renaming it to `{}`.".format(directory, new_dir))
-    os.rename(directory, new_dir)
-os.makedirs(directory)
+#directory = os.path.join(args.results_dir, 'results_{}{}'.format(date_str, additional_dir_name))
+directory = args.results_dir
+#if os.path.exists(directory):
+#    print("ERROR: Directory with name `{}` already exists. Aborting.", directory)
+#    sys.exit(1)
+
+#os.makedirs(directory, exist_ok=True)
 data_dir = os.path.join(directory, 'data')
 plot_dir = os.path.join(directory, 'plots')
 log_dir = os.path.join(directory, 'logs')

@@ -36,7 +36,7 @@ conda_env_remote="b2c"
 # where to store the logfile on the remote
 benchmark_suite_remote_dir="~/projects/brian2cuda/benchmark-suite"
 # result directory
-benchmark_result_dir="~/projects/brian2cuda/benchmark-results/"
+benchmark_result_dir="$benchmark_suite_remote_dir/results"
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -107,19 +107,27 @@ while true; do
     esac
 done
 
-# all args after --
-benchmark_suite_args="-d $benchmark_result_dir $@"
+run_name="$benchmark_suite_task_name\_$(date +%y-%m-%d_%T)"
+remote_dir="$benchmark_result_dir/$run_name"
+remote_logfile="$remote_dir/full.log"
+qsub_name=${run_name//_/__}
+qsub_name=b2c-${qsub_name//:/_}
 
-benchmark_suite_remote_logdir="$benchmark_suite_remote_dir/results"
+# all args after --
+benchmark_suite_args="-d $remote_dir $@"
+
+# Check that benchmark_suite_args are valid arguments for
+# run_manuscript_runtime_vs_N_benchmarks.py
+dry_run_output=$(python ../benchmarking/run_manuscript_runtime_vs_N_benchmarks.py --dry-run $benchmark_suite_args 2>&1)
+if [ $? -ne 0 ]; then
+    echo_usage
+    echo -e "$0: error: invalid <run_manuscript_runtime_vs_N_benchmarks.py arguments>\n"
+    echo "$dry_run_output"
+    exit 1
+fi
 
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
-
-run_name="$benchmark_suite_task_name\_$(date +%y-%m-%d_%T)"
-local_logfile="/tmp/$run_name.log"
-remote_logfile="$benchmark_suite_remote_logdir/$run_name.log"
-qsub_name=${run_name//_/__}
-qsub_name=b2c-${qsub_name//:/_}
 
 # create tmp folder name for brian2cuda code (in $HOME)
 remote_b2c_dir="$benchmark_suite_remote_dir/brian2cuda-synced-repos/$run_name"
@@ -127,7 +135,7 @@ remote_b2c_dir="$benchmark_suite_remote_dir/brian2cuda-synced-repos/$run_name"
 remote_ge_log_dir="$benchmark_suite_remote_dir/ge-logs"
 
 ### Create logdirs on remote
-ssh "$remote" "mkdir -p $benchmark_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir $benchmark_result_dir"
+ssh "$remote" "mkdir -p $remote_dir $remote_b2c_dir $remote_ge_log_dir $benchmark_result_dir"
 
 ### Copy brian2cuda repo over to remote
 rsync -avzz \
@@ -137,9 +145,6 @@ rsync -avzz \
     --exclude 'dev' \
     --exclude '.eggs'\
     --exclude 'worktrees' \
-    --exclude '.git/modules' \
-    --exclude '.git/worktrees' \
-    --exclude '.git/objects' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 bash_script=brian2cuda/tools/benchmarking/_run_benchmark_suite.sh

@@ -46,6 +46,9 @@ else
     . /cognition/home/local/.init_cuda.sh
 fi
 
+# Set GeNN environment variales such that they always use the GeNN from the
+# frozen_repos/genn submodule
+. "$b2c_dir/frozen_repos/init_genn.sh"
 
 script_path="$b2c_dir/$bash_script"
 script_folder="$(dirname $script_path)"
