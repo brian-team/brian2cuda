@@ -123,16 +123,18 @@ void _run_{{codeobj_name}}()
         {% block prepare_kernel_inner %}
         // get number of blocks and threads
         {% if calc_occupancy %}
-        int min_num_threads; // The minimum grid size needed to achieve the
-                             // maximum occupancy for a full device launch
+        int min_num_blocks; // The minimum grid size needed to achieve the
+                            // maximum occupancy for a full device launch
 
         CUDA_SAFE_CALL(
-                cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
+                cudaOccupancyMaxPotentialBlockSize(&min_num_blocks, &num_threads,
                     kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
                 );
 
         // Round up according to array size
         num_blocks = (_N + num_threads - 1) / num_threads;
+        printf("NUM BLOCKS AFTER ROUND %u\n", num_blocks);
+        printf("NUM THREADS AFTER ROUND %u\n", num_threads);
         {% else %}
         num_blocks = num_parallel_blocks;
         while(num_blocks * max_threads_per_block < _N)
@@ -140,6 +142,7 @@ void _run_{{codeobj_name}}()
             num_blocks *= 2;
         }
         num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
+        printf("NUM THREADS AFTER MIN %u\n", num_threads);
         {% endif %}
 
         {% block modify_kernel_dimensions %}
@@ -155,6 +158,7 @@ void _run_{{codeobj_name}}()
                     kernel_{{codeobj_name}}, num_threads, 0)
                 );
 
+        printf("MAX ACTIVE BLOCKS %u\n", max_active_blocks);
         float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
                           (float)(max_threads_per_sm / num_threads_per_warp);
         {% endblock occupancy %}
@@ -207,13 +211,13 @@ void _run_{{codeobj_name}}()
                    "\t%i bytes local memory per thread\n"
                    "\t%i bytes user-allocated constant memory\n"
                    {% if calc_occupancy %}
-                   "\t%.3f theoretical occupancy\n",
+                   "\t%.3f theoretical occupancy (need %u blocks for 1.000)\n",
                    {% else %}
                    "",
                    {% endif %}
                    num_blocks, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
-                   funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
+                   funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy, min_num_blocks{% endif %});
         }
         {% endblock %}
         first_run = false;
