@@ -18,22 +18,32 @@ b2c_dir="$2"
 logfile="$3"
 path_conda_sh="$4"
 conda_env="$5"
-shift 5
+keep_remote_repo="$6"
+shift 6
 test_suite_args="$@"
 
 # deletes the brian2cuda directory
 function cleanup {
     cd
-    rm -rf "$b2c_dir"
-    echo "Script EXIT: Deleted tmp brian2cuda directory $b2c_dir" | tee -a "$logfile"
+    if [ $keep_remote_repo -eq 1 ]; then
+        rm -rf "$b2c_dir"
+        echo "Script EXIT: Deleted tmp brian2cuda directory $b2c_dir" | tee -a "$logfile"
+    else
+        echo "Script EXIT: tmp brian2cuda directory was not deleted" \
+             "(-k|--keep-remote-dir option). If you don't need it, delete it:" \
+             "$b2c_dir" | tee -a "$logfile"
+    fi
 }
 
 # register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
 
-# where to save log files
-logdir="$(dirname $logfile)"
-run_name="$(basename $logfile)"
+# Get directory and name of logfile. For test suite script, the logfile has the
+# timestemp and the directory is where all different logfiles are stored. For
+# benchmark scripts, the directory has the timestemp and the logfile is always
+# `full.log`
+logfile_dir="$(dirname $logfile)"
+logfile_name="$(basename $logfile)"
 
 # activate bashrc (for conda activation and CUDA paths)
 . "$path_conda_sh"
@@ -56,4 +66,4 @@ script_name="$(basename $script_path)"
 # XXX: needs to cd into the tools directory for PYTHONPATH setup to work
 echo "About to call script in $script_folder"
 cd "$script_folder"
-bash "$script_name" "$run_name" "$logdir" "$test_suite_args"
+bash "$script_name" "$logfile_name" "$logfile_dir" "$test_suite_args"

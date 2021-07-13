@@ -2,11 +2,8 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
 
-#parser.add_argument('-n', '--name', default=None,
-#                    help="Name of run, appended to results directory")
-
 parser.add_argument('-d', '--results-dir', default='./',
-                    help="Directory where results folders will be stored")
+                    help="Directory where results will be stored")
 
 parser.add_argument('--dry-run', action='store_true',
                     help=("Exit script after argument parsing. Used to check "
@@ -238,18 +235,10 @@ for proj_dir in project_dirs:
 time_stemp = time.time()
 date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y-%m-%d_%T')
 
-#if args.name:
-#    additional_dir_name = '_' + args.name
-#else:
-#    additional_dir_name = ''
-
-#directory = os.path.join(args.results_dir, 'results_{}{}'.format(date_str, additional_dir_name))
 directory = args.results_dir
-#if os.path.exists(directory):
-#    print("ERROR: Directory with name `{}` already exists. Aborting.", directory)
-#    sys.exit(1)
 
-#os.makedirs(directory, exist_ok=True)
+if not os.path.exists(directory):
+    os.makedirs(directory)
 data_dir = os.path.join(directory, 'data')
 plot_dir = os.path.join(directory, 'plots')
 log_dir = os.path.join(directory, 'logs')

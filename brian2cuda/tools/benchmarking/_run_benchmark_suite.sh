@@ -2,17 +2,17 @@
 # This script assumes it is called from where it is stored in in the brian2cuda
 # repository and it uses the brian2cuda and brian2 of that repository.
 
-# $1 task name
-# $2 logdir
+# $1 logfile name, should be `full.log`
+# $2 logfile directory, this is the task name with timestemp
 
-task_name=$1
-logdir=$2
+logfile_name=$1
+results_dir=$2
 shift 2
 benchmark_suite_args=$@
 
-mkdir -p "$logdir"
+mkdir -p "$results_dir"
 
-logfile="$logdir/$task_name"
+logfile="$results_dir/$logfile_name"
 
 start_time=`date +%s`
 
