@@ -128,7 +128,7 @@ fi
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
-run_name="$test_suite_task_name\_$(date +%y-%m-%d_%T)"
+run_name="$test_suite_task_name"_"$(date +%y-%m-%d_%T)"
 local_logfile="/tmp/$run_name.log"
 remote_logfile="$test_suite_remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}

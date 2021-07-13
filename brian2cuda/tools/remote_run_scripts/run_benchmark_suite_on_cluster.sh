@@ -114,7 +114,7 @@ while true; do
     esac
 done
 
-run_name="$benchmark_suite_task_name\_$(date +%y-%m-%d_%T)"
+run_name="$benchmark_suite_task_name"_"$(date +%y-%m-%d_%T)"
 remote_dir="$benchmark_result_dir/$run_name"
 remote_logfile="$remote_dir/full.log"
 qsub_name=${run_name//_/__}
@@ -122,6 +122,8 @@ qsub_name=b2c-${qsub_name//:/_}
 
 # all args after --
 benchmark_suite_args="-d $remote_dir $@"
+
+echo -e "\nINFO: Running benchmarks script with options $benchmark_suite_args"
 
 # Check that benchmark_suite_args are valid arguments for
 # run_manuscript_runtime_vs_N_benchmarks.py
@@ -141,18 +143,79 @@ remote_b2c_dir="$benchmark_suite_remote_dir/brian2cuda-synced-repos/$run_name"
 # folder name for qsub .o and .e logs
 remote_ge_log_dir="$benchmark_suite_remote_dir/ge-logs"
 
-### Create logdirs on remote
-ssh "$remote" "mkdir -p $remote_dir $remote_b2c_dir $remote_ge_log_dir $benchmark_result_dir"
+echo -e "\nINFO: Setting up remote brian2cuda repository..."
 
-### Copy brian2cuda repo over to remote
-rsync -avzz \
-    --exclude '*.o' \
-    --exclude 'tags' \
-    --exclude 'examples' \
-    --exclude 'dev' \
-    --exclude '.eggs'\
-    --exclude 'worktrees' \
-    "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
+# Setup remote brian2cuda repository by cloning from GitHub
+ssh "$remote" "/bin/bash" << EOF
+    # Create remote directories
+    mkdir -p $remote_dir $remote_b2c_dir $remote_ge_log_dir $benchmark_result_dir
+
+    # Clone brian2cuda from GitHub
+    git clone https://github.com/brian-team/brian2cuda.git $remote_b2c_dir
+
+    # Make bare repository (you can push to it)
+    cd $remote_b2c_dir
+    git config receive.denyCurrentBranch updateInstead
+EOF
+
+local_commit="$(git rev-parse HEAD)"
+echo -e "\nINFO: Pushing local commit $local_commit to remote repository..."
+
+# Add remote repository as git remote (allows pushing from local repo)
+cd $local_b2c_dir
+git remote add remote_repo $remote:$remote_b2c_dir
+
+### Push local commit to remote repo
+git push remote_repo
+
+# Remove remote from local repo
+git remote remove remote_repo
+
+# Checkout correct remote branch and initialize submodules
+echo -e "\nINFO: Checking out remote branch and intializing submodules..."
+ssh "$remote" "/bin/bash" << EOF
+    # Checkout correct commit on remote
+    cd $remote_b2c_dir
+    git checkout $local_commit
+
+    # Update submodules and apply diff files if present
+    cd frozen_repos
+    git submodule update --init
+
+    cd brian2
+    if [ -f ../brian2.diff ]; then
+        echo "Applying brian2.diff"
+        git apply ../brian2.diff
+    else
+        echo "No diff file found for brian2"
+    fi
+    cd -
+
+    cd brian2genn
+    if [ -f ../brian2genn.diff ]; then
+        echo "Applying brian2genn.diff"
+        git apply ../brian2genn.diff
+    else
+        echo "No diff file found for brian2genn"
+    fi
+    cd -
+
+    cd genn
+    if [ -f ../genn.diff ]; then
+        echo "Applying genn.diff"
+        git apply ../genn.diff
+    else
+        echo "No diff file found for genn"
+    fi
+    cd -
+EOF
+
+echo -e "\nINFO: Copying local run_manuscript_runtime_vs_N_benchmarks.py to remote..."
+scp \
+    $local_b2c_dir/brian2cuda/tools/benchmarking/run_manuscript_runtime_vs_N_benchmarks.py \
+    $remote:$remote_b2c_dir/brian2cuda/tools/benchmarking/
+
+echo -e "\nINFO: Submitting script to grid engine to run benchmarks..."
 
 bash_script=brian2cuda/tools/benchmarking/_run_benchmark_suite.sh
 # submit test suite script through qsub on cluster headnote
@@ -176,8 +239,11 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
             # $@ (the rest): arguments passed to benchmark script
             # (_on_headnode.sh)
 
+echo
+echo "INFO: Grid engine logs are stored on remote at $remote_ge_log_dir"
+echo "INFO: Benchmark results are stored on remote at $benchmark_result_dir"
 if [ $keep_remote_repo -eq 0 ]; then
-    echo -e "\nThe copied brian2cuda directory on the remote will not be deleted" \
-            "due to the -k|--keep-remote-dir option. Make sure you delete it once" \
-            "you don't need it anymore!"
+    echo "WARNING: The remote brian2cuda repository will not be deleted " \
+         "due to the '-k | --keep-remote-dir' option. Make sure you delete " \
+         "it once you don't need it anymore! It is at $remote_b2c_dir"
 fi
