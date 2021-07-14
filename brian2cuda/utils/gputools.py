@@ -355,7 +355,7 @@ def _get_available_gpus():
         # raise new_error from excepted_error
         raise new_error
 
-    gpu_list = []
+    all_gpu_list = []
     if gpu_info_lines is not None:
         for i, gpu_info in enumerate(gpu_info_lines):
             if gpu_info == "":  # last list item is empty
@@ -371,8 +371,17 @@ def _get_available_gpus():
             assert id_str.startswith("GPU ")
             gpu_id = id_str[4]
             assert int(gpu_id) == i
-            gpu_list.append(gpu_name)
-    return gpu_list
+            all_gpu_list.append(gpu_name)
+
+    visible_gpu_list = all_gpu_list
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        visible_gpu_list = []
+        cuda_visible_devices = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
+        for id_str in cuda_visible_devices:
+            gpu_id = int(id_str)
+            visible_gpu_list.append(all_gpu_list[gpu_id])
+
+    return visible_gpu_list
 
 
 def get_compute_capability(gpu_id):

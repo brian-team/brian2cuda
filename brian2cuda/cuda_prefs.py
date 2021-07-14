@@ -120,7 +120,7 @@ prefs.register_preferences(
         unnecassary device memory allocations in synapse creation are fixed, it
         is only relevant if your network uses close to all memory.''',
         default=False),
-    
+
     default_functions_integral_convertion=BrianPreference(
         docs='''The floating point precision to which integral types will be converted when
         passed as arguments to default functions that have no integral type overload in device
@@ -144,7 +144,7 @@ prefs.register_preferences(
 prefs.register_preferences(
     'devices.cuda_standalone.cuda_backend',
     'CUDA standalone CUDA backend preferences',
-    
+
     gpu_heap_size = BrianPreference(
         docs='''
         Size of the heap (in MB) used by malloc() and free() device system calls, which
@@ -155,7 +155,7 @@ prefs.register_preferences(
         ''',
         validator=lambda v: isinstance(v, int) and v >= 0,
         default=128),
-    
+
     detect_gpus=BrianPreference(
         docs='''Whether to detect names and compute capabilities of all available GPUs.
         This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
@@ -164,16 +164,24 @@ prefs.register_preferences(
     ),
 
     gpu_id=BrianPreference(
-        docs='''The ID of the GPU that should be used''',
+        docs='''
+        The ID of the GPU that should be used for code execution. Default value is
+        `None`, in which case the GPU with the highest compute capability and lowest ID
+        is used.
+
+        If environment variable `CUDA_VISIBLE_DEVICES` is set, this preference will be
+        interpreted as ID from the visible devices (e.g. with `CUDA_VISIBLE_DEVICES=2`
+        and `gpu_id=0` preference, the GPU 2 will be used).
+        ''',
         default=None,
         validator=lambda v: v is None or isinstance(v, int)
     ),
-    
+
     extra_compile_args_nvcc=BrianPreference(
         docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
         default=['-w', '-use_fast_math']
     ),
-    
+
     compute_capability=BrianPreference(
         docs='''Manually set the compute capability for which CUDA code will be
         compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
@@ -187,5 +195,5 @@ prefs.register_preferences(
         default=None,
         validator=lambda v: v is None or isinstance(v, str)
     )
-    
+
 )
