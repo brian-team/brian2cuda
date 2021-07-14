@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
 
-parser.add_argument('-d', '--results-dir', default='./',
+parser.add_argument('-d', '--results-dir', default='./results',
                     help="Directory where results will be stored")
 
 parser.add_argument('--dry-run', action='store_true',
@@ -237,8 +237,10 @@ date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y-%m-%d_%T')
 
 directory = args.results_dir
 
-if not os.path.exists(directory):
-    os.makedirs(directory)
+if os.path.exists(directory):
+    directory = directory + "__" + date_str
+
+os.makedirs(directory)
 data_dir = os.path.join(directory, 'data')
 plot_dir = os.path.join(directory, 'plots')
 log_dir = os.path.join(directory, 'logs')
@@ -249,7 +251,7 @@ os.makedirs(log_dir)
 os.makedirs(prof_dir)
 print("Saving results in {}.".format(plot_dir))
 
-shutil.copy(os.path.realpath(__file__), os.path.join(directory, 'run_speed_test_script.py'))
+shutil.copy(os.path.realpath(__file__), os.path.join(directory, 'run_benchmark_suite.py'))
 
 time_format = '%d.%m.%Y at %H:%M:%S'
 script_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
