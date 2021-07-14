@@ -37,10 +37,6 @@ nosetests.xml
 /dev/**/*.o
 /dev/**/main
 
-# ignore benchmark results
-/brian2cuda/tools/benchmarking/results_*
-/brian2cuda/tools/benchmarking/README.md
-
 # ignore directories in example folder (generated code)
 # TODO: we have now compartmental example folder not only code as subfolders
 #/examples/*/*

@@ -1,10 +1,13 @@
 The scripts here run the brian2 and brian2cuda test suite.
 
 1. Run locally
-  To run the test suite on your local GPU, use `run_test_suite.sh`. This will
-  use the brian2 and brian2cuda packages that are available right now. If you
-  installed in developer mode, you can't modify the source code during test
-  suite run, otherwise it will change your test results.
+  To run the test suite on your local GPU, use `run_test_suite.sh`. Don't use
+  the Python file `run_test_suite.py` directly. The shell script will take
+  care of logging git state and logfiles before calling `run_test_suite.py`.
+  This will use the brian2 and brian2cuda packages that are available in your
+  local Python environment. If you installed in developer mode, you can't
+  modify the source code during test suite run, otherwise it will change your
+  test results.
 
   If you want to make a copy of the current repository before running the test
   suite, such that you can continue development, use
