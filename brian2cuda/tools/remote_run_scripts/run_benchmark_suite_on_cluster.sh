@@ -2,7 +2,7 @@
 
 # show the manual for this script
 usage=$(cat << END
-usage: $0 <options> -- <run_manuscript_runtime_vs_N_benchmarks.py arguments>
+usage: $0 <options> -- <run_benchmark_suite.py arguments>
 
 with <options>:
     -h|--help                 Show usage message
@@ -126,11 +126,11 @@ benchmark_suite_args="-d $remote_dir $@"
 echo -e "\nINFO: Running benchmarks script with options $benchmark_suite_args"
 
 # Check that benchmark_suite_args are valid arguments for
-# run_manuscript_runtime_vs_N_benchmarks.py
-dry_run_output=$(python ../benchmarking/run_manuscript_runtime_vs_N_benchmarks.py --dry-run $benchmark_suite_args 2>&1)
+# run_benchmark_suite.py
+dry_run_output=$(python ../benchmarking/run_benchmark_suite.py --dry-run $benchmark_suite_args 2>&1)
 if [ $? -ne 0 ]; then
     echo_usage
-    echo -e "$0: error: invalid <run_manuscript_runtime_vs_N_benchmarks.py arguments>\n"
+    echo -e "$0: error: invalid <run_benchmark_suite.py arguments>\n"
     echo "$dry_run_output"
     exit 1
 fi
@@ -210,9 +210,9 @@ ssh "$remote" "/bin/bash" << EOF
     cd -
 EOF
 
-echo -e "\nINFO: Copying local run_manuscript_runtime_vs_N_benchmarks.py to remote..."
+echo -e "\nINFO: Copying local run_benchmark_suite.py to remote..."
 scp \
-    $local_b2c_dir/brian2cuda/tools/benchmarking/run_manuscript_runtime_vs_N_benchmarks.py \
+    $local_b2c_dir/brian2cuda/tools/benchmarking/run_benchmark_suite.py \
     $remote:$remote_b2c_dir/brian2cuda/tools/benchmarking/
 
 echo -e "\nINFO: Submitting script to grid engine to run benchmarks..."

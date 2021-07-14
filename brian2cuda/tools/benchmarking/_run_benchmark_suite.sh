@@ -17,7 +17,7 @@ logfile="$results_dir/$logfile_name"
 start_time=`date +%s`
 
 PYTHONPATH="../../..:../../../frozen_repos/brian2:../../../frozen_repos/brian2genn:$PYTHONPATH" \
-    python run_manuscript_runtime_vs_N_benchmarks.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
+    python run_benchmark_suite.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
 
 runtime=$(( $(date +%s) - $start_time ))
 min=$(( $runtime / 60 ))
