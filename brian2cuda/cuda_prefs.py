@@ -169,12 +169,9 @@ prefs.register_preferences(
         `None`, in which case the GPU with the highest compute capability and lowest ID
         is used.
 
-        If this preference is set, it has to be the ID reported by `nvidia-smi`, which
-        ignores the environment variable `CUDA_VISIBLE_DEVICES`.
-
-        If this preference isn't set, `CUDA_VISIBLE_DEVICES` is not ignored. E.g. with
-        `CUDA_DEVICE_QUERY=1,2` only GPUs 1 and 2 will be considered during GPU
-        detection.
+        If environment variable `CUDA_VISIBLE_DEVICES` is set, this preference will be
+        interpreted as ID from the visible devices (e.g. with `CUDA_VISIBLE_DEVICES=2`
+        and `gpu_id=0` preference, the GPU 2 will be used).
         ''',
         default=None,
         validator=lambda v: v is None or isinstance(v, int)
