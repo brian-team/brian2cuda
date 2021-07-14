@@ -164,7 +164,18 @@ prefs.register_preferences(
     ),
 
     gpu_id=BrianPreference(
-        docs='''The ID of the GPU that should be used''',
+        docs='''
+        The ID of the GPU that should be used for code execution. Default value is
+        `None`, in which case the GPU with the highest compute capability and lowest ID
+        is used.
+
+        If this preference is set, it has to be the ID reported by `nvidia-smi`, which
+        ignores the environment variable `CUDA_VISIBLE_DEVICES`.
+
+        If this preference isn't set, `CUDA_VISIBLE_DEVICES` is not ignored. E.g. with
+        `CUDA_DEVICE_QUERY=1,2` only GPUs 1 and 2 will be considered during GPU
+        detection.
+        ''',
         default=None,
         validator=lambda v: v is None or isinstance(v, int)
     ),
