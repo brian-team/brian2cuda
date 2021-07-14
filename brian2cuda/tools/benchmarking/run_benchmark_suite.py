@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
 
-parser.add_argument('-d', '--results-dir', default='./results',
+parser.add_argument('-d', '--results-dir', default=None,
                     help="Directory where results will be stored")
 
 parser.add_argument('--dry-run', action='store_true',
@@ -15,6 +15,14 @@ if args.dry_run:
     import sys
     print("Dry run completed, {} arguments valid.".format(__file__))
     sys.exit()
+
+if args.results_dir is None:
+    raise RuntimeError(
+        "Don't run `run_benchmark_suite.py` directly. Use the shell script "
+        "`run_benchmark_suite.sh` instead."
+    )
+else:
+    directory = args.results_dir
 
 import os
 import shutil
@@ -235,12 +243,9 @@ for proj_dir in project_dirs:
 time_stemp = time.time()
 date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y-%m-%d_%T')
 
-directory = args.results_dir
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
-if os.path.exists(directory):
-    directory = directory + "__" + date_str
-
-os.makedirs(directory)
 data_dir = os.path.join(directory, 'data')
 plot_dir = os.path.join(directory, 'plots')
 log_dir = os.path.join(directory, 'logs')

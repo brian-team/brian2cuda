@@ -240,8 +240,8 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
             # (_on_headnode.sh)
 
 echo
-echo "INFO: Grid engine logs are stored on remote at $remote_ge_log_dir"
-echo "INFO: Benchmark results are stored on remote at $benchmark_result_dir"
+echo "INFO: Grid engine logs are stored on remote at $remote_ge_log_dir/$run_name"
+echo "INFO: Benchmark results are stored on remote at $benchmark_result_dir/$run_name"
 if [ $keep_remote_repo -eq 0 ]; then
     echo "WARNING: The remote brian2cuda repository will not be deleted " \
          "due to the '-k | --keep-remote-dir' option. Make sure you delete " \
