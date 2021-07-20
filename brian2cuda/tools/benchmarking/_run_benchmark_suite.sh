@@ -16,6 +16,11 @@ logfile="$results_dir/$logfile_name"
 
 start_time=`date +%s`
 
+# Set GeNN environment variales such that they always use the GeNN from the
+# frozen_repos/genn submodule
+b2c_dir=$(git rev-parse --show-toplevel)
+source "$b2c_dir/frozen_repos/init_genn.sh" | tee -a "$logfile"
+
 PYTHONPATH="../../..:../../../frozen_repos/brian2:../../../frozen_repos/brian2genn:$PYTHONPATH" \
     python run_benchmark_suite.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
 
