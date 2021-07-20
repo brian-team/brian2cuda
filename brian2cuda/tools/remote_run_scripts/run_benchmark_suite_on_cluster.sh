@@ -14,6 +14,7 @@ with <options>:
     -s|--remote-conda-sh      Remote path to conda.sh
     -e|--remote-conda-env     Conda environment name with brian2cuda on remote
     -k|--keep-remote-repo     Don't delete remote repository after run
+    -t|--copy-tools-dir       Copy (rsync) local `brian2cuda/tools` directory to remote
 END
 )
 
@@ -40,6 +41,9 @@ benchmark_suite_remote_dir="~/projects/brian2cuda/benchmark-suite"
 benchmark_result_dir="$benchmark_suite_remote_dir/results"
 # keep remote (false by default)
 keep_remote_repo=1
+# copy local brian2cuda/tools directory for remote (use this when you are
+# modifying benchmark scripts and want to test them without commiting yet)
+copy_tools_dir=1
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -47,8 +51,8 @@ source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:g:c:r:l:s:e:k
-long_args=help,name:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
+short_args=hn:g:c:r:l:s:e:kt
+long_args=help,name:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo,copy-tools-dir
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -100,6 +104,10 @@ while true; do
             ;;
         -k | --keep-remote-dir )
             keep_remote_repo=0
+            shift 1
+            ;;
+        -t | --copy-tools-dir )
+            copy_tools_dir=0
             shift 1
             ;;
         -- )
@@ -210,13 +218,22 @@ ssh "$remote" "/bin/bash" << EOF
     cd -
 EOF
 
-echo -e "\nINFO: Copying local run_benchmark_suite.py to remote..."
-scp \
-    $local_b2c_dir/brian2cuda/tools/benchmarking/run_benchmark_suite.py \
-    $remote:$remote_b2c_dir/brian2cuda/tools/benchmarking/
+# Copy at least local run_benchmark_suite.py to remote such that the locally
+# chosen benchmark configuration is run on the remote (without having to commit
+# it). If `-t | --copy-tools-dir` is set, copy the entire brian2cuda/tools dir.
+if [ $copy_tools_dir -eq 0 ]; then
+    echo -e "\nINFO: Copying local tools directory to remote..."
+    # -m: --prune-empty-dirs
+    rsync -avzzm --include="*/" --include="*.sh" --include="*.py" --exclude="*" \
+        $local_b2c_dir/brian2cuda/tools/ $remote:$remote_b2c_dir/brian2cuda/tools
+else
+    echo -e "\nINFO: Copying local `run_benchmark_suite.py` directory to remote..."
+    scp \
+        $local_b2c_dir/brian2cuda/tools/benchmarking/run_benchmark_suite.py \
+        $remote:$remote_b2c_dir/brian2cuda/tools/benchmarking/
+fi
 
 echo -e "\nINFO: Submitting script to grid engine to run benchmarks..."
-
 bash_script=brian2cuda/tools/benchmarking/_run_benchmark_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
