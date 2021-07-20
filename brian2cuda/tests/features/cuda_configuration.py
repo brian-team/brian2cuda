@@ -95,8 +95,20 @@ class DynamicConfigCreator(object):
 
         return DynamicCUDAStandaloneConfiguration()
 
-    def _subprocess(self, cmd, **kwargs):
-        return subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT, **kwargs)
+    def _subprocess(self, cmd, fails_ok=False, **kwargs):
+        try:
+            output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT, **kwargs)
+        except subprocess.CalledProcessError as error:
+            logger.diagnostic(
+                "Command '{cmd}' failed: {error}, {error.output}".format(
+                    cmd=cmd, error=error
+                )
+            )
+            output = None
+            if not fails_ok:
+                raise
+
+        return output
 
     def git_checkout(self, reverse=False):
         assert self.git_commit is not None
@@ -117,9 +129,9 @@ class DynamicConfigCreator(object):
             self.original_branch = self._subprocess('git rev-parse --abbrev-ref HEAD').rstrip()
             logger.diagnostic("Original branch is {}.".format(self.original_branch))
             # stash the current changes if we are checking out another commit
-            old_stash = self._subprocess('git rev-parse -q --verify refs/stash')
+            old_stash = self._subprocess('git rev-parse -q --verify refs/stash', fails_ok=True)
             self._subprocess('git stash')
-            new_stash = self._subprocess('git rev-parse -q --verify refs/stash')
+            new_stash = self._subprocess('git rev-parse -q --verify refs/stash', fails_ok=True)
             # store shash commit sha if there was something to stash
             self.stashed = None
             if old_stash != new_stash:
@@ -127,7 +139,7 @@ class DynamicConfigCreator(object):
                 logger.diagnostic("Stashed current state in original branch.")
             try:
                 self._subprocess('git checkout {}'.format(self.git_commit))
-                logger.diagnostic("Checkout out target {}.".format(self.git_commit))
+                logger.diagnostic("Checked out target {}.".format(self.git_commit))
             except subprocess.CalledProcessError as err:
                 raise RuntimeError("Couldn't check out target commit, "
                                    "trying to restore original ({}). "
@@ -295,6 +307,7 @@ class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStanda
     single_precision = True
     profile = True
 
+# Copied from brian2genn.correctness_testing
 class GeNNConfigurationOptimized(Configuration):
     name = 'GeNN_optimized'
     def before_run(self):
