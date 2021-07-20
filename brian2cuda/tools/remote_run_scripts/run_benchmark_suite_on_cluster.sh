@@ -114,11 +114,11 @@ while true; do
     esac
 done
 
-run_name="$benchmark_suite_task_name"_"$(date +%y-%m-%d_%T)"
+run_name="$benchmark_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"
 remote_dir="$benchmark_result_dir/$run_name"
 remote_logfile="$remote_dir/full.log"
 qsub_name=${run_name//_/__}
-qsub_name=b2c-${qsub_name//:/_}
+qsub_name=b2c-benchmarks-${qsub_name//:/_}
 
 # all args after --
 benchmark_suite_args="-d $remote_dir $@"

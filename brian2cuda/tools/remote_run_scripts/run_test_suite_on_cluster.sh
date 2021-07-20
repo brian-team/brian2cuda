@@ -128,11 +128,11 @@ fi
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
-run_name="$test_suite_task_name"_"$(date +%y-%m-%d_%T)"
+run_name="$test_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"
 local_logfile="/tmp/$run_name.log"
 remote_logfile="$test_suite_remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}
-qsub_name=b2c-${qsub_name//:/_}
+qsub_name=b2c-tests-${qsub_name//:/_}
 
 # create tmp folder name for brian2cuda code (in $HOME)
 remote_b2c_dir="$test_suite_remote_dir/brian2cuda-synced-repos/$run_name"

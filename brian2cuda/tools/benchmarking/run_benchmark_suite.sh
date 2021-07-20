@@ -6,7 +6,7 @@ run_name=${1:-noname}       # default: noname
 benchmarks_result_dir=${2:-results}  # default: results
 
 # add timestemp to name
-run_name="$run_name"_"$(date +%y-%m-%d_%T)"
+run_name="$run_name"_"$(date +%y-%m-%d_%H-%M-%S)"
 logfile_name="full.log"
 results_dir="$benchmarks_result_dir/$run_name"
 
