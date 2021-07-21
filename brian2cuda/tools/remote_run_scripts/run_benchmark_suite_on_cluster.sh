@@ -14,7 +14,7 @@ with <options>:
     -s|--remote-conda-sh      Remote path to conda.sh
     -e|--remote-conda-env     Conda environment name with brian2cuda on remote
     -k|--keep-remote-repo     Don't delete remote repository after run
-    -t|--copy-tools-dir       Copy (rsync) local `brian2cuda/tools` directory to remote
+    -t|--copy-tools-dir       Copy (rsync) local brian2cuda/tools directory to remote
 END
 )
 
