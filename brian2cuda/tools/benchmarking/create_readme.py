@@ -48,9 +48,9 @@ def create_readme(result_dir, description=''):
     result_md = []
     for name in test_names:
         plots_md = []
-        for plot_file in sorted(glob.glob(result_dir+ "/plots/speed_test_{}_*".format(name))):
-            plot_path = os.path.join(*(plot_file.split(os.path.sep)[1:]))
-            md = "![]({plot})".format(plot=os.path.relpath(plot_path, result_dir))
+        for plot_file in sorted(glob.glob(result_dir + "/plots/speed_test_{}_*".format(name))):
+            filename = os.path.basename(plot_file)
+            md = "![]({plot})".format(plot="plots/{}".format(filename))
             plots_md.append(md)
         profile_md = []
         for nvprof_file in sorted(glob.glob(result_dir + "/nvprof/nvprof_{}_*".format(name))):
@@ -75,7 +75,8 @@ def create_readme(result_dir, description=''):
     with open(result_dir + "/README.md", "w") as readme_file:
         readme_file.write(readme_md)
 
-    update_benchmark_readme()
+    result_dir_parent = os.path.dirname(result_dir)
+    update_benchmark_readme(directory=result_dir_parent)
 
 if __name__ == '__main__':
 
