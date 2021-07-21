@@ -265,13 +265,8 @@ class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfiguration):
     openmp_threads = None
     hostname = socket.gethostname()
     known = True
-    if hostname == 'risha':
-        openmp_threads = 12  # 12 physical cores, no hyper-threading
-    elif hostname == 'merope':
-        openmp_threads = 6  # 6 physical cores, with hyper-threading (x2)
-    elif hostname == 'sabik':
-        logger.warn("CHECK CPU COUNT ON SABIK! (using 12)")
-        openmp_threads = 12
+    if hostname.startswith("cognition"):
+        openmp_threads = 24
     else:
         known = False
         openmp_threads = multiprocessing.cpu_count()

@@ -191,16 +191,16 @@ configs = [# configuration                          project_directory
 speed_tests = [# feature_test                     name                                  n_slice
 
                # paper benchmarks
-               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(0, -1)         ),
-               (COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(0, -1)         ),
-               (COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(0, -1)         ),
-               (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(0, -1)         ),
-               (MushroomBody,                                   'MushroomBody',                                 slice(0, -1)         ),
-               (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(0, -1)         ),
-               (BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(0, -1)         ),
-               (STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(0, -1)         ),
-               (STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(0, -1)         ),
-               (STDPCUDA,                                       'STDPCUDA',                                     slice(0, -1)         ),
+               (BrunelHakimHomogDelays,                         'BrunelHakimHomogDelays',                       slice(None)         ),
+               (BrunelHakimHeterogDelays,                       'BrunelHakimHeterogDelays',                     slice(None)         ),
+               (BrunelHakimHeterogDelaysNarrowDistr,            'BrunelHakimHeterogDelaysNarrowDistr',          slice(None)         ),
+               (STDPCUDAHeterogeneousDelays,                    'STDPCUDAHeterogeneousDelays',                  slice(None)         ),
+               (STDPCUDAHomogeneousDelays,                      'STDPCUDAHomogeneousDelays',                    slice(None)         ),
+               (STDPCUDA,                                       'STDPCUDA',                                     slice(None)         ),
+               (COBAHHPseudocoupled1000,                        'COBAHHPseudocoupled1000',                      slice(None)         ),
+               (COBAHHPseudocoupled80,                          'COBAHHPseudocoupled80',                        slice(None)         ),
+               (MushroomBody,                                   'MushroomBody',                                 slice(None)         ),
+               (COBAHHUncoupled,                                'COBAHHUncoupled',                              slice(0, -2)         ),
 
                ## other benchmarks
                #(CUBAFixedConnectivityNoMonitor,                 'CUBAFixedConnectivityNoMonitor',               slice(None)         ),
