@@ -11,4 +11,4 @@ fi
 
 export GENN_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/genn" && pwd )"
 echo "Setting GENN_PATH=$GENN_PATH"
-export PATH=$PATH:$GENN_PATH/lib/bin
+export PATH=$GENN_PATH/lib/bin:$PATH
