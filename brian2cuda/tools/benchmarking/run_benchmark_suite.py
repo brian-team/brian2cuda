@@ -81,7 +81,9 @@ from create_readme import create_readme
 from helpers import pickle_results, translate_pkl_to_csv
 
 suppress_brian2_logs()
-BrianLogger.log_level_diagnostic()
+# Uncomment this to get brian2cuda logs
+# (e.g. for DynamicConfigCreator diagnostic messages)
+#BrianLogger.log_level_diagnostic()
 
 configs = [# configuration                          project_directory
           #(NumpyConfiguration,                     None),
