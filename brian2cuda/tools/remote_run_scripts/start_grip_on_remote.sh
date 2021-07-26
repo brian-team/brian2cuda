@@ -9,6 +9,8 @@ remote="cluster"
 path_conda_sh_remote="~/anaconda3/etc/profile.d/conda.sh"
 # where to store the logfile on the remote
 benchmark_suite_remote_dir="~/projects/brian2cuda/benchmark-suite"
+# what grip port to use on the remote
+remote_grip_port=6420
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -36,7 +38,7 @@ ssh $remote "/bin/bash" << EOF
         echo Killing any running instance of grip on remote...
         killall grip
         echo Starting grip on remote...
-        grip
+        grip $remote_grip_port
     else
         echo No conda environment with name grip found. Please create it and \
              install grip in that environment.
@@ -47,7 +49,7 @@ EOF
 sleep 2
 
 echo Starting ssh tunnel to connect to remote grip server...
-echo "  grip server is running on remote port 6419 and tunneled to local port 6420"
+echo "  grip server is running on remote port $remote_grip_port and tunneled to local port 6420"
 echo "  You can access it via your browser at http://localhost:6420"
 echo
-ssh -Y -N -M -S $control_socket -L localhost:6420:localhost:6419 cluster
+ssh -Y -N -M -S $control_socket -L localhost:6420:localhost:$remote_grip_port $remote
