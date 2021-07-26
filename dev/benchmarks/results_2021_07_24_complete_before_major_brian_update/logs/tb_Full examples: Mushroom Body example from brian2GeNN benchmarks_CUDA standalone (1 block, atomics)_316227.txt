@@ -1,0 +1,220 @@
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'synapse')
+INFO: setting cudaDevice stuff took 0.136331 seconds
+objects cu num par blocks 1
+INFO: _init_arrays() took 0.027662s
+INFO: synapses creation took 2.95614s
+INFO: synapses_1 creation took 0.608206s
+INFO: synapses_2 creation took 0.01121s
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	4635 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO kernel_synapses_1_group_variable_set_conditional_codeobject
+	975 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO kernel_synapses_1_group_variable_set_conditional_codeobject_1
+	975 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO connectivity matrix has size 998303, number of (pre neuron ID, post neuron block) pairs is 316227
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 998303
+	number of pre/post blocks: 316227
+	number of synapses over all pre/post blocks:
+		mean: 3.2	std: 1.7
+
+	memory usage: TOTAL: 7.4 MB (~7.8 byte per synapse)
+		51.3%	3.808 MB	synapse IDs [998303]
+		32.5%	2.413 MB	pointers to synapse IDs [316227]
+		16.2%	1.206 MB	number of synapses per pre/post block [316227]
+INFO _run_synapses_1_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	58 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 1.394s
+INFO connectivity matrix has size 10000, number of (pre neuron ID, post neuron block) pairs is 100
+INFO: synapse statistics and memory usage for synapses_2_pre:
+	number of synapses: 10000
+	number of pre/post blocks: 100
+	number of synapses over all pre/post blocks:
+		mean: 100.0	std: 0.0
+
+	memory usage: TOTAL: 0.0 MB (~4.1 byte per synapse)
+		97.1%	0.038 MB	synapse IDs [10000]
+		1.9%	0.001 MB	pointers to synapse IDs [100]
+		1.0%	0.000 MB	number of synapses per pre/post block [100]
+INFO _run_synapses_2_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	58 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO: synapses_2_pre initialisation took 0.001s
+INFO connectivity matrix has size 4745372, number of (pre neuron ID, post neuron block) pairs is 100
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 4745372
+	number of bundles: 0
+	number of pre/post blocks: 100
+	number of synapses over all pre/post blocks:
+		mean: 47453.7	std: 204.4
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 18.1 MB (~4.0 byte per synapse)
+		100.0%	18.102 MB	synapse IDs [4745372]
+		0.0%	0.001 MB	pointers to synapse IDs [100]
+		0.0%	0.000 MB	number of synapses per pre/post block [100]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	58 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.168s
+INFO connectivity matrix has size 998303, number of (pre neuron ID, post neuron block) pairs is 100
+INFO: synapse statistics and memory usage for synapses_1_post:
+	number of synapses: 998303
+	number of bundles: 0
+	number of pre/post blocks: 100
+	number of synapses over all pre/post blocks:
+		mean: 9983.0	std: 108.7
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 3.8 MB (~4.0 byte per synapse)
+		100.0%	3.808 MB	synapse IDs [998303]
+		0.0%	0.001 MB	pointers to synapse IDs [100]
+		0.0%	0.000 MB	number of synapses per pre/post block [100]
+INFO _run_synapses_1_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	58 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+INFO: synapses_1_post initialisation took 0.042s
+INFO kernel_neurongroup_1_stateupdater_codeobject
+	1 blocks
+	896 threads
+	72 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	0.875 theoretical occupancy
+INFO kernel_neurongroup_stateupdater_codeobject
+	353 blocks
+	896 threads
+	72 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	0.875 theoretical occupancy
+INFO kernel_neurongroup_1_thresholder_codeobject
+	1 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	309 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikegeneratorgroup_codeobject
+	1 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_1_pre_codeobject
+	1 blocks
+	1024 threads
+	42 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_2_pre_codeobject
+	1 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	1 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_1_post_codeobject
+	1 blocks
+	1024 threads
+	40 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	2016 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 4745372
+Number of synapses: 10000
+Number of synapses: 998303
+Number of synapses: 998303
+INFO: main_lines took 110.719218 seconds
+INFO: main function took 111.094817 seconds
+INFO _last_run_time = 105.217 s
+
+INFO       CUDA installation directory given via environment variable `CUDA_PATH=/usr/local/cuda` [brian2.devices.cuda_standalone]
+INFO       Compiling device code for GPU 0 (GeForce RTX 2080 Ti) [brian2.devices.cuda_standalone]
+INFO       Compiling device code for compute capability 7.5 (compiler flags: ['-arch=sm_75']) [brian2.devices.cuda_standalone]
+INFO       Using the following preferences for CUDA standalone: [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_ordering = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.parallel_blocks = 1 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.push_synapse_bundles = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.launch_bounds = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.use_atomics = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.detect_gpus = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.extra_threshold_kernel = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.calc_occupancy = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.compute_capability = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.SM_multiplier = 1 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc = ['-use_fast_math'] [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.cuda_path = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_heap_size = 128 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_id = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_post_references = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_type = CURAND_RNG_PSEUDO_DEFAULT [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.default_functions_integral_convertion = <type 'numpy.float64'> [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_pre_references = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.syn_launch_bounds = False [brian2.devices.cuda_standalone]

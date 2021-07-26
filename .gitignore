@@ -37,9 +37,6 @@ nosetests.xml
 /dev/**/*.o
 /dev/**/main
 
-# ignore benchmarks folder
-/dev/benchmarks
-
 # ignore directories in example folder (generated code)
 # TODO: we have now compartmental example folder not only code as subfolders
 #/examples/*/*

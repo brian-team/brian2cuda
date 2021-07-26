@@ -134,8 +134,8 @@ class COBAHHPseudocoupled1000(COBAHHBase):
     """
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
-    #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 337500, fail: 346875
-    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(337500)]  #pass: 337500, fail: 346875
+    #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 384962, fail: 390235
+    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
     n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n

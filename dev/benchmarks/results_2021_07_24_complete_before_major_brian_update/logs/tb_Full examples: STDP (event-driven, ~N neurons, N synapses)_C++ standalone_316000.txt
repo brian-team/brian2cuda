@@ -1,0 +1,3 @@
+INFO _last_run_time = 442.538 s
+
+INFO       No numerical integration method specified for group 'neurongroup', using method 'exact' (took 1.63s). [brian2.stateupdaters.base.method_choice]

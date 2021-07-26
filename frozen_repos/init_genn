@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# source this file to set environmental variables for genn:
-# `source ./init_genn`
-
-export CUDA_PATH=/usr/local/cuda
-export GENN_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/genn" && pwd )"
-export PATH=$PATH:$GENN_PATH/lib/bin

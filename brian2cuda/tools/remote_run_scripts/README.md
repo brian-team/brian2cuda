@@ -7,7 +7,7 @@ directory. This is a template, please copy it into your home directory like this
 cp brian2cuda-remote-dev.conf ~/.brian2cuda-remote-dev.conf
 ```
 Note the dot in front of the copy target!
-No modify the file that you just copied into your home directory and change at
+Now modify the file that you just copied into your home directory and change at
 least the `remote` such that is has the correct name with which you log into
 the remote cluster (as configured in `~/.ssh/config`). The other options you
 can change as well, but they are probably fine for now.
@@ -18,21 +18,68 @@ The following scripts are available in this directory:
     This script runs the entire test suite on the current version of this git
     repository. It will first copy all source files in the this repository
     over to the remote (using `rsync`). That means even uncommited changes
-    will copied. Then it will submit a job through the grid engine to run our
-    test suite on the next available GPU.
+    will be copied. Then it will submit a job through the grid engine to run
+    our test suite on the next available GPU.
     
-    This script will call `../run_test_suite.py` on the cluster. Any parameter
-    passed to this script after `--` will be passed as parameters to
-    `run_test_suite.py`.
+    This script will call `../test_suite/run_test_suite.py` on the cluster.
+    Any parameter passed to `run_test_suite_on_cluster.sh` after `--` will be
+    passed as parameters to `run_test_suite.py`.
 
-    You can pass arguments to the script to change the default parameters
-    (before `--`), such as choosing a specific GPU (`--gpu`), setting the
-    number of CPU cores requested (`--cores`) or passing. See
-    `run_test_suite_on_cluster.sh --help` for all available parameters. And
-    you can change the defaults of these parameters in the config file
-    `~/.brian2cuda-remote-dev.conf` if you want too.
+    You can pass arguments to `run_test_suite_on_cluster.sh` to change the
+    default parameters (before `--`), such as choosing a specific GPU
+    (`--gpu`), setting the number of CPU cores requested (`--cores`) or
+    giving the test suite ran a name (`--name`). See
+    `run_test_suite_on_cluster.sh --help` for all available parameters.
 
-2. `remote_sync.sh`, `remote_make.sh` and `remote_execute_main.sh`
+    You can also change the defaults of these parameters in the config file
+    `~/.brian2cuda-remote-dev.conf` if you want to.
+
+    If you want to run the test suite on a local GPU, use the shell script
+    `../test_suite/run_test_suite.sh` instead. You can also `ssh` to a
+    server first and use that script from there directly.
+
+2. `run_benchmark_suite_on_cluster.sh`
+    This script runs the benchmarks defined in
+    `../benchmarking/run_benchmark_suite.py` on the cluster. Instead of
+    copying the files of this repository via `rsync` (as
+    `run_test_suite_on_cluster.sh` does it), it pulls the `brian2cuda`
+    repository from GitHub to the remote. Then it pushes the last local commit
+    to the remote repository (this works even if the local commit has not been
+    pushed to GitHub). This way, only commits can be benchmarked, uncommited
+    changes will not appear at the remote during benchmarking (except if you
+    pass the `-t | --copy-tools-dir` argument, in which case the `tools`
+    folder will be copied over, which helps when developing tool scripts)
+
+    To modify what benchmarks are run and with which configurations, modify
+    the `run_benchmark_suite.py` file locally. You don't need to commit
+    changes here, it will be copied to the remote and stored alongside the
+    benchmark results for reproduce ability.
+
+    This script will call `../benchmarking/run_benchmark_suite.py` on the
+    cluster. Any parameter passed to `run_benchmark_suite_on_cluster.sh` after
+    `--` will be passed as parameters to `run_benchmark_suite.py`.
+
+    You can pass the same arguments to `run_benchmark_suite_on_cluster.sh` as
+    you can pass to `run_test_suite_on_cluster.sh` (see above).
+    
+    You can also change the defaults of these parameters in the config file
+    `~/.brian2cuda-remote-dev.conf` if you want to.
+
+    If you want to run the benchmarks on a local GPU, use the shell script
+    `../benchmarking/run_benchmark_suite.sh` instead. You can also `ssh` to a
+    server first and use that script from there directly.
+
+    By default, the remote repository will be deleted after the run is
+    finished to save memory on the server. If you don't want this to happen
+    (e.g. because you need to debug something), you can pass the
+    `-k | --keep-remote-repo` argument to the bash script.
+
+3. `start_grip_on_remote.sh` starts a `grip` server from the remote benchmark
+   results directory and opens an ssh tunnel to that server. This allows you
+   to open `http://localhost:6420` in your browser locally and view the
+   benchmark results on the remote.
+
+4. `remote_sync.sh`, `remote_make.sh` and `remote_execute_main.sh`
     These scripts are meant to execute a standalone project generated by
     brian2 (`cpp_standalone`) or brian2cuda (`cuda_standalone`) on the remote.
     And they assumes that you have set up an ssh tunnel to the compute node
@@ -62,8 +109,9 @@ The following scripts are available in this directory:
        terminal.
     7. If you want to run all of the scripts at once, you can also execute
        `remote_sync_make_execute.sh`.
-3. Files located in the `helper_scripts` directory can be used to synchronize
-   test suite log files from the remote system with the local system. Just
-   copy them into any directory where you would like to store the log files
-   (preferable outside this git repository, as you won't be version controlling
-   them)
+
+5. Files located in the `helper_scripts` directory can be used to synchronize
+   test suite log files or benchmark results from the remote system with the
+   local system. Just copy them into any directory where you would like to
+   store the log files (preferable outside this git repository, as you won't
+   be version controlling them)
