@@ -1,0 +1,23 @@
+diff --git a/brian2cuda/tools/benchmarking/run_benchmark_suite.py b/brian2cuda/tools/benchmarking/run_benchmark_suite.py
+index f5897d8..38a31dd 100644
+--- a/brian2cuda/tools/benchmarking/run_benchmark_suite.py
++++ b/brian2cuda/tools/benchmarking/run_benchmark_suite.py
+@@ -388,4 +388,4 @@ finally:
+ ## Debug (includes profiling infos)
+ #from brian2.tests.features.base import results
+ #for x in results(LocalConfiguration, LinearNeuronsOnly, 10, maximum_run_time=10*second):
+-#    print x
++#    print x
+\ No newline at end of file
+diff --git a/frozen_repos/brian2 b/frozen_repos/brian2
+--- a/frozen_repos/brian2
++++ b/frozen_repos/brian2
+@@ -1 +1 @@
+-Subproject commit d71a9993f8c7656d7afb5ad24cde6b705e9ae82f
++Subproject commit d71a9993f8c7656d7afb5ad24cde6b705e9ae82f-dirty
+diff --git a/frozen_repos/brian2genn b/frozen_repos/brian2genn
+--- a/frozen_repos/brian2genn
++++ b/frozen_repos/brian2genn
+@@ -1 +1 @@
+-Subproject commit 67dd275c91f59c8edeae0e15bbb56326082b5fb6
++Subproject commit 67dd275c91f59c8edeae0e15bbb56326082b5fb6-dirty

@@ -1,0 +1,1 @@
+no stdout file found, cwd = /cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/brian2cuda/tools/benchmarking/GeNNWorkspace/results/stdout.txt

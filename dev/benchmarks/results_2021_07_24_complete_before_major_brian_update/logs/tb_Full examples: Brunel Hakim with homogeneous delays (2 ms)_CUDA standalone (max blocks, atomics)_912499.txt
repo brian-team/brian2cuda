@@ -1,0 +1,43 @@
+('debug syn effect mode ', 'target')
+INFO: setting cudaDevice stuff took 0.158068 seconds
+objects cu num par blocks 68
+INFO: _init_arrays() took 0.030526s
+INFO: synapses creation took 1780.04s
+
+INFO       CUDA installation directory given via environment variable `CUDA_PATH=/usr/local/cuda` [brian2.devices.cuda_standalone]
+INFO       No numerical integration method specified for group 'neurongroup', using method 'euler' (took 0.04s, trying other methods took 0.00s). [brian2.stateupdaters.base.method_choice]
+INFO       Compiling device code for GPU 0 (GeForce RTX 2080 Ti) [brian2.devices.cuda_standalone]
+INFO       Compiling device code for compute capability 7.5 (compiler flags: ['-arch=sm_75']) [brian2.devices.cuda_standalone]
+INFO       Using the following preferences for CUDA standalone: [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_ordering = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.parallel_blocks = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.push_synapse_bundles = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.launch_bounds = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.use_atomics = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.detect_gpus = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.extra_threshold_kernel = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.calc_occupancy = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.compute_capability = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.SM_multiplier = 1 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc = ['-use_fast_math'] [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.cuda_path = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_heap_size = 128 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_id = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_post_references = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_type = CURAND_RNG_PSEUDO_DEFAULT [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.default_functions_integral_convertion = <type 'numpy.float64'> [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_pre_references = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.syn_launch_bounds = False [brian2.devices.cuda_standalone]
+ERROR: cudaMalloc failed at code_objects/synapses_pre_initialise_queue.cu:299 : out of memory
+terminate called after throwing an instance of 'thrust::system::system_error'
+  what():  CUDA free failed: cudaErrorCudartUnloading: driver shutting down
+
+Traceback (most recent call last):
+  File "<string>", line 21, in <module>
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/brian2cuda/tests/features/cuda_configuration.py", line 43, in after_run
+    with_output=True)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/brian2cuda/device.py", line 1103, in build
+    self.run(directory, with_output, run_args)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/brian2cuda/tools/benchmarking/cuda_standalone/cuda_standalone)

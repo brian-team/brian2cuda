@@ -1,0 +1,5 @@
+INFO _last_run_time = 7.13382 s
+
+INFO       Running CPPStandaloneConfigurationOpenMP with 24 threads [brian2.devices.cuda_standalone.cuda_configuration]
+INFO       No numerical integration method specified for group 'neurongroup', using method 'euler' (took 0.04s, trying other methods took 0.00s). [brian2.stateupdaters.base.method_choice]
+WARNING    OpenMP code is not yet well tested, and may be inaccurate. [brian2.devices.cpp_standalone.device.openmp]

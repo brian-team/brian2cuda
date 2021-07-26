@@ -1,0 +1,18 @@
+
+INFO       The following preferences have been changed for Brian2GeNN, reset them manually if you use a different device later in the same script: codegen.loop_invariant_optimisations, core.network.default_schedule [brian2.devices.genn]
+
+Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/brian2cuda/tests/features/speed.py", line 238, in run
+    conn.delay = self.heterog_delays
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2/brian2/groups/group.py", line 404, in __setattr__
+    return object.__setattr__(self, name, val)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2/brian2/synapses/synapses.py", line 959, in _set_delay
+    reference.set_item('True', delay, level=2)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2/brian2/core/variables.py", line 892, in set_item
+    run_namespace=namespace)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/cognition/home/subora/projects/brian2cuda/benchmark-suite/brian2cuda-synced-repos/subora_21-07-24_19-25-02/frozen_repos/brian2genn/brian2genn/device.py", line 479, in variableview_set_with_expression_conditional
+    raise NotImplementedError('GeNN does not support assigning to the '
+NotImplementedError: GeNN does not support assigning to the delay variable -- set the delay for all synapses (heterogeneous delays are not supported) as an argument to the Synapses initializer.

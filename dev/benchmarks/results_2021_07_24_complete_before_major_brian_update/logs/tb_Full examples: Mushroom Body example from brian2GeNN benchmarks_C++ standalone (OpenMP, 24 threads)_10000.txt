@@ -1,0 +1,4 @@
+INFO _last_run_time = 39.9684 s
+
+INFO       Running CPPStandaloneConfigurationOpenMP with 24 threads [brian2.devices.cuda_standalone.cuda_configuration]
+WARNING    OpenMP code is not yet well tested, and may be inaccurate. [brian2.devices.cpp_standalone.device.openmp]

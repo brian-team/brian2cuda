@@ -1,0 +1,9 @@
+,C++ standalone,"C++ standalone (OpenMP, 24 threads)","CUDA standalone (max blocks, atomics)","CUDA standalone (1 block, atomics)",GeNN_optimized,GeNN_optimized (span type PRE)
+100,0.599119,6.72899,3.00812,2.92021,nan,nan
+316,1.68481,6.00231,3.06454,3.0453,nan,nan
+1000,5.27579,7.13382,5.48128,5.51152,nan,nan
+3162,16.6734,8.64711,5.74016,5.91983,nan,nan
+10000,51.3757,13.5093,6.34916,6.9158,nan,nan
+31622,164.25,29.9464,8.93401,10.0585,nan,nan
+100000,525.058,96.713,20.4404,22.9617,nan,nan
+316227,1674.6378631834548,343.359,58.2781,66.1474,nan,nan

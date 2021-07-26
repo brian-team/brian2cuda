@@ -1,0 +1,86 @@
+('debug syn effect mode ', 'target')
+INFO: setting cudaDevice stuff took 0.138302 seconds
+objects cu num par blocks 1
+INFO: _init_arrays() took 0.012659s
+INFO: synapses creation took 36.6224s
+INFO connectivity matrix has size 31629368, number of (pre neuron ID, post neuron block) pairs is 31622
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 31629368
+	number of pre/post blocks: 31622
+	number of synapses over all pre/post blocks:
+		mean: 1000.2	std: 30.9
+
+	memory usage: TOTAL: 121.0 MB (~4.0 byte per synapse)
+		99.7%	120.656 MB	synapse IDs [31629368]
+		0.2%	0.241 MB	pointers to synapse IDs [31622]
+		0.1%	0.121 MB	number of synapses per pre/post block [31622]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	21 threads
+	58 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	864 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.692s
+INFO generating 6545754 randn every 207 clock cycles for neurongroup_stateupdater_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	31 blocks
+	1024 threads
+	52 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	31 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	1 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	864 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	31 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 31629368
+INFO: main_lines took 44.771903 seconds
+INFO: main function took 45.173260 seconds
+INFO _last_run_time = 5.81096 s
+
+INFO       CUDA installation directory given via environment variable `CUDA_PATH=/usr/local/cuda` [brian2.devices.cuda_standalone]
+INFO       No numerical integration method specified for group 'neurongroup', using method 'euler' (took 0.04s, trying other methods took 0.00s). [brian2.stateupdaters.base.method_choice]
+INFO       Compiling device code for GPU 0 (GeForce RTX 2080 Ti) [brian2.devices.cuda_standalone]
+INFO       Compiling device code for compute capability 7.5 (compiler flags: ['-arch=sm_75']) [brian2.devices.cuda_standalone]
+INFO       Using the following preferences for CUDA standalone: [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_ordering = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.parallel_blocks = 1 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.push_synapse_bundles = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.launch_bounds = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.use_atomics = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.detect_gpus = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.extra_threshold_kernel = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.calc_occupancy = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.compute_capability = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.SM_multiplier = 1 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc = ['-use_fast_math'] [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.cuda_path = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_heap_size = 128 [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.cuda_backend.gpu_id = None [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_post_references = False [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.random_number_generator_type = CURAND_RNG_PSEUDO_DEFAULT [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.default_functions_integral_convertion = <type 'numpy.float64'> [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.no_pre_references = True [brian2.devices.cuda_standalone]
+INFO       	devices.cuda_standalone.syn_launch_bounds = False [brian2.devices.cuda_standalone]
