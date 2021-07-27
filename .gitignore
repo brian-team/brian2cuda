@@ -48,3 +48,6 @@ GeNNworkspace/
 
 # ignore tags files
 tags
+
+# git worktrees are placed here
+worktrees/
