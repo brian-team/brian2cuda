@@ -110,44 +110,11 @@ def test_poisson_regex():
         '''
     assert_equal(co.code.cu_file, replaced_code)
     assert co.code.cu_file == replaced_code, replaced_code
-    ## should match
-    #m = []
-    #m.append(DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
-    #m.append(DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
-    #m.append(DummyCodeobj(' _rand(_vectorisation_idx)'))
-    #m.append(DummyCodeobj('_rand(_vectorisation_idx)'))
-    #m.append(DummyCodeobj('*_rand(_vectorisation_idx)'))
-    #m.append(DummyCodeobj('_rand(_vectorisation_idx)-'))
-    #m.append(DummyCodeobj('+_rand(_vectorisation_idx)-'))
-
-    ## should not match
-    #n = []
-    #n.append(DummyCodeobj('h_rand(_vectorisation_idx)'))
-    #n.append(DummyCodeobj('_rand_h(_vectorisation_idx)'))
-    #n.append(DummyCodeobj('#_rand_h(_vectorisation_idx)'))
-    #n.append(DummyCodeobj('# _rand_h(_vectorisation_idx)'))
-    #n.append(DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
-    #n.append(DummyCodeobj('#define _rand(_vectorisation_idx)'))
-    #n.append(DummyCodeobj(' #define _rand(_vectorisation_idx)'))
-    #n.append(DummyCodeobj('  #define _rand(_vectorisation_idx)'))
-
-    ## this one is matched currently (double space)
-    ##n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
-
-    #for i, co in enumerate(m):
-    #    check_codeobj_for_rng(co)
-    #    assert co.rng_calls["rand"] == 1, \
-    #        "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
-
-    #for i, co in enumerate(n):
-    #    check_codeobj_for_rng(co)
-    #    assert co.rng_calls["rand"] == 0, \
-    #        "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
-def test_rand_randn_occurence_counting():
+@with_setup(teardown=reinit_devices)
+def test_rng_occurrence_counting():
 
     set_device('cuda_standalone', directory=None)
 
@@ -159,25 +126,43 @@ def test_rand_randn_occurence_counting():
     S_randn = Synapses(G_randn, G_randn, on_pre='''x += randn()''', name='S_randn')
     S_randn.connect()
 
+    G_poisson = NeuronGroup(10, '''dx/dt = poisson(1)/ms : 1''', threshold='True', name='G_poisson')
+    S_poisson = Synapses(G_poisson, G_poisson, on_pre='''x += poisson(1)''', name='S_poisson')
+    S_poisson.connect()
+
     run(0*ms)
 
-    assert len(device.all_code_objects['binomial']) == 0
+    # Check that there is no device side RNG registered (no binomial or poisson with
+    # vectorized lamda)
+    for codeobjects in device.codeobjects_with_rng['device_api'].values():
+        assert len(codeobjects) == 0, codeobjects
 
-    for code_object in device.all_code_objects['rand']:
-        assert code_object.rng_calls["rand"] == 1
-        assert code_object.rng_calls["randn"] == 0
+    # Check that for each codeobject that has rand, randn or poisson detected, the number
+    # of occurrences is correct.
+    for check_rng in ['rand', 'randn', 'poisson_0']:
+        for code_object in device.codeobjects_with_rng['host_api']['all_runs'][check_rng]:
+            for rng_type, num_occurrence in code_object.rng_calls.items():
+                if rng_type == check_rng:
+                    assert num_occurrence == 1, (
+                        '{rng_type} occurs {num_occurrence} times (not 1)'
+                    )
+                else:
+                    assert num_occurrence == 0, (
+                        '{rng_type} occurs {num_occurrence} times (not 0)'
+                    )
 
-    for code_object in device.all_code_objects['randn']:
-        assert code_object.rng_calls["rand"] == 0
-        assert code_object.rng_calls["randn"] == 1
+                if rng_type == 'poisson_0':
+                    co_lamda = code_object.poisson_lamdas['poisson_0']
+                    assert co_lamda == 1.0, co_lamda
+                    d_lamda = device.all_poisson_lamdas[code_object.name]['poisson_0']
+                    assert d_lamda == 1.0, "{} {}".format(d_lamda, code_object.name)
 
-    for code_object in device.all_code_objects['rand_or_randn']:
-        assert code_object not in device.code_object_with_binomial_separate_call
+                assert not code_object.needs_curand_states
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
-def test_binomial_occurence():
+@with_setup(teardown=reinit_devices)
+def test_binomial_occurrence():
 
     set_device('cuda_standalone', directory=None)
 
@@ -196,18 +181,18 @@ def test_binomial_occurence():
 
     run(0*ms)
 
-    for key in ['rand', 'randn', 'rand_or_randn']:
-        assert len(device.all_code_objects[key]) == 0
+    for codeobjects in device.codeobjects_with_rng['host_api']['all_runs'].values():
+        assert len(codeobjects) == 0
 
-    # all_code_objects['binomial'] collects all codeobjects that use binomials (run
-    # every or single clock cycle). We have 5 objects
-    assert len(device.all_code_objects['binomial']) == 5
+    # Check the number of codeobjects using curand and that are run every clock cycle
+    every_tick = device.codeobjects_with_rng['device_api']['every_tick']
+    assert len(every_tick) == 4, every_tick
 
     # Here we collect all codeobjects with binomial run only ones
     # This is only one from the G_my_f.x = 'my_f()' line above
-    obj_list = device.code_object_with_binomial_separate_call
-    assert len(obj_list) == 1
-    assert obj_list[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
+    single_tick = device.codeobjects_with_rng['device_api']['single_tick']
+    assert len(single_tick) == 1
+    assert single_tick[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
 
 
 @attr('standalone-compatible')
