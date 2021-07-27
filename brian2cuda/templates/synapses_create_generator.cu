@@ -28,15 +28,8 @@ randomNumber_t _host_randn(const int _vectorisation_idx)
 {
     return _ptr_array_%CODEOBJ_NAME%_randn[_vectorisation_idx];
 }
+
 // This is the C++ Standalone implementation of the poisson function, which we use
-int32_t _host_poisson(double lam, int32_t _idx) {
-  if (lam >= 10)
-    return _poisson_ptrs(lam, _idx);
-  else if (lam == 0)
-    return 0;
-  else
-    return _poisson_mult(lam, _idx);
-}
 double _loggam(double x) {
   double x0, x2, xp, gl, gl0;
   int32_t k, n;
@@ -112,6 +105,15 @@ int32_t _poisson_ptrs(double lam, int _vectorisation_idx) {
         (-lam + k * loglam - _loggam(k + 1)))
       return k;
   }
+}
+
+int32_t _host_poisson(double lam, int32_t _idx) {
+  if (lam >= 10)
+    return _poisson_ptrs(lam, _idx);
+  else if (lam == 0)
+    return 0;
+  else
+    return _poisson_mult(lam, _idx);
 }
 {% endblock random_functions %}
 
