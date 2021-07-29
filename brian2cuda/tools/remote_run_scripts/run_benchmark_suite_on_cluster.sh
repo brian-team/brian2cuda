@@ -188,34 +188,8 @@ ssh "$remote" "/bin/bash" << EOF
 
     # Update submodules and apply diff files if present
     cd frozen_repos
-    git submodule update --init
 
-    cd brian2
-    if [ -f ../brian2.diff ]; then
-        echo "Applying brian2.diff"
-        git apply ../brian2.diff
-    else
-        echo "No diff file found for brian2"
-    fi
-    cd -
-
-    cd brian2genn
-    if [ -f ../brian2genn.diff ]; then
-        echo "Applying brian2genn.diff"
-        git apply ../brian2genn.diff
-    else
-        echo "No diff file found for brian2genn"
-    fi
-    cd -
-
-    cd genn
-    if [ -f ../genn.diff ]; then
-        echo "Applying genn.diff"
-        git apply ../genn.diff
-    else
-        echo "No diff file found for genn"
-    fi
-    cd -
+    bash submodules_update.sh
 EOF
 
 # Copy at least local run_benchmark_suite.py to remote such that the locally
@@ -227,7 +201,7 @@ if [ $copy_tools_dir -eq 0 ]; then
     rsync -avzzm --include="*/" --include="*.sh" --include="*.py" --exclude="*" \
         $local_b2c_dir/brian2cuda/tools/ $remote:$remote_b2c_dir/brian2cuda/tools
 else
-    echo -e "\nINFO: Copying local `run_benchmark_suite.py` directory to remote..."
+    echo -e "\nINFO: Copying local 'run_benchmark_suite.py' file to remote..."
     scp \
         $local_b2c_dir/brian2cuda/tools/benchmarking/run_benchmark_suite.py \
         $remote:$remote_b2c_dir/brian2cuda/tools/benchmarking/
