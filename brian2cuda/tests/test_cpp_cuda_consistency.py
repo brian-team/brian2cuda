@@ -3,12 +3,12 @@ from nose.plugins.attrib import attr
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.devices.device import reinit_devices, set_device, reset_device
+from brian2.devices.device import reinit_and_delete, reinit_devices, set_device, reset_device
 
 import brian2cuda
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_stdp_example():
     previous_device = get_device()
     n_cells    = 100
@@ -89,7 +89,7 @@ def test_stdp_example():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_stdp_heterog_delays_example():
     previous_device = get_device()
     n_cells    = 100
@@ -173,7 +173,7 @@ def test_stdp_heterog_delays_example():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_sorted_indices_statemonitor():
     previous_device = get_device()
 

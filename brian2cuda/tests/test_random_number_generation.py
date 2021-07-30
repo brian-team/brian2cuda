@@ -6,7 +6,7 @@ from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_devices, device
+from brian2.devices.device import reinit_and_delete, device
 
 import brian2cuda
 from brian2cuda.device import check_codeobj_for_rng
@@ -64,7 +64,7 @@ def test_rand_randn_regex():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_rand_randn_occurence_counting():
 
     set_device('cuda_standalone', directory=None)
@@ -94,7 +94,7 @@ def test_rand_randn_occurence_counting():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_occurence():
 
     set_device('cuda_standalone', directory=None)
@@ -129,7 +129,7 @@ def test_binomial_occurence():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_rand():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -142,7 +142,7 @@ def test_rand():
 
 
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_number_generation_with_multiple_runs():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -158,7 +158,7 @@ def test_random_number_generation_with_multiple_runs():
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 # brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_fixed_and_random_seed():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -188,7 +188,7 @@ def test_random_values_fixed_and_random_seed():
 
 
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_codeobject_every_tick():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -216,7 +216,7 @@ def test_random_values_codeobject_every_tick():
 
 # Test all binomial is single test
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values():
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
     my_f = BinomialFunction(100, 0.1, approximate=False)
@@ -317,7 +317,7 @@ def test_binomial_values():
 
 ### 3. rand/randn in synapses set_conditional template
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -334,7 +334,7 @@ def test_random_values_set_synapses_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -352,7 +352,7 @@ def test_random_values_set_synapses_fixed_seed():
 
 ### 4. randn in synapses stateupdater and mixing seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_synapse_dynamics_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
@@ -395,7 +395,7 @@ def test_random_values_synapse_dynamics_fixed_and_random_seed():
 
 ### 5. rand/randn in host side rng (synapses_init tempalte)
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -437,7 +437,7 @@ def test_random_values_init_synapses_fixed_and_random_seed():
 
 ### 1. binomial in neurongroup set_conditional templates
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_random_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -454,7 +454,7 @@ def test_binomial_values_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_fixed_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -472,7 +472,7 @@ def test_binomial_values_fixed_seed():
 
 ### 2. binomial in neurongroup stateupdater and mixed seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -516,7 +516,7 @@ def test_binomial_values_fixed_and_random_seed():
 
 ### 3. binomial in synapses set_conditional template
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -537,7 +537,7 @@ def test_random_values_set_synapses_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -559,7 +559,7 @@ def test_random_values_set_synapses_fixed_seed():
 
 ### 4. binomial in synapses stateupdater and mixing seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -605,7 +605,7 @@ def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
 
 ### 5. binomial in host side rng (synapses_init tempalte)
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -647,7 +647,7 @@ def test_binomial_values_init_synapses_fixed_and_random_seed():
 
 ### Extra: group_set template (not conditional), only for neurongroup, not synapse
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_binomial_set_template_random_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
@@ -665,7 +665,7 @@ def test_random_binomial_set_template_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
