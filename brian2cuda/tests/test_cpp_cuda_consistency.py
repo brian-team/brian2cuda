@@ -7,6 +7,7 @@ from brian2.devices.device import reinit_and_delete, reinit_devices, set_device,
 
 import brian2cuda
 
+# CUDA version of brian2.tests.test_cpp_standalone.test_openmp_consistency
 @attr('cuda_standalone', 'standalone-only')
 @with_setup(teardown=reinit_and_delete)
 def test_stdp_example():
