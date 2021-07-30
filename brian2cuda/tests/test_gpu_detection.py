@@ -6,7 +6,7 @@ from nose.plugins.attrib import attr
 from numpy.testing import assert_raises, assert_equal
 
 from brian2 import prefs, ms, run
-from brian2.devices.device import reinit_devices
+from brian2.devices.device import reinit_and_delete
 from brian2.utils.logger import catch_logs
 from brian2.core.preferences import PreferenceError
 from brian2cuda.utils.gputools import (
@@ -15,7 +15,7 @@ from brian2cuda.utils.gputools import (
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_wrong_cuda_path_error():
     # store global _cuda_installation and environment variable before changing them
     cuda_installation_backup = get_cuda_installation()
@@ -37,7 +37,7 @@ def test_wrong_cuda_path_error():
         os.environ['CUDA_PATH'] = cuda_path_env
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_manual_setting_compute_capability():
     compute_capability_pref = '3.5'
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = float(compute_capability_pref)
@@ -51,7 +51,7 @@ def test_manual_setting_compute_capability():
             assert_equal(compute_capability_pref, compute_capability)
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_unsupported_compute_capability_error():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 2.0
     with assert_raises(NotImplementedError):
@@ -59,7 +59,7 @@ def test_unsupported_compute_capability_error():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_warning_compute_capability_set_twice():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
     prefs.codegen.cuda.extra_compile_args_nvcc.append('-arch=sm_37')
@@ -74,7 +74,7 @@ def test_warning_compute_capability_set_twice():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_no_gpu_detection_preference_error():
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     # needs setting gpu_id and compute_capability as well
@@ -83,7 +83,7 @@ def test_no_gpu_detection_preference_error():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_no_gpu_detection_preference():
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False

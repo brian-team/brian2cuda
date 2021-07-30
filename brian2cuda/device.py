@@ -1022,7 +1022,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if run_args is None:
             run_args = []
         if directory is None:
-            directory = tempfile.mkdtemp()
+            directory = tempfile.mkdtemp(prefix='brian_standalone_')
 
         cpp_compiler, cpp_extra_compile_args = get_compiler_and_args()
         cpp_compiler_flags = ' '.join(cpp_extra_compile_args)
@@ -1032,7 +1032,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for d in ['code_objects', 'results', 'static_arrays']:
             ensure_directory(os.path.join(directory, d))
 
-        writer = CUDAWriter(directory)
+        self.writer = CUDAWriter(directory)
 
         logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
 
@@ -1046,7 +1046,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for net in self.networks:
             net.after_run()
 
-        self.generate_main_source(writer, main_includes)
+        self.generate_main_source(self.writer, main_includes)
 
         # Create lists of codobjects using rand, randn or binomial across all
         # runs (needed for variable declarations).
@@ -1071,21 +1071,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if codeobj not in self.all_code_objects['binomial']:
                 self.all_code_objects['binomial'].append(codeobj)
 
-        self.generate_codeobj_source(writer)
-        self.generate_objects_source(writer, self.arange_arrays,
+        self.generate_codeobj_source(self.writer)
+        self.generate_objects_source(self.writer, self.arange_arrays,
                                      self.net_synapses,
                                      self.static_array_specs,
                                      self.networks)
-        self.generate_network_source(writer)
-        self.generate_synapses_classes_source(writer)
-        self.generate_run_source(writer, run_includes)
-        self.generate_rand_source(writer)
-        self.copy_source_files(writer, directory)
+        self.generate_network_source(self.writer)
+        self.generate_synapses_classes_source(self.writer)
+        self.generate_run_source(self.writer, run_includes)
+        self.generate_rand_source(self.writer)
+        self.copy_source_files(self.writer, directory)
 
-        writer.source_files.extend(additional_source_files)
-        writer.header_files.extend(additional_header_files)
+        self.writer.source_files.extend(additional_source_files)
+        self.writer.header_files.extend(additional_header_files)
 
-        self.generate_makefile(writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
+        self.generate_makefile(self.writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
 
         logger.info("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:

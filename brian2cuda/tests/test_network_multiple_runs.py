@@ -4,13 +4,13 @@ from numpy.testing.utils import assert_equal, assert_raises
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.devices.device import reinit_devices
+from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
 
 
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_changing_delay_scalar():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)
@@ -33,7 +33,7 @@ def test_changing_delay_scalar():
 
 
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_changing_delay_heterogeneous():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)
