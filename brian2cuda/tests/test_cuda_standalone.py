@@ -295,6 +295,49 @@ def test_changing_profile_arg():
     assert ('op3_codeobject_1' in profiling_dict and
             profiling_dict['op3_codeobject_1'] > 0*second)
 
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_delete_code_data():
+    set_device('cuda_standalone', build_on_run=True, directory=None)
+    group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : volt', method='exact')
+    group.v = np.arange(10)*mV  # uses the static array mechanism
+    run(defaultclock.dt)
+    results_dir = os.path.join(device.project_dir, 'results')
+    assert os.path.exists(results_dir) and os.path.isdir(results_dir)
+    # There should be 3 files for the clock, 2 for the neurongroup (index + v),
+    # and the "last_run_info.txt" file
+    assert len(os.listdir(results_dir)) == 6
+    device.delete(data=True, code=False, directory=False)
+    assert os.path.exists(results_dir) and os.path.isdir(results_dir)
+    assert len(os.listdir(results_dir)) == 0
+    assert len(os.listdir(os.path.join(device.project_dir, 'static_arrays'))) > 0
+    assert len(os.listdir(os.path.join(device.project_dir, 'code_objects'))) > 0
+    device.delete(data=False, code=True, directory=False)
+    assert len(os.listdir(os.path.join(device.project_dir, 'static_arrays'))) == 0
+    assert len(os.listdir(os.path.join(device.project_dir, 'code_objects'))) == 0
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_delete_directory():
+    set_device('cuda_standalone', build_on_run=True, directory=None)
+    group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : volt', method='exact')
+    group.v = np.arange(10)*mV  # uses the static array mechanism
+    run(defaultclock.dt)
+    # Add a new file
+    dummy_file = os.path.join(device.project_dir, 'results', 'dummy.txt')
+    open(dummy_file, 'w').flush()
+    assert os.path.isfile(dummy_file)
+    with catch_logs() as logs:
+        device.delete(directory=True)
+    assert len(logs) == 1
+    assert os.path.isfile(dummy_file)
+    with catch_logs() as logs:
+        device.delete(directory=True, force=True)
+    assert len(logs) == 0
+    # everything should be deleted
+    assert not os.path.exists(device.project_dir)
+
 
 if __name__=='__main__':
     for t in [
@@ -307,6 +350,8 @@ if __name__=='__main__':
              test_array_cache,
              test_run_with_debug,
              test_changing_profile_arg,
+             test_delete_code_data,
+             test_delete_directory
              ]:
         t()
         reinit_and_delete()
