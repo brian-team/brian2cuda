@@ -3,7 +3,7 @@ Module implementing the CUDA "standalone" device.
 '''
 import os
 import inspect
-from collections import defaultdict
+from collections import defaultdict, Counter
 import tempfile
 import re
 from itertools import chain
@@ -1046,6 +1046,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for net in self.networks:
             net.after_run()
 
+        # Check that all names are globally unique
+        names = [obj.name for net in self.networks for obj in net.objects]
+        non_unique_names = [name for name, count in Counter(names).items()
+                            if count > 1]
+        if len(non_unique_names):
+            formatted_names = ', '.join("'%s'" % name
+                                        for name in non_unique_names)
+            raise ValueError('All objects need to have unique names in '
+                             'standalone mode, the following name(s) were used '
+                             'more than once: %s' % formatted_names)
+
         self.generate_main_source(self.writer, main_includes)
 
         # Create lists of codobjects using rand, randn or binomial across all
@@ -1114,7 +1125,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # `code_object` method
         self.enable_profiling = profile
 
-        net._clocks = {obj.clock for obj in net.objects}
+        all_objects = net.sorted_objects
+        net._clocks = {obj.clock for obj in all_objects}
         t_end = net.t+duration
         for clock in net._clocks:
             clock.set_interval(net.t, t_end)
@@ -1137,7 +1149,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Note that since we ran the Network object, these CodeObjects will be sorted into the right
         # running order, assuming that there is only one clock
         code_objects = []
-        for obj in net.objects:
+        for obj in all_objects:
             if obj.active:
                 for codeobj in obj._code_objects:
                     code_objects.append((obj.clock, codeobj))
