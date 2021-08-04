@@ -140,7 +140,8 @@ modindex_common_prefix = ['brian2cuda.']
 # -- Project information -----------------------------------------------------
 
 project = u'brian2cuda'
-copyright = u'2021-, Brian2Cuda authors'
+import datetime
+copyright = u'2021-{}, Brian2Cuda authors'.format(datetime.datetime.today().year)
 author = u'Brian@Cuda authors'
 
 # The version info for the project you're documenting, acts as replacement for
