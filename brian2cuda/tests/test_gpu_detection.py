@@ -62,7 +62,7 @@ def test_unsupported_compute_capability_error():
 @with_setup(teardown=reinit_and_delete)
 def test_warning_compute_capability_set_twice():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
-    prefs.codegen.cuda.extra_compile_args_nvcc.append('-arch=sm_37')
+    prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc.append('-arch=sm_37')
     with catch_logs() as logs:
         run(0*ms)
 

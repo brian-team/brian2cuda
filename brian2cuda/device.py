@@ -445,8 +445,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 line = '''
                 CUDA_SAFE_CALL(
-                        cudaMemcpy({pointer_arrayname}, &{arrayname}[0],
-                                sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice)
+                        cudaMemcpy({pointer_arrayname},
+                                   &{arrayname}[0],
+                                   sizeof({arrayname}[0])*{size_str},
+                                   cudaMemcpyHostToDevice)
                         );
                 '''.format(arrayname=arrayname, size_str=size_str, pointer_arrayname=pointer_arrayname,
                            value=CPPNodeRenderer().render_expr(repr(value)))
@@ -454,13 +456,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='set_by_single_value':
                 arrayname, item, value = args
                 pointer_arrayname = "dev{arrayname}".format(arrayname=arrayname)
+                if arrayname.endswith('space'):  # eventspace
+                    pointer_arrayname += '[current_idx{arrayname}]'.format(arrayname=arrayname)
                 if arrayname in self.dynamic_arrays.values():
                     pointer_arrayname = "thrust::raw_pointer_cast(&dev{arrayname}[0])".format(arrayname=arrayname)
                 code = '''
                 {arrayname}[{item}] = {value};
                 CUDA_SAFE_CALL(
-                        cudaMemcpy(&{pointer_arrayname}[{item}], &{arrayname}[{item}],
-                                sizeof({arrayname}[0]), cudaMemcpyHostToDevice)
+                        cudaMemcpy({pointer_arrayname} + {item},
+                                   &{arrayname}[{item}],
+                                   sizeof({arrayname}[{item}]),
+                                   cudaMemcpyHostToDevice)
                         );
                 '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
                 main_lines.extend([code])
@@ -1300,9 +1306,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.iterkeys():
                     if key.endswith('space'):  # get the correct eventspace name
+                        eventspace_name = self.get_array_name(codeobj.variables[key], False)
                         # In case of custom scheduling, the thresholder might come after synapses or monitors
                         # and needs to be initialized in the beginning of the simulation
-                        self.main_queue.insert(0, ('set_by_constant', (self.get_array_name(codeobj.variables[key], False), -1, False)))
+
+                        # See generate_main_source() for main_queue formats
+
+                        # Initialize entire eventspace array with -1 at beginning of main
+                        self.main_queue.insert(
+                            0,  # list insert position
+                            # func            , (arrayname, value, is_dynamic)
+                            ('set_by_constant', (eventspace_name, -1, False))
+                        )
+                        # Set the last value (index N) in the eventspace array to 0 (-> event counter)
+                        self.main_queue.insert(
+                            1,  # list insert position
+                            (
+                                'set_by_single_value',  # func
+                                # arrayname     , item,                                , value
+                                (eventspace_name, "_num_{} - 1".format(eventspace_name), 0)
+                            )
+                        )
 
         if self.build_on_run:
             if self.has_been_run:
