@@ -549,7 +549,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            code_objects=self.code_objects.values(),
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
-                                                           additional_headers=main_includes,
+                                                           user_headers=prefs['codegen.cpp.headers'],
                                                            gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
@@ -810,10 +810,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         synapses_classes_tmp = self.code_object_class().templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
-    def generate_run_source(self, writer, run_includes):
+    def generate_run_source(self, writer):
         run_tmp = self.code_object_class().templater.run(None, None, run_funcs=self.runfuncs,
                                                         code_objects=self.code_objects.values(),
-                                                        additional_headers=run_includes,
+                                                        user_headers=prefs['codegen.cpp.headers'],
                                                         array_specs=self.arrays,
                                                         clocks=self.clocks)
         writer.write('run.*', run_tmp)
@@ -932,8 +932,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def build(self, directory='output',
               compile=True, run=True, debug=False, clean=False,
               with_output=True, disable_asserts=False,
-              additional_source_files=None, additional_header_files=None,
-              main_includes=None, run_includes=None,
+              additional_source_files=None,
               run_args=None, direct_call=True, **kwds):
         '''
         Build the project
@@ -965,12 +964,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             ``False``.
         additional_source_files : list of str, optional
             A list of additional ``.cu`` files to include in the build.
-        additional_header_files : list of str
-            A list of additional ``.h`` files to include in the build.
-        main_includes : list of str
-            A list of additional header files to include in ``main.cu``.
-        run_includes : list of str
-            A list of additional header files to include in ``run.cu``.
         direct_call : bool, optional
             Whether this function was called directly. Is used internally to
             distinguish an automatic build due to the ``build_on_run`` option
@@ -1019,12 +1012,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         if additional_source_files is None:
             additional_source_files = []
-        if additional_header_files is None:
-            additional_header_files = []
-        if main_includes is None:
-            main_includes = []
-        if run_includes is None:
-            run_includes = []
         if run_args is None:
             run_args = []
         if directory is None:
@@ -1063,7 +1050,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                              'standalone mode, the following name(s) were used '
                              'more than once: %s' % formatted_names)
 
-        self.generate_main_source(self.writer, main_includes)
+        self.generate_main_source(self.writer)
 
         # Create lists of codobjects using rand, randn or binomial across all
         # runs (needed for variable declarations).
@@ -1095,12 +1082,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                      self.networks)
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
-        self.generate_run_source(self.writer, run_includes)
+        self.generate_run_source(self.writer)
         self.generate_rand_source(self.writer)
         self.copy_source_files(self.writer, directory)
 
         self.writer.source_files.extend(additional_source_files)
-        self.writer.header_files.extend(additional_header_files)
 
         self.generate_makefile(self.writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
 
