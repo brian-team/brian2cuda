@@ -5,8 +5,10 @@ import os
 import inspect
 from collections import defaultdict, Counter
 import tempfile
+from distutils import ccompiler
 import re
 from itertools import chain
+import sys
 
 import numpy as np
 
@@ -70,6 +72,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     '''
 
     def __init__(self):
+        super(CUDAStandaloneDevice, self).__init__()
+        ### Reset variables we don't need from CPPStandaloneDevice.__init__()
+        # we remove randomkit and system prefix from included libraries/dirs (else we
+        # end up using the conda gcc, potentially incompatible with cuda installed
+        # sytem-wide)
+        # TODO: If we manage to package nvcc via conda, we need the system prefix again
+        self.include_dirs = []
+        self.library_dirs = []
+        self.runtime_library_dirs = []
+        self.run_environment_variables = {}
+        if sys.platform.startswith('darwin') and 'DYLD_LIBRARY_PATH' in os.environ:
+            self.run_environment_variables['DYLD_LIBRARY_PATH'] = os.environ['DYLD_LIBRARY_PATH']
+
+        ### Attributes specific to CUDAStandaloneDevice:
+        # specify minimal compute capability suppported by brian2cuda
         self.minimal_compute_capability = 3.5
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
@@ -85,7 +102,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # store gpu_id and compute capability
         self.gpu_id = None
         self.compute_capability = None
-        super(CUDAStandaloneDevice, self).__init__()
 
     def get_array_name(self, var, access_data=True, prefix=None):
         '''
@@ -194,7 +210,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
-                    override_conditional_write=None, **kwds):
+                    override_conditional_write=None, compiler_kwds=None):
         if prefs['core.default_float_dtype'] == np.float32 and 'dt' in variables:
             # In single-precision mode we replace dt variables in codeobjects with
             # a single precision version, for details see #148
@@ -330,12 +346,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                codeobj_class=codeobj_class,
                                                                template_kwds=template_kwds,
                                                                override_conditional_write=override_conditional_write,
+                                                               compiler_kwds=compiler_kwds,
                                                                )
         return codeobj
 
     def check_openmp_compatible(self, nb_threads):
         if nb_threads > 0:
-            raise NotImplementedError("Using OpenMP in an CUDA standalone project is not supported")
+            raise NotImplementedError("Using OpenMP in a CUDA standalone project is not supported")
 
     def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
@@ -384,7 +401,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
 
-    def generate_main_source(self, writer, main_includes):
+    def generate_main_source(self, writer):
         main_lines = []
         procedures = [('', main_lines)]
         runfuncs = {}
@@ -543,13 +560,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
+        user_headers = self.headers + prefs['codegen.cpp.headers']
         main_tmp = self.code_object_class().templater.main(None, None,
                                                            gpu_id=self.gpu_id,
                                                            main_lines=main_lines,
                                                            code_objects=self.code_objects.values(),
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
-                                                           user_headers=prefs['codegen.cpp.headers'],
+                                                           user_headers=user_headers,
                                                            gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
                                                           )
         writer.write('main.cu', main_tmp)
@@ -813,12 +831,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def generate_run_source(self, writer):
         run_tmp = self.code_object_class().templater.run(None, None, run_funcs=self.runfuncs,
                                                         code_objects=self.code_objects.values(),
-                                                        user_headers=prefs['codegen.cpp.headers'],
+                                                        user_headers=self.headers,
                                                         array_specs=self.arrays,
                                                         clocks=self.clocks)
         writer.write('run.*', run_tmp)
 
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, nb_threads, disable_asserts=False):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts):
         available_gpu_arch_flags = (
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
@@ -919,7 +937,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
-                cpp_compiler_flags=cpp_compiler_flags,
+                cpp_compiler_flags=' '.join(cpp_compiler_flags),
                 nvcc_optimization_flags=nvcc_optimization_flags,
                 gpu_arch_flags=gpu_arch_flags,
                 disable_warnings=disable_warnings,
@@ -1022,6 +1040,67 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.project_dir = directory
         ensure_directory(directory)
 
+        # Determine compiler flags and directories
+        cpp_compiler, cpp_default_extra_compile_args = get_compiler_and_args()
+        extra_compile_args = self.extra_compile_args + cpp_default_extra_compile_args
+        extra_link_args = self.extra_link_args + prefs['codegen.cpp.extra_link_args']
+
+        codeobj_define_macros = [macro for codeobj in
+                                 self.code_objects.values()
+                                 for macro in
+                                 codeobj.compiler_kwds.get('define_macros', [])]
+        define_macros = (self.define_macros +
+                         prefs['codegen.cpp.define_macros'] +
+                         codeobj_define_macros)
+
+        codeobj_include_dirs = [include_dir for codeobj in
+                                self.code_objects.values()
+                                for include_dir in
+                                codeobj.compiler_kwds.get('include_dirs', [])]
+        include_dirs = (self.include_dirs +
+                        prefs['codegen.cpp.include_dirs'] +
+                        codeobj_include_dirs)
+
+        codeobj_library_dirs = [library_dir for codeobj in
+                                self.code_objects.values()
+                                for library_dir in
+                                codeobj.compiler_kwds.get('library_dirs', [])]
+        library_dirs = (self.library_dirs +
+                        prefs['codegen.cpp.library_dirs'] +
+                        codeobj_library_dirs)
+
+        codeobj_runtime_dirs = [runtime_dir for codeobj in
+                                self.code_objects.values()
+                                for runtime_dir in
+                                codeobj.compiler_kwds.get('runtime_library_dirs', [])]
+        runtime_library_dirs = (self.runtime_library_dirs +
+                                prefs['codegen.cpp.runtime_library_dirs'] +
+                                codeobj_runtime_dirs)
+
+        codeobj_libraries = [library for codeobj in
+                             self.code_objects.values()
+                             for library in
+                             codeobj.compiler_kwds.get('libraries', [])]
+        libraries = (self.libraries +
+                     prefs['codegen.cpp.libraries'] +
+                     codeobj_libraries)
+
+        cpp_compiler_obj = ccompiler.new_compiler(compiler=cpp_compiler)
+        cpp_compiler_flags = (ccompiler.gen_preprocess_options(define_macros,
+                                                           include_dirs) +
+                          extra_compile_args)
+        cpp_linker_flags = (ccompiler.gen_lib_options(cpp_compiler_obj,
+                                                  library_dirs=library_dirs,
+                                                  runtime_library_dirs=runtime_library_dirs,
+                                                  libraries=libraries) +
+                        extra_link_args)
+
+        codeobj_source_files = [source_file for codeobj in
+                                self.code_objects.values()
+                                for source_file in
+                                codeobj.compiler_kwds.get('sources', [])]
+        additional_source_files += codeobj_source_files
+
         for d in ['code_objects', 'results', 'static_arrays']:
             ensure_directory(os.path.join(directory, d))
 
@@ -1088,7 +1167,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.writer.source_files.extend(additional_source_files)
 
-        self.generate_makefile(self.writer, cpp_compiler, cpp_compiler_flags, nb_threads=0, disable_asserts=disable_asserts)
+        self.generate_makefile(self.writer, cpp_compiler,
+                               cpp_compiler_flags,
+                               cpp_linker_flags,
+                               debug,
+                               disable_asserts)
 
         logger.info("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
