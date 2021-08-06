@@ -4,6 +4,7 @@ from numpy.testing.utils import assert_equal, assert_raises
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
+from brian2.utils.logger import catch_logs
 from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
@@ -43,14 +44,14 @@ def test_spikegenerator_period_repeat():
     sorted_times = np.ascontiguousarray(rec.t)*1000
     sorted_indices = np.ascontiguousarray(rec.i)
     SG = SpikeGeneratorGroup(1, indices, times, period=1*ms)
-    net   = Network(SG, s_mon)
-    rate  = PopulationRateMonitor(SG)
+    net   = Network(SG)
 
     # XXX: not standalone-version:
-    #s_mon = SpikeMonitor(SG)
-    #for idx in range(5):
-    #    net.run(1*ms)
-    #    assert (idx+1)*len(SG.spike_time) == s_mon.num_spikes
+    # s_mon = SpikeMonitor(SG)
+    # net   = Network(SG, s_mon)
+    # for idx in range(5):
+    #     net.run(1*ms)
+    #     assert (idx+1)*len(SG.spike_time) == s_mon.num_spikes
 
     # Here, I use seperate monitors due to SpikeMonitor bug (#221)
     monitors = []

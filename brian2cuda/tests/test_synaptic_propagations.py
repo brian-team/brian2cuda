@@ -218,7 +218,7 @@ def test_circular_eventspaces_spikegenerator():
     S3.delay = 'j*default_dt'
     mon = SpikeMonitor(G)
 
-    run((n_timesteps + 6) * default_dt, profile=profile)
+    run((n_timesteps + 6) * default_dt)
 
     # neurons should spike in the timestep after effect application
     assert_allclose(mon.t[mon.i[:] == 0], arange(1, n_timesteps + 1) * default_dt)
@@ -256,7 +256,7 @@ def test_circular_eventspaces_different_clock():
     S3.delay = '2*j*default_dt'
     mon = SpikeMonitor(G)
 
-    run((n_timesteps + 9) * default_dt, profile=profile)
+    run((n_timesteps + 9) * default_dt)
 
     # neurons should spike in the timestep after effect application
     assert_allclose(mon.t[mon.i[:] == 0], arange(1, n_timesteps + 1, clock_multiplier) * default_dt)
