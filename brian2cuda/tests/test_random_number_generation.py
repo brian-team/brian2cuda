@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from nose import with_setup
 from nose.plugins.attrib import attr
@@ -14,48 +14,48 @@ import brian2cuda
 from brian2cuda.device import prepare_codeobj_code_for_rng
 
 
+# dummy class to fit with prepare_codeobj_code_for_rng function
+class _DummyCodeobj():
+    def __init__(self, string):
+        self.template_name = 'DummyTemplate'
+        self.name = 'Dummy'
+        self.variables = {}
+        self.code = lambda: 0
+        self.code.cu_file = string
+        self.rng_calls = defaultdict(int)
+        self.poisson_lamdas = defaultdict(float)
+        self.needs_curand_states = False
+
+
 @attr('cuda_standalone', 'standalone-only')
 def test_rand_randn_regex():
     # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
-    # dummy class to fit with prepare_codeobj_code_for_rng function
-    class DummyCodeobj():
-        def __init__(self, string):
-            self.template_name = 'TemplateName'
-            self.name = 'Name'
-            self.code = lambda: 0
-            self.code.cu_file = string
-            self.rng_calls = {
-                "rand": 0,
-                "randn": 0,
-                "poisson": OrderedDict()
-            }
-
     # should match
     m = []
-    m.append(DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
-    m.append(DummyCodeobj(' _rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('*_rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx)-'))
-    m.append(DummyCodeobj('+_rand(_vectorisation_idx)-'))
+    m.append(_DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
+    m.append(_DummyCodeobj(' _rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('*_rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx)-'))
+    m.append(_DummyCodeobj('+_rand(_vectorisation_idx)-'))
 
     # should not match
     n = []
-    n.append(DummyCodeobj('h_rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj('_rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('#_rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('# _rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('#define _rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj(' #define _rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj('  #define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('h_rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('_rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('#_rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('# _rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('#define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj(' #define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('  #define _rand(_vectorisation_idx)'))
 
     # this one is matched currently (double space)
-    #n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
+    #n.append(_DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
 
     for i, co in enumerate(m):
         prepare_codeobj_code_for_rng(co)
@@ -74,20 +74,7 @@ def test_poisson_regex():
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
-    # dummy class to fit with prepare_codeobj_code_for_rng function
-    class DummyCodeobj():
-        def __init__(self, string):
-            self.template_name = 'TemplateName'
-            self.name = 'Name'
-            self.code = lambda: 0
-            self.code.cu_file = string
-            self.rng_calls = {
-                "rand": 0,
-                "randn": 0,
-                "poisson": OrderedDict()
-            }
-
-    co = DummyCodeobj('''
+    co = _DummyCodeobj('''
         _rand(_vectorisation_idx)
         _poisson(l, _vectorisation_idx)
         _poisson(5, _vectorisation_idx)
@@ -98,18 +85,26 @@ def test_poisson_regex():
         _poisson(l, _vectorisation_idx)
         ''')
     prepare_codeobj_code_for_rng(co)
+
+    # If lambda is a variable (l), nothing will be replaces (on-the-fly RNG)
+    # If lambda is a literal (.01 and 5), it will be replaced by a
+    # _ptr_array_{name}_poisson_<idx> variables, where the idx is ascending by
+    # lambda value (lamda=.01 gets idx=0; lamda=5 gets idx=1)
     replaced_code = '''
         _rand(_vectorisation_idx + 0 * _N)
-        _poisson(l, _vectorisation_idx + 0 * _N)
-        _poisson(5, _vectorisation_idx + 0 * _N)
-        _poisson(.01, _vectorisation_idx + 0 * _N)
-        _poisson(5, _vectorisation_idx + 1 * _N)
-        _poisson(.01, _vectorisation_idx + 1 * _N)
-        _poisson(.01, _vectorisation_idx + 2 * _N)
-        _poisson(l, _vectorisation_idx + 1 * _N)
-        '''
+        _poisson(l, _vectorisation_idx)
+        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 2 * _N)
+        _poisson(l, _vectorisation_idx)
+        '''.format(name=co.name)
+
+    for i, (cu_line, replaced_line) in enumerate(zip(co.code.cu_file.split('\n'),
+                                                     replaced_code.split('\n'))):
+        assert_equal(cu_line, replaced_line, err_msg="Line {} is wrong".format(i))
     assert_equal(co.code.cu_file, replaced_code)
-    assert co.code.cu_file == replaced_code, replaced_code
 
 
 @attr('cuda_standalone', 'standalone-only')
