@@ -843,14 +843,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         )
         nvcc_compiler_flags = prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
         gpu_arch_flags = []
-        disable_warnings = False
         for flag in nvcc_compiler_flags:
             if flag.startswith(available_gpu_arch_flags):
                 gpu_arch_flags.append(flag)
                 nvcc_compiler_flags.remove(flag)
             elif flag.startswith(('-w', '--disable-warnings')):
-                disable_warnings = True
-                nvcc_compiler_flags.remove(flag)
+                # add the flage to linker flags, else linking will give warnings
+                cpp_linker_flags.append(flag)
         # Check if compute capability was set manually via preference
         compute_capability_pref = prefs.devices.cuda_standalone.cuda_backend.compute_capability
         # If GPU architecture was set via `extra_compile_args_nvcc` and
@@ -910,40 +909,39 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 "".format(self.compute_capability, gpu_arch_flags)
             )
 
-        nvcc_optimization_flags = ' '.join(nvcc_compiler_flags)
-        gpu_arch_flags = ' '.join(gpu_arch_flags)
         nvcc_path = get_nvcc_path()
         if cpp_compiler=='msvc':
-            if nb_threads>1:
-                openmp_flag = '/openmp'
-            else:
-                openmp_flag = ''
-            # Generate the visual studio makefile
-            source_bases = [fname.replace('.cpp', '').replace('/', '\\') for fname in writer.source_files]
-            win_makefile_tmp = self.code_object_class().templater.win_makefile(
-                None, None,
-                source_bases=source_bases,
-                cpp_compiler_flags=cpp_compiler_flags,
-                openmp_flag=openmp_flag,
-                )
-            writer.write('win_makefile', win_makefile_tmp)
+            # Check CPPStandaloneDevice.generate_makefile() for how to do things
+            raise RuntimeError("Windows is currently not supported. See https://github.com/brian-team/brian2cuda/issues/225")
         else:
             # Generate the makefile
             if os.name=='nt':
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
+
+            if debug:
+                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
+                linker_debug_flags = '-g -G'
+            else:
+                compiler_debug_flags = ''
+                linker_debug_flags = ''
+
+            if disable_asserts:
+                # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
+                nvcc_compiler_flags += ['-NDEBUG']
+
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
                 source_files=' '.join(writer.source_files),
                 header_files=' '.join(writer.header_files),
                 cpp_compiler_flags=' '.join(cpp_compiler_flags),
-                nvcc_optimization_flags=nvcc_optimization_flags,
-                gpu_arch_flags=gpu_arch_flags,
-                disable_warnings=disable_warnings,
-                disable_asserts=disable_asserts,
-                rm_cmd=rm_cmd,
+                compiler_debug_flags=compiler_debug_flags,
+                linker_debug_flags=linker_debug_flags,
+                linker_flags=' '.join(gpu_arch_flags + cpp_linker_flags),
+                nvcc_compiler_flags=' '.join(gpu_arch_flags + nvcc_compiler_flags),
                 nvcc_path=nvcc_path,
+                rm_cmd=rm_cmd,
             )
             writer.write('makefile', makefile_tmp)
 
