@@ -1497,7 +1497,7 @@ def prepare_codeobj_code_for_rng(codeobj):
     lamda_matches = {}
     poisson_device_api = False
     poisson_with_lamda_zero = []
-    for i, lamda_match in enumerate(set(matches_poisson)):
+    for i, lamda_match in enumerate(sorted(set(matches_poisson))):
         poisson_name = "poisson_{i}".format(i=i)
         # Test if the lambda_match from poisson(<lambda_match>) is scalar or vectorized
         # (different across neurons/synapses of the codeobject owner)
