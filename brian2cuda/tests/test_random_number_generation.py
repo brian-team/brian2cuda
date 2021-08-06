@@ -11,7 +11,7 @@ from brian2.utils.logger import catch_logs
 from brian2.devices.device import reinit_and_delete, device
 
 import brian2cuda
-from brian2cuda.device import check_codeobj_for_rng
+from brian2cuda.device import prepare_codeobj_code_for_rng
 
 
 @attr('cuda_standalone', 'standalone-only')
@@ -20,7 +20,7 @@ def test_rand_randn_regex():
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
-    # dummy class to fit with check_codeobj_for_rng function
+    # dummy class to fit with prepare_codeobj_code_for_rng function
     class DummyCodeobj():
         def __init__(self, string):
             self.template_name = 'TemplateName'
@@ -58,12 +58,12 @@ def test_rand_randn_regex():
     #n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
 
     for i, co in enumerate(m):
-        check_codeobj_for_rng(co)
+        prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 1, \
             "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
     for i, co in enumerate(n):
-        check_codeobj_for_rng(co)
+        prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 0, \
             "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
@@ -74,7 +74,7 @@ def test_poisson_regex():
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
-    # dummy class to fit with check_codeobj_for_rng function
+    # dummy class to fit with prepare_codeobj_code_for_rng function
     class DummyCodeobj():
         def __init__(self, string):
             self.template_name = 'TemplateName'
@@ -97,7 +97,7 @@ def test_poisson_regex():
         _poisson(.01, _vectorisation_idx)
         _poisson(l, _vectorisation_idx)
         ''')
-    check_codeobj_for_rng(co)
+    prepare_codeobj_code_for_rng(co)
     replaced_code = '''
         _rand(_vectorisation_idx + 0 * _N)
         _poisson(l, _vectorisation_idx + 0 * _N)
@@ -113,7 +113,7 @@ def test_poisson_regex():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_rng_occurrence_counting():
 
     set_device('cuda_standalone', directory=None)
@@ -161,7 +161,7 @@ def test_rng_occurrence_counting():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_occurrence():
 
     set_device('cuda_standalone', directory=None)
