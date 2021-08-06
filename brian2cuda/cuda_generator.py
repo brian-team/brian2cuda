@@ -615,6 +615,15 @@ class CUDACodeGenerator(CodeGenerator):
         kernel_lines = []
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
+        if isinstance(funccode, str):
+            # Rename references to any dependencies if necessary
+            for dep_name, dep in impl.dependencies.items():
+                dep_impl = dep.implementations[self.codeobj_class]
+                dep_impl_name = dep_impl.name
+                if dep_impl_name is None:
+                    dep_impl_name = dep.pyfunc.__name__
+                if dep_name != dep_impl_name:
+                    funccode = word_substitute(funccode, {dep_name: dep_impl_name})
 
         ### Different from CPPCodeGenerator: We format the funccode dtypes here
         from brian2.devices.device import get_device
@@ -674,6 +683,9 @@ class CUDACodeGenerator(CodeGenerator):
             for dep_name, dep in impl.dependencies.iteritems():
                 if dep_name not in self.variables:
                     self.variables[dep_name] = dep
+                    dep_impl = dep.implementations[self.codeobj_class]
+                    if dep_name != dep_impl.name:
+                        self.func_name_replacements[dep_name] = dep_impl.name
                     hd, ps, sc, uf, kl = self._add_user_function(dep_name, dep)
                     dep_hash_defines.extend(hd)
                     dep_pointers.extend(ps)
