@@ -74,16 +74,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def __init__(self):
         super(CUDAStandaloneDevice, self).__init__()
         ### Reset variables we don't need from CPPStandaloneDevice.__init__()
-        # we remove randomkit and system prefix from included libraries/dirs (else we
-        # end up using the conda gcc, potentially incompatible with cuda installed
-        # sytem-wide)
-        # TODO: If we manage to package nvcc via conda, we need the system prefix again
-        self.include_dirs = []
-        self.library_dirs = []
-        self.runtime_library_dirs = []
-        self.run_environment_variables = {}
-        if sys.platform.startswith('darwin') and 'DYLD_LIBRARY_PATH' in os.environ:
-            self.run_environment_variables['DYLD_LIBRARY_PATH'] = os.environ['DYLD_LIBRARY_PATH']
+        # remove randomkit, which we don't use for CUDA Standalone
+        self.include_dirs.remove('brianlib/randomkit')
+        self.library_dirs.remove('brianlib/randomkit')
 
         ### Attributes specific to CUDAStandaloneDevice:
         # specify minimal compute capability suppported by brian2cuda
@@ -850,6 +843,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif flag.startswith(('-w', '--disable-warnings')):
                 # add the flage to linker flags, else linking will give warnings
                 cpp_linker_flags.append(flag)
+        # Make the linker options (meant to be passed to `gcc`) compatible with `nvcc`
+        for i, flag in enumerate(cpp_linker_flags):
+            if flag.startswith('-Wl,'):
+                # -Wl,<option> passes <option> directly to linker
+                # for gcc `-Wl,<option>`, for nvcc `-Xlinker "<option>"`
+                cpp_linker_flags[i] = flag.replace('-Wl,', '-Xlinker ')
         # Check if compute capability was set manually via preference
         compute_capability_pref = prefs.devices.cuda_standalone.cuda_backend.compute_capability
         # If GPU architecture was set via `extra_compile_args_nvcc` and
@@ -938,8 +937,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 cpp_compiler_flags=' '.join(cpp_compiler_flags),
                 compiler_debug_flags=compiler_debug_flags,
                 linker_debug_flags=linker_debug_flags,
-                linker_flags=' '.join(gpu_arch_flags + cpp_linker_flags),
-                nvcc_compiler_flags=' '.join(gpu_arch_flags + nvcc_compiler_flags),
+                cpp_linker_flags=' '.join(cpp_linker_flags),
+                nvcc_compiler_flags=' '.join(nvcc_compiler_flags),
+                gpu_arch_flags=' '.join(gpu_arch_flags),
                 nvcc_path=nvcc_path,
                 rm_cmd=rm_cmd,
             )
