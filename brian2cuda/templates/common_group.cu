@@ -7,8 +7,13 @@
 #include <stdint.h>
 #include <ctime>
 #include <stdio.h>
+
 {% block extra_headers %}
 {% endblock %}
+
+{% for name in user_headers %}
+#include {{name}}
+{%endfor %}
 
 ////// SUPPORT CODE ///////
 namespace {

@@ -1,29 +1,24 @@
 PROGRAM = main
-SRCS_CU  = $(wildcard *.cu */*.cu)
-OBJS_CU  = ${SRCS_CU:.cu=.o}
-CC = @{{ nvcc_path }}
-DEBUG = -g -G -DTHRUST_DEBUG
-OPTIMISATIONFLAGS = {{ nvcc_optimization_flags }} -Xcompiler "{{ cpp_compiler_flags }}"
-NVCCFLAGS = {% if disable_warnings %}-w{% endif %} {% if disable_asserts %}-DNDEBUG{% endif %} -I. -std=c++11
-GPU_ARCH_FLAGS = {{ gpu_arch_flags }}
-LFLAGS = -lcurand
 
-# Add optimisation flags
-all: NVCCFLAGS += $(OPTIMISATIONFLAGS)
-all: executable
+SRCS = {{source_files}}
+H_SRCS = {{header_files}}
+OBJS = ${SRCS:.cu=.o}
+OBJS := ${OBJS:.cpp=.o}
+OBJS := ${OBJS:.c=.o}
+NVCC = @{{ nvcc_path }}
+NVCCFLAGS = -I. -std=c++11 {{gpu_arch_flags}} {{nvcc_compiler_flags}} {{compiler_debug_flags}} -Xcompiler "{{cpp_compiler_flags}}"
+LFLAGS = -lcurand -I. {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}}
 
-# Add debug flags
-debug: GPU_ARCH_FLAGS += $(DEBUG)
-debug: executable
+all: $(PROGRAM)
 
-.PHONY: all debug executable clean
+.PHONY: all clean
 
-executable: $(OBJS_CPP) $(OBJS_CU)
-	$(CC) $(GPU_ARCH_FLAGS) $(LFLAGS) $(OBJS_CU) -o $(PROGRAM)
+$(PROGRAM): $(OBJS)
+	$(NVCC) $(LFLAGS) $(OBJS) -o $(PROGRAM)
 
 clean:
-	rm -f $(OBJS_CPP) $(OBJS_CU) $(PROGRAM) results/*
+	{{rm_cmd}}
 
 %.o : %.cu
-	$(CC) $(GPU_ARCH_FLAGS) $(NVCCFLAGS) -dc $< -o $@
+	$(NVCC) $(NVCCFLAGS) -dc $< -o $@
 

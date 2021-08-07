@@ -39,6 +39,15 @@ if (_num__array_{{owner.name}}__indices > 1024)
 // inefficient, can we keep the t values on the host instead? Do we need them
 // on the device?
 dev_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
+// Update size variables for Python side indexing to work
+// (Note: Need to update device variable which will be copied to host in write_arrays())
+// TODO: This is one cudaMemcpy per time step, this should be done only once in the last
+// time step, fix when fixing the statemonitor (currently only works for <=1024 threads)
+_array_{{owner.name}}_N[0] += 1;
+CUDA_SAFE_CALL(
+        cudaMemcpy(dev_array_{{owner.name}}_N, _array_{{owner.name}}_N, sizeof(int32_t),
+                   cudaMemcpyHostToDevice)
+        );
 
 int num_iterations = {{owner.clock.name}}.i_end;
 int current_iteration = {{owner.clock.name}}.timestep[0];
