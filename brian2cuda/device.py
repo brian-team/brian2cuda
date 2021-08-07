@@ -601,7 +601,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 number_elements = str(codeobj.owner._N)
             else:
                 number_elements = "_N"
-            for k, v in codeobj.variables.iteritems():
+            # We need the functions to be sorted by keys for reproducable rng with a
+            # given seed: For codeobjects that are only run once, we generate the random
+            # numbers using the curand host API. For that, we insert code into the
+            # `additional_code` block in the host function. If we use multiple random
+            # function in one codeobject (e.g. rand() and randn()), the order in which
+            # they are generated can differ between two codeobjects, which makes the
+            # brian2.tests.test_neurongroup.test_random_values_fixed_seed fail.
+            for k, v in sorted(codeobj.variables.iteritems()):
                 if k == 'dt' and prefs['core.default_float_dtype'] == np.float32:
                     # use the double-precision array versions for dt as kernel arguments
                     # they are cast to single-precision scalar dt in scalar_code
