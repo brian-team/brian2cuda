@@ -951,7 +951,6 @@ poisson_code = '''
 DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(
     CUDACodeGenerator,
     code=poisson_code,
-    #namespace=lambda owner: {},
     name='_poisson',
     compiler_kwds={"headers": ["<curand.h>"]}
 )

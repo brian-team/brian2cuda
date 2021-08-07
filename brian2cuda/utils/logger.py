@@ -30,3 +30,9 @@ def suppress_brian2_logs():
     BrianLogger.suppress_hierarchy('brian2.codegen.generators.cpp_generator')
     BrianLogger.suppress_hierarchy('brian2.codegen.generators.numpy_generator')
     BrianLogger.suppress_hierarchy('brian2.codegen.generators.base')
+
+
+report_issue_message = (
+    "This should not have happened. Please report this error to "
+    "https://github.com/brian-team/brian2cuda/issues/new"
+)

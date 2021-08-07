@@ -30,6 +30,7 @@ from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path
+from brian2cuda.utils.logger import report_issue_message
 
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
 
@@ -637,21 +638,41 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         kernel_parameters_lines.append(line)
                         host_parameters_lines.append("dev_array_rand")
                     elif k == "poisson":
-                        # TODO: needs to work for different poisson distributions
-                        # TODO: rng_calls[poisson] is dict now
-                        assert False, "POISSON (to fix), k = {}, v = {}".format(k, v)
-                        code_snippet = '''
-                            //genenerate an array of random numbers on the device
-                            {dtype}* dev_array_poisson;
-                            CUDA_SAFE_CALL(
-                                    cudaMalloc((void**)&dev_array_poisson, sizeof(unsigned int)*{number_elements}*{num_calls})
-                                    );
-                            curandGeneratePoisson(curand_generator, dev_array_poisson, {number_elements}*{num_calls});
-                            '''.format(number_elements=number_elements, num_calls=codeobj.rng_calls["poisson"], dtype=c_data_type(prefs['core.default_float_dtype']))
-                        additional_code.append(code_snippet)
-                        line = "{dtype}* _ptr_array_{name}_poisson".format(dtype=c_data_type(prefs['core.default_float_dtype']), name=codeobj.name)
-                        kernel_parameters_lines.append(line)
-                        host_parameters_lines.append("dev_array_poisson")
+                        # We are assuming that there can be at most one poisson call per expression,
+                        # else brian2 should raise a NotImplementedError due to multiple stateful function calls.
+                        assert len(codeobj.poisson_lamdas) < 2, report_issue_message
+                        if len(codeobj.poisson_lamdas) == 0:
+                            ### On-the-fly poisson number generation (curand device API)
+                            # If we have a poisson function call and no entry in
+                            # `poisson_lamdas`, we must have a variable lamda and are
+                            # using on-the-fly RNG We don't need to add any code, we
+                            # will use the device implementation defined in
+                            # cuda_generator.py
+                            assert codeobj.needs_curand_states, report_issue_message
+                        else:  # len(codeobj.poisson_lamdas) == 1
+                            ### Pregenerated poisson number (curand host API)
+                            # There only one poisson call, hence we have only `poisson_0`
+                            poisson_name = 'poisson_0'
+                            # curand generates `unsigned int`, we cast it to `int32_t` in our `_poisson` implementation
+                            dtype = 'unsigned int'
+                            code_snippet = '''
+                                //genenerate an array of random numbers on the device
+                                {dtype}* dev_array_{poisson_name};
+                                CUDA_SAFE_CALL(
+                                        cudaMalloc((void**)&dev_array_{poisson_name}, sizeof(unsigned int)*{number_elements}*{num_calls})
+                                        );
+                                curandGeneratePoisson(curand_generator, dev_array_{poisson_name}, {number_elements}*{num_calls}, {lamda});
+                                '''.format(dtype=dtype,
+                                           number_elements=number_elements,
+                                           num_calls=codeobj.rng_calls[poisson_name],
+                                           poisson_name=poisson_name,
+                                           lamda=codeobj.poisson_lamdas[poisson_name])
+                            additional_code.append(code_snippet)
+                            line = "{dtype}* _ptr_array_{name}_{poisson_name}".format(
+                                dtype=dtype, name=codeobj.name, poisson_name=poisson_name
+                            )
+                            kernel_parameters_lines.append(line)
+                            host_parameters_lines.append("dev_array_{poisson_name}".format(poisson_name=poisson_name))
                 # Clock variables (t, dt, timestep)
                 elif hasattr(v, 'owner') and isinstance(v.owner, Clock):
                     # Clocks only run on the host and the corresponding device variables are copied
