@@ -25,6 +25,43 @@ index a2666799..7d671f5e 100644
          all_objects = net.sorted_objects
          net._clocks = {obj.clock for obj in all_objects}
          t_end = net.t+duration
+diff --git a/brian2/devices/cpp_standalone/templates/makefile b/brian2/devices/cpp_standalone/templates/makefile
+index f3a9ca0f..77b9d6e8 100644
+--- a/brian2/devices/cpp_standalone/templates/makefile
++++ b/brian2/devices/cpp_standalone/templates/makefile
+@@ -4,9 +4,9 @@ SRCS = {{source_files}}
+ H_SRCS = {{header_files}}
+ OBJS = ${SRCS:.cpp=.o}
+ OBJS := ${OBJS:.c=.o}
+-CC = @g++
++$(info $$OBJS is [${OBJS}])
+ OPTIMISATIONS = {{ compiler_flags }}
+-CFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
++CXXFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
+ LFLAGS = {{ openmp_pragma('compilation') }} {{ linker_flags }} {{ linker_debug_flags }}
+ DEPS = make.deps
+ 
+@@ -15,17 +15,17 @@ all: $(PROGRAM)
+ .PHONY: all clean
+ 
+ $(PROGRAM): $(OBJS) $(DEPS) makefile
+-	$(CC) $(OBJS) -o $(PROGRAM) $(LFLAGS)
++	$(CXX) $(OBJS) -o $(PROGRAM) $(LFLAGS)
+ 
+ clean:
+ 	{{ rm_cmd }}
+ 
+ make.deps: $(SRCS) $(H_SRCS)
+-	$(CC) $(CFLAGS) -MM $(SRCS) > make.deps
++	$(CXX) $(CXXFLAGS) -MM $(SRCS) > make.deps
+ 	
+ ifneq ($(wildcard $(DEPS)), )
+ include $(DEPS)
+ endif
+ 
+ %.o : %.cpp makefile
+-	$(CC) $(CFLAGS) $< -o $@
++	$(CXX) $(CXXFLAGS) $< -o $@
 diff --git a/brian2/input/timedarray.py b/brian2/input/timedarray.py
 index 3935dcdd..9485c569 100644
 --- a/brian2/input/timedarray.py
