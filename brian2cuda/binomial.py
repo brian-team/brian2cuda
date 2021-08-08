@@ -36,7 +36,7 @@ def _generate_cuda_code(n, p, use_normal, name):
         #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
             return curand_normal%SUFFIX%(brian::d_curand_states + vectorisation_idx) * %SCALE% + %LOC%;
         #else
-            return host_randn(vectorisation_idx) * %SCALE% + %LOC%;
+            return _host_randn(vectorisation_idx) * %SCALE% + %LOC%;
         #endif
         }
         '''
@@ -59,7 +59,7 @@ def _generate_cuda_code(n, p, use_normal, name):
             curandState localState = brian::d_curand_states[vectorisation_idx];
             %DTYPE% U = curand_uniform%SUFFIX%(&localState);
         #else
-            %DTYPE% U = host_rand(vectorisation_idx);
+            %DTYPE% U = _host_rand(vectorisation_idx);
         #endif
             long X = 0;
             %DTYPE% px = %QN%;
@@ -73,7 +73,7 @@ def _generate_cuda_code(n, p, use_normal, name):
         #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 0))
                     U = curand_uniform%SUFFIX%(&localState);
         #else
-                    U = host_rand(vectorisation_idx);
+                    U = _host_rand(vectorisation_idx);
         #endif
                 } else
                 {
