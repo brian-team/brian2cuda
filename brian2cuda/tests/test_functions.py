@@ -8,14 +8,14 @@ from brian2 import *
 from brian2.core.functions import timestep
 from brian2.parsing.sympytools import str_to_sympy, sympy_to_str
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_devices
+from brian2.devices.device import reinit_and_delete
 from brian2.tests.utils import assert_allclose
 from brian2.codegen.generators import CodeGenerator
 from brian2.codegen.codeobject import CodeObject
 
 
 @attr('cuda-standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_user_defined_function():
     @implementation('cuda',"""
     __host__ __device__ inline double usersin(double x)
@@ -40,7 +40,7 @@ def test_user_defined_function():
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_user_function_with_namespace_variable():
 
     my_var = 0.1 * np.array(np.arange(5))
@@ -61,3 +61,106 @@ def test_user_function_with_namespace_variable():
     net.run(defaultclock.dt)
 
     assert_allclose(G.v_[:], my_var)
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_manual_user_defined_function_cuda_standalone_compiler_args():
+    set_device('cuda_standalone', directory=None)
+
+    @implementation('cuda', '''
+    __host__ __device__ static inline double foo(const double x, const double y)
+    {
+        return x + y + _THREE;
+    }''',  # just check whether we can specify the supported compiler args,
+           # only the define macro is actually used
+        headers=[], sources=[], libraries=[], include_dirs=[],
+        library_dirs=[], runtime_library_dirs=[],
+        define_macros=[('_THREE', '3')])
+    @check_units(x=volt, y=volt, result=volt)
+    def foo(x, y):
+        return x + y + 3*volt
+
+    G = NeuronGroup(1, '''
+                       func = foo(x, y) : volt
+                       x : volt
+                       y : volt''')
+    G.x = 1*volt
+    G.y = 2*volt
+    mon = StateMonitor(G, 'func', record=True)
+    net = Network(G, mon)
+    net.run(defaultclock.dt)
+    assert mon[0].func == [6] * volt
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args1():
+    set_device('cuda_standalone', directory=None)
+
+    @implementation('cuda', '''
+    static inline double foo(const double x, const double y)
+    {
+        return x + y + _THREE;
+    }''',  some_arg=[])  # non-existing argument
+    @check_units(x=volt, y=volt, result=volt)
+    def foo(x, y):
+        return x + y + 3*volt
+
+    G = NeuronGroup(1, '''
+                       func = foo(x, y) : volt
+                       x : volt
+                       y : volt''')
+    mon = StateMonitor(G, 'func', record=True)
+    net = Network(G, mon)
+    assert_raises(ValueError, lambda: net.run(defaultclock.dt,
+                                                 namespace={'foo': foo}))
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args2():
+    set_device('cuda_standalone', directory=None)
+
+    @implementation('cuda', '''
+    static inline double foo(const double x, const double y)
+    {
+        return x + y + _THREE;
+    }''',  headers='<stdio.h>')  # existing argument, wrong value type
+    @check_units(x=volt, y=volt, result=volt)
+    def foo(x, y):
+        return x + y + 3*volt
+
+    G = NeuronGroup(1, '''
+                       func = foo(x, y) : volt
+                       x : volt
+                       y : volt''')
+    mon = StateMonitor(G, 'func', record=True)
+    net = Network(G, mon)
+    assert_raises(TypeError, lambda: net.run(defaultclock.dt,
+                                                 namespace={'foo': foo}))
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_external_function_cuda_standalone():
+    set_device('cuda_standalone', directory=None)
+    this_dir = os.path.abspath(os.path.dirname(__file__))
+    @implementation('cuda', '//all code in func_def_cuda.cu',
+                    headers=['"func_def_cuda.h"'],
+                    include_dirs=[this_dir],
+                    sources=[os.path.join(this_dir, 'func_def_cuda.cu')])
+    @check_units(x=volt, y=volt, result=volt)
+    def foo(x, y):
+        return x + y + 3*volt
+
+    G = NeuronGroup(1, '''
+                       func = foo(x, y) : volt
+                       x : volt
+                       y : volt''')
+    G.x = 1*volt
+    G.y = 2*volt
+    mon = StateMonitor(G, 'func', record=True)
+    net = Network(G, mon)
+    net.run(defaultclock.dt)
+    assert mon[0].func == [6] * volt

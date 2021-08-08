@@ -154,22 +154,24 @@ double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
 curandGenerator_t brian::curand_generator;
 __device__ unsigned long long* brian::d_curand_seed;
 unsigned long long* brian::dev_curand_seed;
-// dev_{}_rand(n)_allocator
+// dev_{co.name}_{rng_type}_allocator
 //      pointer to start of generated random numbers array
 //      at each generation cycle this array is refilled
-// dev_{}_rand(n)
+// dev_{co.name}_{rng_type}
 //      pointer moving through generated random number array
 //      until it is regenerated at the next generation cycle
-{% for co in all_codeobj_with_rand | sort(attribute='name') %}
-randomNumber_t* brian::dev_{{co.name}}_rand_allocator;
-randomNumber_t* brian::dev_{{co.name}}_rand;
-__device__ randomNumber_t* brian::_array_{{co.name}}_rand;
-{% endfor %}
-{% for co in all_codeobj_with_randn | sort(attribute='name') %}
-randomNumber_t* brian::dev_{{co.name}}_randn_allocator;
-randomNumber_t* brian::dev_{{co.name}}_randn;
-__device__ randomNumber_t* brian::_array_{{co.name}}_randn;
-{% endfor %}
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
+__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
+{% endfor %}{# rng_type #}
+{% endfor %}{# co #}
 curandState* brian::dev_curand_states;
 __device__ curandState* brian::d_curand_states;
 RandomNumberBuffer brian::random_number_buffer;
@@ -212,9 +214,14 @@ void _init_arrays()
                 sizeof(unsigned long long*))
             );
 
-    curandCreateGenerator(&curand_generator, {{curand_generator_type}});
+    CUDA_SAFE_CALL(
+            curandCreateGenerator(&curand_generator, {{curand_generator_type}})
+            );
+
     {% if curand_generator_ordering %}
-    curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}});
+    CUDA_SAFE_CALL(
+        curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}})
+            );
     {% endif %}
 
     // this sets seed for host and device api RNG
@@ -450,16 +457,17 @@ void _dealloc_arrays()
 {
     using namespace brian;
 
-    {% for co in all_codeobj_with_rand | sort(attribute='name') %}
+    {% for rng_type in all_codeobj_with_host_rng.keys() %}
+    {% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
     CUDA_SAFE_CALL(
-            cudaFree(dev_{{co.name}}_rand_allocator)
+            cudaFree(dev_{{co.name}}_{{rng_type}}_allocator)
             );
-    {% endfor %}
-    {% for co in all_codeobj_with_randn | sort(attribute='name') %}
+    {% endfor %}{# rng_type #}
+    {% endfor %}{# co #}
+
     CUDA_SAFE_CALL(
-            cudaFree(dev_{{co.name}}_randn_allocator)
+            curandDestroyGenerator(curand_generator)
             );
-    {% endfor %}
 
     {% for S in synapses | sort(attribute='name') %}
     {% for path in S._pathways | sort(attribute='name') %}
@@ -643,20 +651,22 @@ extern curandGenerator_t curand_generator;
 extern unsigned long long* dev_curand_seed;
 extern __device__ unsigned long long* d_curand_seed;
 
-{% for co in all_codeobj_with_rand | sort(attribute='name') %}
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
 // pointer to start of generated random numbers array
 // at each generation cycle this array is refilled
-extern randomNumber_t* dev_{{co.name}}_rand_allocator;
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
 // pointer moving through generated random number array
 // until it is regenerated at the next generation cycle
-extern randomNumber_t* dev_{{co.name}}_rand;
-extern __device__ randomNumber_t* _array_{{co.name}}_rand;
-{% endfor %}
-{% for co in all_codeobj_with_randn | sort(attribute='name') %}
-extern randomNumber_t* dev_{{co.name}}_randn_allocator;
-extern randomNumber_t* dev_{{co.name}}_randn;
-extern __device__ randomNumber_t* _array_{{co.name}}_randn;
-{% endfor %}
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
+extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
+{% endfor %}{# rng_type #}
+{% endfor %}{# co #}
 extern curandState* dev_curand_states;
 extern __device__ curandState* d_curand_states;
 extern RandomNumberBuffer random_number_buffer;

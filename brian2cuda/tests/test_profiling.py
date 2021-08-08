@@ -4,13 +4,13 @@ from numpy.testing.utils import assert_raises
 
 from brian2 import *
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_devices, set_device
+from brian2.devices.device import reinit_and_delete, set_device
 
 import brian2cuda
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_changing_profile_arg():
     set_device('cuda_standalone', build_on_run=False)
     G = NeuronGroup(10000, 'v : 1')

@@ -7,32 +7,53 @@
 #include <stdint.h>
 #include <ctime>
 #include <stdio.h>
+
 {% block extra_headers %}
 {% endblock %}
 
+{% for name in user_headers %}
+#include {{name}}
+{%endfor %}
+
 ////// SUPPORT CODE ///////
 namespace {
+    {# Need to declare these functions here since they can be used by support_code_lines
+       (e.g. _host_rand used in _poisson), but we can't put support_code_lines lines
+       after block random_functions since random_functions can use functions defined in
+       support_code_lines (e.g. _rand) #}
+    double _host_rand(const int _vectorisation_idx);
+    double _host_randn(const int _vectorisation_idx);
+    int32_t _host_poisson(double _lambda, const int _vectorisation_idx);
+
+    ///// block extra_device_helper /////
+    {% block extra_device_helper %}
+    {% endblock %}
+
+    ///// support_code_lines /////
+    {{support_code_lines|autoindent}}
+
     {% block random_functions %}
     // Implement dummy functions such that the host compiled code of binomial
     // functions works. Hacky, hacky ...
-    double host_rand(const int _vectorisation_idx)
+    double _host_rand(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
-    double host_randn(const int _vectorisation_idx)
+    double _host_randn(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `host_rand` in %s:%d\n", __FILE__,
+        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+                __LINE__);
+        exit(EXIT_FAILURE);
+    }
+    int32_t _host_poisson(double _lambda, const int _vectorisation_idx)
+    {
+        printf("ERROR: Called dummy function `_host_poisson` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
     {% endblock random_functions %}
-
-    {% block extra_device_helper %}
-    {% endblock %}
-
-    {{support_code_lines|autoindent}}
 }
 
 {{hashdefine_lines|autoindent}}

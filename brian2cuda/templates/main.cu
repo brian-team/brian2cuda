@@ -11,8 +11,8 @@
 #include "code_objects/{{codeobj.name}}.h"
 {% endfor %}
 
-{% for name in additional_headers %}
-#include "{{name}}"
+{% for name in user_headers %}
+#include {{name}}
 {% endfor %}
 
 #include <iostream>

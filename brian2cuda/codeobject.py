@@ -6,6 +6,8 @@ effect application if race conditions are possible.
 `CUDAStandaloneAtomicsCodeObject` uses atomic operations which allows parallel
 effect applications even when race conditions are possible.
 '''
+from collections import defaultdict
+
 from brian2.codegen.codeobject import CodeObject, constant_or_scalar
 from brian2.codegen.targets import codegen_targets
 from brian2.codegen.templates import Templater
@@ -34,12 +36,22 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
                           env_globals={'c_data_type': c_data_type,
                                        'constant_or_scalar': constant_or_scalar})
     generator_class = CUDACodeGenerator
-    no_or_const_delay_mode = False
-    serializing_form = "syn"
-    runs_every_tick = True  #default True, set False in generate_main_source
-    rand_calls = 0
-    randn_calls = 0
-    binomial_function = False
+
+    def __init__(self, *args, **kwargs):
+        super(CUDAStandaloneCodeObject, self).__init__(*args, **kwargs)
+        # Whether this code object runs on a clock or only once. Default is True, set
+        # False in `CUDAStandaloneDevice.generate_main_source()`
+        self.runs_every_tick = True
+        # Dictionary collectin the number of RNG function calls in this code object.
+        # Keys are: "rand", "randn", "poisson-<idx>" with one <idx> for each `poisson`
+        # with different (scalar) lambda
+        self.rng_calls = defaultdict(int)
+        # {name: lambda} dictionary for all poisson functions with scalar lambda
+        # (these random numbers will be generated using the curand host side API)
+        self.poisson_lamdas = defaultdict(float)
+        # Whether this codeobject uses curand device API (for binomial functions or
+        # poisson with vectorized lambda) and needs curand states
+        self.needs_curand_states = False
 
     def __call__(self, **kwds):
         return self.run()

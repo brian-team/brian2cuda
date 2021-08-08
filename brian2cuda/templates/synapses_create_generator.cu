@@ -13,20 +13,107 @@
 // NOTE: _ptr_array_%CODEOBJ_NAME%_rand is NOT an array
 // but an instance of CurandBuffer, which overloads the operator[], which then just
 // returns the next random number in the buffer, ignoring the argument passed to operator[]
-// NOTE: Put buffers into anonymous namespace such that host_rand/n and rand/n
+// NOTE: Put buffers into anonymous namespace such that _host_rand/n and rand/n
 // in main code have access to it.
-// NOTE: host_rand/n is used in the host compiled implementation of binomial
+// NOTE: _host_rand/n is used in the host compiled implementation of binomial
 // functions. Here, it just returns the next element from the CurandBuffer.
 CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_rand(&brian::curand_generator, RAND);
-randomNumber_t host_rand(const int _vectorisation_idx)
+randomNumber_t _host_rand(const int _vectorisation_idx)
 {
     return _ptr_array_%CODEOBJ_NAME%_rand[_vectorisation_idx];
 }
 
 CurandBuffer<randomNumber_t> _ptr_array_%CODEOBJ_NAME%_randn(&brian::curand_generator, RANDN);
-randomNumber_t host_randn(const int _vectorisation_idx)
+randomNumber_t _host_randn(const int _vectorisation_idx)
 {
     return _ptr_array_%CODEOBJ_NAME%_randn[_vectorisation_idx];
+}
+
+// This is the C++ Standalone implementation of the poisson function, which we use
+double _loggam(double x) {
+  double x0, x2, xp, gl, gl0;
+  int32_t k, n;
+
+  static double a[10] = {8.333333333333333e-02, -2.777777777777778e-03,
+                         7.936507936507937e-04, -5.952380952380952e-04,
+                         8.417508417508418e-04, -1.917526917526918e-03,
+                         6.410256410256410e-03, -2.955065359477124e-02,
+                         1.796443723688307e-01, -1.39243221690590e+00};
+  x0 = x;
+  n = 0;
+  if ((x == 1.0) || (x == 2.0))
+    return 0.0;
+  else if (x <= 7.0) {
+    n = (int32_t)(7 - x);
+    x0 = x + n;
+  }
+  x2 = 1.0 / (x0 * x0);
+  xp = 2 * M_PI;
+  gl0 = a[9];
+  for (k=8; k>=0; k--) {
+    gl0 *= x2;
+    gl0 += a[k];
+  }
+  gl = gl0 / x0 + 0.5 * log(xp) + (x0 - 0.5) * log(x0) - x0;
+  if (x <= 7.0) {
+    for (k=1; k<=n; k++) {
+      gl -= log(x0 - 1.0);
+      x0 -= 1.0;
+    }
+  }
+  return gl;
+}
+
+int32_t _poisson_mult(double lam, int _vectorisation_idx) {
+  int32_t X;
+  double prod, U, enlam;
+
+  enlam = exp(-lam);
+  X = 0;
+  prod = 1.0;
+  while (1) {
+    U = _rand(_vectorisation_idx);
+    prod *= U;
+    if (prod > enlam)
+      X += 1;
+    else
+      return X;
+  }
+}
+
+int32_t _poisson_ptrs(double lam, int _vectorisation_idx) {
+  int32_t k;
+  double U, V, slam, loglam, a, b, invalpha, vr, us;
+
+  slam = sqrt(lam);
+  loglam = log(lam);
+  b = 0.931 + 2.53 * slam;
+  a = -0.059 + 0.02483 * b;
+  invalpha = 1.1239 + 1.1328 / (b - 3.4);
+  vr = 0.9277 - 3.6224 / (b - 2);
+
+  while (1) {
+    U = _rand(_vectorisation_idx) - 0.5;
+    V = _rand(_vectorisation_idx);
+    us = 0.5 - abs(U);
+    k = (int32_t)floor((2 * a / us + b) * U + lam + 0.43);
+    if ((us >= 0.07) && (V <= vr))
+      return k;
+    if ((k < 0) || ((us < 0.013) && (V > us)))
+      continue;
+    if ((log(V) + log(invalpha) - log(a / (us * us) + b)) <=
+        (-lam + k * loglam - _loggam(k + 1)))
+      return k;
+  }
+}
+
+int32_t _host_poisson(double lam, int32_t _idx) {
+  if (lam >= 10)
+    return _poisson_ptrs(lam, _idx);
+  else if (lam == 0)
+    return 0;
+  else
+    return _poisson_mult(lam, _idx);
 }
 {% endblock random_functions %}
 
@@ -93,14 +180,13 @@ std::cout << std::endl;
     int _raw_pre_idx, _raw_post_idx;
     const int _vectorisation_idx = -1;
     ///// scalar_code['setup_iterator'] /////
-        {{scalar_code['setup_iterator']|autoindent}}
+    {{scalar_code['setup_iterator']|autoindent}}
     ///// scalar_code['create_j'] /////
-        {{scalar_code['create_j']|autoindent}}
+    {{scalar_code['create_j']|autoindent}}
     ///// scalar_code['create_cond'] /////
-        {{scalar_code['create_cond']|autoindent}}
+    {{scalar_code['create_cond']|autoindent}}
     ///// scalar_code['update_post'] /////
-        {{scalar_code['update_post']|autoindent}}
-    int syn_id = 0;
+    {{scalar_code['update_post']|autoindent}}
 
     for(int _i = 0; _i < _N_pre; _i++)
     {
@@ -180,18 +266,21 @@ std::cout << std::endl;
             _j = __j; // make the previously locally scoped _j available
             _pre_idx = __pre_idx;
             _raw_post_idx = _j + _target_offset;
-            if(_j<0 || _j>=_N_post)
-            {
-                {% if skip_if_invalid %}
-                continue;
-                {% else %}
-                cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
-                        _N_post-1 << endl;
-                exit(1);
-                {% endif %}
-            }
             {% if postsynaptic_condition %}
             {
+                {% if postsynaptic_variable_used %}
+                {# The condition could index outside of array range #}
+                if(_j<0 || _j>=_N_post)
+                {
+                    {% if skip_if_invalid %}
+                    continue;
+                    {% else %}
+                    cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
+                            _N_post-1 << endl;
+                    exit(1);
+                    {% endif %}
+                }
+                {% endif %}
                 ///// vector_code['create_cond'] /////
                 {{vector_code['create_cond']|autoindent}}
                 __cond = _cond;
@@ -203,17 +292,28 @@ std::cout << std::endl;
             if(!_cond) continue;
             {% endif %}
 
+            {% if not postsynaptic_variable_used %}
+            {# Otherwise, we already checked before #}
+            if(_j<0 || _j>=_N_post)
+            {
+                {% if skip_if_invalid %}
+                continue;
+                {% else %}
+                cout << "Error: tried to create synapse to neuron j=" << _j << " outside range 0 to " <<
+                        _N_post-1 << endl;
+                exit(1);
+                {% endif %}
+            }
+            {% endif %}
+
             ///// vector_code['update_post'] /////
             {{vector_code['update_post']|autoindent}}
 
-            for (int _repetition = 0; _repetition < _n; _repetition++)
-            {
+            for (int _repetition=0; _repetition<_n; _repetition++) {
                 {{_dynamic_N_outgoing}}[_pre_idx] += 1;
                 {{_dynamic_N_incoming}}[_post_idx] += 1;
                 {{_dynamic__synaptic_pre}}.push_back(_pre_idx);
                 {{_dynamic__synaptic_post}}.push_back(_post_idx);
-                // TODO: what do we need syn_id for?
-                syn_id++;
             }
         }
     }

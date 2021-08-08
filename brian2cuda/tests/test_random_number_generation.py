@@ -1,3 +1,5 @@
+from collections import OrderedDict, defaultdict
+
 from nose import with_setup
 from nose.plugins.attrib import attr
 from numpy.testing.utils import assert_equal, assert_raises, assert_allclose
@@ -6,66 +8,108 @@ from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_devices, device
+from brian2.devices.device import reinit_and_delete, device
 
 import brian2cuda
-from brian2cuda.device import check_codeobj_for_rng
+from brian2cuda.device import prepare_codeobj_code_for_rng
+
+
+# dummy class to fit with prepare_codeobj_code_for_rng function
+class _DummyCodeobj():
+    def __init__(self, string):
+        self.template_name = 'DummyTemplate'
+        self.name = 'Dummy'
+        self.variables = {}
+        self.code = lambda: 0
+        self.code.cu_file = string
+        self.rng_calls = defaultdict(int)
+        self.poisson_lamdas = defaultdict(float)
+        self.needs_curand_states = False
 
 
 @attr('cuda_standalone', 'standalone-only')
 def test_rand_randn_regex():
-    # Since we don't build anython but only test a Python function in
+    # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
     # device.build
 
-    # dummy class to fit with check_codeobj_for_rng function
-    class DummyCodeobj():
-        def __init__(self, string):
-            self.template_name = 'TemplateName'
-            self.name = 'Name'
-            self.code = lambda: 0
-            self.code.cu_file = string
-            self.rand_calls = 0
-            self.randn_calls = 0
-
     # should match
     m = []
-    m.append(DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
-    m.append(DummyCodeobj(' _rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('*_rand(_vectorisation_idx)'))
-    m.append(DummyCodeobj('_rand(_vectorisation_idx)-'))
-    m.append(DummyCodeobj('+_rand(_vectorisation_idx)-'))
+    m.append(_DummyCodeobj(' _rand(_vectorisation_idx) slfkjwefss'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx) slfkjwefss'))
+    m.append(_DummyCodeobj(' _rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('*_rand(_vectorisation_idx)'))
+    m.append(_DummyCodeobj('_rand(_vectorisation_idx)-'))
+    m.append(_DummyCodeobj('+_rand(_vectorisation_idx)-'))
 
     # should not match
     n = []
-    n.append(DummyCodeobj('h_rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj('_rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('#_rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('# _rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
-    n.append(DummyCodeobj('#define _rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj(' #define _rand(_vectorisation_idx)'))
-    n.append(DummyCodeobj('  #define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('h_rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('_rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('#_rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('# _rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj(' # _rand_h(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('#define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj(' #define _rand(_vectorisation_idx)'))
+    n.append(_DummyCodeobj('  #define _rand(_vectorisation_idx)'))
 
     # this one is matched currently (double space)
-    #n.append(DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
+    #n.append(_DummyCodeobj('  #define  _rand(_vectorisation_idx)'))
 
     for i, co in enumerate(m):
-        check_codeobj_for_rng(co)
-        assert co.rand_calls == 1, \
-            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
+        prepare_codeobj_code_for_rng(co)
+        assert co.rng_calls["rand"] == 1, \
+            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
     for i, co in enumerate(n):
-        check_codeobj_for_rng(co)
-        assert co.rand_calls == 0, \
-            "{}: matches: {} in '{}'".format(i, co.rand_calls, co.code.cu_file)
+        prepare_codeobj_code_for_rng(co)
+        assert co.rng_calls["rand"] == 0, \
+            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_rand_randn_occurence_counting():
+def test_poisson_regex():
+    # Since we don't build anything but only test a Python function in
+    # device.py, we can run this standalone-only test without set_device and
+    # device.build
+
+    co = _DummyCodeobj('''
+        _rand(_vectorisation_idx)
+        _poisson(l, _vectorisation_idx)
+        _poisson(5, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(5, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(.01, _vectorisation_idx)
+        _poisson(l, _vectorisation_idx)
+        ''')
+    prepare_codeobj_code_for_rng(co)
+
+    # If lambda is a variable (l), nothing will be replaces (on-the-fly RNG)
+    # If lambda is a literal (.01 and 5), it will be replaced by a
+    # _ptr_array_{name}_poisson_<idx> variables, where the idx is ascending by
+    # lambda value (lamda=.01 gets idx=0; lamda=5 gets idx=1)
+    replaced_code = '''
+        _rand(_vectorisation_idx + 0 * _N)
+        _poisson(l, _vectorisation_idx)
+        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 2 * _N)
+        _poisson(l, _vectorisation_idx)
+        '''.format(name=co.name)
+
+    for i, (cu_line, replaced_line) in enumerate(zip(co.code.cu_file.split('\n'),
+                                                     replaced_code.split('\n'))):
+        assert_equal(cu_line, replaced_line, err_msg="Line {} is wrong".format(i))
+    assert_equal(co.code.cu_file, replaced_code)
+
+
+@attr('cuda_standalone', 'standalone-only')
+@with_setup(teardown=reinit_and_delete)
+def test_rng_occurrence_counting():
 
     set_device('cuda_standalone', directory=None)
 
@@ -77,25 +121,43 @@ def test_rand_randn_occurence_counting():
     S_randn = Synapses(G_randn, G_randn, on_pre='''x += randn()''', name='S_randn')
     S_randn.connect()
 
+    G_poisson = NeuronGroup(10, '''dx/dt = poisson(1)/ms : 1''', threshold='True', name='G_poisson')
+    S_poisson = Synapses(G_poisson, G_poisson, on_pre='''x += poisson(1)''', name='S_poisson')
+    S_poisson.connect()
+
     run(0*ms)
 
-    assert len(device.all_code_objects['binomial']) == 0
+    # Check that there is no device side RNG registered (no binomial or poisson with
+    # vectorized lamda)
+    for codeobjects in device.codeobjects_with_rng['device_api'].values():
+        assert len(codeobjects) == 0, codeobjects
 
-    for code_object in device.all_code_objects['rand']:
-        assert code_object.rand_calls == 1
-        assert code_object.randn_calls == 0
+    # Check that for each codeobject that has rand, randn or poisson detected, the number
+    # of occurrences is correct.
+    for check_rng in ['rand', 'randn', 'poisson_0']:
+        for code_object in device.codeobjects_with_rng['host_api']['all_runs'][check_rng]:
+            for rng_type, num_occurrence in code_object.rng_calls.items():
+                if rng_type == check_rng:
+                    assert num_occurrence == 1, (
+                        '{rng_type} occurs {num_occurrence} times (not 1)'
+                    )
+                else:
+                    assert num_occurrence == 0, (
+                        '{rng_type} occurs {num_occurrence} times (not 0)'
+                    )
 
-    for code_object in device.all_code_objects['randn']:
-        assert code_object.rand_calls == 0
-        assert code_object.randn_calls == 1
+                if rng_type == 'poisson_0':
+                    co_lamda = code_object.poisson_lamdas['poisson_0']
+                    assert co_lamda == 1.0, co_lamda
+                    d_lamda = device.all_poisson_lamdas[code_object.name]['poisson_0']
+                    assert d_lamda == 1.0, "{} {}".format(d_lamda, code_object.name)
 
-    for code_object in device.all_code_objects['rand_or_randn']:
-        assert code_object not in device.code_object_with_binomial_separate_call
+                assert not code_object.needs_curand_states
 
 
 @attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_devices)
-def test_binomial_occurence():
+@with_setup(teardown=reinit_and_delete)
+def test_binomial_occurrence():
 
     set_device('cuda_standalone', directory=None)
 
@@ -114,22 +176,22 @@ def test_binomial_occurence():
 
     run(0*ms)
 
-    for key in ['rand', 'randn', 'rand_or_randn']:
-        assert len(device.all_code_objects[key]) == 0
+    for codeobjects in device.codeobjects_with_rng['host_api']['all_runs'].values():
+        assert len(codeobjects) == 0
 
-    # all_code_objects['binomial'] collects all codeobjects that use binomials (run
-    # every or single clock cycle). We have 5 objects
-    assert len(device.all_code_objects['binomial']) == 5
+    # Check the number of codeobjects using curand and that are run every clock cycle
+    every_tick = device.codeobjects_with_rng['device_api']['every_tick']
+    assert len(every_tick) == 4, every_tick
 
     # Here we collect all codeobjects with binomial run only ones
     # This is only one from the G_my_f.x = 'my_f()' line above
-    obj_list = device.code_object_with_binomial_separate_call
-    assert len(obj_list) == 1
-    assert obj_list[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
+    single_tick = device.codeobjects_with_rng['device_api']['single_tick']
+    assert len(single_tick) == 1
+    assert single_tick[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_rand():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -142,7 +204,7 @@ def test_rand():
 
 
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_number_generation_with_multiple_runs():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -158,7 +220,7 @@ def test_random_number_generation_with_multiple_runs():
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 # brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_fixed_and_random_seed():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -187,8 +249,75 @@ def test_random_values_fixed_and_random_seed():
                   first_run_values[:, 1], second_run_values[:, 1])
 
 
+# adapted for standalone mode from brian2/tests/test_neurongroup.py
+# brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_values_fixed_and_random_seed():
+    G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)/ms : 1')
+    mon = StateMonitor(G, 'v', record=True)
+
+    # first run
+    seed(13579)
+    G.v = 'poisson(5)'
+    seed()
+    run(2*defaultclock.dt)
+
+    # second run
+    seed(13579)
+    G.v = 'poisson(5)'
+    seed()
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+
+    # First time step should be identical (same seed)
+    assert_allclose(first_run_values[:, 0], second_run_values[:, 0])
+    # Second should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values[:, 1], second_run_values[:, 1])
+
+
+# adapted for standalone mode from brian2/tests/test_neurongroup.py
+# brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_vectorized_values_fixed_and_random_seed():
+    G = NeuronGroup(10,
+                    '''l: 1
+                       dv/dt = -v/(10*ms) + 0.1*poisson(l)/ms : 1''')
+    G.l = arange(10)
+    mon = StateMonitor(G, 'v', record=True)
+
+    # first run
+    seed(13579)
+    G.v = 'poisson(l)'
+    seed()
+    run(2*defaultclock.dt)
+
+    # second run
+    seed(13579)
+    G.v = 'poisson(l)'
+    seed()
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+
+    # First time step should be identical (same seed)
+    assert_allclose(first_run_values[:, 0], second_run_values[:, 0])
+    # Second should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values[:, 1], second_run_values[:, 1])
+
+
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_codeobject_every_tick():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -216,7 +345,7 @@ def test_random_values_codeobject_every_tick():
 
 # Test all binomial is single test
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values():
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
     my_f = BinomialFunction(100, 0.1, approximate=False)
@@ -317,7 +446,7 @@ def test_binomial_values():
 
 ### 3. rand/randn in synapses set_conditional template
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -334,7 +463,7 @@ def test_random_values_set_synapses_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -352,7 +481,7 @@ def test_random_values_set_synapses_fixed_seed():
 
 ### 4. randn in synapses stateupdater and mixing seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_synapse_dynamics_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
@@ -395,7 +524,7 @@ def test_random_values_synapse_dynamics_fixed_and_random_seed():
 
 ### 5. rand/randn in host side rng (synapses_init tempalte)
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -437,7 +566,7 @@ def test_random_values_init_synapses_fixed_and_random_seed():
 
 ### 1. binomial in neurongroup set_conditional templates
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_random_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -454,7 +583,7 @@ def test_binomial_values_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_fixed_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -472,7 +601,7 @@ def test_binomial_values_fixed_seed():
 
 ### 2. binomial in neurongroup stateupdater and mixed seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -516,8 +645,8 @@ def test_binomial_values_fixed_and_random_seed():
 
 ### 3. binomial in synapses set_conditional template
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
-def test_random_values_set_synapses_random_seed():
+@with_setup(teardown=reinit_and_delete)
+def test_binomial_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
                           v2 : 1''')
@@ -537,8 +666,8 @@ def test_random_values_set_synapses_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
-def test_random_values_set_synapses_fixed_seed():
+@with_setup(teardown=reinit_and_delete)
+def test_binomial_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
                           v2 : 1''')
@@ -559,7 +688,7 @@ def test_random_values_set_synapses_fixed_seed():
 
 ### 4. binomial in synapses stateupdater and mixing seed random/fixed
 @attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -605,7 +734,7 @@ def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
 
 ### 5. binomial in host side rng (synapses_init tempalte)
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_binomial_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -647,7 +776,7 @@ def test_binomial_values_init_synapses_fixed_and_random_seed():
 
 ### Extra: group_set template (not conditional), only for neurongroup, not synapse
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
+@with_setup(teardown=reinit_and_delete)
 def test_random_binomial_set_template_random_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
@@ -665,21 +794,440 @@ def test_random_binomial_set_template_random_seed():
 
 
 @attr('standalone-compatible')
-@with_setup(teardown=reinit_devices)
-def test_random_values_set_synapses_fixed_seed():
+@with_setup(teardown=reinit_and_delete)
+def test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
 
     seed(12345678)
-    G.v1[:8] = 'rand() + randn() + my_f() + my_f_approximated()'
+    G.v1[:8] = 'rand() + randn() + my_f() + my_f_approximated() + poisson(5)'
     seed(12345678)
-    G.v2[:8] = 'rand() + randn() + my_f() + my_f_approximated()'
+    G.v2[:8] = 'rand() + randn() + my_f() + my_f_approximated() + poisson(5)'
     run(0*ms)  # for standalone
     assert np.var(G.v1[:]) > 0
     assert np.var(G.v2[:]) > 0
     assert_allclose(G.v1[:], G.v2[:])
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed():
+    G = NeuronGroup(10, '''v1 : 1
+                           v2 : 1
+                           l  : 1''')
+    G.l = arange(10)
+    my_f = BinomialFunction(100, 0.1, approximate=False)
+    my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
+
+    seed(12345678)
+    G.v1[:8] = 'rand() + randn() + my_f() + my_f_approximated() + poisson(l)'
+    seed(12345678)
+    G.v2[:8] = 'rand() + randn() + my_f() + my_f_approximated() + poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert_allclose(G.v1[:], G.v2[:])
+
+
+###### POISSON ######
+
+### 1. poisson in neurongroup set_conditional templates
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_random_seed():
+    G = NeuronGroup(100, '''v1 : 1
+                            v2 : 1''')
+    seed()
+    G.v1 = 'poisson(5)'
+    seed()
+    G.v2 = 'poisson(5)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert np.var(G.v1[:] - G.v2[:]) > 0
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_random_seed():
+    G = NeuronGroup(100, '''v1 : 1
+                            v2 : 1
+                            x1 : 1
+                            x2 : 1
+                            l  : 1''')
+    G.l = arange(100) / 10
+    seed()
+    G.v1 = 'poisson(l)'
+    seed()
+    G.v2 = 'poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert np.var(G.v1[:] - G.v2[:]) > 0
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_fixed_seed():
+    G = NeuronGroup(100, '''v1 : 1
+                            v2 : 1''')
+    seed(12345678)
+    G.v1 = 'poisson(5)'
+    seed(12345678)
+    G.v2 = 'poisson(5)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert_allclose(G.v1[:], G.v2[:])
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_fixed_seed():
+    G = NeuronGroup(100, '''v1 : 1
+                            v2 : 1
+                            l  : 1''')
+    G.l = arange(100) / 10
+    seed(12345678)
+    G.v1 = 'poisson(l)'
+    seed(12345678)
+    G.v2 = 'poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert_allclose(G.v1[:], G.v2[:])
+
+
+### 2. poisson in neurongroup stateupdater and mixed seed random/fixed
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_fixed_and_random_seed():
+
+    G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)*xi/sqrt(ms) : 1')
+
+    mon = StateMonitor(G, 'v', record=True)
+
+    # first run
+    G.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # second run
+    G.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    # fourth run
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+    third_run_values = np.array(mon.v[:, [4, 5]])
+    fourth_run_values = np.array(mon.v[:, [6, 7]])
+
+    # First and second run should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values, second_run_values)
+    # Third and fourth run should be identical (same seed)
+    assert_allclose(third_run_values, fourth_run_values)
+
+
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_fixed_and_random_seed():
+
+    G = NeuronGroup(10,
+                    '''l : 1
+                       dv/dt = -v/(10*ms) + 0.1*poisson(l)*xi/sqrt(ms) : 1''')
+    G.l = arange(10)
+
+    mon = StateMonitor(G, 'v', record=True)
+
+    # first run
+    G.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # second run
+    G.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    # fourth run
+    G.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+    third_run_values = np.array(mon.v[:, [4, 5]])
+    fourth_run_values = np.array(mon.v[:, [6, 7]])
+
+    # First and second run should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values, second_run_values)
+    # Third and fourth run should be identical (same seed)
+    assert_allclose(third_run_values, fourth_run_values)
+
+
+### 3. poisson in synapses set_conditional template
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_set_synapses_random_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G, '''v1 : 1
+                          v2 : 1''')
+    S.connect()
+
+    seed()
+    S.v1 = 'poisson(5)'
+    seed()
+    S.v2 = 'poisson(5)'
+    run(0*ms)  # for standalone
+    assert np.var(S.v1[:]) > 0
+    assert np.var(S.v2[:]) > 0
+    assert np.var(S.v1[:] - S.v2[:]) > 0
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_set_synapses_random_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G, '''v1 : 1
+                          v2 : 1
+                          l  : 1''')
+    S.connect()
+    S.l = arange(100) / 10
+
+    seed()
+    S.v1 = 'poisson(l)'
+    seed()
+    S.v2 = 'poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(S.v1[:]) > 0
+    assert np.var(S.v2[:]) > 0
+    assert np.var(S.v1[:] - S.v2[:]) > 0
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_set_synapses_fixed_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G, '''v1 : 1
+                          v2 : 1''')
+    S.connect()
+
+    seed(12345678)
+    S.v1 = 'poisson(5)'
+    seed(12345678)
+    S.v2 = 'poisson(5)'
+    run(0*ms)  # for standalone
+    assert np.var(S.v1[:]) > 0
+    assert np.var(S.v2[:]) > 0
+    assert_allclose(S.v1[:], S.v2[:])
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_set_synapses_fixed_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G, '''v1 : 1
+                          v2 : 1
+                          l  : 1''')
+    S.connect()
+    S.l = arange(100) / 10
+
+    seed(12345678)
+    S.v1 = 'poisson(l)'
+    seed(12345678)
+    S.v2 = 'poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(S.v1[:]) > 0
+    assert np.var(S.v2[:]) > 0
+    assert_allclose(S.v1[:], S.v2[:])
+
+
+### 4. poisson in synapses stateupdater and mixing seed random/fixed
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G,
+                 '''dv/dt = -v/(10*ms) + 0.1*poisson(5)*xi/sqrt(ms) : 1''')
+    S.connect()
+    mon = StateMonitor(S, 'v', record=range(100))
+
+    # first run
+    S.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    S.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    S.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    # fourth run
+    S.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+    third_run_values = np.array(mon.v[:, [4, 5]])
+    fourth_run_values = np.array(mon.v[:, [6, 7]])
+
+    # First and second run should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values, second_run_values)
+    # Third and fourth run should be identical (same seed)
+    assert_allclose(third_run_values, fourth_run_values)
+
+
+@attr('standalone-compatible', 'multiple-runs')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed():
+    G = NeuronGroup(10, 'z : 1')
+    S = Synapses(G, G,
+                 '''l : 1
+                    dv/dt = -v/(10*ms) + 0.1*poisson(l)*xi/sqrt(ms) : 1''')
+    S.connect()
+    S.l = arange(100) / 10
+    mon = StateMonitor(S, 'v', record=range(100))
+
+    # first run
+    S.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    S.v = 0
+    seed()
+    run(2*defaultclock.dt)
+
+    # third run
+    S.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    # fourth run
+    S.v = 0
+    seed(13579)
+    run(2*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    first_run_values = np.array(mon.v[:, [0, 1]])
+    second_run_values = np.array(mon.v[:, [2, 3]])
+    third_run_values = np.array(mon.v[:, [4, 5]])
+    fourth_run_values = np.array(mon.v[:, [6, 7]])
+
+    # First and second run should be different (random seed)
+    assert_raises(AssertionError, assert_allclose,
+                  first_run_values, second_run_values)
+    # Third and fourth run should be identical (same seed)
+    assert_allclose(third_run_values, fourth_run_values)
+
+
+### 5. poisson in host side rng (synapses_init tempalte)
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_values_init_synapses_fixed_and_random_seed():
+    G = NeuronGroup(10, 'l : 1')
+    G.l = arange(10)
+
+    seed()
+    S1 = Synapses(G, G)
+    S1.connect('poisson(5) < poisson(l_post + l_pre)')
+
+    seed(12345678)
+    S2 = Synapses(G, G)
+    S2.connect('poisson(5) < poisson(l_post + l_pre)')
+
+    seed()
+    S3 = Synapses(G, G)
+    S3.connect('poisson(5) < poisson(l_post + l_pre)')
+
+    seed(12345678)
+    S4 = Synapses(G, G)
+    S4.connect('poisson(5) < poisson(l_post + l_pre)')
+
+    run(0*ms)  # for standalone
+
+    idcs1 = np.hstack([S1.i[:], S1.j[:]])
+    idcs2 = np.hstack([S2.i[:], S2.j[:]])
+    idcs3 = np.hstack([S3.i[:], S3.j[:]])
+    idcs4 = np.hstack([S4.i[:], S4.j[:]])
+
+    # Pre/post idcs for first, second and third run should be different
+    assert_raises(AssertionError, assert_equal,
+                  idcs1, idcs2)
+    assert_raises(AssertionError, assert_equal,
+                  idcs1, idcs3)
+    assert_raises(AssertionError, assert_equal,
+                  idcs2, idcs3)
+    # Pre/post idcs for second and fourth run should be equal (same seed)
+    assert_equal(idcs2, idcs4)
+
+
+### Extra: group_set template (not conditional), only for neurongroup, not synapse
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_scalar_lambda_set_template_random_seed():
+    G = NeuronGroup(10, '''v1 : 1
+                           v2 : 1''')
+
+    seed()
+    G.v1[:8] = 'rand() + randn() + poisson(5)'
+    seed()
+    G.v2[:8] = 'rand() + randn() + poisson(5)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert np.var(G.v1[:] - G.v2[:]) > 0
+
+
+@attr('standalone-compatible')
+@with_setup(teardown=reinit_and_delete)
+def test_poisson_variable_lambda_set_template_random_seed():
+    G = NeuronGroup(10, '''v1 : 1
+                           v2 : 1
+                           l  : 1''')
+
+    G.l = arange(10)
+    seed()
+    G.v1[:8] = 'rand() + randn() + poisson(l)'
+    seed()
+    G.v2[:8] = 'rand() + randn() + poisson(l)'
+    run(0*ms)  # for standalone
+    assert np.var(G.v1[:]) > 0
+    assert np.var(G.v2[:]) > 0
+    assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
 if __name__ == '__main__':
@@ -688,3 +1236,115 @@ if __name__ == '__main__':
     test_random_values_fixed_and_random()
     test_random_values_codeobject_every_tick()
     test_rand_randn_regex()
+    test_poisson_regex()
+
+
+
+### This is an attempt at dynamically generating these test functions. Should be
+### possible like this but something wasn't working and I'm leaving this for another time.
+## 1. poisson in neurongroup set_conditional templates
+#rng_setups = [
+#    # (rng_type, prepare_func, func, extra_vars)
+#    ('rand', '', 'rand()', ''),
+#    ('randn', '', 'randn()', ''),
+#    (
+#        'binomial',
+#        'my_f = BinomialFunction(100, 0.1, approximate=False)',
+#        'my_f()',
+#        ''
+#    ),
+#    (
+#        'binomial_approx',
+#        'my_f = BinomialFunction(100, 0.1, approximate=True)',
+#        'my_f()',
+#        ''
+#    ),
+#    ('poisson_scalar_l', '', 'poisson(5)', ''),
+#    ('poisson_variable_l', 'G.l = arange(10)', 'poisson(l)', 'l : 1')
+#]
+#
+#seed_setup = {
+#    'random': None,
+#    'fixed': 13579
+#}
+#
+#for rng_type, prepare_func, func, extra_vars in rng_setups:
+#    for random_fixed, seed in seed_setup.items():
+#        function_def = """
+#@attr('standalone-compatible')
+#@with_setup(teardown=reinit_and_delete)
+#def test_{rng_type}_values_{random_fixed}_seed():
+#    G = NeuronGroup(100, '''v1 : 1
+#                            v2 : 1
+#                            {extra_vars}''')
+#    {prepare_func}
+#    seed({seed})
+#    G.v1 = \'{func}\'
+#    seed({seed})
+#    G.v2 = '{func}'
+#    run(0*ms)
+#    assert np.var(G.v1[:]) > 0
+#    assert np.var(G.v2[:]) > 0
+#    if '{random_fixed}' == 'random':
+#        assert np.var(G.v1[:] - G.v2[:]) > 0
+#    else:
+#        assert_allclose(G.v1[:], G.v2[:])
+#""".format(rng_type=rng_type, prepare_func=prepare_func, func=func,
+#           extra_vars=extra_vars, random_fixed=random_fixed, seed=seed)
+#
+#        # define function from string via `exec`
+#        print(function_def)
+#        exec(function_def)
+#
+#
+#### 2. binomial in neurongroup stateupdater and mixed seed random/fixed
+#function_def = """
+#@attr('standalone-compatible', 'multiple-runs')
+#@with_setup(teardown=reinit_and_delete)
+#def test_{rng_type}_values_fixed_and_random_seed():
+#
+#    # e.g. `my_f = BinomialFunction(...)`
+#    {prepare_func}
+#
+#    G = NeuronGroup(10,
+#                    '''{extra_vars}  # e.g. `l : 1`
+#                       dv/dt = -v/(10*ms) + 0.1*({func})/ms : 1''')
+#
+#    # e.g. `G.l = arange(10)`
+#    {init_vars}
+#
+#    mon = StateMonitor(G, 'v', record=True)
+#
+#    # first run
+#    G.v = 0
+#    seed()
+#    run(2*defaultclock.dt)
+#
+#    # second run
+#    G.v = 0
+#    seed()
+#    run(2*defaultclock.dt)
+#
+#    # third run
+#    G.v = 0
+#    seed(13579)
+#    run(2*defaultclock.dt)
+#
+#    # fourth run
+#    G.v = 0
+#    seed(13579)
+#    run(2*defaultclock.dt)
+#
+#    device.build(direct_call=False, **device.build_options)
+#
+#    first_run_values = np.array(mon.v[:, [0, 1]])
+#    second_run_values = np.array(mon.v[:, [2, 3]])
+#    third_run_values = np.array(mon.v[:, [4, 5]])
+#    fourth_run_values = np.array(mon.v[:, [6, 7]])
+#
+#    # First and second run should be different (random seed)
+#    assert_raises(AssertionError, assert_allclose,
+#                  first_run_values, second_run_values)
+#    # Third and fourth run should be identical (same seed)
+#    assert_allclose(third_run_values, fourth_run_values)
+#"""
