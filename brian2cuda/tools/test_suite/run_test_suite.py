@@ -22,8 +22,8 @@ parser.add_argument('--notify-slack', action='store_true',
                     help="Send progress reports through Slack via ClusterBot "
                           "(if installed)")
 
-parser.add_argument('-v', '--verbose', action='store_true',
-                    help="Pass verbose option to pytest")
+parser.add_argument('-v', '--verbosity', action='count', default=None,
+                    help="Increase pytest verbosity.")
 
 args = utils.parse_arguments(parser)
 
@@ -67,8 +67,8 @@ stored_prefs = prefs.as_file
 # should include the conftest.py we want to load.
 additional_args = ['--rootdir={}'.format(os.path.dirname(brian2.__file__))]
 
-if args.verbose:
-   additional_args += ['-v']
+if args.verbosity is not None:
+   additional_args += ['-{}'.format(args.verbosity * 'v')]
 
 all_successes = []
 for target in args.targets:
