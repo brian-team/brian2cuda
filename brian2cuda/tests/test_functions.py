@@ -15,6 +15,8 @@ from brian2.codegen.codeobject import CodeObject
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_user_defined_function():
+    set_device('cuda_standalone', directory=None)
+
     @implementation('cuda',"""
     __host__ __device__ inline double usersin(double x)
     {
@@ -40,6 +42,7 @@ def test_user_defined_function():
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_user_function_with_namespace_variable():
+    set_device('cuda_standalone', directory=None)
 
     my_var = 0.1 * np.array(np.arange(5))
 
