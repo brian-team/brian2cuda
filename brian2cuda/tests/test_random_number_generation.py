@@ -435,13 +435,13 @@ def test_binomial_values():
 
     # 2. and 4. run set the same seed
     assert_allclose(run_values_2, run_values_4)
-    # all other combinations shouldvalues_3)
+    # all other combinations should be different
     with pytest.raises(AssertionError):
         assert_allclose(run_values_1, run_values_2)
     with pytest.raises(AssertionError):
         assert_allclose(run_values_1, run_values_3)
     with pytest.raises(AssertionError):
-        assert_allclose(run_values_2, run_values_2)
+        assert_allclose(run_values_2, run_values_3)
 
 
 ####### RAND / RANDN ######
