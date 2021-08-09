@@ -1,6 +1,9 @@
 # Compiled Python files
 *.py[cod]
 
+# Compiled object files
+*.o
+
 # Backup files
 *~
 *.bak
