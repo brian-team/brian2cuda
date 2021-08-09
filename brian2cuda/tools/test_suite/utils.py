@@ -116,7 +116,7 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
     if fast_compilation:
         # Switch off cpp compiler optimization to get faster compilation times
         prefs['codegen.cpp.extra_compile_args_gcc'].extend(['-w', '-O0'])
-        prefs['codegen.cpp.extra_compile_args_msvc'].extend(['/Od'])
+        prefs['codegen.cpp.extra_compile_args_msvc'].extend(['-w', '-O0'])
         prints.append("Turning off  compiler optimizations for fast compilation")
 
     if suppress_warnings:

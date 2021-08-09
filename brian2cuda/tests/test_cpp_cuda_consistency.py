@@ -1,15 +1,14 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
+import pytest
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.devices.device import reinit_and_delete, reinit_devices, set_device, reset_device
+from brian2.devices.device import reinit_devices, set_device, reset_device
 
 import brian2cuda
 
 # CUDA version of brian2.tests.test_cpp_standalone.test_openmp_consistency
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_stdp_example():
     previous_device = get_device()
     n_cells    = 100
@@ -89,8 +88,8 @@ def test_stdp_example():
     reset_device(previous_device)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_stdp_heterog_delays_example():
     previous_device = get_device()
     n_cells    = 100
@@ -173,8 +172,8 @@ def test_stdp_heterog_delays_example():
     reset_device(previous_device)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_sorted_indices_statemonitor():
     previous_device = get_device()
 

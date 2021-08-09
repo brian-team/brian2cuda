@@ -46,7 +46,7 @@ all_prefs_combinations, print_lines = utils.set_preferences(args, prefs,
 buffer.add(print_lines)
 buffer.print_all()
 
-extra_test_dirs = os.path.abspath(os.path.dirname(brian2cuda.__file__))
+extra_test_dirs = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 'tests')
 
 if args.test_parallel is None:
     args.test_parallel = args.targets

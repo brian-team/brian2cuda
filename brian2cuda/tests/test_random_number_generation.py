@@ -1,14 +1,13 @@
 from collections import OrderedDict, defaultdict
 
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_raises, assert_allclose
+import pytest
+from numpy.testing import assert_equal, assert_allclose
 
 from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete, device
+from brian2.devices.device import device
 
 import brian2cuda
 from brian2cuda.device import prepare_codeobj_code_for_rng
@@ -27,7 +26,8 @@ class _DummyCodeobj():
         self.needs_curand_states = False
 
 
-@attr('cuda_standalone', 'standalone-only')
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_rand_randn_regex():
     # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
@@ -68,7 +68,8 @@ def test_rand_randn_regex():
             "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
 
 
-@attr('cuda_standalone', 'standalone-only')
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_poisson_regex():
     # Since we don't build anything but only test a Python function in
     # device.py, we can run this standalone-only test without set_device and
@@ -107,8 +108,8 @@ def test_poisson_regex():
     assert_equal(co.code.cu_file, replaced_code)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_rng_occurrence_counting():
 
     set_device('cuda_standalone', directory=None)
@@ -155,8 +156,8 @@ def test_rng_occurrence_counting():
                 assert not code_object.needs_curand_states
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_binomial_occurrence():
 
     set_device('cuda_standalone', directory=None)
@@ -190,8 +191,7 @@ def test_binomial_occurrence():
     assert single_tick[0].name == 'G_my_f_group_variable_set_conditional_codeobject'
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_rand():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -199,12 +199,14 @@ def test_rand():
     run(3*defaultclock.dt)
 
     print(mon.v[:5, :])
-    assert_raises(AssertionError, assert_equal, mon.v[:, -1], 0)
-    assert_raises(AssertionError, assert_equal, mon.v[:, -2], mon.v[:, -1])
+    with pytest.raises(AssertionError):
+        assert_equal(mon.v[:, -1], 0)
+    with pytest.raises(AssertionError):
+        assert_equal(mon.v[:, -2], mon.v[:, -1])
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_random_number_generation_with_multiple_runs():
     G = NeuronGroup(1000, 'dv/dt = rand() : second')
     mon = StateMonitor(G, 'v', record=True)
@@ -213,14 +215,16 @@ def test_random_number_generation_with_multiple_runs():
     run(2*defaultclock.dt)
     device.build(direct_call=False, **device.build_options)
 
-    assert_raises(AssertionError, assert_equal, mon.v[:, -1], 0)
-    assert_raises(AssertionError, assert_equal, mon.v[:, -2], mon.v[:, -1])
+    with pytest.raises(AssertionError):
+        assert_equal(mon.v[:, -1], 0)
+    with pytest.raises(AssertionError):
+        assert_equal(mon.v[:, -2], mon.v[:, -1])
 
 
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 # brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_random_values_fixed_and_random_seed():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -245,14 +249,14 @@ def test_random_values_fixed_and_random_seed():
     # First time step should be identical (same seed)
     assert_allclose(first_run_values[:, 0], second_run_values[:, 0])
     # Second should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values[:, 1], second_run_values[:, 1])
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values[:, 1], second_run_values[:, 1])
 
 
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 # brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_scalar_values_fixed_and_random_seed():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)/ms : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -277,14 +281,14 @@ def test_poisson_scalar_values_fixed_and_random_seed():
     # First time step should be identical (same seed)
     assert_allclose(first_run_values[:, 0], second_run_values[:, 0])
     # Second should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values[:, 1], second_run_values[:, 1])
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values[:, 1], second_run_values[:, 1])
 
 
 # adapted for standalone mode from brian2/tests/test_neurongroup.py
 # brian2.tests.test_neurongroup.test_random_values_fixed_and_random().
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_vectorized_values_fixed_and_random_seed():
     G = NeuronGroup(10,
                     '''l: 1
@@ -312,12 +316,12 @@ def test_poisson_vectorized_values_fixed_and_random_seed():
     # First time step should be identical (same seed)
     assert_allclose(first_run_values[:, 0], second_run_values[:, 0])
     # Second should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values[:, 1], second_run_values[:, 1])
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values[:, 1], second_run_values[:, 1])
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_random_values_codeobject_every_tick():
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
@@ -344,8 +348,8 @@ def test_random_values_codeobject_every_tick():
 
 
 # Test all binomial is single test
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_binomial_values():
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
     my_f = BinomialFunction(100, 0.1, approximate=False)
@@ -426,17 +430,18 @@ def test_binomial_values():
 
     # Two calls to binomial functions should return different numbers in all runs
     for n, values in enumerate([run_values_1, run_values_2, run_values_3, run_values_4]):
-        assert_raises(AssertionError, assert_allclose, values[:, 0], values[:, 1])
+        with pytest.raises(AssertionError):
+            assert_allclose(values[:, 0], values[:, 1])
 
     # 2. and 4. run set the same seed
     assert_allclose(run_values_2, run_values_4)
-    # all other combinations should be different
-    assert_raises(AssertionError, assert_allclose,
-                  run_values_1, run_values_2)
-    assert_raises(AssertionError, assert_allclose,
-                  run_values_1, run_values_3)
-    assert_raises(AssertionError, assert_allclose,
-                  run_values_2, run_values_3)
+    # all other combinations shouldvalues_3)
+    with pytest.raises(AssertionError):
+        assert_allclose(run_values_1, run_values_2)
+    with pytest.raises(AssertionError):
+        assert_allclose(run_values_1, run_values_3)
+    with pytest.raises(AssertionError):
+        assert_allclose(run_values_2, run_values_2)
 
 
 ####### RAND / RANDN ######
@@ -445,8 +450,7 @@ def test_binomial_values():
 ###    in brian2/tests/test_neurongroup.py:test_random_values_random/fixed_seed.py
 
 ### 3. rand/randn in synapses set_conditional template
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -462,8 +466,7 @@ def test_random_values_set_synapses_random_seed():
     assert np.var(S.v1[:] - S.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -480,8 +483,8 @@ def test_random_values_set_synapses_fixed_seed():
 
 
 ### 4. randn in synapses stateupdater and mixing seed random/fixed
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_random_values_synapse_dynamics_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
@@ -516,15 +519,14 @@ def test_random_values_synapse_dynamics_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
 ### 5. rand/randn in host side rng (synapses_init tempalte)
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -552,12 +554,12 @@ def test_random_values_init_synapses_fixed_and_random_seed():
     idcs4 = np.hstack([S4.i[:], S4.j[:]])
 
     # Pre/post idcs for first, second and third run should be different
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs2)
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs3)
-    assert_raises(AssertionError, assert_equal,
-                  idcs2, idcs3)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs2)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs3)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs2, idcs3)
     # Pre/post idcs for second and fourth run should be equal (same seed)
     assert_equal(idcs2, idcs4)
 
@@ -565,8 +567,7 @@ def test_random_values_init_synapses_fixed_and_random_seed():
 ####### BINOMIAL ######
 
 ### 1. binomial in neurongroup set_conditional templates
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial_values_random_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -582,8 +583,7 @@ def test_binomial_values_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial_values_fixed_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -600,8 +600,8 @@ def test_binomial_values_fixed_seed():
 
 
 ### 2. binomial in neurongroup stateupdater and mixed seed random/fixed
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_binomial_values_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -637,15 +637,14 @@ def test_binomial_values_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
 ### 3. binomial in synapses set_conditional template
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -665,8 +664,7 @@ def test_binomial_values_set_synapses_random_seed():
     assert np.var(S.v1[:] - S.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -687,8 +685,8 @@ def test_binomial_values_set_synapses_fixed_seed():
 
 
 ### 4. binomial in synapses stateupdater and mixing seed random/fixed
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
@@ -726,15 +724,14 @@ def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
 ### 5. binomial in host side rng (synapses_init tempalte)
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
 
@@ -765,18 +762,18 @@ def test_binomial_values_init_synapses_fixed_and_random_seed():
     idcs4 = np.hstack([S4.i[:], S4.j[:]])
 
     # Pre/post idcs for first, second and third run should be different
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs2)
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs3)
-    assert_raises(AssertionError, assert_equal,
-                  idcs2, idcs3)
+    # Pre/post idcs for first, second and third run should be different
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs2)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs3)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs2, idcs3)
     # Pre/post idcs for second and fourth run should be equal (same seed)
     assert_equal(idcs2, idcs4)
 
 ### Extra: group_set template (not conditional), only for neurongroup, not synapse
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_binomial_set_template_random_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
@@ -793,8 +790,7 @@ def test_random_binomial_set_template_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
@@ -811,8 +807,7 @@ def test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed():
     assert_allclose(G.v1[:], G.v2[:])
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1
@@ -834,8 +829,7 @@ def test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed(
 ###### POISSON ######
 
 ### 1. poisson in neurongroup set_conditional templates
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_random_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -849,8 +843,7 @@ def test_poisson_scalar_lambda_values_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_variable_lambda_values_random_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1
@@ -868,8 +861,7 @@ def test_poisson_variable_lambda_values_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_fixed_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
@@ -883,8 +875,7 @@ def test_poisson_scalar_lambda_values_fixed_seed():
     assert_allclose(G.v1[:], G.v2[:])
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_variable_lambda_values_fixed_seed():
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1
@@ -901,8 +892,8 @@ def test_poisson_variable_lambda_values_fixed_seed():
 
 
 ### 2. poisson in neurongroup stateupdater and mixed seed random/fixed
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_scalar_lambda_values_fixed_and_random_seed():
 
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)*xi/sqrt(ms) : 1')
@@ -937,14 +928,14 @@ def test_poisson_scalar_lambda_values_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_variable_lambda_values_fixed_and_random_seed():
 
     G = NeuronGroup(10,
@@ -982,15 +973,14 @@ def test_poisson_variable_lambda_values_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
 ### 3. poisson in synapses set_conditional template
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -1007,8 +997,7 @@ def test_poisson_scalar_lambda_values_set_synapses_random_seed():
     assert np.var(S.v1[:] - S.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_variable_lambda_values_set_synapses_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -1027,8 +1016,7 @@ def test_poisson_variable_lambda_values_set_synapses_random_seed():
     assert np.var(S.v1[:] - S.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -1045,8 +1033,7 @@ def test_poisson_scalar_lambda_values_set_synapses_fixed_seed():
     assert_allclose(S.v1[:], S.v2[:])
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_variable_lambda_values_set_synapses_fixed_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, '''v1 : 1
@@ -1066,8 +1053,8 @@ def test_poisson_variable_lambda_values_set_synapses_fixed_seed():
 
 
 ### 4. poisson in synapses stateupdater and mixing seed random/fixed
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G,
@@ -1103,14 +1090,14 @@ def test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed():
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed():
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G,
@@ -1148,15 +1135,14 @@ def test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed()
     fourth_run_values = np.array(mon.v[:, [6, 7]])
 
     # First and second run should be different (random seed)
-    assert_raises(AssertionError, assert_allclose,
-                  first_run_values, second_run_values)
+    with pytest.raises(AssertionError):
+        assert_allclose(first_run_values, second_run_values)
     # Third and fourth run should be identical (same seed)
     assert_allclose(third_run_values, fourth_run_values)
 
 
 ### 5. poisson in host side rng (synapses_init tempalte)
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_values_init_synapses_fixed_and_random_seed():
     G = NeuronGroup(10, 'l : 1')
     G.l = arange(10)
@@ -1185,19 +1171,18 @@ def test_poisson_values_init_synapses_fixed_and_random_seed():
     idcs4 = np.hstack([S4.i[:], S4.j[:]])
 
     # Pre/post idcs for first, second and third run should be different
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs2)
-    assert_raises(AssertionError, assert_equal,
-                  idcs1, idcs3)
-    assert_raises(AssertionError, assert_equal,
-                  idcs2, idcs3)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs2)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs1, idcs3)
+    with pytest.raises(AssertionError):
+        assert_equal(idcs2, idcs3)
     # Pre/post idcs for second and fourth run should be equal (same seed)
     assert_equal(idcs2, idcs4)
 
 
 ### Extra: group_set template (not conditional), only for neurongroup, not synapse
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_set_template_random_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1''')
@@ -1212,8 +1197,7 @@ def test_poisson_scalar_lambda_set_template_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poisson_variable_lambda_set_template_random_seed():
     G = NeuronGroup(10, '''v1 : 1
                            v2 : 1
@@ -1271,9 +1255,8 @@ if __name__ == '__main__':
 #for rng_type, prepare_func, func, extra_vars in rng_setups:
 #    for random_fixed, seed in seed_setup.items():
 #        function_def = """
-#@attr('standalone-compatible')
-#@with_setup(teardown=reinit_and_delete)
-#def test_{rng_type}_values_{random_fixed}_seed():
+#@pytest.mark.standalone_compatible
+##def test_{rng_type}_values_{random_fixed}_seed():
 #    G = NeuronGroup(100, '''v1 : 1
 #                            v2 : 1
 #                            {extra_vars}''')
@@ -1299,9 +1282,9 @@ if __name__ == '__main__':
 #
 #### 2. binomial in neurongroup stateupdater and mixed seed random/fixed
 #function_def = """
-#@attr('standalone-compatible', 'multiple-runs')
-#@with_setup(teardown=reinit_and_delete)
-#def test_{rng_type}_values_fixed_and_random_seed():
+#@pytest.mark.standalone_compatible
+#@pytest.mark.multiple_runs
+##def test_{rng_type}_values_fixed_and_random_seed():
 #
 #    # e.g. `my_f = BinomialFunction(...)`
 #    {prepare_func}
@@ -1343,8 +1326,8 @@ if __name__ == '__main__':
 #    fourth_run_values = np.array(mon.v[:, [6, 7]])
 #
 #    # First and second run should be different (random seed)
-#    assert_raises(AssertionError, assert_allclose,
-#                  first_run_values, second_run_values)
+#    with pytest.raises(AssertionError):
+# 	     assert_allclose(first_run_values, second_run_values)
 #    # Third and fourth run should be identical (same seed)
 #    assert_allclose(third_run_values, fourth_run_values)
 #"""

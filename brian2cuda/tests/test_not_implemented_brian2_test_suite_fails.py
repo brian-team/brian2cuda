@@ -2,21 +2,18 @@
 Tests that fail from the brian2 test suite and need fixing.
 TODO: are these tests copied from the brian2 test suite? Check and if so, delete this.
 '''
-
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_raises, assert_equal, assert_array_equal
+import pytest
+from numpy.testing import assert_equal, assert_array_equal
 
 from brian2 import *
-from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
 
 
 # cuda version of same test in brian2.tests.test_functions.py
 # ERROR: unexpected keyword argument 'header'
-@attr('standalone-only')
-@attr('cuda-standalone')
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_manual_user_defined_function_cuda_standalone_compiler_args():
     set_device('cuda_standalone', directory=None)
 
@@ -46,8 +43,7 @@ def test_manual_user_defined_function_cuda_standalone_compiler_args():
 
 
 #TODO: Update BinomialFunction with cuda implementation
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_binomial():
     binomial_f_approximated = BinomialFunction(100, 0.1, approximate=True)
     binomial_f = BinomialFunction(100, 0.1, approximate=False)
@@ -65,8 +61,7 @@ def test_binomial():
 
 
 #TODO: Update TimedArray with cuda implementations
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_time_dependent_rate():
     # The following two groups should show the same behaviour
     timed_array = TimedArray(np.array([[0, 0],
@@ -86,8 +81,7 @@ def test_time_dependent_rate():
 
 
 #TODO: needs BinomialFunction
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_poissoninput():
     # Test extreme cases and do a very basic test of an intermediate case, we
     # don't want tests to be stochastic
@@ -128,8 +122,7 @@ def test_poissoninput():
 
 #TODO Why do we get a NotImplementedError in this test?
 # NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_synapses_to_synapses():
     source = SpikeGeneratorGroup(3, [0, 1, 2], [0, 0, 0]*ms, period=2*ms)
     modulator = SpikeGeneratorGroup(3, [0, 2], [1, 3]*ms)
@@ -147,8 +140,7 @@ def test_synapses_to_synapses():
 
 #TODO Why do we get a NotImplementedError in this test?
 # NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_synapses_to_synapses_different_sizes():
     prefs.codegen.target = 'numpy'
     source = NeuronGroup(100, 'v : 1', threshold='False')
@@ -167,8 +159,7 @@ def test_synapses_to_synapses_different_sizes():
 
 #TODO Why do we get a NotImplementedError in this test?
 # NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_synapses_to_synapses_summed_variable():
     source = NeuronGroup(5, '', threshold='False')
     target = NeuronGroup(5, '')
@@ -189,8 +180,7 @@ def test_synapses_to_synapses_summed_variable():
 
 #TODO: Update TimedArray with cuda implementations
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_timedarray_semantics():
     # Make sure that timed arrays are interpreted as specifying the values
     # between t and t+dt (not between t-dt/2 and t+dt/2 as in Brian1)
@@ -202,8 +192,7 @@ def test_timedarray_semantics():
     assert_equal(mon[0].value, ta(mon.t))
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_timedarray_no_units():
     ta = TimedArray(np.arange(10), dt=0.1*ms)
     G = NeuronGroup(1, 'value = ta(t) + 1: 1', dt=0.1*ms)
@@ -212,8 +201,7 @@ def test_timedarray_no_units():
     assert_equal(mon[0].value_, np.clip(np.arange(len(mon[0].t)), 0, 9) + 1)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_timedarray_with_units():
     ta = TimedArray(np.arange(10)*amp, dt=0.1*ms)
     G = NeuronGroup(1, 'value = ta(t) + 2*nA: amp', dt=0.1*ms)
@@ -222,8 +210,7 @@ def test_timedarray_with_units():
     assert_equal(mon[0].value, np.clip(np.arange(len(mon[0].t)), 0, 9)*amp + 2*nA)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_timedarray_2d():
     # 4 time steps, 3 neurons
     ta2d = TimedArray(np.arange(12).reshape(4, 3), dt=0.1*ms)
@@ -235,8 +222,7 @@ def test_timedarray_2d():
     assert_equal(mon[2].value_, np.array([2, 5, 8, 11, 11]) + 1)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_timedarray_no_upsampling():
     # Test a TimedArray where no upsampling is necessary because the monitor's
     # dt is bigger than the TimedArray's

@@ -1,21 +1,19 @@
 import os
 
-from nose import SkipTest, with_setup
-from nose.plugins.attrib import attr
-from numpy.testing import assert_equal, assert_raises
+import pytest
+from numpy.testing import assert_equal
 
 from brian2 import *
 from brian2.core.functions import timestep
 from brian2.parsing.sympytools import str_to_sympy, sympy_to_str
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete
 from brian2.tests.utils import assert_allclose
 from brian2.codegen.generators import CodeGenerator
 from brian2.codegen.codeobject import CodeObject
 
 
-@attr('cuda-standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_user_defined_function():
     @implementation('cuda',"""
     __host__ __device__ inline double usersin(double x)
@@ -39,8 +37,8 @@ def test_user_defined_function():
     assert_equal(np.sin(test_array), mon.func_.flatten())
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_user_function_with_namespace_variable():
 
     my_var = 0.1 * np.array(np.arange(5))
@@ -63,8 +61,8 @@ def test_user_function_with_namespace_variable():
     assert_allclose(G.v_[:], my_var)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_manual_user_defined_function_cuda_standalone_compiler_args():
     set_device('cuda_standalone', directory=None)
 
@@ -93,8 +91,8 @@ def test_manual_user_defined_function_cuda_standalone_compiler_args():
     assert mon[0].func == [6] * volt
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args1():
     set_device('cuda_standalone', directory=None)
 
@@ -113,12 +111,13 @@ def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args1():
                        y : volt''')
     mon = StateMonitor(G, 'func', record=True)
     net = Network(G, mon)
-    assert_raises(ValueError, lambda: net.run(defaultclock.dt,
-                                                 namespace={'foo': foo}))
+    with pytest.raises(ValueError):
+        net.run(defaultclock.dt, namespace={'foo': foo})
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args2():
     set_device('cuda_standalone', directory=None)
 
@@ -137,12 +136,12 @@ def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args2():
                        y : volt''')
     mon = StateMonitor(G, 'func', record=True)
     net = Network(G, mon)
-    assert_raises(TypeError, lambda: net.run(defaultclock.dt,
-                                                 namespace={'foo': foo}))
+    with pytest.raises(TypeError):
+        net.run(defaultclock.dt, namespace={'foo': foo})
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_external_function_cuda_standalone():
     set_device('cuda_standalone', directory=None)
     this_dir = os.path.abspath(os.path.dirname(__file__))

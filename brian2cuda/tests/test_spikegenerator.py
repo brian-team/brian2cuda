@@ -1,18 +1,15 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_raises
+import pytest
+from numpy.testing import assert_equal
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
 
 
 # Copied from brian2.tests.test_spikegenerator (where it isn't 'standalone-compatible')
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_spikegenerator_extreme_period():
     '''
     Basic test for `SpikeGeneratorGroup`.
@@ -30,8 +27,8 @@ def test_spikegenerator_extreme_period():
 
 
 # Adapted from brian2.tests.test_spikegenerator (where it isn't 'standalone-compatible')
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_spikegenerator_period_repeat():
     '''
     Basic test for `SpikeGeneratorGroup`.
@@ -69,8 +66,8 @@ def test_spikegenerator_period_repeat():
 
 
 # Adapted from brian2.tests.test_spikegenerator (where it isn't 'standalone-compatible')
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_spikegenerator_rounding():
     # all spikes should fall into the first time bin
     indices = np.arange(100)
