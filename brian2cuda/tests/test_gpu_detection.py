@@ -52,7 +52,7 @@ def test_manual_setting_compute_capability():
 @pytest.mark.standalone_only
 def test_unsupported_compute_capability_error():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 2.0
-    with pytest.raises(NotADirectoryError):
+    with pytest.raises(NotImplementedError):
         run(0*ms)
 
 

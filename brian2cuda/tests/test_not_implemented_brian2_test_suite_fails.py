@@ -17,7 +17,7 @@ import brian2cuda
 def test_manual_user_defined_function_cuda_standalone_compiler_args():
     set_device('cuda_standalone', directory=None)
 
-    @implementation('cpp', '''
+    @implementation('cuda', '''
     __host__ __device__ static inline double foo(const double x, const double y)
     {
         return x + y + _THREE;
