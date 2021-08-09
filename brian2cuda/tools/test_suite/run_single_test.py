@@ -70,8 +70,8 @@ for target in args.targets:
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False)
             argv = make_argv(args.test, markers='standalone_compatible and not multiple_runs')
-            success = pytest.main(argv, plugins=[pref_plugin])
-            pref_success = pref_success and success
+            exit_code = pytest.main(argv, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             clear_caches()
             reset_device()
@@ -83,8 +83,8 @@ for target in args.targets:
             set_device(target, directory=None, with_output=False,
                        build_on_run=False)
             argv = make_argv(args.test, markers='standalone_compatible and multiple-runs')
-            success = pytest.main(argv, plugins=[pref_plugin])
-            pref_success = pref_success and success
+            exit_code = pytest.main(argv, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             clear_caches()
             reset_device()
@@ -94,8 +94,8 @@ for target in args.targets:
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False)
             argv = make_argv(args.test, markers=target)
-            success = pytest.main(argv, plugins=[pref_plugin])
-            pref_success = pref_success and success
+            exit_code = pytest.main(argv, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             successes.append(pref_success)
 
