@@ -184,6 +184,8 @@ rsync -avzz "$local_logfile" "$remote:$remote_logfile"
 ### Copy brian2cuda repo over to remote
 rsync -avzz \
     --exclude '*.o' \
+    --exclude '__pycache__' \
+    --exclude '*.pyc' \
     --exclude 'tags' \
     --exclude 'examples' \
     --exclude 'dev'\
