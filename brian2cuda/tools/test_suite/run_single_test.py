@@ -16,6 +16,10 @@ parser.add_argument('tests', nargs='*', type=str,
                           "``test`` can be a pattern to match brian2 or brian2cuda "
                           "tests (passed to pytest via ``-k`` option)"))
 
+parser.add_argument('-k', default=None, type=str,
+                    help=("Passed to pytest's ``-k`` option. This overwrites ``tests`` "
+                          "if ``--brian2`` or `--brian2cuda`` is set."))
+
 mutual_exclusive = parser.add_mutually_exclusive_group(required=False)
 mutual_exclusive.add_argument(
     '--brian2',
@@ -71,12 +75,11 @@ b2c_dir = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 't
 if args.brian2:
     tests = [brian2_dir]
     test_patterns = ' or '.join(args.tests)
-    additional_args += ['-k {}'.format(test_patterns)]
 elif args.brian2cuda:
     tests = [b2c_dir]
     test_patterns = ' or '.join(args.tests)
-    additional_args += ['-k {}'.format(test_patterns)]
 else:
+    test_patterns = None
     tests = []
     for test in args.tests:
         if test.startswith('brian2cuda/'):
@@ -84,6 +87,13 @@ else:
         elif test[0].startswith('brian2/'):
             test = os.path.join(brian2_dir, test)
         tests.append(test)
+
+if args.k:
+    # overwrites any other test patterns
+    test_patterns = args.k
+
+if test_patterns is not None:
+    additional_args += ['-k {}'.format(test_patterns)]
 
 all_successes = []
 for target in args.targets:
