@@ -1,17 +1,14 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_array_equal
+import pytest
+from numpy.testing import assert_equal, assert_array_equal
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_CudaSpikeQueue_push_outer_loop():
 
     # This test only works, if the CudaSpikeQueue::push() kernel is called with
@@ -51,8 +48,7 @@ def test_CudaSpikeQueue_push_outer_loop():
     assert len(mon) == N
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_CudaSpikeQueue_push_outer_loop2():
 
     # This test was testing a special case scenario in an old version of
@@ -154,8 +150,7 @@ def test_CudaSpikeQueue_push_outer_loop2():
                 raise
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_circular_eventspaces():
     # test postsynaptic effects in no_or_const_delay_mode are applied correctly
 
@@ -186,8 +181,7 @@ def test_circular_eventspaces():
     assert_allclose(mon.t[mon.i[:] == 4], 5*default_dt)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_circular_eventspaces_spikegenerator():
     # same test as test_circular_eventspaces() but with a SpikeGeneratorGroup spiking
     # for multiple time steps
@@ -228,8 +222,7 @@ def test_circular_eventspaces_spikegenerator():
     assert_allclose(mon.t[mon.i[:] == 4], arange(5, n_timesteps + 5) * default_dt)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_circular_eventspaces_different_clock():
     # same test as test_circular_eventspaces_spikegenerator() but with a
     # SpikeGeneratorGroup on a different clock (dt=2*defaultclock.dt)
@@ -266,8 +259,7 @@ def test_circular_eventspaces_different_clock():
     assert_allclose(mon.t[mon.i[:] == 4], arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
 
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_synaptic_effect_modes():
     # make sure on_pre pathway changing pre variables has the same mode as
     # on_post pathway changing post variables

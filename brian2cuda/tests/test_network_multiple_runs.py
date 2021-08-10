@@ -1,16 +1,14 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_raises
+import pytest
+from numpy.testing import assert_equal
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.devices.device import reinit_and_delete
 
 import brian2cuda
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_changing_delay_scalar():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)
@@ -32,8 +30,8 @@ def test_changing_delay_scalar():
     assert_allclose(mon.v[:], [[0, 0, 1, 1, 2, 3]])
 
 
-@attr('standalone-compatible', 'multiple-runs')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
 def test_changing_delay_heterogeneous():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)

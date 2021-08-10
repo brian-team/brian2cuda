@@ -1,10 +1,9 @@
-from nose.tools import eq_
-from nose.plugins.attrib import attr
+import pytest
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
 
-@attr('codegen-independent')
+@pytest.mark.codegen_independent
 def test_replace_floating_point_literals():
     float_literals = ['1.', '.2', '3.14', '5e6', '5e-6', '5E+6', '7.e8',
                       '9.0E-10', '.11e12']

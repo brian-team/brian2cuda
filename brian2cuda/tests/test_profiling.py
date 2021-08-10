@@ -1,16 +1,14 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_raises
+import pytest
 
 from brian2 import *
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete, set_device
+from brian2.devices.device import set_device
 
 import brian2cuda
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_changing_profile_arg():
     set_device('cuda_standalone', build_on_run=False)
     G = NeuronGroup(10000, 'v : 1')

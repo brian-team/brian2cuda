@@ -1,13 +1,11 @@
-from nose import with_setup
-from nose.plugins.attrib import attr
+import pytest
 
 from numpy.testing import assert_equal
 from brian2 import *
-from brian2.devices.device import reinit_and_delete
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_state_monitor_more_threads_than_single_block():
     # Currently, statemonitor only works for <=1024 recorded variables (#201).
     # This is a test is to remind us of the issue.

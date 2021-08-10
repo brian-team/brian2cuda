@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 import os
 
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_equal, assert_raises
+import pytest
+from numpy.testing import assert_equal
 
 from brian2 import *
 from brian2.devices.device import reinit_and_delete, set_device, reset_device
@@ -14,8 +13,8 @@ import brian2cuda
 
 ### These tests are CUDA versions of the tests in brian2.tests.test_cpp_standalone
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_cuda_standalone():
     set_device('cuda_standalone', build_on_run=False)
     ##### Define the model
@@ -50,8 +49,8 @@ def test_cuda_standalone():
     assert M.t[0] == 0., M.t[0]
     reset_device()
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_multiple_connects():
     set_device('cuda_standalone', build_on_run=False)
     G = NeuronGroup(10, 'v:1')
@@ -63,8 +62,8 @@ def test_multiple_connects():
     assert len(S) == 2 and len(S.w[:]) == 2
     reset_device()
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_storing_loading():
     set_device('cuda_standalone', build_on_run=False)
     G = NeuronGroup(10, '''v : volt
@@ -103,8 +102,8 @@ def test_storing_loading():
 # CUDA version of brian2.tests.test_cpp_standalone:test_openmp_consistency is
 # brian2cuda.tests.test_cuda_cpp_cuda_consistency:test_stdp_example
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_duplicate_names_across_nets():
     set_device('cuda_standalone', build_on_run=False)
     # In standalone mode, names have to be globally unique, not just unique
@@ -117,13 +116,14 @@ def test_duplicate_names_across_nets():
     net2 = Network(obj3, obj4)
     net1.run(0*ms)
     net2.run(0*ms)
-    assert_raises(ValueError, lambda: device.build())
+    with pytest.raises(ValueError):
+        device.build()
 
     reset_device()
 
 # CUDA version of brian2.tests.test_cpp_standalone:test_openmp_scalar_writes
-@attr('cuda_standalone', 'standalone-only', 'openmp')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_cuda_scalar_writes():
     # Test that writing to a scalar variable only is done once in a cuda_standalone
     # setting
@@ -136,8 +136,8 @@ def test_cuda_scalar_writes():
 
     reset_device()
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_time_after_run():
     set_device('cuda_standalone', build_on_run=False)
     # Check that the clock and network time after a run is correct, even if we
@@ -164,8 +164,8 @@ def test_time_after_run():
 
     reset_device()
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_array_cache():
     # Check that variables are only accessible from Python when they should be
     set_device('cuda_standalone', build_on_run=False)
@@ -187,7 +187,8 @@ def test_array_cache():
     assert_allclose(G.i, np.arange(10))
 
     # But the synaptic variable is not -- we don't know the number of synapses
-    assert_raises(NotImplementedError, lambda: S.weight[:])
+    with pytest.raises(NotImplementedError):
+        S.weight[:]
 
     # Setting variables with explicit values should not change anything
     G.v = np.arange(10)+1
@@ -201,18 +202,23 @@ def test_array_cache():
 
     # But setting with code should invalidate them
     G.x = 'i*2'
-    assert_raises(NotImplementedError, lambda: G.x[:])
+    with pytest.raises(NotImplementedError):
+        G.x[:]
 
     # Make sure that the array cache does not allow to use incorrectly sized
     # values to pass
-    assert_raises(ValueError, lambda: setattr(G, 'w', [0, 2]))
-    assert_raises(ValueError, lambda: G.w.__setitem__(slice(0, 4), [0, 2]))
+    with pytest.raises(ValueError):
+        setattr(G, 'w', [0, 2])
+    with pytest.raises(ValueError):
+        G.w.__setitem__(slice(0, 4), [0, 2])
 
     run(10*ms)
     # v is now no longer known without running the network
-    assert_raises(NotImplementedError, lambda: G.v[:])
+    with pytest.raises(NotImplementedError):
+        G.v[:]
     # Neither is w, it is updated in the synapse
-    assert_raises(NotImplementedError, lambda: G.w[:])
+    with pytest.raises(NotImplementedError):
+        G.w[:]
     # However, no code touches y or z
     assert_allclose(G.y, 5)
     assert_allclose(G.z, 7)
@@ -229,8 +235,8 @@ def test_array_cache():
     assert_allclose(G.i, np.arange(10))
     assert_allclose(S.weight, 7)
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_run_with_debug():
     # We just want to make sure that it works for now (i.e. not fails with a
     # compilation or runtime error), capturing the output is actually
@@ -243,8 +249,8 @@ def test_run_with_debug():
     mon = SpikeMonitor(group)
     run(defaultclock.dt)
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_changing_profile_arg():
     set_device('cuda_standalone', build_on_run=False)
     G = NeuronGroup(10000, 'v : 1')
@@ -295,8 +301,8 @@ def test_changing_profile_arg():
     assert ('op3_codeobject_1' in profiling_dict and
             profiling_dict['op3_codeobject_1'] > 0*second)
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_delete_code_data():
     set_device('cuda_standalone', build_on_run=True, directory=None)
     group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : volt', method='exact')
@@ -317,8 +323,8 @@ def test_delete_code_data():
     assert len(os.listdir(os.path.join(device.project_dir, 'code_objects'))) == 0
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_delete_directory():
     set_device('cuda_standalone', build_on_run=True, directory=None)
     group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : volt', method='exact')

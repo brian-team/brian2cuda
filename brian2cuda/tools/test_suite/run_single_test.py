@@ -7,30 +7,93 @@ import utils
 
 parser = argparse.ArgumentParser(description='Run a subset from the brian2 testsuite on GPU.')
 
-parser.add_argument('test', nargs='*', type=str,
+parser.add_argument('tests', nargs='*', type=str,
                     help=("Specify the test(s) to run. Has to be in the form "
-                          "of package.tests.test_file:test_function "
-                          "(e.g. brian2.tests.test_base:test_names) or "
-                          "package.tests.test_file to run all tests in a "
-                          "file."))
+                          "of package/tests/test_file::test_function "
+                          "(e.g. brian2/tests/test_base.py::test_names) or "
+                          "package/tests/test_file to run all tests in a "
+                          "file. If the ``--brian`` or ``--brian2cuda`` option is set, "
+                          "``test`` can be a pattern to match brian2 or brian2cuda "
+                          "tests (passed to pytest via ``-k`` option)"))
+
+parser.add_argument('-k', default=None, type=str,
+                    help=("Passed to pytest's ``-k`` option. This overwrites ``tests`` "
+                          "if ``--brian2`` or `--brian2cuda`` is set."))
+
+mutual_exclusive = parser.add_mutually_exclusive_group(required=False)
+mutual_exclusive.add_argument(
+    '--brian2',
+    action='store_true',
+    help=(
+        "Pass ``test`` string as ``-k`` option to select tests from brian2 test suite."
+    )
+)
+mutual_exclusive.add_argument(
+    '--brian2cuda',
+    action='store_true',
+    help=(
+        "Pass ``test`` string as ``-k`` option to select tests from brian2cuda test "
+        "suite."
+    )
+)
+
 parser.add_argument('--only',
                     choices=['single-run', 'multi-run', 'standalone-only'],
                     default=None)
 
 args = utils.parse_arguments(parser)
 
-import sys, nose
+import sys, os, pytest
 from StringIO import StringIO
 import numpy as np
 
+import brian2
+import brian2cuda
 from brian2.devices.device import set_device, reset_device
-from brian2.tests import clear_caches, make_argv
+from brian2.tests import clear_caches, make_argv, PreferencePlugin
 from brian2 import prefs
+import brian2cuda
 
 all_prefs_combinations = utils.set_preferences(args, prefs)
 
 # target independent preferences
 stored_prefs = prefs.as_file
+
+pref_plugin = PreferencePlugin(prefs, fail_for_not_implemented=True)
+
+additional_args = []
+# Increase verbosity such that the paths and names of executed tests are shown
+additional_args += ['-vvv']
+# Set rootdir to directory that has brian2's conftest.py, such that it is laoded for all
+# tests (even when outside the brian2 folder)
+additional_args += ['--rootdir={}'.format(os.path.dirname(brian2.__file__))]
+
+brian2_dir = os.path.join(os.path.abspath(os.path.dirname(brian2.__file__)))
+b2c_dir = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 'tests')
+
+
+if args.brian2:
+    tests = [brian2_dir]
+    test_patterns = ' or '.join(args.tests)
+elif args.brian2cuda:
+    tests = [b2c_dir]
+    test_patterns = ' or '.join(args.tests)
+else:
+    test_patterns = None
+    tests = []
+    for test in args.tests:
+        if test.startswith('brian2cuda/'):
+            test = os.path.join(b2c_dir, test)
+        elif test[0].startswith('brian2/'):
+            test = os.path.join(brian2_dir, test)
+        tests.append(test)
+
+if args.k:
+    # overwrites any other test patterns
+    test_patterns = args.k
+
+if test_patterns is not None:
+    additional_args += ['-k {}'.format(test_patterns)]
 
 all_successes = []
 for target in args.targets:
@@ -57,8 +120,9 @@ for target in args.targets:
             print "Running {} with default preferences\n".format(target)
         sys.stdout.flush()
 
-        # backup prefs such that reinit_device in the nose test teardown resets
+        # backup prefs such that reinit_device in the pytest test teardown resets
         # the preferences to what was set above (in restore_initial_state())
+        # TODO after change to pytest, might just use that pytest prefs plugin?
         prefs._backup()
 
         if args.only is None or args.only == 'single-run':
@@ -66,9 +130,9 @@ for target in args.targets:
                    "(single run statement)\n")
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False)
-            argv = make_argv(args.test, 'standalone-compatible,!multiple-runs')
-            success = nose.run(argv=argv)
-            pref_success = pref_success and success
+            argv = make_argv(tests, markers='standalone_compatible and not multiple_runs')
+            exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             clear_caches()
             reset_device()
@@ -79,9 +143,9 @@ for target in args.targets:
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False,
                        build_on_run=False)
-            argv = make_argv(args.test, 'standalone-compatible,multiple-runs')
-            success = nose.run(argv=argv)
-            pref_success = pref_success and success
+            argv = make_argv(tests, markers='standalone_compatible and multiple-runs')
+            exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             clear_caches()
             reset_device()
@@ -90,9 +154,9 @@ for target in args.targets:
             print "Running standalone-specific tests\n"
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False)
-            argv = make_argv(args.test, target)
-            success = nose.run(argv=argv)
-            pref_success = pref_success and success
+            argv = make_argv(tests, markers=target)
+            exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
+            pref_success = pref_success and (exit_code == 0)
 
             successes.append(pref_success)
 

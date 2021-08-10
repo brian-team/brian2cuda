@@ -1,21 +1,18 @@
-from nose import with_setup, SkipTest
-from nose.plugins.attrib import attr
-from numpy.testing.utils import assert_raises
+import pytest
 import numpy as np
 import logging
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import reinit_and_delete, set_device
+from brian2.devices.device import set_device
 from brian2.tests.test_synapses import permutation_analysis_good_examples
 from brian2.utils.stringtools import get_identifiers, deindent
 
 import brian2cuda
 from brian2cuda.cuda_generator import CUDACodeGenerator
 
-@attr('standalone-compatible')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.standalone_compatible
 def test_default_function_implementations():
     ''' Test that all default functions work as expected '''
     # NeuronGroup variables are set in device code
@@ -359,12 +356,12 @@ def test_default_function_implementations():
     assert_allclose([S.N[:], S1.N[:]], [1, 1])
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_default_function_convertion_preference():
 
     if prefs.core.default_float_dtype is np.float32:
-        raise SkipTest('Need double precision for this test')
+        pytest.skip('Need double precision for this test')
 
     set_device('cuda_standalone', directory=None)
 
@@ -388,8 +385,8 @@ def test_default_function_convertion_preference():
     assert G2.v[0] == unrepresentable_int, '{} != {}'.format(G2.v[0], unrepresentable_int)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_default_function_convertion_warnings():
 
     set_device('cuda_standalone', directory=None)
@@ -478,8 +475,9 @@ def test_default_function_convertion_warnings():
 
 
 
-@attr('long', 'cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+@pytest.mark.long
 def test_atomics_parallelisation():
     # Adapted from brian2.test_synapses:test_ufunc_at_vectorisation()
     for n, code in enumerate(permutation_analysis_good_examples):

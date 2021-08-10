@@ -1,12 +1,10 @@
 import os
 import logging
 
-from nose import with_setup
-from nose.plugins.attrib import attr
-from numpy.testing import assert_raises, assert_equal
+import pytest
+from numpy.testing import assert_equal
 
 from brian2 import prefs, ms, run
-from brian2.devices.device import reinit_and_delete
 from brian2.utils.logger import catch_logs
 from brian2.core.preferences import PreferenceError
 from brian2cuda.utils.gputools import (
@@ -14,8 +12,8 @@ from brian2cuda.utils.gputools import (
 )
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_wrong_cuda_path_error():
     # store global _cuda_installation and environment variable before changing them
     cuda_installation_backup = get_cuda_installation()
@@ -25,7 +23,7 @@ def test_wrong_cuda_path_error():
 
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
-    with assert_raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         run(0*ms)
 
     # restore the cuda installation
@@ -36,8 +34,8 @@ def test_wrong_cuda_path_error():
     else:
         os.environ['CUDA_PATH'] = cuda_path_env
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_manual_setting_compute_capability():
     compute_capability_pref = '3.5'
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = float(compute_capability_pref)
@@ -50,16 +48,16 @@ def test_manual_setting_compute_capability():
             compute_capability = log[2][log_start_num_chars:log_start_num_chars + 3]
             assert_equal(compute_capability_pref, compute_capability)
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_unsupported_compute_capability_error():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 2.0
-    with assert_raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
         run(0*ms)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_warning_compute_capability_set_twice():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
     prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc.append('-arch=sm_37')
@@ -73,17 +71,17 @@ def test_warning_compute_capability_set_twice():
     assert log[2].startswith("GPU architecture for compilation was specified via ")
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_no_gpu_detection_preference_error():
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     # needs setting gpu_id and compute_capability as well
-    with assert_raises(PreferenceError):
+    with pytest.raises(PreferenceError):
         run(0*ms)
 
 
-@attr('cuda_standalone', 'standalone-only')
-@with_setup(teardown=reinit_and_delete)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
 def test_no_gpu_detection_preference():
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
