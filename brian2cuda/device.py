@@ -1493,6 +1493,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.first_run = False
 
+    def network_store(self, net, *args, **kwds):
+        raise NotImplementedError(('The store/restore mechanism is not '
+                                   'supported in CUDA standalone'))
+
+    def network_restore(self, net, *args, **kwds):
+        raise NotImplementedError(('The store/restore mechanism is not '
+                                   'supported in CUDA standalone'))
+
+
 
 def prepare_codeobj_code_for_rng(codeobj):
     '''
