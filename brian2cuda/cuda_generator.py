@@ -18,10 +18,7 @@ from brian2.devices import get_device
 from brian2cuda.utils.gputools import get_cuda_runtime_version
 
 
-__all__ = ['CUDACodeGenerator',
-           'CUDAAtomicsCodeGenerator'
-           'c_data_type'
-           ]
+__all__ = ['CUDACodeGenerator', 'CUDAAtomicsCodeGenerator', 'c_data_type']
 
 
 logger = get_logger('brian2.codegen.generators.cuda_generator')
