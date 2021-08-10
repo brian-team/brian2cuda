@@ -1,8 +1,8 @@
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index a378e649..64c784a6 100644
+index f06c12a3..325e6139 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1066,6 +1066,7 @@ def run(self, directory, with_output, run_args):
+@@ -1068,6 +1068,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -10,7 +10,7 @@ index a378e649..64c784a6 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1390,6 +1391,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1392,6 +1393,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile
