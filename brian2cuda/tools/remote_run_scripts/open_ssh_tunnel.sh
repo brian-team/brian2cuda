@@ -7,6 +7,7 @@
 # All command line arguments will be passed to `qsub` (e.g. -l cuda=1)
 
 # You can set the local port for your ssh tunnel here
+remote="cluster"
 LOCALPORT=1234
 
 ERROR_MSG=$(cat << END
@@ -16,11 +17,14 @@ the sshserver manually with 'qdel ssh-server' on the cluster head node!
 
 END
 )
+# Load configuration file
+script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # Close sshserver on compute node when exiting this script
 function cleanup {
     echo "Script exiting... closing sshserver on compute node..."
-    ssh cluster "source /opt/ge/default/common/settings.sh && qdel ssh-server"
+    ssh $remote "source /opt/ge/default/common/settings.sh && qdel ssh-server"
     if [ "$?" -eq 0 ]; then
         echo "... done!"
     else
@@ -32,13 +36,14 @@ function cleanup {
 trap cleanup EXIT
 
 # Start sshserver on compute node
-ssh -t cluster "/cognition/home/local/sshd/start-sshserver.sh -p $LOCALPORT -- $@"
+ssh -t $remote "/cognition/home/local/sshd/start-sshserver.sh -p $LOCALPORT -- $@"
 if [ "$?" -ne 0 ]; then
     echo "ERROR start-sshserver.sh did not succeed. Terminating."
     exit 1
 fi
 
+echo $remote
 # Get information about running server
-TUNNEL_CMD=$(ssh cluster "cat ~/.cluster-sshd/sshserver-tunnel-cmd")
+TUNNEL_CMD=$(ssh $remote "cat ~/.cluster-sshd/sshserver-tunnel-cmd")
 # Open ssh tunnel to ssh server on compute node
 $TUNNEL_CMD
