@@ -66,7 +66,14 @@ additional_args = []
 additional_args += ['-vvv']
 # Set rootdir to directory that has brian2's conftest.py, such that it is laoded for all
 # tests (even when outside the brian2 folder)
-additional_args += ['--rootdir={}'.format(os.path.dirname(brian2.__file__))]
+additional_args += [
+    # Set rootdir to directory that has brian2's conftest.py, such that it is laoded for
+    # all tests (even when outside the brian2 folder)
+    '--rootdir={}'.format(os.path.dirname(brian2.__file__)),
+    # Set confcutdir, such that `conftest.py` inside `brian2cuda` are also loaded
+    # (overwrites confcutdir set in brian2's `make_argv`)
+    '--confcutdir={}'.format(os.path.dirname(brian2cuda.__file__))
+]
 
 brian2_dir = os.path.join(os.path.abspath(os.path.dirname(brian2.__file__)))
 b2c_dir = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 'tests')
