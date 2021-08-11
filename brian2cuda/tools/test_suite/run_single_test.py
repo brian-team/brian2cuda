@@ -83,9 +83,9 @@ else:
     tests = []
     for test in args.tests:
         if test.startswith('brian2cuda/'):
-            test = os.path.join(b2c_dir, test)
-        elif test[0].startswith('brian2/'):
-            test = os.path.join(brian2_dir, test)
+            test = os.path.join(b2c_dir, '..', '..', test)
+        elif test.startswith('brian2/'):
+            test = os.path.join(brian2_dir, '..', test)
         tests.append(test)
 
 if args.k:
@@ -143,7 +143,7 @@ for target in args.targets:
             sys.stdout.flush()
             set_device(target, directory=None, with_output=False,
                        build_on_run=False)
-            argv = make_argv(tests, markers='standalone_compatible and multiple-runs')
+            argv = make_argv(tests, markers='standalone_compatible and multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
 
