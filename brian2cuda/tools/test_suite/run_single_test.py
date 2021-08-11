@@ -64,15 +64,14 @@ pref_plugin = PreferencePlugin(prefs, fail_for_not_implemented=True)
 additional_args = []
 # Increase verbosity such that the paths and names of executed tests are shown
 additional_args += ['-vvv']
-# Set rootdir to directory that has brian2's conftest.py, such that it is laoded for all
-# tests (even when outside the brian2 folder)
+# Set confcutdir, such that all `conftest.py` files inside the brian2 and brian2cuda
+# directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
+# stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args += [
-    # Set rootdir to directory that has brian2's conftest.py, such that it is laoded for
-    # all tests (even when outside the brian2 folder)
-    '--rootdir={}'.format(os.path.dirname(brian2.__file__)),
-    # Set confcutdir, such that `conftest.py` inside `brian2cuda` are also loaded
-    # (overwrites confcutdir set in brian2's `make_argv`)
-    '--confcutdir={}'.format(os.path.dirname(brian2cuda.__file__))
+    # TODO (Python 3): Use `os.path.commonpath`
+    '--confcutdir={}'.format(
+        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
+    )
 ]
 
 brian2_dir = os.path.join(os.path.abspath(os.path.dirname(brian2.__file__)))

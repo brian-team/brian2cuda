@@ -62,18 +62,14 @@ if args.test_parallel is None:
 
 stored_prefs = prefs.as_file
 
-# Only the conftest.py located in the `rootdir` of a pytest run is loaded and used for
-# all tests (else each conftest.py applies only to the tests in its own directory).
-# To use brian2's conftest.py also for our brian2cuda tests, we set `rootdir` to the
-# `brian2` directory, where `brian2/conftest.py` is located.
+# Set confcutdir, such that all `conftest.py` files inside the brian2 and brian2cuda
+# directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
+# stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args = [
-    # Set rootdir to directory that has brian2's conftest.py, such that it is laoded for
-    # all tests (even when outside the brian2 folder)
-    '--rootdir={}'.format(os.path.dirname(brian2.__file__)),
-    # Set confcutdir, such that `conftest.py` inside `brian2cuda` are also loaded
-    # (overwrites confcutdir set in brian2's `make_argv`, which stops searching for
-    # `conftest.py` files outside the `brian2` directory)
-    '--confcutdir={}'.format(os.path.dirname(brian2cuda.__file__))
+    # TODO (Python 3): Use `os.path.commonpath`
+    '--confcutdir={}'.format(
+        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
+    )
 ]
 
 if args.verbosity is not None:

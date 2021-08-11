@@ -1,11 +1,8 @@
 '''
 Module containing fixtures and hooks used by the pytest test suite.
 '''
-# We set `--rootidr=/path/to/brian`, such that `brian2/conftest.py` is loaded for all
-# tests run in the test suite. This `conftest.py` will only be loaded for all tests in
-# this directory
-
-from brian2.conftest import fake_randn, fake_randn_randn_fixture
+# Use brian2's pytest configuration for the brian2cuda tests (see PR #232 for details)
+from brian2.conftest import *
 
 # Add a cuda implementation for the fake_randn_randn_fixture,
 # used in test_stateupdaters.py
