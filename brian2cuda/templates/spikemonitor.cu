@@ -142,7 +142,7 @@ __global__ void _count_{{codeobj_name}}_kernel(
 
     {# If there are any record_variables, get the size of one arbitrary monitor #}
     {% if record_variables %}
-    {% set varname = record_variables.keys()[0] %}
+    {% set varname = record_variables.keys() | first %}
     num_events = monitor_{{varname}}->size();
     {{N}} = num_events;
     {# If there are no record_variables, we add the count after each kernel call #}

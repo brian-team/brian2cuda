@@ -183,7 +183,7 @@ void _run_{{codeobj_name}}()
     );
 
     CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
-    {% for var in variables.itervalues() %}
+    {% for var in variables.values() %}
     {# We want to copy only those variables that were potentially modified in aboves kernel call. #}
     {% if var is not callable and var.array and not var.constant and not var.dynamic %}
     {% set varname = get_array_name(var, access_data=False) %}
