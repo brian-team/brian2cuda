@@ -1129,9 +1129,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             run_args = []
         if directory is None:
             directory = tempfile.mkdtemp(prefix='brian_standalone_')
-
-        cpp_compiler, cpp_extra_compile_args = get_compiler_and_args()
-        cpp_compiler_flags = ' '.join(cpp_extra_compile_args)
         self.project_dir = directory
         ensure_directory(directory)
 

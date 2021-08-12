@@ -20,6 +20,12 @@ parser.add_argument('-k', default=None, type=str,
                     help=("Passed to pytest's ``-k`` option. This overwrites ``tests`` "
                           "if ``--brian2`` or `--brian2cuda`` is set."))
 
+parser.add_argument('-q', '--quiet', action='store_true',
+                    help="Disable all verbosity")
+
+parser.add_argument('-d', '--debug', action='store_true',
+                    help=("Debug mode, set pytest to not capture outputs."))
+
 mutual_exclusive = parser.add_mutually_exclusive_group(required=False)
 mutual_exclusive.add_argument(
     '--brian2',
@@ -49,7 +55,7 @@ import numpy as np
 
 import brian2
 import brian2cuda
-from brian2.devices.device import set_device, reset_device
+from brian2.devices.device import reset_device
 from brian2.tests import clear_caches, make_argv, PreferencePlugin
 from brian2 import prefs
 import brian2cuda
@@ -63,21 +69,21 @@ pref_plugin = PreferencePlugin(prefs, fail_for_not_implemented=True)
 
 additional_args = []
 # Increase verbosity such that the paths and names of executed tests are shown
-additional_args += ['-vvv']
-# Set rootdir to directory that has brian2's conftest.py, such that it is laoded for all
-# tests (even when outside the brian2 folder)
+if not args.quiet:
+    # set verbosity to max(?)
+    additional_args += ['-vvv']
+# Set confcutdir, such that all `conftest.py` files inside the brian2 and brian2cuda
+# directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
+# stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args += [
-    # Set rootdir to directory that has brian2's conftest.py, such that it is laoded for
-    # all tests (even when outside the brian2 folder)
-    '--rootdir={}'.format(os.path.dirname(brian2.__file__)),
-    # Set confcutdir, such that `conftest.py` inside `brian2cuda` are also loaded
-    # (overwrites confcutdir set in brian2's `make_argv`)
-    '--confcutdir={}'.format(os.path.dirname(brian2cuda.__file__))
+    # TODO (Python 3): Use `os.path.commonpath`
+    '--confcutdir={}'.format(
+        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
+    )
 ]
 
 brian2_dir = os.path.join(os.path.abspath(os.path.dirname(brian2.__file__)))
 b2c_dir = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 'tests')
-
 
 if args.brian2:
     tests = [brian2_dir]
@@ -102,9 +108,17 @@ if args.k:
 if test_patterns is not None:
     additional_args += ['-k {}'.format(test_patterns)]
 
+with_output = False
+if args.debug:
+    # disable output capture
+    additional_args += ['-s']
+    # enable brian2 output
+    with_output = True
+
 all_successes = []
 for target in args.targets:
 
+    pref_plugin.device = target
     if target == 'cuda_standalone':
         preference_dictionaries = all_prefs_combinations
     else:
@@ -136,7 +150,7 @@ for target in args.targets:
             print ("Running standalone-compatible standard tests "
                    "(single run statement)\n")
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': with_output}
             argv = make_argv(tests, markers='standalone_compatible and not multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
@@ -148,8 +162,8 @@ for target in args.targets:
             print ("Running standalone-compatible standard tests "
                    "(multiple run statements)\n")
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False,
-                       build_on_run=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': with_output,
+                                          'build_on_run': False}
             argv = make_argv(tests, markers='standalone_compatible and multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
@@ -160,7 +174,9 @@ for target in args.targets:
         if args.only is None or args.only == 'standalone-only':
             print "Running standalone-specific tests\n"
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': with_output,
+                                          # same as in brian2.tests()
+                                          'build_on_run': False}
             argv = make_argv(tests, markers=target)
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)

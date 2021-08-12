@@ -92,7 +92,9 @@ def get_gpu_selection():
         'selected_gpu_compute_capability': compute_capability,
     }
     global _gpu_selection
-    assert gpu_selection.keys() == _gpu_selection.keys()
+    assert (
+        sorted(gpu_selection.keys()) == sorted(_gpu_selection.keys())
+    ), "{} != {}".format(gpu_selection.keys(), _gpu_selection.keys())
     return gpu_selection
 
 
@@ -145,10 +147,12 @@ def reset_gpu_selection():
 def restore_cuda_installation(cuda_installation):
     """Set global cuda installation dictionary to `cuda_installation`"""
     global _cuda_installation
-    if _cuda_installation.keys() != cuda_installation.keys():
+    if sorted(_cuda_installation.keys()) != sorted(cuda_installation.keys()):
         raise KeyError(
             "`cuda_installation` has to have the following keys: {}. Got instead: "
-            "{}".format(cuda_installation.keys(), _cuda_installation.keys())
+            "{}".format(
+                sorted(cuda_installation.keys()), sorted(_cuda_installation.keys())
+            )
         )
     _cuda_installation.update(cuda_installation)
 
@@ -156,10 +160,10 @@ def restore_cuda_installation(cuda_installation):
 def restore_gpu_selection(gpu_selection):
     """Set global gpu selection dictionary to `gpu_selection`"""
     global _gpu_selection
-    if _gpu_selection.keys() != gpu_selection.keys():
+    if sorted(_gpu_selection.keys()) != sorted(gpu_selection.keys()):
         raise KeyError(
             "`gpu_selection` has to have the following keys: {}. Got instead: "
-            "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            "{}".format(sorted(gpu_selection.keys()), sorted(_gpu_selection.keys()))
         )
     _gpu_selection.update(gpu_selection)
 
