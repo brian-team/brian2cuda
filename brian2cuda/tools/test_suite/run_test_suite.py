@@ -47,7 +47,7 @@ if args.notify_slack:
 buffer = utils.PrintBuffer(clusterbot=bot)
 
 import os, sys
-from StringIO import StringIO
+from io import StringIO
 
 import brian2
 from brian2 import test, prefs

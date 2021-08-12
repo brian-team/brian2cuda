@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import argparse
 parser = argparse.ArgumentParser(description=("Extract benchmark data from pickled SpeedTest "
                                               "obejct into csv files from pickle file. Overwrites "

@@ -1259,7 +1259,7 @@ if __name__ == '__main__':
         test_poisson_scalar_lambda_set_template_random_seed,
         test_poisson_variable_lambda_set_template_random_seed,
     ]:
-        print
+        print()
         print(test.__name__)
         pytestmarks = [mark.name for mark in test.pytestmark]
         build_on_run = True

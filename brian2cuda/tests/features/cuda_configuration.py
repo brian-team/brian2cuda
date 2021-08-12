@@ -29,7 +29,7 @@ class CUDAStandaloneConfigurationBase(Configuration):
 
     def before_run(self):
         # set brian preferences
-        for key, value in self.extra_prefs.iteritems():
+        for key, value in self.extra_prefs.items():
             brian2.prefs[key] = value
         if self.name is None:
             raise NotImplementedError("You need to set the name attribute.")

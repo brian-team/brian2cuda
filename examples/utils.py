@@ -54,7 +54,7 @@ def update_from_command_line(params, choices={}):
     for key in sorted(params.keys()):
         arg = getattr(args, key)
         if arg is not None:
-            print "Setting {} from command line to {}.".format(key, arg)
+            print("Setting {} from command line to {}.".format(key, arg))
             params[key] = arg
 
 
@@ -111,8 +111,8 @@ def set_prefs(params, prefs):
         elif hostname == 'risha':
             dev_no_to_cc = {0: '70'}
         else:
-            print "WARNING: can't recognize hostname. Compiling with "\
-                    "{}".format(prefs['codegen.cuda.extra_compile_args_nvcc'])
+            print("WARNING: can't recognize hostname. Compiling with "\
+                    "{}".format(prefs['codegen.cuda.extra_compile_args_nvcc']))
 
         # TODO make this a preference
         #prefs['devices.cuda_standalone.default_device'] = gpu_device
@@ -128,8 +128,8 @@ def set_prefs(params, prefs):
             except KeyError as err:
                 raise AttributeError("unknown device number: {}".format(err))
 
-            print "Compiling device code for compute capability "\
-                    "{}.{}".format(cc[0], cc[1])
+            print("Compiling device code for compute capability "\
+                    "{}.{}".format(cc[0], cc[1]))
             prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
             prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
 

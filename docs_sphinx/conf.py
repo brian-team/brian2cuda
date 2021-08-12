@@ -114,7 +114,7 @@ master_doc = 'index'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = [u'_build']
+exclude_patterns = ['_build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 default_role = 'brianobj'
@@ -139,18 +139,18 @@ modindex_common_prefix = ['brian2cuda.']
 
 # -- Project information -----------------------------------------------------
 
-project = u'brian2cuda'
+project = 'brian2cuda'
 import datetime
-copyright = u'2021-{}, Brian2Cuda authors'.format(datetime.datetime.today().year)
-author = u'Brian@Cuda authors'
+copyright = '2021-{}, Brian2Cuda authors'.format(datetime.datetime.today().year)
+author = 'Brian@Cuda authors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 # The short X.Y version
-version = u'1.0'
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = u'1.0.0'
+release = '1.0.0'
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -263,8 +263,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'brian2cuda.tex', u'brian2cuda Documentation',
-     u'brian2cuda authors', 'manual'),
+    (master_doc, 'brian2cuda.tex', 'brian2cuda Documentation',
+     'brian2cuda authors', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -293,7 +293,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'brian2cuda', u'brian2cuda Documentation',
+    (master_doc, 'brian2cuda', 'brian2cuda Documentation',
      [author], 1)
 ]
 
@@ -307,7 +307,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'brian2cuda', u'brian2cuda Documentation',
+    (master_doc, 'brian2cuda', 'brian2cuda Documentation',
      author, 'brian2cuda', 'One line description of project.',
      'Miscellaneous'),
 ]

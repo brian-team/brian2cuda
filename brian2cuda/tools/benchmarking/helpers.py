@@ -1,5 +1,5 @@
 import os
-import cPickle as pickle
+import pickle as pickle
 import pandas as pd
 import brian2
 from brian2.tests.features.base import SpeedTestResults

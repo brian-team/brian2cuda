@@ -41,7 +41,7 @@ matplotlib.use('Agg')
 
 import time
 import datetime
-import cPickle as pickle
+import pickle as pickle
 
 from brian2 import *
 from brian2.tests.features import *
