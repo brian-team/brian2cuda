@@ -630,7 +630,7 @@ class CUDACodeGenerator(CodeGenerator):
         if varname in functions_C99:
             funccode = funccode.format(default_type=self.default_func_type,
                                        other_type=self.other_func_type)
-        if varname == 'clip':
+        elif varname in ['clip', 'exprel']:
             funccode = funccode.format(float_dtype=self.float_dtype)
         ###
 
@@ -831,6 +831,22 @@ for func, func_cuda in func_translations:
                                                                code=cuda_code,
                                                                name='_brian_{}'.format(func_cuda)
                                                                )
+
+# TODO: make float version type safe or print warning (see #233)
+exprel_code = '''
+__host__ __device__
+static inline {float_dtype} _brian_exprel({float_dtype} x)
+{{
+    if (fabs(x) < 1e-16)
+        return 1.0;
+    if (x > 717)
+        return INFINITY;
+    return expm1(x)/x;
+}}
+'''
+DEFAULT_FUNCTIONS['exprel'].implementations.add_implementation(CUDACodeGenerator,
+                                                               code=exprel_code,
+                                                               name='_brian_exprel')
 
 # std::abs is available and already overloaded for integral types in device code
 abs_code = '''
