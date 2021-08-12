@@ -320,7 +320,7 @@ def _run_command_with_output(command, *args):
         command_split = [command] + list(args)
 
     try:
-        output = subprocess.check_output(command_split)
+        output = subprocess.check_output(command_split, encoding='UTF-8')
     except subprocess.CalledProcessError as err:
         raise RuntimeError(
             "Running `{binary}` failed with error code {err.returncode}: {err.output}"
