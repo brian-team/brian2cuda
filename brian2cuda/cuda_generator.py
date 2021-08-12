@@ -244,9 +244,9 @@ class CUDACodeGenerator(CodeGenerator):
         # set clip function to either use all float or all double arguments
         # see #51 for details
         if prefs['core.default_float_dtype'] == np.float64:
-            self.float_dtype = 'float'
-        else:  # np.float32
             self.float_dtype = 'double'
+        else:  # np.float32
+            self.float_dtype = 'float'
 
 
     @property
@@ -437,9 +437,10 @@ class CUDACodeGenerator(CodeGenerator):
                             if int64_type is not None:
                                 logger.warn("Detected code statement with default function and 64bit integer type in the same line. "
                                             "Using 64bit integer types as default function arguments is not type safe due to convertion of "
-                                            "integer to 64bit floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
-                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
-                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            "integer to 64bit floating-point types in device code. (relevant functions: {})\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(
+                                                ', '.join(functions_C99), line, statements
+                                            ),
                                             once=True)
                                 self.warned_integral_convertion = True
                                 self.previous_convertion_pref = np.float64
@@ -450,9 +451,10 @@ class CUDACodeGenerator(CodeGenerator):
                                 logger.warn("Detected code statement with default function and 32bit or 64bit integer type in the same line and the "
                                             "preference for default_functions_integral_convertion is 'float32'. "
                                             "Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of "
-                                            "integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
-                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
-                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            "integer to single-precision floating-point types in device code. (relevant functions: {})\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(
+                                                ', '.join(functions_C99), line, statements
+                                            ),
                                             once=True)
                                 self.warned_integral_convertion = True
                                 self.previous_convertion_pref = np.float32
@@ -628,7 +630,7 @@ class CUDACodeGenerator(CodeGenerator):
         if varname in functions_C99:
             funccode = funccode.format(default_type=self.default_func_type,
                                        other_type=self.other_func_type)
-        if varname == 'clip':
+        elif varname in ['clip', 'exprel']:
             funccode = funccode.format(float_dtype=self.float_dtype)
         ###
 
@@ -797,7 +799,7 @@ functions_C99 = []
 func_translations = []
 # Functions that exist under the same name in C++
 for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
-             'log10', 'sqrt', 'ceil', 'floor']:
+             'log10', 'expm1', 'log1p', 'sqrt', 'ceil', 'floor']:
     func_translations.append((func, func))
 
 # Functions that exist under a different name in C++
@@ -829,6 +831,22 @@ for func, func_cuda in func_translations:
                                                                code=cuda_code,
                                                                name='_brian_{}'.format(func_cuda)
                                                                )
+
+# TODO: make float version type safe or print warning (see #233)
+exprel_code = '''
+__host__ __device__
+static inline {float_dtype} _brian_exprel({float_dtype} x)
+{{
+    if (fabs(x) < 1e-16)
+        return 1.0;
+    if (x > 717)
+        return INFINITY;
+    return expm1(x)/x;
+}}
+'''
+DEFAULT_FUNCTIONS['exprel'].implementations.add_implementation(CUDACodeGenerator,
+                                                               code=exprel_code,
+                                                               name='_brian_exprel')
 
 # std::abs is available and already overloaded for integral types in device code
 abs_code = '''
