@@ -11,7 +11,7 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-def parse_arguments(parser):
+def parse_arguments(parser, parse_unknown=False):
 
     parser.add_argument('--targets', '-t', nargs='*',
                         default=['cuda_standalone'], type=str,
@@ -46,14 +46,20 @@ def parse_arguments(parser):
                         help=("Exit script after argument parsing. Used to check "
                               "validity of arguments"))
 
-    args = parser.parse_args()
+    if parse_unknown:
+        args, unknown_args = parser.parse_known_args()
+    else:
+        args = parser.parse_args()
 
     if args.dry_run:
         import sys
         print("Dry run completed, {} arguments valid.".format(__file__))
         sys.exit()
 
-    return args
+    if parse_unknown:
+        return args, unknown_args
+    else:
+        return args
 
 
 def print_single_prefs(prefs_dict, set_prefs=None, return_lines=False):
