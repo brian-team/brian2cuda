@@ -244,9 +244,9 @@ class CUDACodeGenerator(CodeGenerator):
         # set clip function to either use all float or all double arguments
         # see #51 for details
         if prefs['core.default_float_dtype'] == np.float64:
-            self.float_dtype = 'float'
-        else:  # np.float32
             self.float_dtype = 'double'
+        else:  # np.float32
+            self.float_dtype = 'float'
 
 
     @property
