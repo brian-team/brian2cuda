@@ -69,10 +69,7 @@ stored_prefs = prefs.as_file
 # directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
 # stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args = [
-    # TODO (Python 3): Use `os.path.commonpath`
-    '--confcutdir={}'.format(
-        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
-    )
+    f'--confcutdir={os.path.commonpath([brian2.__file__, brian2cuda.__file__])}'
 ]
 
 if not args.quiet:
