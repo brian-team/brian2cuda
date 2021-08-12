@@ -627,6 +627,11 @@ class CUDACodeGenerator(CodeGenerator):
         ### Different from CPPCodeGenerator: We format the funccode dtypes here
         from brian2.devices.device import get_device
         device = get_device()
+        # TODO don't check for func_name but for the implementation object, otherwise
+        # dependencies which are not names exactly as the function won't be formatted
+        # (e.g. dependencies={'my_cos': DEFAULT_FUNCTIONS['cos']} will not match as
+        # `'my_cos'` is not in `functions_C99`. Buf matching variable for
+        # `DEFAULT_FUNCTIONS['cos'] would match intependent of the function name.
         if varname in functions_C99:
             funccode = funccode.format(default_type=self.default_func_type,
                                        other_type=self.other_func_type)
@@ -834,19 +839,45 @@ for func, func_cuda in func_translations:
 
 # TODO: make float version type safe or print warning (see #233)
 exprel_code = '''
+template <typename T>
+__host__ __device__
+static inline {float_dtype} _brian_exprel(T x)
+{{
+    // Integer type T: (|x| < 1e-16) simplifies to (x == 0)
+    if (x == 0) {{
+        return 1.0;
+    }}
+    if (x > 717) {{
+        return INFINITY;
+    }}
+    // Will be replaced by DEFAULT_FUNCTIONS['expm1'], which we overloaded for integral
+    // type input. We have an implicit type conversion of denominator x (integral) to
+    // return type of expm1(x) (floating-point).
+    return expm1(x)/x;
+}}
+// Special overload for floating-point type input (same as C++ standalone)
 __host__ __device__
 static inline {float_dtype} _brian_exprel({float_dtype} x)
 {{
-    if (fabs(x) < 1e-16)
+    if (fabs(x) < 1e-16) {{
         return 1.0;
-    if (x > 717)
+    }}
+    if (x > 717) {{
         return INFINITY;
+    }}
+    // TODO: Use the CUDA math function, which is already overloaded for {float_dtype},
+    // instead of our DEFAULT_FUNCTIONS['expm1']. For that, we need to keep this
+    // function as is but rename in the `expm1` in the templated definition above to e.g.
+    // _expm1 and use dependencies={'_expm1': DEFAULT_FUNCTIONS['expm1'], such that _expm1
+    // is replaced but expm1 not (using the CUDA math function). This needs the updated
+    // funccode.format matching (see TODO below where formatting happens)
     return expm1(x)/x;
 }}
 '''
 DEFAULT_FUNCTIONS['exprel'].implementations.add_implementation(CUDACodeGenerator,
                                                                code=exprel_code,
-                                                               name='_brian_exprel')
+                                                               name='_brian_exprel',
+                                                               dependencies={'expm1': DEFAULT_FUNCTIONS['expm1']})
 
 # std::abs is available and already overloaded for integral types in device code
 abs_code = '''
