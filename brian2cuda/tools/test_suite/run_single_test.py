@@ -49,7 +49,7 @@ import numpy as np
 
 import brian2
 import brian2cuda
-from brian2.devices.device import set_device, reset_device
+from brian2.devices.device import reset_device
 from brian2.tests import clear_caches, make_argv, PreferencePlugin
 from brian2 import prefs
 import brian2cuda
@@ -104,6 +104,7 @@ if test_patterns is not None:
 all_successes = []
 for target in args.targets:
 
+    pref_plugin.device = target
     if target == 'cuda_standalone':
         preference_dictionaries = all_prefs_combinations
     else:
@@ -135,7 +136,7 @@ for target in args.targets:
             print ("Running standalone-compatible standard tests "
                    "(single run statement)\n")
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': False}
             argv = make_argv(tests, markers='standalone_compatible and not multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
@@ -147,8 +148,8 @@ for target in args.targets:
             print ("Running standalone-compatible standard tests "
                    "(multiple run statements)\n")
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False,
-                       build_on_run=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': False,
+                                          'build_on_run': False}
             argv = make_argv(tests, markers='standalone_compatible and multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
@@ -159,7 +160,9 @@ for target in args.targets:
         if args.only is None or args.only == 'standalone-only':
             print "Running standalone-specific tests\n"
             sys.stdout.flush()
-            set_device(target, directory=None, with_output=False)
+            pref_plugin.device_options = {'directory': None, 'with_output': False,
+                                          # same as in brian2.tests()
+                                          'build_on_run': False}
             argv = make_argv(tests, markers=target)
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
             pref_success = pref_success and (exit_code == 0)
