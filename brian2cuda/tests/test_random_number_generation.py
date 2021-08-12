@@ -7,7 +7,7 @@ from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import device
+from brian2.devices.device import device, reinit_and_delete
 
 import brian2cuda
 from brian2cuda.device import prepare_codeobj_code_for_rng
@@ -1215,12 +1215,60 @@ def test_poisson_variable_lambda_set_template_random_seed():
 
 
 if __name__ == '__main__':
-    test_rand()
-    test_random_number_generation_with_multiple_runs()
-    test_random_values_fixed_and_random()
-    test_random_values_codeobject_every_tick()
-    test_rand_randn_regex()
-    test_poisson_regex()
+    import brian2cuda
+    from brian2cuda.tests.conftest import fake_randn
+    for test in [
+        test_rand_randn_regex,
+        test_poisson_regex,
+        test_rng_occurrence_counting,
+        test_binomial_occurrence,
+        test_rand,
+        test_random_number_generation_with_multiple_runs,
+        test_random_values_fixed_and_random_seed,
+        test_poisson_scalar_values_fixed_and_random_seed,
+        test_poisson_vectorized_values_fixed_and_random_seed,
+        test_random_values_codeobject_every_tick,
+        test_binomial_values,
+        test_random_values_set_synapses_random_seed,
+        test_random_values_set_synapses_fixed_seed,
+        test_random_values_synapse_dynamics_fixed_and_random_seed,
+        test_random_values_init_synapses_fixed_and_random_seed,
+        test_binomial_values_random_seed,
+        test_binomial_values_fixed_seed,
+        test_binomial_values_fixed_and_random_seed,
+        test_binomial_values_set_synapses_random_seed,
+        test_binomial_values_set_synapses_fixed_seed,
+        test_binomial_values_synapse_dynamics_fixed_and_random_seed,
+        test_binomial_values_init_synapses_fixed_and_random_seed,
+        test_random_binomial_set_template_random_seed,
+        test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed,
+        test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed,
+        test_poisson_scalar_lambda_values_random_seed,
+        test_poisson_variable_lambda_values_random_seed,
+        test_poisson_scalar_lambda_values_fixed_seed,
+        test_poisson_variable_lambda_values_fixed_seed,
+        test_poisson_scalar_lambda_values_fixed_and_random_seed,
+        test_poisson_variable_lambda_values_fixed_and_random_seed,
+        test_poisson_scalar_lambda_values_set_synapses_random_seed,
+        test_poisson_variable_lambda_values_set_synapses_random_seed,
+        test_poisson_scalar_lambda_values_set_synapses_fixed_seed,
+        test_poisson_variable_lambda_values_set_synapses_fixed_seed,
+        test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed,
+        test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed,
+        test_poisson_values_init_synapses_fixed_and_random_seed,
+        test_poisson_scalar_lambda_set_template_random_seed,
+        test_poisson_variable_lambda_set_template_random_seed,
+    ]:
+        print
+        print(test.__name__)
+        pytestmarks = [mark.name for mark in test.pytestmark]
+        build_on_run = True
+        if 'multiple_runs' in pytestmarks:
+            build_on_run = False
+        set_device('cuda_standalone', build_on_run=build_on_run, directory=None)
+        test()
+
+        reinit_and_delete()
 
 
 
