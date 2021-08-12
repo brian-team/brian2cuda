@@ -111,8 +111,10 @@ def set_prefs(params, prefs):
         elif hostname == 'risha':
             dev_no_to_cc = {0: '70'}
         else:
-            print("WARNING: can't recognize hostname. Compiling with "\
-                    "{}".format(prefs['codegen.cuda.extra_compile_args_nvcc']))
+            print(
+                f"WARNING: can't recognize hostname. Compiling with "
+                f"{prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc']}"
+            )
 
         # TODO make this a preference
         #prefs['devices.cuda_standalone.default_device'] = gpu_device
@@ -130,8 +132,8 @@ def set_prefs(params, prefs):
 
             print("Compiling device code for compute capability "\
                     "{}.{}".format(cc[0], cc[1]))
-            prefs['codegen.cuda.extra_compile_args_nvcc'].remove('-arch=sm_35')
-            prefs['codegen.cuda.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
+            prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].remove('-arch=sm_35')
+            prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
 
         if params['num_blocks'] is not None:
             prefs['devices.cuda_standalone.parallel_blocks'] = params['num_blocks']
