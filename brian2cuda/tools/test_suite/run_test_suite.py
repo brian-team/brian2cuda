@@ -27,8 +27,11 @@ parser.add_argument('-k', default=None, type=str,
                          "some tests, e.g. `-k 'test_functions` or `-k 'not "
                          "test_funcions'`")
 
-parser.add_argument('-v', '--verbosity', action='count', default=None,
-                    help="Increase pytest verbosity.")
+parser.add_argument('-q', '--quiet', action='store_true',
+                    help="Disable all verbosity")
+
+parser.add_argument('-d', '--debug', action='store_true',
+                    help=("Debug mode, set pytest to not capture outputs."))
 
 args = utils.parse_arguments(parser)
 
@@ -72,11 +75,19 @@ additional_args = [
     )
 ]
 
-if args.verbosity is not None:
-   additional_args += ['-{}'.format(args.verbosity * 'v')]
+if not args.quiet:
+    # set verbosity to max(?)
+    additional_args += ['-vvv']
 
 if args.k is not None:
     additional_args += ['-k {}'.format(args.k)]
+
+build_options = None
+if args.debug:
+    # disable output capture
+    additional_args += ['-s']
+    # enable brian2 output
+    build_options = {'with_output': True}
 
 all_successes = []
 for target in args.targets:
@@ -114,7 +125,8 @@ for target in args.targets:
                        test_in_parallel=test_in_parallel,
                        extra_test_dirs=extra_test_dirs,
                        float_dtype=None,
-                       additional_args=additional_args)
+                       additional_args=additional_args,
+                       build_options=build_options)
 
         successes.append(success)
 
