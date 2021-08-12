@@ -2,7 +2,7 @@
 Preferences that relate to the brian2cuda interface.
 '''
 
-from brian2.core.preferences import prefs, BrianPreference, PreferenceError
+from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 import numpy as np
 
