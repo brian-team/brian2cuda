@@ -15,3 +15,10 @@ fake_randn.implementations.add_implementation(
     }
     '''
 )
+
+
+# Register `cuda_standalone` marker
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "cuda_standalone: to be used with standalone_only marker"
+    )
