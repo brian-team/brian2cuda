@@ -16,8 +16,8 @@ logfile="$logdir/$task_name"
 
 start_time=`date +%s`
 
-test_suite_cmd="python run_test_suite.py --notify-slack $test_suite_args"
-echo "$test_suite_cmd"
+test_suite_cmd="python run_test_suite.py $test_suite_args"
+echo "$test_suite_cmd" | tee -a "$logfile"
 PYTHONPATH="../../..:../../../frozen_repos/brian2:$PYTHONPATH" \
     $test_suite_cmd 2>&1 | tee -a "$logfile"
 
