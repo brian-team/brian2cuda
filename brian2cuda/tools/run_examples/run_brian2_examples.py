@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     args = utils.parse_arguments(parser)
 
-    from StringIO import StringIO
+    from io import StringIO
     import brian2
     from brian2 import prefs
 
@@ -191,7 +191,7 @@ if __name__ == '__main__':
 
     all_successes = []
     for target in args.targets:
-        print "Running examples with target", target
+        print("Running examples with target", target)
         target_list = [target]
         target_image_dir = os.path.join(args.plot_dir[0], target.split('_')[0])
 
@@ -204,11 +204,11 @@ if __name__ == '__main__':
         for n, prefs_dict in enumerate(preference_dictionaries):
 
             if prefs_dict is not None:
-                print "{}. RUN: running on {} with prefs:".format(n + 1, target)
+                print("{}. RUN: running on {} with prefs:".format(n + 1, target))
                 # print preferences (setting happens in RunTestCase.runTest())
                 utils.print_single_prefs(prefs_dict, set_prefs=prefs)
             else:  # None
-                print "Running {} with default preferences".format(target)
+                print("Running {} with default preferences".format(target))
                 # RunTestCase.runTest() needs a dictionary
                 prefs_dict = {}
 
@@ -222,23 +222,23 @@ if __name__ == '__main__':
                                         Capture(), Xunit()])
             successes.append(success)
 
-        print "\nTARGET: {}".format(target.upper())
+        print("\nTARGET: {}".format(target.upper()))
         all_success = utils.check_success(successes, all_prefs_combinations)
 
         all_successes.append(all_success)
 
     if len(args.targets) > 1:
-        print "\nFINISHED ALL TARGETS"
+        print("\nFINISHED ALL TARGETS")
 
         if all(all_successes):
-            print "\nALL TARGETS PASSED"
+            print("\nALL TARGETS PASSED")
         else:
-            print "\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
+            print("\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
                                                    len(all_successes),
-                                                   len(all_successes))
+                                                   len(all_successes)))
             for n, target in enumerate(args.targets):
                 if not all_successes[n]:
-                    print "\t{} failed.".format(target)
+                    print("\t{} failed.".format(target))
             sys.exit(1)
 
     elif not all_successes[0]:

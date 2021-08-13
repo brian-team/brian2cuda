@@ -302,7 +302,7 @@ class CUDACodeGenerator(CodeGenerator):
             firstline = True
             # bool assigns is a sequence of (var, value) pairs giving the conditions under
             # which the simplified expression simp_expr holds
-            for bool_assigns, simp_expr in bool_simp.iteritems():
+            for bool_assigns, simp_expr in bool_simp.items():
                 # generate a boolean expression like ``var1 && var2 && !var3``
                 atomics = []
                 for boolvar, boolval in bool_assigns:
@@ -634,14 +634,14 @@ class CUDACodeGenerator(CodeGenerator):
             funccode = funccode.format(float_dtype=self.float_dtype)
         ###
 
-        if isinstance(funccode, basestring):
+        if isinstance(funccode, str):
             funccode = {'support_code': funccode}
         if funccode is not None:
             # To make namespace variables available to functions, we
             # create global variables and assign to them in the main
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
-            for ns_key, ns_value in func_namespace.iteritems():
+            for ns_key, ns_value in func_namespace.items():
                 # This section is adapted from CPPCodeGenerator such that file
                 # global namespace pointers can be used in both host and device
                 # code.
@@ -679,7 +679,7 @@ class CUDACodeGenerator(CodeGenerator):
         dep_support_code = []
         dep_kernel_lines = []
         if impl.dependencies is not None:
-            for dep_name, dep in impl.dependencies.iteritems():
+            for dep_name, dep in impl.dependencies.items():
                 if dep_name not in self.variables:
                     self.variables[dep_name] = dep
                     dep_impl = dep.implementations[self.codeobj_class]
@@ -712,7 +712,7 @@ class CUDACodeGenerator(CodeGenerator):
         # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
-        for varname, var in self.variables.iteritems():
+        for varname, var in self.variables.items():
             if isinstance(var, ArrayVariable):
                 # This is the "true" array name, not the restricted pointer.
                 array_name = device.get_array_name(var)
@@ -736,7 +736,7 @@ class CUDACodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in self.variables.items():
+        for varname, variable in list(self.variables.items()):
             if isinstance(variable, Function):
                 hd, ps, sc, uf, kl = self._add_user_function(varname, variable)
                 user_functions.extend(uf)
@@ -761,7 +761,7 @@ class CUDACodeGenerator(CodeGenerator):
 
         # Clock variables (t, dt, timestep) are passed by value to kernels and
         # need to be translated back into pointers for scalar/vector code.
-        for varname, variable in self.variables.iteritems():
+        for varname, variable in self.variables.items():
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
                 arrayname = self.get_array_name(variable, prefix='')

@@ -5,7 +5,13 @@ usage: $0 <options> -- <run_test_suite.py arguments>
 
 with <options>:
     -h|--help                 Show usage message
-    -n|--name <string>        Name for test suite log file
+    -n|--name <string>        Name for test suite run (default: 'noname'). This
+                              name will also be used for the pytest cache
+                              directory. That means when running the test suite
+                              multiple times with the same --name, pytest
+                              options --last-failed or --failed-first can be
+                              used.
+    -s|--suffix <string>      Name suffix for the logfile (<name>_<suffix>_<timestemp>)
     -g|--gpu <K40|RTX2080>    Which GPU to run on
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
     -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
@@ -37,6 +43,7 @@ conda_env_remote="b2c"
 test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 # keep remote (false by default)
 keep_remote_repo=1
+# $suffix unset by default
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -63,6 +70,10 @@ while true; do
             ;;
         -n | --name )
             test_suite_task_name="$2"
+            shift 2
+            ;;
+        -s | --suffix )
+            suffix="$2"
             shift 2
             ;;
         -g | --gpu )
@@ -111,8 +122,9 @@ while true; do
     esac
 done
 
-# all args after --
-test_suite_args=$@
+# all args after -- are passed to run_test_suite.py (collected in $@)
+pytest_cache_dir="$test_suite_remote_dir"/.pytest_caches
+test_suite_args="--notify-slack --cache-dir $pytest_cache_dir/$test_suite_task_name $@"
 
 test_suite_remote_logdir="$test_suite_remote_dir/results"
 
@@ -128,7 +140,12 @@ fi
 # get path to this git repo (brian2cuda)
 local_b2c_dir=$(git rev-parse --show-toplevel)
 
-run_name="$test_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"
+if [ -n "$suffix" ]; then
+    run_name="$test_suite_task_name"_"$suffix"_"$(date +%y-%m-%d_%H-%M-%S)"
+else
+    run_name="$test_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"
+fi
+
 local_logfile="/tmp/$run_name.log"
 remote_logfile="$test_suite_remote_logdir/$run_name.log"
 qsub_name=${run_name//_/__}
@@ -175,7 +192,12 @@ EOL
 
 
 ### Create logdirs on remote
-ssh "$remote" "mkdir -p $test_suite_remote_logdir $remote_b2c_dir $remote_ge_log_dir"
+ssh "$remote" \
+    "mkdir -p \
+        $test_suite_remote_logdir \
+        $remote_b2c_dir \
+        $remote_ge_log_dir \
+        $pytest_cache_dir"
 
 ### Copy local logfile with diff over to remote
 rsync -avzz "$local_logfile" "$remote:$remote_logfile"

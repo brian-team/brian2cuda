@@ -15,7 +15,7 @@ res = run_feature_tests([#CPPStandaloneConfiguration,
                          #GeNNConfiguration,
                          #GeNNConfigurationOptimized,
                          CUDAStandaloneConfiguration])
-print res.tables_and_exceptions
+print(res.tables_and_exceptions)
 
 # Quick testing
 # print run_feature_tests(configurations=[Default...

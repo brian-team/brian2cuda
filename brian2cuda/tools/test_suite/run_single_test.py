@@ -50,7 +50,7 @@ parser.add_argument('--only',
 args = utils.parse_arguments(parser)
 
 import sys, os, pytest
-from StringIO import StringIO
+from io import StringIO
 import numpy as np
 
 import brian2
@@ -76,10 +76,7 @@ if not args.quiet:
 # directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
 # stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args += [
-    # TODO (Python 3): Use `os.path.commonpath`
-    '--confcutdir={}'.format(
-        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
-    )
+    f'--confcutdir={os.path.commonpath([brian2.__file__, brian2cuda.__file__])}'
 ]
 
 brian2_dir = os.path.join(os.path.abspath(os.path.dirname(brian2.__file__)))
@@ -134,11 +131,11 @@ for target in args.targets:
         prefs.read_preference_file(StringIO(stored_prefs))
 
         if prefs_dict is not None:
-            print "{}. RUN: running on {} with prefs:".format(n + 1, target)
+            print("{}. RUN: running on {} with prefs:".format(n + 1, target))
             # print and set preferences
             utils.print_single_prefs(prefs_dict, set_prefs=prefs)
         else:  # None
-            print "Running {} with default preferences\n".format(target)
+            print("Running {} with default preferences\n".format(target))
         sys.stdout.flush()
 
         # backup prefs such that reinit_device in the pytest test teardown resets
@@ -172,7 +169,7 @@ for target in args.targets:
             reset_device()
 
         if args.only is None or args.only == 'standalone-only':
-            print "Running standalone-specific tests\n"
+            print("Running standalone-specific tests\n")
             sys.stdout.flush()
             pref_plugin.device_options = {'directory': None, 'with_output': with_output,
                                           # same as in brian2.tests()
@@ -186,22 +183,22 @@ for target in args.targets:
             clear_caches()
             reset_device()
 
-    print "\nTARGET: {}".format(target.upper())
+    print("\nTARGET: {}".format(target.upper()))
     all_success = utils.check_success(successes, all_prefs_combinations)
     all_successes.append(all_success)
 
 if len(args.targets) > 1:
-    print "\nFINISHED ALL TARGETS"
+    print("\nFINISHED ALL TARGETS")
 
     if all(all_successes):
-        print "\nALL TARGETS PASSED"
+        print("\nALL TARGETS PASSED")
     else:
-        print "\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
+        print("\n{}/{} TARGETS FAILED:".format(sum(all_successes) -
                                                len(all_successes),
-                                               len(all_successes))
+                                               len(all_successes)))
         for n, target in enumerate(args.targets):
             if not all_successes[n]:
-                print "\t{} failed.".format(target)
+                print("\t{} failed.".format(target))
         sys.exit(1)
 
 elif not all_successes[0]:

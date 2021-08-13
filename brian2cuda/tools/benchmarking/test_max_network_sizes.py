@@ -15,7 +15,7 @@ import seaborn
 
 import time
 import datetime
-import cPickle as pickle
+import pickle as pickle
 
 from brian2 import *
 from brian2.tests.features import *
@@ -104,34 +104,34 @@ for (ft, name, sl) in speed_tests:
             n = (n//1000) * 1000
         start = time.time()
         script_start = datetime.datetime.fromtimestamp(start).strftime(time_format)
-        print "LOG RUNNING {} with n={} (start at {})".format(name, n, script_start)
+        print("LOG RUNNING {} with n={} (start at {})".format(name, n, script_start))
         tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n)
-        print "LOG FINISHED {} with n={} in {:.2f}s".format(name, n, time.time()-start)
+        print("LOG FINISHED {} with n={} in {:.2f}s".format(name, n, time.time()-start))
         codes.append((n, res, tb))
         diff = np.abs(n - n_prev)
         n_prev = n
         if isinstance(res, Exception):
-            print "LOG FAILED:\n", res, tb
+            print("LOG FAILED:\n", res, tb)
             has_failed = True
             if i == 0:
                 print("LOG FAILED at first run ({}) n={}\n\terror={}\nt\ttb={}".format(name, n, res, tb))
                 break
             # assuming the first run passes, when we fail we always go down half the abs distance
             n -= int(0.5 * diff)
-            print "LOG HALF DOWN"
+            print("LOG HALF DOWN")
         elif has_failed:
             n += int(0.5 * diff)
-            print "LOG HALF UP"
+            print("LOG HALF UP")
         else:  # not has_failed
             n *= 2
-            print "LOG DOUBLE"
+            print("LOG DOUBLE")
         if i != 0 and diff <= 10000:
-            print "LOG BREAK {} after n={} (diff={})".format(name, n, diff)
+            print("LOG BREAK {} after n={} (diff={})".format(name, n, diff))
             break
-    print "LOG FINAL RESULTS FOR {}:".format(name)
+    print("LOG FINAL RESULTS FOR {}:".format(name))
     for n, res, tb in codes:
         if isinstance(res, Exception):
             sym = 'ERROR'
         else:
             sym = 'PASS'
-        print "\t{}\t\t{}".format(n, sym)
+        print("\t{}\t\t{}".format(n, sym))

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import argparse
 parser = argparse.ArgumentParser(description=("Recreate plots from pickled SpeedTest objects. "
                                               "Overwrites already existing plots of same name."))

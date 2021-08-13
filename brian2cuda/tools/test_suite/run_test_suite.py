@@ -27,6 +27,9 @@ parser.add_argument('-k', default=None, type=str,
                          "some tests, e.g. `-k 'test_functions` or `-k 'not "
                          "test_funcions'`")
 
+parser.add_argument('-c', '--cache-dir', type=str, default=None,
+                    help="Pytest cache directory")
+
 parser.add_argument('-q', '--quiet', action='store_true',
                     help="Disable all verbosity")
 
@@ -47,7 +50,7 @@ if args.notify_slack:
 buffer = utils.PrintBuffer(clusterbot=bot)
 
 import os, sys
-from StringIO import StringIO
+from io import StringIO
 
 import brian2
 from brian2 import test, prefs
@@ -69,18 +72,19 @@ stored_prefs = prefs.as_file
 # directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
 # stops searching for `conftest.py` files outside the `brian2` directory)
 additional_args = [
-    # TODO (Python 3): Use `os.path.commonpath`
-    '--confcutdir={}'.format(
-        os.path.dirname(os.path.commonprefix([brian2.__file__, brian2cuda.__file__]))
-    )
+    f'--confcutdir={os.path.commonpath([brian2.__file__, brian2cuda.__file__])}',
 ]
+
+if args.cache_dir is not None:
+    # set pytest cache directory
+    additional_args += ['-o', f'cache_dir={args.cache_dir}']
 
 if not args.quiet:
     # set verbosity to max(?)
     additional_args += ['-vvv']
 
 if args.k is not None:
-    additional_args += ['-k {}'.format(args.k)]
+    additional_args += ['-k', args.k]
 
 build_options = None
 if args.debug:

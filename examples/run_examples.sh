@@ -4,7 +4,10 @@ codefolder=$base/code
 resultsfolder=$base/results
 lofgile=$base/log.txt
 
-mkdir $base
+# Exit at first failing example run
+#set -e -o pipefail
+
+mkdir -p $base
 for n in 5000 50000 500000; do
     for a_flag in "" "no-"; do
         for b_flag in "" "no-"; do

@@ -203,7 +203,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # `vector_code`
         ##################################################################
         vector_statements = {}
-        for ac_name, ac_code in abstract_code.iteritems():
+        for ac_name, ac_code in abstract_code.items():
             statements = make_statements(ac_code,
                                          variables,
                                          prefs['core.default_float_dtype'],
@@ -212,7 +212,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             _, vector_statements[ac_name] = statements
         read = set()
         write = set()
-        for statements in vector_statements.itervalues():
+        for statements in vector_statements.values():
             for stmt in statements:
                 ids = get_identifiers(stmt.expr)
                 # if the operation is inplace this counts as a read.
@@ -279,16 +279,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             read_write = read.union(write)
             synaptic_pre_array_name = self.get_array_name(owner.variables['_synaptic_pre'], False)
             synaptic_post_array_name = self.get_array_name(owner.variables['_synaptic_post'], False)
-            if synaptic_pre_array_name not in self.delete_synaptic_pre.iterkeys():
+            if synaptic_pre_array_name not in self.delete_synaptic_pre.keys():
                 self.delete_synaptic_pre[synaptic_pre_array_name] = True
-            if synaptic_post_array_name not in self.delete_synaptic_post.iterkeys():
+            if synaptic_post_array_name not in self.delete_synaptic_post.keys():
                 self.delete_synaptic_post[synaptic_post_array_name] = True
             error_msg = ("'devices.cuda_standalone.no_{prepost}_references' "
                          "was set to True, but {prepost}synaptic index is "
                          "needed for variable {varname} in {owner.name}")
             # Check for all variable that are read or written to if they are
             # i/j or their indices are pre/post
-            for varname in variables.iterkeys():
+            for varname in variables.keys():
                 if varname in read_write:
                     idx = variable_indices[varname]
                     if idx == '_presynaptic_idx' or varname == 'i':
@@ -325,7 +325,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
-            for varname in variables.iterkeys():
+            for varname in variables.keys():
                 if varname in write:
                     idx = variable_indices[varname]
                     if (prepost == 'pre' and idx == '_postsynaptic_idx') or (prepost == 'post' and idx == '_presynaptic_idx'):
@@ -336,7 +336,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # The SynapticPathways 'source' group variables are modified
                         synaptic_effects = "source"
             template_kwds["synaptic_effects"] = synaptic_effects
-            print('debug syn effect mode ', synaptic_effects)
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
             # use atomics if possible (except for `synapses` mode, where we cann parallelise without)
             # TODO: this overwrites if somebody sets a codeobject in the Synapses(..., codeobj_class=...)
@@ -379,13 +378,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         self.eventspace_arrays = {}
         self.spikegenerator_eventspaces = []
-        for var, varname in self.arrays.iteritems():
+        for var, varname in self.arrays.items():
             if var.name.endswith('space'):  # get all eventspace variables
                 self.eventspace_arrays[var] = varname
                 #if hasattr(var, 'owner') and isinstance(v.owner, Clock):
                 if isinstance(var.owner, SpikeGeneratorGroup):
                     self.spikegenerator_eventspaces.append(varname)
-        for var in self.eventspace_arrays.iterkeys():
+        for var in self.eventspace_arrays.keys():
             del self.arrays[var]
         multisyn_vars = []
         for syn in synapses:
@@ -447,14 +446,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # These lines delete `i`/`j` variables stored per synapse. They need to be called after
                     # synapses_initialise_queue codeobjects, therefore just before the network creation, so I
                     # put them here
-                    for arrname, boolean in self.delete_synaptic_pre.iteritems():
+                    for arrname, boolean in self.delete_synaptic_pre.items():
                         if boolean:
                             lines = '''
                             dev{synaptic_pre}.clear();
                             dev{synaptic_pre}.shrink_to_fit();
                             '''.format(synaptic_pre=arrname)
                             main_lines.extend(lines.split('\n'))
-                    for arrname, boolean in self.delete_synaptic_post.iteritems():
+                    for arrname, boolean in self.delete_synaptic_post.items():
                         if boolean:
                             lines = '''
                             dev{synaptic_post}.clear();
@@ -575,7 +574,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.gpu_id, self.compute_capability = select_gpu()
 
         # generate the finalisations
-        for codeobj in self.code_objects.itervalues():
+        for codeobj in self.code_objects.values():
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
@@ -597,7 +596,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         kernel_parameters = defaultdict(list)
         kernel_constants = defaultdict(list)
         # Generate data for non-constant values
-        for codeobj in self.code_objects.itervalues():
+        for codeobj in self.code_objects.values():
             code_object_defs_lines = []
             host_parameters_lines = []
             kernel_parameters_lines = []
@@ -615,7 +614,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # function in one codeobject (e.g. rand() and randn()), the order in which
             # they are generated can differ between two codeobjects, which makes the
             # brian2.tests.test_neurongroup.test_random_values_fixed_seed fail.
-            for k, v in sorted(codeobj.variables.iteritems()):
+            for k, v in sorted(codeobj.variables.items()):
                 if k == 'dt' and prefs['core.default_float_dtype'] == np.float32:
                     # use the double-precision array versions for dt as kernel arguments
                     # they are cast to single-precision scalar dt in scalar_code
@@ -821,7 +820,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code_object_defs[codeobj.name].append(line)
 
         # Generate the code objects
-        for codeobj in self.code_objects.itervalues():
+        for codeobj in self.code_objects.values():
             ns = codeobj.variables
             # TODO: fix these freeze/HOST_CONSTANTS hacks somehow - they work but not elegant.
             code = self.freeze(codeobj.code.cu_file, ns)
@@ -1335,7 +1334,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             report_func = standard_code.replace('%STREAMNAME%', 'std::cout')
         elif report == 'stderr':
             report_func = standard_code.replace('%STREAMNAME%', 'std::cerr')
-        elif isinstance(report, basestring):
+        elif isinstance(report, str):
             report_func = '''
             void report_progress(const double elapsed, const double completed, const double start, const double duration)
             {
@@ -1455,7 +1454,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Initialize eventspaces with -1 before the network runs
         for codeobj in self.code_objects.values():
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
-                for key in codeobj.variables.iterkeys():
+                for key in codeobj.variables.keys():
                     if key.endswith('space'):  # get the correct eventspace name
                         eventspace_name = self.get_array_name(codeobj.variables[key], False)
                         # In case of custom scheduling, the thresholder might come after synapses or monitors
@@ -1659,7 +1658,7 @@ def prepare_codeobj_code_for_rng(codeobj):
     if codeobj.template_name == 'synapses':
         for rng_type in codeobj.rng_calls.keys():
             assert codeobj.rng_calls[rng_type] % 2 == 0
-            codeobj.rng_calls[rng_type] /= 2
+            codeobj.rng_calls[rng_type] //= 2
 
     # RAND/N
     # Substitue the _vectorisation_idx of _rand/n calls such that different calls always

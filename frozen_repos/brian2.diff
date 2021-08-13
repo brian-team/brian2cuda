@@ -1,8 +1,31 @@
+diff --git a/brian2/conftest.py b/brian2/conftest.py
+index ca1acba6..3a7ca446 100644
+--- a/brian2/conftest.py
++++ b/brian2/conftest.py
+@@ -6,7 +6,7 @@
+ import numpy as np
+ import pytest
+ 
+-from brian2.devices import reinit_devices
++from brian2.devices import reinit_devices, get_device
+ from brian2.units import ms
+ from brian2.core.clocks import defaultclock
+ from brian2.core.functions import Function, DEFAULT_FUNCTIONS
+@@ -99,6 +99,9 @@ def pytest_runtest_makereport(item, call):
+     outcome = yield
+     rep = outcome.get_result()
+     if rep.outcome == 'failed':
++        project_dir = get_device().project_dir
++        if project_dir is not None:
++            rep.sections.append(('Standalone project directory', f'{project_dir}'))
+         reinit_devices()
+         if not fail_for_not_implemented:
+             if call.excinfo.errisinstance(NotImplementedError):
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index f06c12a3..325e6139 100644
+index 1dcc3ce5..f75728a3 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1068,6 +1068,7 @@ def run(self, directory, with_output, run_args):
+@@ -1026,6 +1026,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -10,7 +33,7 @@ index f06c12a3..325e6139 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1392,6 +1393,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1350,6 +1351,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile
@@ -63,18 +86,9 @@ index f3a9ca0f..77b9d6e8 100644
 -	$(CC) $(CFLAGS) $< -o $@
 +	$(CXX) $(CXXFLAGS) $< -o $@
 diff --git a/brian2/input/timedarray.py b/brian2/input/timedarray.py
-index 3935dcdd..9485c569 100644
+index a9f34633..9485c569 100644
 --- a/brian2/input/timedarray.py
 +++ b/brian2/input/timedarray.py
-@@ -2,7 +2,7 @@
- Implementation of `TimedArray`.
- '''
- 
--from __future__ import absolute_import
-+
- import numpy as np
- 
- from brian2.core.clocks import defaultclock
 @@ -33,6 +33,101 @@ def _find_K(group_dt, dt):
      return K
  
@@ -357,10 +371,10 @@ index 3935dcdd..9485c569 100644
      def is_locally_constant(self, dt):
          if dt > self.dt:
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index ac231d3a..336c4c9c 100644
+index 03a81bfe..83402d97 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
-@@ -13,6 +13,7 @@
+@@ -10,6 +10,7 @@
  import re
  
  from brian2.utils.stringtools import indent
@@ -368,7 +382,7 @@ index ac231d3a..336c4c9c 100644
  
  from collections import defaultdict
  
-@@ -229,8 +230,10 @@ def after_run(self):
+@@ -218,8 +219,10 @@ def after_run(self):
                              with_output=False)
      
      
@@ -381,7 +395,7 @@ index ac231d3a..336c4c9c 100644
      if n is None:
          init_args = ''
      else:
-@@ -238,9 +241,9 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -227,9 +230,9 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      code_string = '''
  __file__ = '{fname}'
  import brian2
@@ -393,7 +407,7 @@ index ac231d3a..336c4c9c 100644
  feature = {feature_name}({init_args})
  import warnings, traceback, pickle, sys, os, time
  warnings.simplefilter('ignore')
-@@ -249,6 +252,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -238,6 +241,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      configuration.before_run()
      brian2.device._set_maximum_run_time({maximum_run_time})
      feature.run()
@@ -406,7 +420,7 @@ index ac231d3a..336c4c9c 100644
      configuration.after_run()
      results = feature.results()
      run_time = time.time()-start_time
-@@ -259,39 +268,80 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -248,39 +257,80 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
              pass
      lrcf = configuration.get_last_run_completed_fraction()
      run_time = run_time/lrcf
@@ -495,7 +509,7 @@ index ac231d3a..336c4c9c 100644
      return tb, res, runtime, profiling_info
      
  
-@@ -336,7 +386,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
+@@ -325,7 +375,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
              txt = 'OK'
              sym = '.'
              exc = None
@@ -504,7 +518,7 @@ index ac231d3a..336c4c9c 100644
              if isinstance(res, Exception):
                  if isinstance(res, NotImplementedError):
                      sym = 'N'
-@@ -480,7 +530,8 @@ def __str__(self):
+@@ -469,7 +519,8 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
@@ -514,7 +528,7 @@ index ac231d3a..336c4c9c 100644
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -498,15 +549,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -487,15 +538,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
      full_results = {}
      tag_results = defaultdict(lambda:defaultdict(list))
      for ft in speed_tests:
@@ -543,7 +557,7 @@ index ac231d3a..336c4c9c 100644
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -515,8 +578,28 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -504,8 +567,28 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -572,7 +586,7 @@ index ac231d3a..336c4c9c 100644
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -531,18 +614,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -520,18 +603,27 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
              if verbose:
                  print(']', end=' ')
@@ -604,7 +618,7 @@ index ac231d3a..336c4c9c 100644
      def get_ns(self, fullname):
          L = [(cn, fn, n, s)
               for cn, fn, n, s in self.full_results
-@@ -557,7 +649,7 @@ def get_codeobjsuffixes(self, fullname):
+@@ -546,7 +638,7 @@ def get_codeobjsuffixes(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
          return set(codeobjsuffixes)
  
@@ -613,7 +627,7 @@ index ac231d3a..336c4c9c 100644
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -568,6 +660,8 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -557,6 +649,8 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              codeobjsuffixes = self.get_codeobjsuffixes(fullname)
              codeobjsuffixes.remove('All')
              codeobjsuffixes.remove('Overheads')
@@ -622,7 +636,7 @@ index ac231d3a..336c4c9c 100644
              codeobjsuffixes = ['All', 'Overheads']+sorted(codeobjsuffixes)
              if relative or profiling_minimum==1:
                  codeobjsuffixes = ['All']
-@@ -577,31 +671,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -566,31 +660,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              dashes = {}
              markerstyles = {}
              for isuffix, suffix in enumerate(codeobjsuffixes):
@@ -673,7 +687,7 @@ index ac231d3a..336c4c9c 100644
                      if plottable:
                          if label in havelabel:
                              label = None
-@@ -623,8 +732,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -612,8 +721,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                                          dash = dash+(4, 2)
                                  dashes[suffix] = dash
                                  markerstyles[suffix] = msty = next(markerstyles_cycle)
@@ -687,7 +701,7 @@ index ac231d3a..336c4c9c 100644
                          if dash is not None:
                              line.set_dashes(dash)
              pylab.title(fullname)
-@@ -634,6 +747,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -623,6 +736,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')
@@ -696,7 +710,7 @@ index ac231d3a..336c4c9c 100644
  # Code below auto generates restructured text tables, copied from:
  # http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte
 diff --git a/brian2/tests/features/speed.py b/brian2/tests/features/speed.py
-index 528b53a3..b854771e 100644
+index 317bbf6d..0b6ba2f6 100644
 --- a/brian2/tests/features/speed.py
 +++ b/brian2/tests/features/speed.py
 @@ -23,7 +23,7 @@ class LinearNeuronsOnly(SpeedTest):
@@ -748,7 +762,7 @@ index 528b53a3..b854771e 100644
      name = "Very sparse, medium rate (10s duration)"
      rate = 10 * Hz
      p = 0.02
--    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 20s
+-    n_range = [10, 100, 1000, 10000, 100000]
 +    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3875000]  #fail: 3906250  # weave max CPU time should be about 20s
      duration = 10 * second
  
@@ -757,7 +771,7 @@ index 528b53a3..b854771e 100644
      name = "Sparse, medium rate (1s duration)"
      rate = 10 * Hz
      p = 0.2
--    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 5m
+-    n_range = [10, 100, 1000, 10000, 100000]
 +    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 1234375]  #fail: 1242187  # weave max CPU time should be about 5m
  
  
@@ -765,7 +779,7 @@ index 528b53a3..b854771e 100644
      name = "Dense, medium rate (1s duration)"
      rate = 10 * Hz
      p = 1.0
--    n_range = [10, 100, 1000, 10000, 40000]  # weave max CPU time should be about 4m
+-    n_range = [10, 100, 1000, 10000, 40000]
 +    n_range = [10, 100, 1000, 10000, 100000, 500000, 546875]  #fail: 554687  # weave max CPU time should be about 4m
  
  
@@ -773,7 +787,7 @@ index 528b53a3..b854771e 100644
      name = "Sparse, low rate (10s duration)"
      rate = 1 * Hz
      p = 0.2
--    n_range = [10, 100, 1000, 10000, 100000]  # weave max CPU time should be about 20s
+-    n_range = [10, 100, 1000, 10000, 100000]
 +    n_range = [10, 100, 1000, 10000, 100000, 500000, 1000000, 3875000]  #fail: 3906250  # weave max CPU time should be about 20s
      duration = 10 * second
  
@@ -782,7 +796,7 @@ index 528b53a3..b854771e 100644
      name = "Sparse, high rate (1s duration)"
      rate = 100 * Hz
      p = 0.2
--    n_range = [10, 100, 1000, 10000]  # weave max CPU time should be about 5m
+-    n_range = [10, 100, 1000, 10000]
 +    n_range = [10, 100, 1000, 10000, 100000, 387500]  #fail: 393750  # weave max CPU time should be about 5m
  
  

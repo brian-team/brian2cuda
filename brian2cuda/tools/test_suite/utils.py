@@ -279,7 +279,7 @@ class PrintBuffer(object):
         import time
         timestemp = time.gmtime()
         formatted = time.strftime("%Y-%m-%d %H:%M:%S", timestemp)
-        if isinstance(new_lines, basestring):
+        if isinstance(new_lines, str):
             new_lines = [new_lines]
         for i in range(len(new_lines)):
             if i == 0:
