@@ -736,7 +736,7 @@ class CUDACodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in self.variables.items():
+        for varname, variable in list(self.variables.items()):
             if isinstance(variable, Function):
                 hd, ps, sc, uf, kl = self._add_user_function(varname, variable)
                 user_functions.extend(uf)
