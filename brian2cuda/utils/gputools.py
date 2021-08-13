@@ -77,9 +77,7 @@ def get_cuda_installation():
         'runtime_version': get_cuda_runtime_version(),
     }
     global _cuda_installation
-    assert (
-        sorted(cuda_installation.keys()) == sorted(_cuda_installation.keys())
-    ), "{} != {}".format(cuda_installation.keys(), _cuda_installation.keys())
+    _assert_keys_equal(cuda_installation, _cuda_installation)
     return cuda_installation
 
 
@@ -92,9 +90,7 @@ def get_gpu_selection():
         'selected_gpu_compute_capability': compute_capability,
     }
     global _gpu_selection
-    assert (
-        sorted(gpu_selection.keys()) == sorted(_gpu_selection.keys())
-    ), "{} != {}".format(gpu_selection.keys(), _gpu_selection.keys())
+    _assert_keys_equal(gpu_selection, _gpu_selection)
     return gpu_selection
 
 
@@ -166,6 +162,12 @@ def restore_gpu_selection(gpu_selection):
             "{}".format(sorted(gpu_selection.keys()), sorted(_gpu_selection.keys()))
         )
     _gpu_selection.update(gpu_selection)
+
+
+def _assert_keys_equal(dict1, dict2):
+    keys1 = sorted(dict1.keys())
+    keys2 = sorted(dict2.keys())
+    assert keys1 == keys2, f"{keys1} != {keys2}"
 
 
 def _get_cuda_path():
