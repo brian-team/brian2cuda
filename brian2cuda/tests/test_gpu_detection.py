@@ -45,7 +45,7 @@ def reset_gpu_detection():
 def test_wrong_cuda_path_error(reset_cuda_detection):
     set_device("cuda_standalone", directory=None)
     # store global _cuda_installation and environment variable before changing them
-    cuda_path_env = os.environ.get('CUDA_PATH', failobj=None)
+    cuda_path_env = os.environ.get('CUDA_PATH', None)
 
     # Set wrong CUDA_PATH
     os.environ['CUDA_PATH'] = '/tmp'
