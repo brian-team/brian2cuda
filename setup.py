@@ -11,6 +11,5 @@ setup(
                                  'templates/win_makefile',
                                  'brianlib/*.cu',
                                  'brianlib/*.h'],
-                 },
-    install_requires=["brian2 @ git+https://github.com/brian-team/brian2@d6de6cc"],
+                 }
 )
