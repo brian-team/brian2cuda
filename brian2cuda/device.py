@@ -1659,7 +1659,7 @@ def prepare_codeobj_code_for_rng(codeobj):
     if codeobj.template_name == 'synapses':
         for rng_type in codeobj.rng_calls.keys():
             assert codeobj.rng_calls[rng_type] % 2 == 0
-            codeobj.rng_calls[rng_type] /= 2
+            codeobj.rng_calls[rng_type] //= 2
 
     # RAND/N
     # Substitue the _vectorisation_idx of _rand/n calls such that different calls always
