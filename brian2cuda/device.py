@@ -336,7 +336,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # The SynapticPathways 'source' group variables are modified
                         synaptic_effects = "source"
             template_kwds["synaptic_effects"] = synaptic_effects
-            print('debug syn effect mode ', synaptic_effects)
             logger.debug("Synaptic effects of Synapses object {syn} modify {mod} group variables.".format(syn=name, mod=synaptic_effects))
             # use atomics if possible (except for `synapses` mode, where we cann parallelise without)
             # TODO: this overwrites if somebody sets a codeobject in the Synapses(..., codeobj_class=...)
