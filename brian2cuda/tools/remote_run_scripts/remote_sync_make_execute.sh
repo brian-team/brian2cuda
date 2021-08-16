@@ -25,10 +25,9 @@ rsync -avzz \
     --exclude=".*" \
     "$local_dir"/* "$remote:$remote_dir"
 
-echo
 echo "Uploaded $local_dir to remote directory $remote_dir"
 
-ssh -p 1234 -i ~/.ssh/id_internal localhost "source /cognition/home/local/.init_cuda.sh \
+ssh -p 1234 -i ~/.ssh/id_intra_cluster localhost "source /cognition/home/local/.init_cuda.sh \
     && cd \$HOME/$relative_remote_dir \
     && make -j $@ \
     && cd \$HOME/$relative_remote_dir \

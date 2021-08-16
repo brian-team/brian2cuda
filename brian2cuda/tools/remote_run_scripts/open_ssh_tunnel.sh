@@ -42,7 +42,6 @@ if [ "$?" -ne 0 ]; then
     exit 1
 fi
 
-echo $remote
 # Get information about running server
 TUNNEL_CMD=$(ssh $remote "cat ~/.cluster-sshd/sshserver-tunnel-cmd")
 # Open ssh tunnel to ssh server on compute node
