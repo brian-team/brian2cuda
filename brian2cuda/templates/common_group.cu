@@ -57,6 +57,7 @@ namespace {
     {% endblock random_functions %}
 }
 
+////// hashdefine_lines ///////
 {{hashdefine_lines|autoindent}}
 
 {% block kernel %}
