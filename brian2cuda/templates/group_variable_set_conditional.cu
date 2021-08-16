@@ -1,3 +1,5 @@
+{# USES_VARIABLES { N } #}
+{# ALLOWS_SCALAR_WRITE #}
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
 #include "rand.h"
@@ -49,7 +51,6 @@ __global__ void kernel_{{codeobj_name}}(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -89,8 +90,6 @@ __global__ void kernel_{{codeobj_name}}(
 
 void _run_{{codeobj_name}}()
 {
-    {# USES_VARIABLES { N } #}
-    {# ALLOWS_SCALAR_WRITE #}
     using namespace brian;
 
     {# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for

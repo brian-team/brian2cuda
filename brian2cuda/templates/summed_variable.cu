@@ -1,3 +1,4 @@
+{# USES_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
 
 
@@ -21,7 +22,6 @@ CUDA_SAFE_CALL(
 
 
 {% block extra_vector_code %}
-{# USES_VARIABLES { N } #}
 {# For the vector_code, get the _ptr array #}
 {% set _target_var_ptr = get_array_name(_target_var) %}
 {% set _index_array = get_array_name(_index_var) %}

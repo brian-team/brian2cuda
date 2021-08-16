@@ -1,3 +1,10 @@
+{# TODO: get rid of the variables we don't actually use #}
+{# USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
+                    N_incoming, N_outgoing, N,
+                    N_pre, N_post, _source_offset, _target_offset } #}
+
+{# WRITES_TO_READ_ONLY_VARIABLES { _synaptic_pre, _synaptic_post,
+                                   N_incoming, N_outgoing, N} #}
 {% extends 'common_synapses.cu' %}
 
 {% block extra_headers %}
@@ -158,14 +165,6 @@ std::cout << std::endl;
 {% endblock %}
 
 {% block host_maincode %}
-    {# // TODO: get rid of the variables we don't actually use
-       USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
-                        N_incoming, N_outgoing, N,
-                        N_pre, N_post, _source_offset, _target_offset } #}
-
-    {# WRITES_TO_READ_ONLY_VARIABLES { _synaptic_pre, _synaptic_post,
-                                       N_incoming, N_outgoing, N}
-    #}
 
     ///// pointers_lines /////
     {{pointers_lines|autoindent}}

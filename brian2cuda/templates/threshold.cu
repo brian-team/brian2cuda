@@ -1,6 +1,6 @@
+{# USES_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
 
-{# USES_VARIABLES { N } #}
 {# not_refractory and lastspike are added as needed_variables in the
    Thresholder class, we cannot use the USES_VARIABLE mechanism
    conditionally

@@ -1,3 +1,4 @@
+{# USES_VARIABLES { N } #}
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
 #include "brianlib/common_math.h"
@@ -70,7 +71,6 @@ kernel_{{codeobj_name}}(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -114,7 +114,6 @@ kernel_{{codeobj_name}}(
 
 void _run_{{codeobj_name}}()
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     {% block profiling_start %}

@@ -1,7 +1,6 @@
-{% extends 'common_group.cu' %}
-{# USES_VARIABLES { N, count,
-                    _source_start, _source_stop} #}
+{# USES_VARIABLES { N, count, _source_start, _source_stop} #}
 {# WRITES_TO_READ_ONLY_VARIABLES { N, count } #}
+{% extends 'common_group.cu' %}
 {% block extra_device_helper %}
     {% for varname, var in record_variables.items() %}
     // declare monitor cudaVectors
