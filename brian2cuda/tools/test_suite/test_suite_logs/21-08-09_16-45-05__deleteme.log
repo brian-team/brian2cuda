@@ -1,0 +1,16 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-09 14:45:06  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+DEBUG: argv: ['/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2', '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests', '-c', '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini', '--quiet', '-m', 'standalone_compatible  and not multiple_runs', '--confcutdir', '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'] additional_args ['--rootdir=/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'] plugins [<brian2.tests.PreferencePlugin object at 0x7f3aff265810>]
+ssssssss.ssssssssTest suite took 0 h 0 m 9 s.

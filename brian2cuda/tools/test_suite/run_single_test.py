@@ -103,7 +103,7 @@ if args.k:
     test_patterns = args.k
 
 if test_patterns is not None:
-    additional_args += ['-k {}'.format(test_patterns)]
+    additional_args += [f'-k {test_patterns}']
 
 with_output = False
 if args.debug:
@@ -131,11 +131,11 @@ for target in args.targets:
         prefs.read_preference_file(StringIO(stored_prefs))
 
         if prefs_dict is not None:
-            print("{}. RUN: running on {} with prefs:".format(n + 1, target))
+            print(f"{n + 1}. RUN: running on {target} with prefs:")
             # print and set preferences
             utils.print_single_prefs(prefs_dict, set_prefs=prefs)
         else:  # None
-            print("Running {} with default preferences\n".format(target))
+            print(f"Running {target} with default preferences\n")
         sys.stdout.flush()
 
         # backup prefs such that reinit_device in the pytest test teardown resets
@@ -183,7 +183,7 @@ for target in args.targets:
             clear_caches()
             reset_device()
 
-    print("\nTARGET: {}".format(target.upper()))
+    print(f"\nTARGET: {target.upper()}")
     all_success = utils.check_success(successes, all_prefs_combinations)
     all_successes.append(all_success)
 
@@ -198,7 +198,7 @@ if len(args.targets) > 1:
                                                len(all_successes)))
         for n, target in enumerate(args.targets):
             if not all_successes[n]:
-                print("\t{} failed.".format(target))
+                print(f"\t{target} failed.")
         sys.exit(1)
 
 elif not all_successes[0]:

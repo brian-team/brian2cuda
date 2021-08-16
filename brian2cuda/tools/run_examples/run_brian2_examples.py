@@ -122,7 +122,7 @@ except Exception as ex:
             self.successful = True
 
     def __str__(self):
-        return 'Example: %s (%s)' % (self.filename, self.codegen_target)
+        return f'Example: {self.filename} ({self.codegen_target})'
 
 
 class SelectFilesPlugin(Plugin):
@@ -204,11 +204,11 @@ if __name__ == '__main__':
         for n, prefs_dict in enumerate(preference_dictionaries):
 
             if prefs_dict is not None:
-                print("{}. RUN: running on {} with prefs:".format(n + 1, target))
+                print(f"{n + 1}. RUN: running on {target} with prefs:")
                 # print preferences (setting happens in RunTestCase.runTest())
                 utils.print_single_prefs(prefs_dict, set_prefs=prefs)
             else:  # None
-                print("Running {} with default preferences".format(target))
+                print(f"Running {target} with default preferences")
                 # RunTestCase.runTest() needs a dictionary
                 prefs_dict = {}
 
@@ -222,7 +222,7 @@ if __name__ == '__main__':
                                         Capture(), Xunit()])
             successes.append(success)
 
-        print("\nTARGET: {}".format(target.upper()))
+        print(f"\nTARGET: {target.upper()}")
         all_success = utils.check_success(successes, all_prefs_combinations)
 
         all_successes.append(all_success)
@@ -238,7 +238,7 @@ if __name__ == '__main__':
                                                    len(all_successes)))
             for n, target in enumerate(args.targets):
                 if not all_successes[n]:
-                    print("\t{} failed.".format(target))
+                    print(f"\t{target} failed.")
             sys.exit(1)
 
     elif not all_successes[0]:

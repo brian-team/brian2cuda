@@ -1,0 +1,41 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-12 07:55:42  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 698 deselected
+
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+================== 698 deselected, 1 warnings in 1.98 seconds ==================
+Running standalone-compatible standard tests (multiple run statements)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 698 deselected
+
+======================== 698 deselected in 1.75 seconds ========================
+Running standalone-specific tests
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... Test suite took 0 h 0 m 7 s.

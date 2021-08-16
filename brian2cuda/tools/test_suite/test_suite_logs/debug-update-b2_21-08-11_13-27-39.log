@@ -1,0 +1,9 @@
+usage: run_test_suite.py [-h] [--no-long-tests] [--skip-not-implemented]
+                         [--test-parallel [TEST_PARALLEL]] [--notify-slack]
+                         [-k K] [-v]
+                         [--targets [{cuda_standalone,genn,cpp_standalone} [{cuda_standalone,genn,cpp_standalone} ...]]]
+                         [--single-precision] [--no-bundles] [--no-atomics]
+                         [--num-blocks NUM_BLOCKS] [--all-prefs] [--jobs JOBS]
+                         [--dry-run]
+run_test_suite.py: error: unrecognized arguments: -x
+Test suite took 0 h 0 m 1 s.

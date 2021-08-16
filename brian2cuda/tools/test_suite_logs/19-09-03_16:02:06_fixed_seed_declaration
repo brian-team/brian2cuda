@@ -1,0 +1,11 @@
+Your branch is up to date with 'origin/binomial_implementation'.
+binomial_implementation
+b452e1df0318b3485a16b912e6bc075e91db8800
+Submodule path 'frozen_repos/brian2': checked out 'd6de6ccc97487c73545589fb659696ae22ecf6d9'
+HEAD
+d6de6ccc97487c73545589fb659696ae22ecf6d9
+Applied brian2.diff
+  File "run_test_suite.py", line 74
+    print "\nTARGET: {}".format(target.upper())
+                       ^
+SyntaxError: invalid syntax

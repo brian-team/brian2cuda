@@ -1,0 +1,160 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-12 06:30:35  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... 	Scalars with units
+3 * mV = 3. mV
+mV * 3 = 3. mV
+3 * mV/mV = 3.0
+(23 * metre) ** 2 = 529. m^2
+np.sqrt((23 * metre) ** 2) = 23. m
+np.sin(2 * np.pi * 100 * Hz * 1 * second) = 3.928773447456944e-15
+np.float32(23) * (1 * metre) = 23. m
+Expected error raised:  sin expects a dimensionless argument but got 3. s (unit is s).
+
+	Removing units
+float(23 * cm) = 0.23
+np.float32(23 * cm) = 0.23
+np.array(23 * cm) = 0.23
+np.asarray(23 * cm) = 0.23
+
+	Arrays with units
+np.array([1, 2, 3]) * mV = [1. 2. 3.] mV
+np.array([1, 2, 3]) * mV/mV = [1. 2. 3.]
+(np.array([1, 2, 3]) * metre) ** 2 = [1. 4. 9.] m^2
+np.sqrt((np.array([1, 2, 3]) * metre) ** 2) = [1. 2. 3.] m
+np.sin(2 * np.pi * 100 * Hz * np.array([0, 2.5, 5]) * ms) = [ 0.0000000e+00  1.0000000e+00 -3.2162453e-16]
+np.array([1, 2, 3], dtype=np.int32) * metre = [1. 2. 3.] m
+
+	removing units
+np.asarray(np.array([1, 2, 3]) * metre) = [1. 2. 3.]
+
+	Calculations with unit arrays
+np.array([10, 20, 30]) * cm + 1 * metre = [1.1 1.2 1.3] m
+np.array([10, 20, 30]) * cm + np.array([1, 2, 3]) * metre = [1.1 2.2 3.3] m
+np.array([10, 20, 30]) * cm * (1 / second) = [0.1 0.2 0.3] m s^-1
+np.array([10, 20, 30]) * cm * (np.array([1, 2, 3]) / second) = [0.1 0.4 0.9] m s^-1
+np.array([10, 20, 30]) * cm / (np.array([1, 2, 3]) * second) = [0.1 0.1 0.1] m s^-1
+np.array([10, 20, 30]) * cm * 5 = [0.5 1.  1.5] m
+np.ones((3, 4)) * mV = [[1. 1. 1. 1.]
+ [1. 1. 1. 1.]
+ [1. 1. 1. 1.]] mV
+(np.ones((3, 4)) * mV).flatten() = [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.] mV
+
+Unit mismatches
+Expected error raised:  Cannot calculate [100. 200. 300.] mm + 3. s, units do not match (units are m and s).
+Expected error raised:  Cannot calculate [100. 200. 300.] mm + [1. 2. 3.] s, units do not match (units are m and s).
+Expected error raised:  sin expects a dimensionless argument but got [100. 200. 300.] mm (unit is m).
+
+	numpy functions
+(np.array([10, 20, 30]) * cm).mean() = 200. mm
+np.mean(np.array([10, 20, 30]) * cm) = 200. mm
+(np.array([10, 20, 30]) * cm).var() = 6666.66666667 mm^2
+np.var(np.array([10, 20, 30]) * cm) = 6666.66666667 mm^2
+np.max(np.array([10, 20, 30]) * cm) = 300. mm
+np.sum(np.array([10, 20, 30]) * cm) = 0.6 m
+np.clip(np.array([10, 20, 30]) * cm, 20 * cm, np.Inf * cm) = [200. 200. 300.] mm
+
+	Comparisons
+np.array([10, 20, 30]) * cm == np.array([0.2, 0.2, 0.2]) * metre = [False  True False]
+np.array([10, 20, 30]) * cm < np.array([0.2, 0.2, 0.2]) * metre = [ True False False]
+Expected error raised:  Cannot perform comparison [100. 200. 300.] mm < [200. 200. 200.] ms, units do not match (units are m and s).
+
+	Slicing and indexing
+(np.array([10, 20, 30]) * cm)[:] = [100. 200. 300.] mm
+(np.array([10, 20, 30]) * cm)[0:2] = [100. 200.] mm
+(np.array([10, 20, 30]) * cm)[0] = 100. mm
+(np.array([10, 20, 30]) * cm)[np.array([0, 2])] = [100. 300.] mm
+(np.array([10, 20, 30]) * cm)[np.array([True, False, True])] = [100. 300.] mm
+
+	Assigning values
+Before assignment:  [100. 200. 300.] mm
+After assignment:  [200. 200. 300.] mm
+After assignment:  [0.5 0.5 0.3] m
+Expected error raised:  Inconsistent units in assignment (units are m and s).
+Expected error raised:  Inconsistent units in assignment (units are m and s).
+
+	Conversions to and from list
+Quantity([1 * mV, 1 * volt]) = [   1. 1000.] mV
+(np.array([1, 2, 3]) * mV).tolist() = [1. * mvolt, 2. * mvolt, 3. * mvolt]
+
+	Examples of functions that are not unit-aware
+np.histogram(np.array([1, 2, 3]) * mV) = (array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1]), array([0.001 , 0.0012, 0.0014, 0.0016, 0.0018, 0.002 , 0.0022, 0.0024,
+       0.0026, 0.0028, 0.003 ]))
+np.correlate(np.array([1, 2, 3]) * mV, np.array([1, 2, 3]) * mV) = [14.] uV
+np.trapz(np.array([1, 2, 3]) * mV, np.array([1, 2, 3]) * second) = 4. mWb
+np.arange(0 * mV, 10 * mV, 1 * mV) = [0. 1. 2. 3. 4. 5. 6. 7. 8. 9.] mV
+collected 698 items / 698 deselected
+
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+================== 698 deselected, 1 warnings in 1.95 seconds ==================
+Running standalone-compatible standard tests (multiple run statements)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 698 deselected
+
+======================== 698 deselected in 1.72 seconds ========================
+Running standalone-specific tests
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 697 deselected / 1 selected
+
+../../tests/test_gpu_detection.py::test_wrong_cuda_path_error ('FAILED PROJECT DIRECTORY', {'writer': None, 'dynamic_arrays': {}, 'minimal_compute_capability': 3.5, 'gpu_id': None, 'run_environment_variables': {}, 'code_lines': {'after_start': [], 'before_start': [], 'after_end': [], 'before_end': []}, 'main_queue': [('set_by_single_value', ('_array_defaultclock_dt', 0, '0.0001')), ('set_by_single_value', ('_array_defaultclock_dt', 0, '0.0001')), ('set_by_single_value', ('_array_defaultclock_dt', 0, '0.0001'))], 'build_options': {'directory': None, 'with_output': True}, 'clocks': set([]), 'synapses': [], 'codeobjects_with_rng': {'device_api': {'every_tick': [], 'single_tick': []}, 'host_api': {'per_run': [], 'all_runs': defaultdict(<type 'list'>, {})}}, 'profiled_codeobjects': [], 'zero_arrays': [(<ArrayVariable(dimensions=Dimension(),  dtype=int64, scalar=True, constant=False, read_only=True)>, '_array_defaultclock_timestep'), (<ArrayVariable(dimensions=second,  dtype=float64, scalar=True, constant=False, read_only=True)>, '_array_defaultclock_t'), (<ArrayVariable(dimensions=second,  dtype=float, scalar=True, constant=True, read_only=True)>, '_array_defaultclock_dt')], 'networks': [], 'static_arrays': {}, 'delete_synaptic_post': {}, 'report_func': '', 'define_macros': [], '_maximum_run_time': None, 'all_poisson_lamdas': defaultdict(<type 'dict'>, {}), 'compute_capability': None, 'static_array_specs': [], '_state_tuple': ('brian2cuda.device', 'CUDAStandaloneDevice'), 'libraries': [], 'code_objects': {}, 'network_schedule': None, 'array_cache': {<ArrayVariable(dimensions=second,  dtype=float, scalar=True, constant=True, read_only=True)>: array([ 0.0001]), <ArrayVariable(dimensions=Dimension(),  dtype=int64, scalar=True, constant=False, read_only=True)>: array([0]), <ArrayVariable(dimensions=second,  dtype=float64, scalar=True, constant=False, read_only=True)>: array([ 0.])}, 'arange_arrays': [], 'defaultclock': Clock(dt=100. * usecond, name='defaultclock'), 'net_synapses': [], 'dynamic_arrays_2d': {}, 'build_on_run': False, 'has_been_run': False, 'extra_link_args': [], 'extra_compile_args': [], 'project_dir': None, 'include_dirs': ['/home/denis/.conda/envs/b2c/include'], 'delete_synaptic_pre': {}, 'first_run': True, 'arrays': {<ArrayVariable(dimensions=second,  dtype=float, scalar=True, constant=True, read_only=True)>: '_array_defaultclock_dt', <ArrayVariable(dimensions=Dimension(),  dtype=int64, scalar=True, constant=False, read_only=True)>: '_array_defaultclock_timestep', <ArrayVariable(dimensions=second,  dtype=float64, scalar=True, constant=False, read_only=True)>: '_array_defaultclock_t'}, 'enable_profiling': False, 'runfuncs': {}, 'runtime_library_dirs': ['/home/denis/.conda/envs/b2c/lib'], 'headers': [], 'library_dirs': ['/home/denis/.conda/envs/b2c/lib']}, None)
+FAILED
+
+=================================== FAILURES ===================================
+__________________________ test_wrong_cuda_path_error __________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3185550610>
+
+    @pytest.mark.cuda_standalone
+    @pytest.mark.standalone_only
+    def test_wrong_cuda_path_error(monkeypatch):
+        # store global _cuda_installation and environment variable before changing them
+        cuda_installation_backup = get_cuda_installation()
+        cuda_path_env = os.environ.get('CUDA_PATH', failobj=None)
+        # reset cuda installation, such that it will be detected again during `run()`
+        reset_cuda_installation()
+    
+        # Set wrong CUDA_PATH
+        monkeypatch.setenv('CUDA_PATH', '/tmp')
+        #os.environ['CUDA_PATH'] = '/tmp'
+        with pytest.raises(RuntimeError):
+>           run(0*ms, report='text')
+E           Failed: DID NOT RAISE <type 'exceptions.RuntimeError'>
+
+../../tests/test_gpu_detection.py:28: Failed
+=================== 1 failed, 697 deselected in 2.01 seconds ===================
+ERROR: 3/3 test suite(s) did not complete successfully (see above).
+2021-08-12 06:30:41  
+TARGET: CUDA_STANDALONE
+2021-08-12 06:30:41  
+FINISHED ALL RUNS
+
+                     1/1 CONFIGURATIONS FAILED:
+                     	1. run
+                     		default preferences
+Test suite took 0 h 0 m 7 s.

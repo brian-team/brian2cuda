@@ -1,0 +1,16 @@
+ERROR      Brian 2 encountered an unexpected error. If you think this is bug in Brian 2, please report this issue either to the mailing list at <http://groups.google.com/group/brian-development/>, or to the issue tracker at <https://github.com/brian-team/brian2/issues>. Please include this file with debug information in your report: /tmp/brian_debug_me74MO.log  Additionally, you can also include a copy of the script that was run, available at: /tmp/brian_script_yEAVXr.py Thanks! [brian2]
+Traceback (most recent call last):
+  File "run_test_suite.py", line 91, in <module>
+    float_dtype=None)
+  File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/__init__.py", line 178, in run
+    raise ImportError('Running the test suite requires the "pytest" package.')
+ImportError: Running the test suite requires the "pytest" package.
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-08 18:20:24  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Test suite took 0 h 0 m 2 s.

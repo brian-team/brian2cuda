@@ -79,9 +79,9 @@ def _generate_atomic_support_code():
                 {{
                 '''
                 if arg_dtype in ['int', 'float']:
-                    code += '''
+                    code += f'''
                     {hardware_implementation}
-                    '''.format(hardware_implementation=hardware_implementation)
+                    '''
                 elif arg_dtype == 'double':
                     if cuda_runtime_version >= 8.0:
                         # Check for CC in at runtime to use software or hardware
@@ -365,7 +365,7 @@ class CUDACodeGenerator(CodeGenerator):
         if statement.var in conditional_write_vars:
             subs = {}
             condvar = conditional_write_vars[statement.var]
-            lines.append('if(%s)' % condvar)
+            lines.append(f'if({condvar})')
             lines.append('    ' + line)
         else:
             lines.append(line)
@@ -487,9 +487,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 decl = ''
                 op = statement.op
-            line = '{decl}{var} {op} {expr};'.format(decl=decl,
-                                                     var=statement.var, op=op,
-                                                     expr=expr)
+            line = f'{decl}{statement.var} {op} {expr};'
             line = [line]
         elif statement.inplace:
             sign = ''
@@ -540,9 +538,7 @@ class CUDACodeGenerator(CodeGenerator):
             collected_writes = set()
             atomic_lines = []
             for stmt in statements:
-                lines.append('//  Abstract code:  {var} {op} {expr}'.format(var=stmt.var,
-                                                                            op=stmt.op,
-                                                                            expr=stmt.expr))
+                lines.append(f'//  Abstract code:  {stmt.var} {stmt.op} {stmt.expr}')
                 # We treat every statement individually with its own read and write code
                 # to be on the safe side
                 read, write, indices, conditional_write_vars = self.arrays_helper([stmt])
@@ -829,7 +825,7 @@ for func, func_cuda in func_translations:
         # depending on user prefs (which are not yet set when this code snippet is created)
     DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
                                                                code=cuda_code,
-                                                               name='_brian_{}'.format(func_cuda)
+                                                               name=f'_brian_{func_cuda}'
                                                                )
 
 # TODO: make float version type safe or print warning (see #233)

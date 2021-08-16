@@ -1,0 +1,14 @@
+ERROR      Brian 2 encountered an unexpected error. If you think this is bug in Brian 2, please report this issue either to the mailing list at <http://groups.google.com/group/brian-development/>, or to the issue tracker at <https://github.com/brian-team/brian2/issues>. Please include this file with debug information in your report: /tmp/brian_debug_4SI7jR.log  Additionally, you can also include a copy of the script that was run, available at: /tmp/brian_script_fzJ5Yb.py Thanks! [brian2]
+Traceback (most recent call last):
+  File "run_test_suite.py", line 117, in <module>
+    additional_args=additional_args)
+TypeError: run() got an unexpected keyword argument 'additional_args'
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-11 10:39:51  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Test suite took 0 h 0 m 1 s.

@@ -1,0 +1,27 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-12 07:25:21  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+698 deselected, 1 warnings in 2.05 seconds
+Running standalone-compatible standard tests (multiple run statements)
+
+698 deselected in 1.58 seconds
+Running standalone-specific tests
+....Test suite took 0 h 0 m 27 s.

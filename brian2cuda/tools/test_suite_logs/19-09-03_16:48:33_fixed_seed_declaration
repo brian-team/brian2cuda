@@ -1,0 +1,2110 @@
+Your branch is up to date with 'origin/binomial_implementation'.
+binomial_implementation
+b452e1df0318b3485a16b912e6bc075e91db8800
+Submodule path 'frozen_repos/brian2': checked out 'd6de6ccc97487c73545589fb659696ae22ecf6d9'
+HEAD
+d6de6ccc97487c73545589fb659696ae22ecf6d9
+Applied brian2.diff
+\n\n\nRunning tests in double precision mode...
+Running tests in /home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2, /home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda  (including long tests)
+Testing standalone 
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+WARNING    Integrating equations with GSL is still considered experimental [brian2.stateupdaters.GSL]
+SSSSSSSSS.SSSSSSS....FNF........F.............................F....N......................F.F..........E.............................EEEE.........N.EE.........NNNNN..FN.NEENNNNNINFO: setting cudaDevice stuff took 1.035671 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.010851s
+INFO generating 3000 rand every 6553 clock cycles for neurongroup_stateupdater_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	504 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO: main_lines took 0.049684 seconds
+INFO: main function took 1.112585 seconds
+.INFO: setting cudaDevice stuff took 1.982728 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.013945s
+INFO: synapses creation took 0.043642s
+INFO connectivity matrix has size 15375, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 15375
+	number of bundles: 6
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 5125.0	std: 0.0
+	number of unique delays over all pre/post blocks:
+		mean: 2.0	std: 0.0
+	bundle size over all bundles:
+		mean: 2562.5	std: 0.5
+
+	memory usage: TOTAL: 0.1 MB (~4.0 byte per synapse)
+		99.9%	0.059 MB	synapse IDs [15375]
+		0.0%	0.000 MB	unique delays [6]
+		0.0%	0.000 MB	number of synapses per bundle [6]
+		0.0%	0.000 MB	synapses bundle offset [6]
+		0.0%	0.000 MB	global bundle ID start [4]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	2 threads
+	62 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	936 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.034s
+INFO kernel_neurongroup_thresholder_codeobject
+	16 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikegeneratorgroup_codeobject
+	1 blocks
+	1 threads
+	19 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO _run_synapses_pre_push_spikes_push_kernel
+	3 blocks per spiking neuron
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	16 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	936 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 15375
+INFO: main_lines took 0.191366 seconds
+Number of spikes: 15375
+INFO: main function took 2.235444 seconds
+FERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:45 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:53 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:43 : no CUDA-capable device is detected
+E
+======================================================================
+ERROR: brian2.tests.test_subgroup.test_subgroup_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_subgroup.py", line 487, in test_subgroup_summed_variable
+    run(2 * defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_Iin_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1155, in test_summed_variable
+    net.run(1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_summed_variable_v_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable_pre_and_post
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1184, in test_summed_variable_pre_and_post
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_summed_variable_neuron_sum_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable_differing_group_size
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1214, in test_summed_variable_differing_group_size
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_var_pre".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variables_subgroups
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1274, in test_summed_variables_subgroups
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_3_summed_variable_v_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_synapses_to_synapses_different_sizes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1963, in test_synapses_to_synapses_different_sizes
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpz4451D)
+-------------------- >> begin captured stdout << ---------------------
+INFO: setting cudaDevice stuff took 1.342267 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.007637s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+INFO kernel_neurongroup_2_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+INFO: synapses creation took 0.000551s
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_synapses_to_synapses_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 2053, in test_synapses_to_synapses_summed_variable
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_w_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_synapses_to_synapses_different_sizes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 157, in test_synapses_to_synapses_different_sizes
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpnO2_kF)
+-------------------- >> begin captured stdout << ---------------------
+INFO: setting cudaDevice stuff took 1.561047 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.007603s
+INFO kernel_neurongroup_1_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+INFO kernel_neurongroup_3_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	864 bytes user-allocated constant memory
+INFO: synapses_2 creation took 0.000534s
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_synapses_to_synapses_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 175, in test_synapses_to_synapses_summed_variable
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_w_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 172, in test_synapses_to_synapses_summed_variable
+    x : integer''')
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2cuda.tests.test_synaptic_propagations.test_CudaSpikeQueue_push_outer_loop2
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_synaptic_propagations.py", line 121, in test_CudaSpikeQueue_push_outer_loop2
+    run(time_steps * default_dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpWneY93)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_synaptic_propagations.test_circular_eventspaces
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_synaptic_propagations.py", line 180, in test_circular_eventspaces
+    run(6*default_dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp4gPahc)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_synaptic_propagations.test_synaptic_effect_modes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_synaptic_propagations.py", line 212, in test_synaptic_effect_modes
+    run(2*defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp_Wpq5h)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'source')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2.tests.test_functions.test_timestep_function_during_run
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_functions.py", line 167, in test_timestep_function_during_run
+    assert_equal(mon.ts[1], [5, 6, 7, 8, 9])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 348, in assert_equal
+    return assert_array_equal(actual, desired, err_msg, verbose)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 896, in assert_array_equal
+    verbose=verbose, header='Arrays are not equal')
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Arrays are not equal
+
+Mismatch: 80%
+Max absolute difference: 4
+Max relative difference: 0.44444444
+ x: array([5, 5, 5, 5, 5], dtype=int32)
+ y: array([5, 6, 7, 8, 9])
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.000334 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2.tests.test_functions.test_binomial
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_functions.py", line 582, in test_binomial
+    assert np.var(mon[0].x) > 0
+AssertionError: 
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.001382 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2.tests.test_monitor.test_state_monitor_indexing
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_monitor.py", line 381, in test_state_monitor_indexing
+    assert_allclose(mon.t[1:], Quantity([defaultclock.dt]))
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (0,), (1,) mismatch)
+ x: array([], dtype=float64)
+ y: array([0.0001])
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.000264 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2.tests.test_neurongroup.test_semantics_floor_division
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_neurongroup.py", line 1563, in test_semantics_floor_division
+    assert len(l) == 0
+AssertionError: 
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.000135 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: Basic test for `SpikeGeneratorGroup`.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 101, in test_spikegenerator_period
+    assert_allclose(generator_spikes, recorded_spikes)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (6, 2), (3, 2) mismatch)
+ x: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004],...
+ y: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004]])
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.000943 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2.tests.test_spikegenerator.test_spikegenerator_rounding_period
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 279, in test_spikegenerator_rounding_period
+    assert_equal(spikes.count[0], N*repeats)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 415, in assert_equal
+    raise AssertionError(msg)
+AssertionError: 
+Items are not equal:
+ ACTUAL: 100
+ DESIRED: 1000000
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+INFO _last_run_time = 37.9042 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_binomial
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 56, in test_binomial
+    assert np.var(mon[0].x) > 0
+AssertionError: 
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.001343 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2cuda.tests.test_synaptic_propagations.test_CudaSpikeQueue_push_outer_loop
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_synaptic_propagations.py", line 47, in test_CudaSpikeQueue_push_outer_loop
+    assert_allclose(S.delay[even_indices], 0)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/utils.py", line 26, in assert_allclose
+    assert have_same_dimensions(actual, desired)
+AssertionError: 
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+INFO _last_run_time = 0.111098 s
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_functions.test_user_defined_function
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_functions.py", line 194, in test_user_defined_function
+    run(default_dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function usersin: 'No implementation available for target cuda. Available implementations: cpp, cython'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function usersin: 'No implementation available for target cuda. Available implementations: cpp, cython'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_poissongroup.test_time_dependent_rate
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_poissongroup.py", line 64, in test_time_dependent_rate
+    run(2*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function timed_array: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "poissongroup_thresholder".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function timed_array: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_synapses.test_synapses_to_synapses
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1919, in test_synapses_to_synapses
+    run(5*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/synapses/synapses.py", line 313, in before_run
+    run_namespace=run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/synapses_initialise_queue.cu", line 65, in macro
+    count += 1;
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/variables.py", line 1357, in __repr__
+    values = repr(Quantity(self.variable.get_value().item(),
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/variables.py", line 462, in get_value
+    return self.device.get_value(self)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 504, in get_value
+    raise NotImplementedError('Cannot retrieve the values of state '
+NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
+
+Error encountered with object named "synapses_1_pre".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_timedarray.test_timedarray_semantics
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_timedarray.py", line 40, in test_timedarray_semantics
+    run(0.8*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_timedarray.test_timedarray_no_units
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_timedarray.py", line 50, in test_timedarray_no_units
+    run(1.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor_1".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_timedarray.test_timedarray_with_units
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_timedarray.py", line 59, in test_timedarray_with_units
+    run(1.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_timedarray.test_timedarray_2d
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_timedarray.py", line 69, in test_timedarray_2d
+    run(0.5*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta2d: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor_1".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta2d: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_timedarray.test_timedarray_no_upsampling
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_timedarray.py", line 96, in test_timedarray_no_upsampling
+    run(2.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_time_dependent_rate
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 71, in test_time_dependent_rate
+    run(2*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function timed_array: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "poissongroup_thresholder".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 67, in test_time_dependent_rate
+    group_1 = PoissonGroup(2, rates='timed_array(t, i)')
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function timed_array: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_synapses_to_synapses
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 135, in test_synapses_to_synapses
+    run(5*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/synapses/synapses.py", line 313, in before_run
+    run_namespace=run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/templates/synapses_initialise_queue.cu", line 65, in macro
+    count += 1;
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/variables.py", line 1357, in __repr__
+    values = repr(Quantity(self.variable.get_value().item(),
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/variables.py", line 462, in get_value
+    return self.device.get_value(self)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 504, in get_value
+    raise NotImplementedError('Cannot retrieve the values of state '
+NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
+
+Error encountered with object named "synapses_1_pre".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 133, in test_synapses_to_synapses
+    modulatory_conn = Synapses(modulator, conn, on_pre='w += 1')
+
+An error occurred when preparing an object. NotImplementedError: Cannot retrieve the values of state variables in standalone code before the simulation has been run.
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_timedarray_semantics
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 193, in test_timedarray_semantics
+    run(0.8*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 192, in test_timedarray_semantics
+    mon = StateMonitor(G, 'value', record=0)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_timedarray_no_units
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 204, in test_timedarray_no_units
+    run(1.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor_1".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 203, in test_timedarray_no_units
+    mon = StateMonitor(G, 'value', record=True, dt=0.1*ms)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_timedarray_with_units
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 214, in test_timedarray_with_units
+    run(1.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 213, in test_timedarray_with_units
+    mon = StateMonitor(G, 'value', record=True, dt=0.1*ms)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_timedarray_2d
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 225, in test_timedarray_2d
+    run(0.5*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta2d: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor_1".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 224, in test_timedarray_2d
+    mon = StateMonitor(G, 'value', record=True, dt=0.1*ms)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta2d: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+======================================================================
+NOT_IMPLEMENTED: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_timedarray_no_upsampling
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 239, in test_timedarray_no_upsampling
+    run(2.1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 238, in test_timedarray_no_upsampling
+    mon = StateMonitor(G, 'value', record=True, dt=1*ms)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function ta: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+----------------------------------------------------------------------
+Ran 182 tests in 3958.750s
+
+FAILED (NOT_IMPLEMENTED=15, SKIP=16, errors=12, failures=8)
+Running standalone-compatible standard tests (multiple run statements)
+WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:34 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:34 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:52 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:52 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:52 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:35 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:34 : no CUDA-capable device is detected
+ENWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:42 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:38 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:36 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:41 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:43 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:36 : no CUDA-capable device is detected
+E
+======================================================================
+ERROR: brian2.tests.test_base.test_active_flag
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_base.py", line 78, in test_active_flag
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpBBNRkF)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_monitor.test_state_monitor_record_single_timestep
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_monitor.py", line 352, in test_state_monitor_record_single_timestep
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpdwKJDN)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_network.test_multiple_runs_report_standalone
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 865, in test_multiple_runs_report_standalone
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpQ31I6E)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_network.test_multiple_runs_report_standalone_2
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 874, in test_multiple_runs_report_standalone_2
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp6fzo5X)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_network.test_multiple_runs_report_standalone_3
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 883, in test_multiple_runs_report_standalone_3
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpK_t6vC)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_network.test_dt_changes_between_runs
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 1180, in test_dt_changes_between_runs
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpK8cQCS)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_network.test_multiple_runs_constant_change
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 1394, in test_multiple_runs_constant_change
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpgJwgFC)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_spatialneuron.test_spatialneuron_capacitive_currents
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_spatialneuron.py", line 808, in test_spatialneuron_capacitive_currents
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpepQb4a)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_spikegenerator.test_spikegenerator_change_spikes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 152, in test_spikegenerator_change_spikes
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpmeuwMM)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: Basic test for `SpikeGeneratorGroup`.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 175, in test_spikegenerator_change_period
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpTqNBFX)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_network_multiple_runs.test_changing_delay_scalar
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_network_multiple_runs.py", line 29, in test_changing_delay_scalar
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpJaSm65)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_network_multiple_runs.test_changing_delay_heterogeneous
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_network_multiple_runs.py", line 52, in test_changing_delay_heterogeneous
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpS2p8pm)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_random_number_generation_with_multiple_runs
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_random_number_generation.py", line 37, in test_random_number_generation_with_multiple_runs
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp2AcDl0)
+
+======================================================================
+NOT_IMPLEMENTED: brian2.tests.test_network.test_multiple_runs_function_change
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/tests/test_network.py", line 1404, in test_multiple_runs_function_change
+    run(2*defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1013, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 360, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/device.py", line 302, in code_object
+    '%s: %s') % (varname, ex))
+NotImplementedError: Cannot use function inp: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+
+Error encountered with object named "statemonitor".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. NotImplementedError: Cannot use function inp: 'No implementation available for target cuda. Available implementations: cpp, cython, numpy'
+(See above for original error message and traceback.)
+
+----------------------------------------------------------------------
+Ran 14 tests in 232.292s
+
+FAILED (NOT_IMPLEMENTED=1, errors=13)
+Running standalone-specific tests
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:69 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:69 : no CUDA-capable device is detected
+EWARNING    Detected code statement with default function and 32bit or 64bit integer type in the same line and the preference for default_functions_integral_convertion is 'float32'. Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)
+Detected code statement:
+	v = _brian_floor(myarr);
+Generated from abstract code statements:
+	[v = floor(myarr)]
+ [brian2.codegen.generators.cuda_generator]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:34 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:40 : no CUDA-capable device is detected
+EERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:37 : no CUDA-capable device is detected
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+ERROR: cudaGetDeviceProperties(&props, 0) failed at main.cu:40 : no CUDA-capable device is detected
+E
+======================================================================
+ERROR: brian2cuda.tests.test_cpp_cuda_consistency.test_stdp_example
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_cpp_cuda_consistency.py", line 77, in test_stdp_example
+    device.build(directory=None, with_output=False)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpLv2CKn)
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.027141 s
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'synapse')
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_cpp_cuda_consistency.test_stdp_heterog_delays_example
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_cpp_cuda_consistency.py", line 161, in test_stdp_heterog_delays_example
+    device.build(directory=None, with_output=False)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp7PT93_)
+-------------------- >> begin captured stdout << ---------------------
+INFO _last_run_time = 0.029148 s
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'synapse')
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_cuda_generator.test_default_function_convertion_preference
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_cuda_generator.py", line 385, in test_default_function_convertion_preference
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpQU5l2e)
+
+======================================================================
+ERROR: brian2cuda.tests.test_cuda_generator.test_default_function_convertion_warnings
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_cuda_generator.py", line 456, in test_default_function_convertion_warnings
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpr3OeUJ)
+
+======================================================================
+ERROR: brian2cuda.tests.test_cuda_generator.test_atomics_parallelisation
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_cuda_generator.py", line 542, in test_atomics_parallelisation
+    Network(src, tgt, syn).run(5*defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 1175, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpdk4Hfb)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_profiling.test_changing_profile_arg
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/tests/test_profiling.py", line 40, in test_changing_profile_arg
+    device.build(directory=None, with_output=False)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/brian2cuda/device.py", line 984, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/tmp.8rgUxph5Qf/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpoeweeU)
+-------------------- >> begin captured stdout << ---------------------
+
+
+--------------------- >> end captured stdout << ----------------------
+
+----------------------------------------------------------------------
+Ran 6 tests in 160.283s
+
+FAILED (errors=6)
+ERROR: 3/3 test suite(s) did not complete successfully (see above).
+Turning off  compiler optimizations for fast compilation
+Suppressing compiler warnings
+Compiling with make -j8
+Running with the following prefs combinations:
+
+1 run with default preferences
+
+
+
+TARGET: CUDA_STANDALONE
+
+FINISHED ALL RUNS
+
+1/1 CONFIGURATIONS FAILED:
+	1. run
+		default preferences

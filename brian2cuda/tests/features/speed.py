@@ -429,7 +429,7 @@ class STDPCUDA(SpeedTest):
         dApre *= gmax
 
         assert K_poisson == 1000
-        assert N % K_poisson == 0, "{} != {}".format(N, K_poisson)
+        assert N % K_poisson == 0, f"{N} != {K_poisson}"
 
         eqs_neurons = '''
         dv/dt = (ge * (Ee-vr) + El - v) / taum : volt

@@ -1,0 +1,37 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-11 09:37:04  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 695 items / 672 deselected / 23 selected
+
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_rand <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [  4%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [  8%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 13%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_init_synapses_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 17%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 21%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 26%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 30%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 34%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_init_synapses_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 39%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_set_template_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 43%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 47%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 52%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 56%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 60%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 65%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 69%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py Test suite took 0 h 0 m 16 s.

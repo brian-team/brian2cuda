@@ -1,0 +1,187 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-12 08:14:33  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 698 deselected
+
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+================== 698 deselected, 1 warnings in 1.98 seconds ==================
+Running standalone-compatible standard tests (multiple run statements)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 698 deselected
+
+======================== 698 deselected in 1.69 seconds ========================
+Running standalone-specific tests
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 698 items / 692 deselected / 6 selected
+
+../../tests/test_gpu_detection.py::test_wrong_cuda_path_error PASSED     [ 16%]
+../../tests/test_gpu_detection.py::test_manual_setting_compute_capability PASSED [ 33%]
+../../tests/test_gpu_detection.py::test_unsupported_compute_capability_error PASSED [ 50%]None
+
+../../tests/test_gpu_detection.py::test_unsupported_compute_capability_error ERROR [ 50%]
+../../tests/test_gpu_detection.py::test_warning_compute_capability_set_twice PASSED [ 66%]None
+
+../../tests/test_gpu_detection.py::test_warning_compute_capability_set_twice ERROR [ 66%]
+../../tests/test_gpu_detection.py::test_no_gpu_detection_preference_error PASSED [ 83%]None
+
+../../tests/test_gpu_detection.py::test_no_gpu_detection_preference_error ERROR [ 83%]
+../../tests/test_gpu_detection.py::test_no_gpu_detection_preference PASSED [100%]None
+
+../../tests/test_gpu_detection.py::test_no_gpu_detection_preference ERROR [100%]
+
+==================================== ERRORS ====================================
+________ ERROR at teardown of test_unsupported_compute_capability_error ________
+
+    @pytest.fixture()
+    def reset_gpu_detection():
+        # these function store, reset and restore the global _cuda_installation dictionary
+        backup = get_gpu_selection()
+        reset_gpu_selection()
+        yield
+>       restore_gpu_selection(backup)
+
+../../tests/test_gpu_detection.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gpu_selection = {'available_gpus': ['NVIDIA GeForce MX150'], 'selected_gpu_compute_capability': 6.1, 'selected_gpu_id': 0}
+
+    def restore_gpu_selection(gpu_selection):
+        """Set global gpu selection dictionary to `gpu_selection`"""
+        global _gpu_selection
+        if _gpu_selection.keys() != gpu_selection.keys():
+            raise KeyError(
+                "`gpu_selection` has to have the following keys: {}. Got instead: "
+>               "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            )
+E           KeyError: "`gpu_selection` has to have the following keys: ['selected_gpu_id', 'selected_gpu_compute_capability', 'available_gpus']. Got instead: ['available_gpus', 'selected_gpu_compute_capability', 'selected_gpu_id']"
+
+../../utils/gputools.py:166: KeyError
+________ ERROR at teardown of test_warning_compute_capability_set_twice ________
+
+    @pytest.fixture()
+    def reset_gpu_detection():
+        # these function store, reset and restore the global _cuda_installation dictionary
+        backup = get_gpu_selection()
+        reset_gpu_selection()
+        yield
+>       restore_gpu_selection(backup)
+
+../../tests/test_gpu_detection.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gpu_selection = {'available_gpus': ['NVIDIA GeForce MX150'], 'selected_gpu_compute_capability': 6.1, 'selected_gpu_id': 0}
+
+    def restore_gpu_selection(gpu_selection):
+        """Set global gpu selection dictionary to `gpu_selection`"""
+        global _gpu_selection
+        if _gpu_selection.keys() != gpu_selection.keys():
+            raise KeyError(
+                "`gpu_selection` has to have the following keys: {}. Got instead: "
+>               "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            )
+E           KeyError: "`gpu_selection` has to have the following keys: ['selected_gpu_id', 'selected_gpu_compute_capability', 'available_gpus']. Got instead: ['available_gpus', 'selected_gpu_compute_capability', 'selected_gpu_id']"
+
+../../utils/gputools.py:166: KeyError
+----------------------------- Captured stdout call -----------------------------
+INFO: setting cudaDevice stuff took 1.159915 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.098068s
+INFO: main_lines took 0.000026 seconds
+INFO: main function took 1.258156 seconds
+INFO _last_run_time = 9.88131291682e-324 s
+_________ ERROR at teardown of test_no_gpu_detection_preference_error __________
+
+    @pytest.fixture()
+    def reset_gpu_detection():
+        # these function store, reset and restore the global _cuda_installation dictionary
+        backup = get_gpu_selection()
+        reset_gpu_selection()
+        yield
+>       restore_gpu_selection(backup)
+
+../../tests/test_gpu_detection.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gpu_selection = {'available_gpus': ['NVIDIA GeForce MX150'], 'selected_gpu_compute_capability': 6.1, 'selected_gpu_id': 0}
+
+    def restore_gpu_selection(gpu_selection):
+        """Set global gpu selection dictionary to `gpu_selection`"""
+        global _gpu_selection
+        if _gpu_selection.keys() != gpu_selection.keys():
+            raise KeyError(
+                "`gpu_selection` has to have the following keys: {}. Got instead: "
+>               "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            )
+E           KeyError: "`gpu_selection` has to have the following keys: ['selected_gpu_id', 'selected_gpu_compute_capability', 'available_gpus']. Got instead: ['available_gpus', 'selected_gpu_compute_capability', 'selected_gpu_id']"
+
+../../utils/gputools.py:166: KeyError
+____________ ERROR at teardown of test_no_gpu_detection_preference _____________
+
+    @pytest.fixture()
+    def reset_gpu_detection():
+        # these function store, reset and restore the global _cuda_installation dictionary
+        backup = get_gpu_selection()
+        reset_gpu_selection()
+        yield
+>       restore_gpu_selection(backup)
+
+../../tests/test_gpu_detection.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gpu_selection = {'available_gpus': ['NVIDIA GeForce MX150'], 'selected_gpu_compute_capability': 6.1, 'selected_gpu_id': 0}
+
+    def restore_gpu_selection(gpu_selection):
+        """Set global gpu selection dictionary to `gpu_selection`"""
+        global _gpu_selection
+        if _gpu_selection.keys() != gpu_selection.keys():
+            raise KeyError(
+                "`gpu_selection` has to have the following keys: {}. Got instead: "
+>               "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            )
+E           KeyError: "`gpu_selection` has to have the following keys: ['selected_gpu_id', 'selected_gpu_compute_capability', 'available_gpus']. Got instead: ['available_gpus', 'selected_gpu_compute_capability', 'selected_gpu_id']"
+
+../../utils/gputools.py:166: KeyError
+----------------------------- Captured stdout call -----------------------------
+INFO: setting cudaDevice stuff took 0.262882 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.09494s
+INFO: main_lines took 0.000026 seconds
+INFO: main function took 0.357991 seconds
+INFO _last_run_time = 9.88131291682e-324 s
+============== 6 passed, 692 deselected, 4 error in 28.02 seconds ==============
+ERROR: 3/3 test suite(s) did not complete successfully (see above).
+2021-08-12 08:15:05  
+TARGET: CUDA_STANDALONE
+2021-08-12 08:15:05  
+FINISHED ALL RUNS
+
+                     1/1 CONFIGURATIONS FAILED:
+                     	1. run
+                     		default preferences
+Test suite took 0 h 0 m 33 s.

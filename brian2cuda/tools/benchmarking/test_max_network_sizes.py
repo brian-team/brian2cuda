@@ -104,9 +104,9 @@ for (ft, name, sl) in speed_tests:
             n = (n//1000) * 1000
         start = time.time()
         script_start = datetime.datetime.fromtimestamp(start).strftime(time_format)
-        print("LOG RUNNING {} with n={} (start at {})".format(name, n, script_start))
+        print(f"LOG RUNNING {name} with n={n} (start at {script_start})")
         tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n)
-        print("LOG FINISHED {} with n={} in {:.2f}s".format(name, n, time.time()-start))
+        print(f"LOG FINISHED {name} with n={n} in {time.time() - start:.2f}s")
         codes.append((n, res, tb))
         diff = np.abs(n - n_prev)
         n_prev = n
@@ -114,7 +114,7 @@ for (ft, name, sl) in speed_tests:
             print("LOG FAILED:\n", res, tb)
             has_failed = True
             if i == 0:
-                print("LOG FAILED at first run ({}) n={}\n\terror={}\nt\ttb={}".format(name, n, res, tb))
+                print(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nt\ttb={tb}")
                 break
             # assuming the first run passes, when we fail we always go down half the abs distance
             n -= int(0.5 * diff)
@@ -126,12 +126,12 @@ for (ft, name, sl) in speed_tests:
             n *= 2
             print("LOG DOUBLE")
         if i != 0 and diff <= 10000:
-            print("LOG BREAK {} after n={} (diff={})".format(name, n, diff))
+            print(f"LOG BREAK {name} after n={n} (diff={diff})")
             break
-    print("LOG FINAL RESULTS FOR {}:".format(name))
+    print(f"LOG FINAL RESULTS FOR {name}:")
     for n, res, tb in codes:
         if isinstance(res, Exception):
             sym = 'ERROR'
         else:
             sym = 'PASS'
-        print("\t{}\t\t{}".format(n, sym))
+        print(f"\t{n}\t\t{sym}")

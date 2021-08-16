@@ -1,0 +1,1637 @@
+Running tests in /home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda  (including long tests)
+Testing standalone 
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+WARNING    Integrating equations with GSL is still considered experimental [brian2.stateupdaters.GSL]
+SSSSSSSSS.SSSSSSS....FNN........F.............................F....N..NN..................F.F..........E.............................EEEE.........N.EE.........NNNNN..NNNNEENNNNNINFO: setting cudaDevice stuff took 0.496619 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.00836s
+INFO generating 3000 rand every 6553 clock cycles for neurongroup_stateupdater_codeobject
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO: main_lines took 0.044372 seconds
+INFO: main function took 0.562362 seconds
+.INFO: setting cudaDevice stuff took 0.920035 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.009431s
+INFO: synapses creation took 0.03805s
+INFO connectivity matrix has size 15375, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 15375
+	number of bundles: 6
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 5125.0	std: 0.0
+	number of unique delays over all pre/post blocks:
+		mean: 2.0	std: 0.0
+	bundle size over all bundles:
+		mean: 2562.5	std: 0.5
+
+	memory usage: TOTAL: 0.1 MB (~4.0 byte per synapse)
+		99.9%	0.059 MB	synapse IDs [15375]
+		0.0%	0.000 MB	unique delays [6]
+		0.0%	0.000 MB	number of synapses per bundle [6]
+		0.0%	0.000 MB	synapses bundle offset [6]
+		0.0%	0.000 MB	global bundle ID start [4]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	2 threads
+	62 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.032s
+INFO kernel_neurongroup_thresholder_codeobject
+	16 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikegeneratorgroup_codeobject
+	1 blocks
+	1 threads
+	19 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO _run_synapses_pre_push_spikes_push_kernel
+	3 blocks per spiking neuron
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	16 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 15375
+INFO: main_lines took 0.187155 seconds
+Number of spikes: 15375
+INFO: main function took 1.167466 seconds
+FINFO: setting cudaDevice stuff took 1.079612 seconds
+objects cu num par blocks 1
+INFO: _init_arrays() took 0.008832s
+INFO: synapses creation took 0.010145s
+INFO kernel_synapses_group_variable_set_conditional_codeobject
+	4 blocks
+	1024 threads
+	4 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_synapses_group_variable_set_conditional_codeobject_1
+	4 blocks
+	1024 threads
+	6 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject
+	4 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject_1
+	4 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject_2
+	4 blocks
+	1024 threads
+	8 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO connectivity matrix has size 4096, number of (pre neuron ID, post neuron block) pairs is 2
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 4096
+	number of bundles: 4095
+	number of pre/post blocks: 2
+	number of synapses over all pre/post blocks:
+		mean: 2048.0	std: 0.0
+	number of unique delays over all pre/post blocks:
+		mean: 2047.5	std: 0.7
+	bundle size over all bundles:
+		mean: 1.0	std: 0.0
+
+	memory usage: TOTAL: 0.1 MB (~16.0 byte per synapse)
+		25.0%	0.016 MB	synapse IDs [4096]
+		25.0%	0.016 MB	unique delays [4095]
+		25.0%	0.016 MB	number of synapses per bundle [4095]
+		25.0%	0.016 MB	synapses bundle offset [4095]
+		0.0%	0.000 MB	global bundle ID start [3]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1024 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.036s
+INFO kernel_neurongroup_1_thresholder_codeobject
+	2 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikegeneratorgroup_1_codeobject
+	1 blocks
+	1 threads
+	19 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO _run_synapses_pre_push_spikes_push_kernel
+	1 blocks per spiking neuron
+	1024 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject_1
+	1 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_1_resetter_codeobject
+	2 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 4096
+INFO: main_lines took 3.465034 seconds
+Number of spikes: 2048
+INFO: main function took 4.558986 seconds
+.INFO: setting cudaDevice stuff took 1.647381 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.009064s
+INFO: synapses creation took 8.9e-05s
+INFO: synapses_1 creation took 8.7e-05s
+INFO: synapses_2 creation took 8.5e-05s
+INFO: synapses_3 creation took 0.000106s
+INFO kernel_synapses_3_pre_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO connectivity matrix has size 1, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 1
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.3	std: 0.6
+
+	memory usage: TOTAL: 0.0 MB (~40.0 byte per synapse)
+		60.0%	0.000 MB	pointers to synapse IDs [3]
+		30.0%	0.000 MB	number of synapses per pre/post block [3]
+		10.0%	0.000 MB	synapse IDs [1]
+INFO _run_synapses_1_pre_initialise_queue_kernel
+	1 blocks
+	3 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 0.000s
+INFO connectivity matrix has size 1, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_2_pre:
+	number of synapses: 1
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.3	std: 0.6
+
+	memory usage: TOTAL: 0.0 MB (~40.0 byte per synapse)
+		60.0%	0.000 MB	pointers to synapse IDs [3]
+		30.0%	0.000 MB	number of synapses per pre/post block [3]
+		10.0%	0.000 MB	synapse IDs [1]
+INFO _run_synapses_2_pre_initialise_queue_kernel
+	1 blocks
+	6 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_2_pre initialisation took 0.000s
+INFO connectivity matrix has size 2, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_3_pre:
+	number of synapses: 2
+	number of bundles: 2
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.7	std: 0.6
+	number of unique delays over all pre/post blocks:
+		mean: 0.7	std: 0.6
+	bundle size over all bundles:
+		mean: 1.0	std: 0.0
+
+	memory usage: TOTAL: 0.0 MB (~24.0 byte per synapse)
+		33.3%	0.000 MB	global bundle ID start [4]
+		16.7%	0.000 MB	synapse IDs [2]
+		16.7%	0.000 MB	unique delays [2]
+		16.7%	0.000 MB	number of synapses per bundle [2]
+		16.7%	0.000 MB	synapses bundle offset [2]
+INFO _run_synapses_3_pre_initialise_queue_kernel
+	1 blocks
+	5 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_3_pre initialisation took 0.000s
+INFO connectivity matrix has size 1, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 1
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.3	std: 0.6
+
+	memory usage: TOTAL: 0.0 MB (~40.0 byte per synapse)
+		60.0%	0.000 MB	pointers to synapse IDs [3]
+		30.0%	0.000 MB	number of synapses per pre/post block [3]
+		10.0%	0.000 MB	synapse IDs [1]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.000s
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikegeneratorgroup_codeobject
+	1 blocks
+	1 threads
+	19 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_synapses_1_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_2_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_synapses_3_pre_push_spikes_push_kernel
+	3 blocks per spiking neuron
+	1 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_synapses_3_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_resetter_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 1
+Number of synapses: 1
+Number of synapses: 2
+Number of synapses: 1
+INFO: main_lines took 0.002557 seconds
+Number of spikes: 4
+INFO: main function took 1.660203 seconds
+.INFO: setting cudaDevice stuff took 1.107802 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008928s
+INFO: synapses creation took 0.037457s
+INFO: synapses_1 creation took 0.039884s
+INFO connectivity matrix has size 15360, number of (pre neuron ID, post neuron block) pairs is 46080
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 15360
+	number of pre/post blocks: 46080
+	number of synapses over all pre/post blocks:
+		mean: 0.3	std: 0.5
+
+	memory usage: TOTAL: 0.6 MB (~40.0 byte per synapse)
+		60.0%	0.352 MB	pointers to synapse IDs [46080]
+		30.0%	0.176 MB	number of synapses per pre/post block [46080]
+		10.0%	0.059 MB	synapse IDs [15360]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.107s
+INFO connectivity matrix has size 15360, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_1_post:
+	number of synapses: 15360
+	number of bundles: 0
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 5120.0	std: 0.0
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 0.1 MB (~4.0 byte per synapse)
+		99.9%	0.059 MB	synapse IDs [15360]
+		0.0%	0.000 MB	pointers to synapse IDs [3]
+		0.0%	0.000 MB	number of synapses per pre/post block [3]
+INFO _run_synapses_1_post_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_1_post initialisation took 0.019s
+INFO kernel_neurongroup_1_thresholder_codeobject
+	15 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	24 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_1_post_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 15360
+Number of synapses: 15360
+INFO: main_lines took 0.292783 seconds
+Number of spikes: 2
+INFO: main function took 1.410777 seconds
+.
+======================================================================
+ERROR: brian2.tests.test_subgroup.test_subgroup_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_subgroup.py", line 487, in test_subgroup_summed_variable
+    run(2 * defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_Iin_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1155, in test_summed_variable
+    net.run(1*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_summed_variable_v_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable_pre_and_post
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1184, in test_summed_variable_pre_and_post
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_summed_variable_neuron_sum_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variable_differing_group_size
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1214, in test_summed_variable_differing_group_size
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_var_pre".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_summed_variables_subgroups
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1274, in test_summed_variables_subgroups
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_3_summed_variable_v_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_synapses_to_synapses_different_sizes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 1963, in test_synapses_to_synapses_different_sizes
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1130, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 939, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpoClofr)
+-------------------- >> begin captured stdout << ---------------------
+INFO: setting cudaDevice stuff took 0.680044 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008406s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_neurongroup_2_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses creation took 0.000539s
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2.tests.test_synapses.test_synapses_to_synapses_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_synapses.py", line 2053, in test_synapses_to_synapses_summed_variable
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_w_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+ERROR: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_synapses_to_synapses_different_sizes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 157, in test_synapses_to_synapses_different_sizes
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1130, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 939, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpHTPbnq)
+-------------------- >> begin captured stdout << ---------------------
+INFO: setting cudaDevice stuff took 0.674100 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008457s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_neurongroup_3_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_2 creation took 0.000537s
+
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_not_implemented_brian2_test_suite_fails.test_synapses_to_synapses_summed_variable
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 175, in test_synapses_to_synapses_summed_variable
+    run(defaultclock.dt)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 968, in network_run
+    net.before_run(namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 276, in device_override_decorated_function
+    return func(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 843, in before_run
+    raise brian_object_exception("An error occurred when preparing an object.", obj, ex)
+BrianObjectException: Original error and traceback:
+Traceback (most recent call last):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/network.py", line 841, in before_run
+    obj.before_run(run_namespace)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/groups/group.py", line 1128, in before_run
+    codeobj_class=self.codeobj_class
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 310, in create_runner_codeobj
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 331, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 565, in code_object
+    override_conditional_write=override_conditional_write,
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/device.py", line 329, in code_object
+    **template_kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 205, in __call__
+    return MultiTemplate(module)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/templates.py", line 221, in __init__
+    s = autoindent_postfilter(str(f()))
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 575, in __call__
+    return self._invoke(arguments, autoescape)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 579, in _invoke
+    rv = self._func(*arguments)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 49, in macro
+    {% block num_thread_check %}
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/templates/common_group.cu", line 276, in block_define_N
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 262, in call
+    return __obj(*args, **kwargs)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/codegen/codeobject.py", line 35, in constant_or_scalar
+    if variable.array:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 641, in __getattr__
+    return self._fail_with_undefined_error()
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/jinja2/runtime.py", line 635, in _fail_with_undefined_error
+    raise self._undefined_exception(hint)
+UndefinedError: 'dict object' has no attribute 'N'
+
+Error encountered with object named "synapses_1_summed_variable_w_post".
+Object was created here (most recent call only, full details in debug log):
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_not_implemented_brian2_test_suite_fails.py", line 172, in test_synapses_to_synapses_summed_variable
+    x : integer''')
+
+An error occurred when preparing an object. UndefinedError: 'dict object' has no attribute 'N'
+(See above for original error message and traceback.)
+
+======================================================================
+FAIL: brian2.tests.test_functions.test_timestep_function_during_run
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_functions.py", line 167, in test_timestep_function_during_run
+    assert_equal(mon.ts[1], [5, 6, 7, 8, 9])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 348, in assert_equal
+    return assert_array_equal(actual, desired, err_msg, verbose)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 896, in assert_array_equal
+    verbose=verbose, header='Arrays are not equal')
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Arrays are not equal
+
+Mismatch: 80%
+Max absolute difference: 4
+Max relative difference: 0.44444444
+ x: array([5, 5, 5, 5, 5], dtype=int32)
+ y: array([5, 6, 7, 8, 9])
+
+======================================================================
+FAIL: brian2.tests.test_monitor.test_state_monitor_indexing
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_monitor.py", line 381, in test_state_monitor_indexing
+    assert_allclose(mon.t[1:], Quantity([defaultclock.dt]))
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (0,), (1,) mismatch)
+ x: array([], dtype=float64)
+ y: array([0.0001])
+
+======================================================================
+FAIL: brian2.tests.test_neurongroup.test_semantics_floor_division
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_neurongroup.py", line 1563, in test_semantics_floor_division
+    assert len(l) == 0
+AssertionError
+
+======================================================================
+FAIL: Basic test for `SpikeGeneratorGroup`.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 101, in test_spikegenerator_period
+    assert_allclose(generator_spikes, recorded_spikes)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (6, 2), (3, 2) mismatch)
+ x: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004],...
+ y: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004]])
+
+======================================================================
+FAIL: brian2.tests.test_spikegenerator.test_spikegenerator_rounding_period
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 279, in test_spikegenerator_rounding_period
+    assert_equal(spikes.count[0], N*repeats)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 415, in assert_equal
+    raise AssertionError(msg)
+AssertionError: 
+Items are not equal:
+ ACTUAL: 100
+ DESIRED: 1000000
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+FAIL: brian2cuda.tests.test_synaptic_propagations.test_CudaSpikeQueue_push_outer_loop
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_synaptic_propagations.py", line 47, in test_CudaSpikeQueue_push_outer_loop
+    assert_allclose(S.delay[even_indices], 0)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 26, in assert_allclose
+    assert have_same_dimensions(actual, desired)
+AssertionError: 
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+----------------------------------------------------------------------
+Ran 182 tests in 2762.516s
+
+FAILED (NOT_IMPLEMENTED=20, SKIP=16, errors=9, failures=6)
+Running standalone-compatible standard tests (multiple run statements)
+WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+..WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.NWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+FWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+FWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+INFO: setting cudaDevice stuff took 1.007684 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.00887s
+INFO: synapses creation took 0.00018s
+INFO connectivity matrix has size 1, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 1
+	number of bundles: 0
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.3	std: 0.6
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 0.0 MB (~40.0 byte per synapse)
+		60.0%	0.000 MB	pointers to synapse IDs [3]
+		30.0%	0.000 MB	number of synapses per pre/post block [3]
+		10.0%	0.000 MB	synapse IDs [1]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	2 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.000s
+INFO kernel_neurongroup_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+ERROR: cudaMemcpy(thrust::raw_pointer_cast(&dev_dynamic_array_synapses_delay[0]), &_dynamic_array_synapses_delay[0], sizeof(_dynamic_array_synapses_delay[0])*_dynamic_array_synapses_delay.size(), cudaMemcpyHostToDevice) failed at main.cu:185 : invalid argument
+terminate called after throwing an instance of 'thrust::system::system_error'
+  what():  CUDA free failed: cudaErrorCudartUnloading: driver shutting down
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+INFO: setting cudaDevice stuff took 1.036198 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008775s
+INFO: synapses creation took 0.000126s
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO connectivity matrix has size 2, number of (pre neuron ID, post neuron block) pairs is 3
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 2
+	number of bundles: 2
+	number of pre/post blocks: 3
+	number of synapses over all pre/post blocks:
+		mean: 0.7	std: 0.6
+	number of unique delays over all pre/post blocks:
+		mean: 0.7	std: 0.6
+	bundle size over all bundles:
+		mean: 1.0	std: 0.0
+
+	memory usage: TOTAL: 0.0 MB (~24.0 byte per synapse)
+		33.3%	0.000 MB	global bundle ID start [4]
+		16.7%	0.000 MB	synapse IDs [2]
+		16.7%	0.000 MB	unique delays [2]
+		16.7%	0.000 MB	number of synapses per bundle [2]
+		16.7%	0.000 MB	synapses bundle offset [2]
+INFO _run_synapses_pre_initialise_queue_kernel
+	1 blocks
+	2 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.000s
+INFO kernel_neurongroup_2_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_synapses_pre_push_spikes_push_kernel
+	3 blocks per spiking neuron
+	1 threads
+	32 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO kernel_synapses_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_synapses_pre_group_variable_set_conditional_codeobject_1
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+ERROR: cudaMemcpy(&dev_array_defaultclock_timestep[0], &_array_defaultclock_timestep[0], sizeof(_array_defaultclock_timestep[0]), cudaMemcpyHostToDevice) failed at main.cu:182 : an illegal memory access was encountered
+terminate called after throwing an instance of 'thrust::system::system_error'
+  what():  CUDA free failed: cudaErrorCudartUnloading: driver shutting down
+EWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+INFO: setting cudaDevice stuff took 0.623167 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008315s
+INFO generating 1000 rand every 6553 clock cycles for neurongroup_stateupdater_codeobject
+INFO generating 1000 rand every 6553 clock cycles for neurongroup_stateupdater_codeobject_1
+INFO kernel_neurongroup_stateupdater_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+main: rand.cu:147: void _run_random_number_generation(): Assertion `dev_neurongroup_stateupdater_codeobject_rand < dev_neurongroup_stateupdater_codeobject_rand_allocator + num_per_gen_rand_neurongroup_stateupdater_codeobject' failed.
+E
+======================================================================
+ERROR: brian2cuda.tests.test_network_multiple_runs.test_changing_delay_scalar
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_network_multiple_runs.py", line 29, in test_changing_delay_scalar
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 939, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp2_wTPd)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_network_multiple_runs.test_changing_delay_heterogeneous
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_network_multiple_runs.py", line 52, in test_changing_delay_heterogeneous
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 939, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmp1UGcsi)
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_random_number_generation_with_multiple_runs
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 37, in test_random_number_generation_with_multiple_runs
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 939, in build
+    self.run(directory, with_output, run_args)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1000, in run
+    "%s)" % os.path.abspath(directory))
+RuntimeError: Project run failed (project directory: /tmp/tmpHw0dkV)
+
+======================================================================
+FAIL: brian2.tests.test_spikegenerator.test_spikegenerator_change_spikes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 153, in test_spikegenerator_change_spikes
+    _compare_spikes(5, indices1, times1, s_mon, 0*ms, 5*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 129, in _compare_spikes
+    assert_allclose(generator_spikes, recorded_spikes)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (3, 2), (0,) mismatch)
+ x: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004]])
+ y: array([], dtype=float64)
+
+======================================================================
+FAIL: Basic test for `SpikeGeneratorGroup`.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 179, in test_spikegenerator_change_period
+    s_mon, 0*ms, 10*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/test_spikegenerator.py", line 129, in _compare_spikes
+    assert_allclose(generator_spikes, recorded_spikes)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 752, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=9.99201e-08, atol=0
+
+(shapes (6, 2), (3, 2) mismatch)
+ x: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004],...
+ y: array([[1.   , 0.002],
+       [1.   , 0.003],
+       [1.   , 0.004]])
+
+----------------------------------------------------------------------
+Ran 14 tests in 117.397s
+
+FAILED (NOT_IMPLEMENTED=1, errors=3, failures=2)
+Running standalone-specific tests
+..WARNING    Detected code statement with default function and 32bit or 64bit integer type in the same line and the preference for default_functions_integral_convertion is 'float32'. Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)
+Detected code statement:
+	v = _brian_floor(myarr);
+Generated from abstract code statements:
+	[v = floor(myarr)]
+ [brian2.codegen.generators.cuda_generator]
+INFO: setting cudaDevice stuff took 0.370446 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008841s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO kernel_neurongroup_1_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: main_lines took 0.000160 seconds
+INFO: main function took 0.379752 seconds
+.INFO: setting cudaDevice stuff took 0.569090 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008698s
+INFO kernel_neurongroup_group_variable_set_conditional_codeobject
+	1 blocks
+	576 threads
+	52 registers per block
+	0 bytes statically-allocated shared memory per block
+	48 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_1_group_variable_set_conditional_codeobject
+	1 blocks
+	576 threads
+	52 registers per block
+	0 bytes statically-allocated shared memory per block
+	48 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_2_group_variable_set_conditional_codeobject
+	1 blocks
+	576 threads
+	52 registers per block
+	0 bytes statically-allocated shared memory per block
+	48 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_3_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	16 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_4_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_5_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	10 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_6_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	18 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO kernel_neurongroup_7_group_variable_set_conditional_codeobject
+	1 blocks
+	1024 threads
+	18 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	688 bytes user-allocated constant memory
+INFO: main_lines took 0.000349 seconds
+INFO: main function took 0.578756 seconds
+.INFO: setting cudaDevice stuff took 0.710352 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008723s
+INFO: syn creation took 2.86179s
+INFO connectivity matrix has size 1000000, number of (pre neuron ID, post neuron block) pairs is 3000
+INFO: synapse statistics and memory usage for syn_pre:
+	number of synapses: 1000000
+	number of bundles: 0
+	number of pre/post blocks: 3000
+	number of synapses over all pre/post blocks:
+		mean: 333.3	std: 0.5
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 3.8 MB (~4.0 byte per synapse)
+		99.1%	3.815 MB	synapse IDs [1000000]
+		0.6%	0.023 MB	pointers to synapse IDs [3000]
+		0.3%	0.011 MB	number of synapses per pre/post block [3000]
+INFO _run_syn_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: syn_pre initialisation took 1.128s
+INFO kernel_src_thresholder_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_syn_pre_codeobject
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 1000000
+INFO: main_lines took 4.100007 seconds
+INFO: main function took 4.841455 seconds
+INFO: setting cudaDevice stuff took 0.729347 seconds
+objects cu num par blocks 3
+INFO: _init_arrays() took 0.008773s
+INFO: syn creation took 2.86041s
+INFO connectivity matrix has size 1000000, number of (pre neuron ID, post neuron block) pairs is 3000
+INFO: synapse statistics and memory usage for syn_pre:
+	number of synapses: 1000000
+	number of bundles: 0
+	number of pre/post blocks: 3000
+	number of synapses over all pre/post blocks:
+		mean: 333.3	std: 0.5
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 3.8 MB (~4.0 byte per synapse)
+		99.1%	3.815 MB	synapse IDs [1000000]
+		0.6%	0.023 MB	pointers to synapse IDs [3000]
+		0.3%	0.011 MB	number of synapses per pre/post block [3000]
+INFO _run_syn_pre_initialise_queue_kernel
+	1 blocks
+	1 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	16 bytes local memory per thread
+	0 bytes user-allocated constant memory
+INFO: syn_pre initialisation took 1.162s
+INFO kernel_src_thresholder_1_codeobject
+	1 blocks
+	1024 threads
+	14 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO kernel_syn_pre_codeobject_1
+	3 blocks
+	1024 threads
+	24 registers per block
+	0 bytes statically-allocated shared memory per block
+	8 bytes local memory per thread
+	0 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+Number of synapses: 1000000
+INFO: main_lines took 4.132805 seconds
+INFO: main function took 4.892859 seconds
+FWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.
+======================================================================
+FAIL: brian2cuda.tests.test_cuda_generator.test_atomics_parallelisation
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_cuda_generator.py", line 550, in test_atomics_parallelisation
+    rtol=1e-5)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/utils.py", line 30, in assert_allclose
+    numpy_allclose(np.asarray(actual), np.asarray(desired), rtol=rtol, atol=atol, **kwds)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=2.22045e-21, atol=0
+0: v_post += w_syn
+Mismatch: 73.9%
+Max absolute difference: 2.72848411e-12
+Max relative difference: 1.10197016e-15
+ x: array([2489.035873, 2461.018328, 2440.155078, 2476.529115, 2455.54045 ,
+       2564.843575, 2477.889653, 2408.267557, 2513.034602, 2570.841807,
+       2561.08389 , 2481.909507, 2474.464789, 2629.567681, 2565.47629 ,...
+ y: array([2489.035873, 2461.018328, 2440.155078, 2476.529115, 2455.54045 ,
+       2564.843575, 2477.889653, 2408.267557, 2513.034602, 2570.841807,
+       2561.08389 , 2481.909507, 2474.464789, 2629.567681, 2565.47629 ,...
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+----------------------------------------------------------------------
+Ran 6 tests in 107.658s
+
+FAILED (failures=1)
+ERROR: 3/3 test suite(s) did not complete successfully (see above).
+Turning off  compiler optimizations for fast compilation
+Suppressing compiler warnings
+Running with the following prefs combinations:
+
+1 run with default preferences
+
+
+
+TARGET: CUDA_STANDALONE
+
+FINISHED ALL RUNS
+
+1/1 CONFIGURATIONS FAILED:
+	1. run
+		default preferences

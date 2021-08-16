@@ -1,0 +1,13 @@
+WARNING: clusterbot not installed. Can't notify slack.
+Traceback (most recent call last):
+  File "run_test_suite.py", line 41, in <module>
+    from brian2 import test, prefs
+  File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/__init__.py", line 71, in <module>
+    from brian2.only import *
+  File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/only.py", line 71, in <module>
+    from brian2.tests import run as test
+  File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/__init__.py", line 343
+    print "DEBUG: argv:", argv, "additional_args", additional_args, "plugins", [pref_plugin]
+                       ^
+SyntaxError: invalid syntax
+Test suite took 0 h 0 m 0 s.

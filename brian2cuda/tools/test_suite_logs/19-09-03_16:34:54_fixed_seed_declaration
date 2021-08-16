@@ -1,0 +1,13 @@
+Your branch is up to date with 'origin/binomial_implementation'.
+binomial_implementation
+b452e1df0318b3485a16b912e6bc075e91db8800
+Submodule path 'frozen_repos/brian2': checked out 'd6de6ccc97487c73545589fb659696ae22ecf6d9'
+HEAD
+d6de6ccc97487c73545589fb659696ae22ecf6d9
+Applied brian2.diff
+usage: run_test_suite.py [-h] [--no-long-tests] [--fail-not-implemented]
+                         [--test-parallel [TEST_PARALLEL]]
+                         [--targets [{cuda_standalone,genn,cpp_standalone} [{cuda_standalone,genn,cpp_standalone} ...]]]
+                         [--single-precision] [--no-bundles] [--no-atomics]
+                         [--num-blocks NUM_BLOCKS] [--all-prefs] [--jobs JOBS]
+run_test_suite.py: error: unrecognized arguments: --float-dtype float64

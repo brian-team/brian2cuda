@@ -1,0 +1,941 @@
+........
+----------------------------------------------------------------------
+Ran 8 tests in 73.952s
+
+OK
+WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+.WARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+FWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+FWARNING    Multiple run statements are currently error prone. See #83, #85, #86. [brian2.devices.cuda_standalone]
+F
+======================================================================
+FAIL: brian2cuda.tests.test_random_number_generation.test_random_values_set_synapses_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 338, in test_random_values_set_synapses_fixed_and_random_seed
+    assert_allclose(third_run_values[:, 1], fourth_run_values[:, 1])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=1e-07, atol=0
+
+Mismatch: 100%
+Max absolute difference: 4.1036856
+Max relative difference: 1182.47830531
+ x: array([ 1.103192,  0.742009,  1.413795,  0.455453,  0.852153,  0.481176,
+        0.542426, -2.084784,  0.149576, -0.319421,  1.552965, -0.443715,
+        0.051728,  2.737377, -0.047271,  1.136648,  1.031776,  2.297528,...
+ y: array([ 2.615396e+00,  2.287620e+00,  3.607017e-01, -5.945093e-01,
+        6.287978e-01, -1.239052e+00,  2.648112e-01,  1.342528e+00,
+        1.576056e+00,  8.730910e-01,  3.186091e-01, -1.776495e-01,...
+
+======================================================================
+FAIL: brian2cuda.tests.test_random_number_generation.test_binomial_values_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 470, in test_binomial_values_fixed_and_random_seed
+    assert_allclose(third_run_values[:, 1], fourth_run_values[:, 1])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=1e-07, atol=0
+
+Mismatch: 100%
+Max absolute difference: 16.11568196
+Max relative difference: 1.82362539
+ x: array([21.485852, 18.089438, 15.225934, 20.099161, 23.080022, 20.981995,
+       18.93939 , 20.838376,  6.935079, 22.032362])
+ y: array([22.189806, 19.755845, 16.47031 , 22.513424, 20.260924, 30.079452,
+        6.707473, 25.608276, 23.050761, 20.260202])
+
+======================================================================
+FAIL: brian2cuda.tests.test_random_number_generation.test_binomial_values_set_synapses_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 570, in test_binomial_values_set_synapses_fixed_and_random_seed
+    assert_allclose(third_run_values[:, 1], fourth_run_values[:, 1])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=1e-07, atol=0
+
+Mismatch: 100%
+Max absolute difference: 14.88424701
+Max relative difference: 0.92868754
+ x: array([24.874955, 20.362474, 22.805467, 17.649337, 17.563111, 22.532225,
+       21.926144, 22.440411, 19.706756, 21.533939, 19.382972, 21.324761,
+       25.968428, 25.030229, 16.648732, 18.598308, 18.373985, 20.717021,...
+ y: array([25.440869, 26.533655, 23.202222, 19.126901, 25.087274, 19.311955,
+       20.123754, 15.911508, 22.433623, 20.021938, 14.780466, 21.882847,
+       22.820794, 21.103694, 17.982426, 14.140405, 22.920516, 11.064884,...
+
+----------------------------------------------------------------------
+Ran 7 tests in 201.316s
+
+FAILED (failures=3)
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+.....objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_1.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_3.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject_2.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/synapses_3_synapses_create_generator_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/synapses_2_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_1_synapses_create_generator_codeobject.o] Error 1
+Eobjects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_1.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_3.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject_2.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/synapses_3_synapses_create_generator_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/synapses_2_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_1_synapses_create_generator_codeobject.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+Eobjects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_1.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_3.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject_2.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/synapses_3_synapses_create_generator_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/synapses_2_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_1_synapses_create_generator_codeobject.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+E
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_binomial_values_init_synapses_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 598, in test_binomial_values_init_synapses_fixed_and_random_seed
+    run(0*ms)  # for standalone
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1311, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1180, in build
+    self.compile_source(directory, compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_random_binomial_set_template_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 628, in test_random_binomial_set_template_random_seed
+    run(0*ms)  # for standalone
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1311, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1180, in build
+    self.compile_source(directory, compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_random_values_set_synapses_fixed_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 646, in test_random_values_set_synapses_fixed_seed
+    run(0*ms)  # for standalone
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1311, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1180, in build
+    self.compile_source(directory, compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+
+----------------------------------------------------------------------
+Ran 8 tests in 10.878s
+
+FAILED (errors=3)
+....Fobjects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_1.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_3.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject_2.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/synapses_3_synapses_create_generator_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/synapses_2_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_1_synapses_create_generator_codeobject.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+code_objects/neurongroup_stateupdater_codeobject.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+code_objects/neurongroup_stateupdater_codeobject_3.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_3.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_1.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_2.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_2.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_2.o] Error 1
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_1.o] Error 1
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_3.o] Error 1
+Eobjects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_1.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+code_objects/synapses_pre_codeobject_3.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+code_objects/synapses_pre_codeobject_2.cu(214): warning: variable "_vectorisation_idx" was set but never used
+
+objects.cu(111): warning: expression has no effect
+
+objects.cu(116): warning: expression has no effect
+
+objects.cu(131): warning: expression has no effect
+
+objects.cu(136): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+objects.cu(66): warning: expression has no effect
+
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_3_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_2_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:26:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   26 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/synapses_1_synapses_create_generator_codeobject.cpp:16:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   16 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/synapses_3_synapses_create_generator_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/synapses_2_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_synapses_create_generator_codeobject.o] Error 1
+make: *** [makefile:31: code_objects/synapses_1_synapses_create_generator_codeobject.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+code_objects/neurongroup_group_variable_set_codeobject.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:24:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   24 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:17:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   17 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:27:9: error: redefinition of ‘double {anonymous}::_rand(int)’
+   27 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+code_objects/neurongroup_group_variable_set_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_rand(int)’ previously defined here
+   14 |  double _rand(const int _vectorisation_idx) {
+      |         ^~~~~
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+make: *** [makefile:31: code_objects/neurongroup_group_variable_set_codeobject_1.o] Error 1
+code_objects/neurongroup_stateupdater_codeobject.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+code_objects/neurongroup_stateupdater_codeobject_3.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_3.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_1.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_2.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/neurongroup_stateupdater_codeobject_2.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_2.o] Error 1
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_1.o] Error 1
+make: *** [makefile:31: code_objects/neurongroup_stateupdater_codeobject_3.o] Error 1
+code_objects/synapses_stateupdater_codeobject.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/synapses_stateupdater_codeobject.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/synapses_stateupdater_codeobject.o] Error 1
+make: *** Waiting for unfinished jobs....
+code_objects/synapses_stateupdater_codeobject_3.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/synapses_stateupdater_codeobject_3.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/synapses_stateupdater_codeobject_1.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/synapses_stateupdater_codeobject_1.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/synapses_stateupdater_codeobject_3.o] Error 1
+make: *** [makefile:31: code_objects/synapses_stateupdater_codeobject_1.o] Error 1
+code_objects/synapses_stateupdater_codeobject_2.cpp:21:9: error: redefinition of ‘double {anonymous}::_randn(int)’
+   21 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+code_objects/synapses_stateupdater_codeobject_2.cpp:14:9: note: ‘double {anonymous}::_randn(int)’ previously defined here
+   14 |  double _randn(const int _vectorisation_idx) {
+      |         ^~~~~~
+make: *** [makefile:31: code_objects/synapses_stateupdater_codeobject_2.o] Error 1
+E
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_binomial_values_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 452, in test_binomial_values_fixed_and_random_seed
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1180, in build
+    self.compile_source(directory, compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_binomial_values_set_synapses_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 552, in test_binomial_values_set_synapses_fixed_and_random_seed
+    device.build(direct_call=False, **device.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 1180, in build
+    self.compile_source(directory, compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+
+======================================================================
+FAIL: brian2cuda.tests.test_random_number_generation.test_random_values_set_synapses_fixed_and_random_seed
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 338, in test_random_values_set_synapses_fixed_and_random_seed
+    assert_allclose(third_run_values[:, 1], fourth_run_values[:, 1])
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 1493, in assert_allclose
+    verbose=verbose, header=header, equal_nan=equal_nan)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/numpy/testing/_private/utils.py", line 819, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=1e-07, atol=0
+
+Mismatch: 100%
+Max absolute difference: 4.29176831
+Max relative difference: 205.2420777
+ x: array([ 1.164161,  1.651235, -0.49179 ,  0.129577,  0.562541, -0.916385,
+       -0.321982,  1.118554,  0.176687,  0.616358,  1.109969, -0.389065,
+       -0.575685,  0.120498,  0.034407,  1.367265,  1.172273,  1.273109,...
+ y: array([ 1.130512,  0.513008,  0.134308,  1.588807,  0.443042, -0.223269,
+        0.989244,  1.736283, -1.940356,  0.655871,  0.042915, -0.893621,
+        2.074787,  0.151711, -0.47595 , -1.345584, -0.278474,  2.670685,...
+
+----------------------------------------------------------------------
+Ran 7 tests in 29.281s
+
+FAILED (errors=2, failures=1)
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.000s
+
+OK
+Turning off  compiler optimizations for fast compilation
+Suppressing compiler warnings
+Running with the following prefs combinations:
+
+1 run with default preferences
+
+
+Running cuda_standalone with default preferences
+
+Running standalone-compatible standard tests (single run statement)
+
+Running standalone-compatible standard tests (multiple run statements)
+
+Running standalone-specific tests
+
+
+TARGET: CUDA_STANDALONE
+
+FINISHED ALL RUNS
+
+1/1 CONFIGURATIONS FAILED:
+	1. run
+		default preferences
+Running cpp_standalone with default preferences
+
+Running standalone-compatible standard tests (single run statement)
+
+Running standalone-compatible standard tests (multiple run statements)
+
+Running standalone-specific tests
+
+
+TARGET: CPP_STANDALONE
+
+FINISHED ALL RUNS
+
+1/1 CONFIGURATIONS FAILED:
+	1. run
+		default preferences
+
+FINISHED ALL TARGETS
+
+-2/2 TARGETS FAILED:
+	cuda_standalone failed.
+	cpp_standalone failed.

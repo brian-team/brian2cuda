@@ -1,0 +1,1041 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-11 09:42:40  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 695 items / 672 deselected / 23 selected
+
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_rand <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [  4%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [  8%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 13%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_init_synapses_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 17%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 21%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 26%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 30%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 34%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_init_synapses_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 39%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_set_template_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 43%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 47%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 52%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 56%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 60%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 65%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 69%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 73%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_set_synapses_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 78%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 82%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_set_synapses_fixed_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 86%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_values_init_synapses_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 91%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_set_template_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 95%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_set_template_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [100%]
+
+=================================== FAILURES ===================================
+___________ test_binomial_values_init_synapses_fixed_and_random_seed ___________
+
+    @pytest.mark.standalone_compatible
+    def test_binomial_values_init_synapses_fixed_and_random_seed():
+        G = NeuronGroup(10, 'z : 1')
+    
+        my_f = BinomialFunction(100, 0.1, approximate=False)
+        my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
+    
+        seed()
+        S1 = Synapses(G, G)
+>       S1.connect('my_f() < my_f_approximated()')
+
+../../tests/test_random_number_generation.py:743: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../frozen_repos/brian2/brian2/core/base.py:280: in device_override_decorated_function
+    return func(*args, **kwds)
+../../../frozen_repos/brian2/brian2/synapses/synapses.py:1408: in connect
+    namespace=namespace, level=level+2)
+../../../frozen_repos/brian2/brian2/synapses/synapses.py:1725: in _add_synapses_generator
+    codeobj()
+../../../frozen_repos/brian2/brian2/codegen/codeobject.py:102: in __call__
+    return self.run()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <brian2.codegen.runtime.cython_rt.cython_rt.CythonCodeObject object at 0x7fd4ebd19d90>
+
+    def run(self):
+>       return self.compiled_code.main(self.namespace)
+E       AttributeError: 'NoneType' object has no attribute 'main'
+
+../../../frozen_repos/brian2/brian2/codegen/runtime/cython_rt/cython_rt.py:153: AttributeError
+----------------------------- Captured stderr call -----------------------------
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index[0] += 1
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_rand_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:110:13: '_namespace_rand_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+        else:
+            U -= px
+            px = ((100-X+1) * 0.100000000000000 * px)/(X*0.900000000000000)
+    return X
+
+cdef int32_t *_namespace_rand_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:62:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_rand_buffer_index
+cdef int64_t *_namespace_rand_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:111:13: '_namespace_rand_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+            U -= px
+            px = ((100-X+1) * 0.100000000000000 * px)/(X*0.900000000000000)
+    return X
+
+cdef int32_t *_namespace_rand_buffer_index
+cdef int64_t *_namespace_rand_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:63:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer = <int64_t *> _buf__randn_buffer.data
+    _namespace_num_randn_buffer = len(_namespace['_randn_buffer'])
+    # namespace for function rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:217:51: '_buf__rand_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _var__target_offset = _namespace["_var__target_offset"]
+    cdef int64_t _target_offset = _namespace["_target_offset"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:193:51: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:223:51: '_buf__rand_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function _rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:199:51: Previous declaration is here
+warning: /home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:217:51: cdef variable '_buf__rand_buffer_index' declared after it is used
+warning: /home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:223:51: cdef variable '_buf__rand_buffer' declared after it is used
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    cdef int64_t _target_offset = _namespace["_target_offset"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+                                              ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:194:47: local variable '_buf__rand_buffer_index' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function _rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+                                        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:200:41: local variable '_buf__rand_buffer' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _var__target_offset = _namespace["_var__target_offset"]
+    cdef int64_t _target_offset = _namespace["_target_offset"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:193:9: Compiler crash in AnalyseExpressionsTransform
+
+ModuleNode.body = StatListNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:6:0)
+StatListNode.stats[31] = StatListNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:151:0)
+StatListNode.stats[0] = DefNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:151:0,
+    modifiers = [...]/0,
+    name = u'main',
+    np_args_idx = [...]/0,
+    num_required_args = 1,
+    outer_attrs = [...]/2,
+    py_wrapper_required = True,
+    used = True)
+File 'Nodes.py', line 436, in analyse_expressions: StatListNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:152:4)
+File 'Nodes.py', line 5178, in analyse_expressions: SingleAssignmentNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:193:9,
+    first = True)
+File 'Nodes.py', line 5304, in analyse_types: SingleAssignmentNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:193:9,
+    first = True)
+File 'ExprNodes.py', line 2044, in analyse_target_types: NameNode(_cython_magic_0ff1bfc1165b9168615a754fbe99573e.pyx:193:9,
+    cf_is_null = True,
+    cf_maybe_null = True,
+    cf_state = [...]/0,
+    is_name = True,
+    name = u'_buf__rand_buffer_index',
+    result_is_used = True,
+    use_managed_ref = True)
+
+Compiler crash traceback from this point on:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/ExprNodes.py", line 2044, in analyse_target_types
+    Buffer.used_buffer_aux_vars(entry)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/Buffer.py", line 285, in used_buffer_aux_vars
+    buffer_aux.buflocal_nd_var.used = True
+AttributeError: 'NoneType' object has no attribute 'buflocal_nd_var'
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+___________ test_poisson_values_init_synapses_fixed_and_random_seed ____________
+
+    @pytest.mark.standalone_compatible
+    def test_poisson_values_init_synapses_fixed_and_random_seed():
+        G = NeuronGroup(10, 'l : 1')
+        G.l = arange(10)
+    
+        seed()
+        S1 = Synapses(G, G)
+>       S1.connect('poisson(5) < poisson(l_post + l_pre)')
+
+../../tests/test_random_number_generation.py:1152: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../frozen_repos/brian2/brian2/core/base.py:280: in device_override_decorated_function
+    return func(*args, **kwds)
+../../../frozen_repos/brian2/brian2/synapses/synapses.py:1408: in connect
+    namespace=namespace, level=level+2)
+../../../frozen_repos/brian2/brian2/synapses/synapses.py:1725: in _add_synapses_generator
+    codeobj()
+../../../frozen_repos/brian2/brian2/codegen/codeobject.py:102: in __call__
+    return self.run()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <brian2.codegen.runtime.cython_rt.cython_rt.CythonCodeObject object at 0x7fd4ec2ef350>
+
+    def run(self):
+>       return self.compiled_code.main(self.namespace)
+E       AttributeError: 'NoneType' object has no attribute 'main'
+
+../../../frozen_repos/brian2/brian2/codegen/runtime/cython_rt/cython_rt.py:153: AttributeError
+----------------------------- Captured stderr call -----------------------------
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer_index[0] += 1
+    if _namespace_rand_buffer_index[0] == 20000:
+        _namespace_rand_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_rand_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:147:13: '_namespace_rand_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+  elif lam == 0:
+    return 0
+  else:
+    return _poisson_mult(lam, _idx)
+
+cdef int32_t *_namespace_rand_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:125:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    if _namespace_rand_buffer_index[0] == 20000:
+        _namespace_rand_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_rand_buffer_index
+cdef int64_t *_namespace_rand_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:148:13: '_namespace_rand_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    return 0
+  else:
+    return _poisson_mult(lam, _idx)
+
+cdef int32_t *_namespace_rand_buffer_index
+cdef int64_t *_namespace_rand_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:126:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:248:51: '_buf__rand_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    cdef double l_post
+    _var_l_pre = _namespace["_var_l_pre"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:236:51: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:254:51: '_buf__rand_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function _rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:242:51: Previous declaration is here
+warning: /home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:248:51: cdef variable '_buf__rand_buffer_index' declared after it is used
+warning: /home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:254:51: cdef variable '_buf__rand_buffer' declared after it is used
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _var_l_pre = _namespace["_var_l_pre"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+    _namespace_rand_buffer_index = <int32_t *> _buf__rand_buffer_index.data
+                                              ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:237:47: local variable '_buf__rand_buffer_index' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_rand_buffer_index = len(_namespace['_rand_buffer_index'])
+    # namespace for function _rand
+    global _namespace_rand_buffer
+    global _namespace_num_rand_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__rand_buffer = _namespace['_rand_buffer']
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+                                        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:243:41: local variable '_buf__rand_buffer' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    cdef double l_post
+    _var_l_pre = _namespace["_var_l_pre"]
+    # namespace for function _rand
+    global _namespace_rand_buffer_index
+    global _namespace_num_rand_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__rand_buffer_index = _namespace['_rand_buffer_index']
+        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:236:9: Compiler crash in AnalyseExpressionsTransform
+
+ModuleNode.body = StatListNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:6:0)
+StatListNode.stats[30] = StatListNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:188:0)
+StatListNode.stats[0] = DefNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:188:0,
+    modifiers = [...]/0,
+    name = u'main',
+    np_args_idx = [...]/0,
+    num_required_args = 1,
+    outer_attrs = [...]/2,
+    py_wrapper_required = True,
+    used = True)
+File 'Nodes.py', line 436, in analyse_expressions: StatListNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:189:4)
+File 'Nodes.py', line 5178, in analyse_expressions: SingleAssignmentNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:236:9,
+    first = True)
+File 'Nodes.py', line 5304, in analyse_types: SingleAssignmentNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:236:9,
+    first = True)
+File 'ExprNodes.py', line 2044, in analyse_target_types: NameNode(_cython_magic_2ed98dc7e2f7dfdb9648b0f206c04828.pyx:236:9,
+    cf_is_null = True,
+    cf_maybe_null = True,
+    cf_state = [...]/0,
+    is_name = True,
+    name = u'_buf__rand_buffer_index',
+    result_is_used = True,
+    use_managed_ref = True)
+
+Compiler crash traceback from this point on:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/ExprNodes.py", line 2044, in analyse_target_types
+    Buffer.used_buffer_aux_vars(entry)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/Buffer.py", line 285, in used_buffer_aux_vars
+    buffer_aux.buflocal_nd_var.used = True
+AttributeError: 'NoneType' object has no attribute 'buflocal_nd_var'
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+======= 2 failed, 21 passed, 672 deselected, 1 warnings in 22.62 seconds =======
+Running standalone-compatible standard tests (multiple run statements)
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 695 items / 682 deselected / 13 selected
+
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_number_generation_with_multiple_runs <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [  7%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 15%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 23%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_vectorized_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 30%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_codeobject_every_tick <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 38%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 46%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_random_values_synapse_dynamics_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 53%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 61%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_values_synapse_dynamics_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py FAILED [ 69%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 76%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 84%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 92%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [100%]
+
+=================================== FAILURES ===================================
+__________________ test_binomial_values_fixed_and_random_seed __________________
+
+    @pytest.mark.standalone_compatible
+    @pytest.mark.multiple_runs
+    def test_binomial_values_fixed_and_random_seed():
+        my_f = BinomialFunction(100, 0.1, approximate=False)
+        my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
+    
+        G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*(my_f() + my_f_approximated())*xi/sqrt(ms) : 1')
+        mon = StateMonitor(G, 'v', record=True)
+    
+        # first run
+        G.v = 0
+        seed()
+>       run(2*defaultclock.dt)
+
+../../tests/test_random_number_generation.py:615: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../frozen_repos/brian2/brian2/units/fundamentalunits.py:2392: in new_f
+    result = f(*args, **kwds)
+../../../frozen_repos/brian2/brian2/core/magic.py:374: in run
+    namespace=namespace, profile=profile, level=2+level)
+../../../frozen_repos/brian2/brian2/core/magic.py:232: in run
+    namespace=namespace, profile=profile, level=level+1)
+../../../frozen_repos/brian2/brian2/core/base.py:280: in device_override_decorated_function
+    return func(*args, **kwds)
+../../../frozen_repos/brian2/brian2/units/fundamentalunits.py:2392: in new_f
+    result = f(*args, **kwds)
+../../../frozen_repos/brian2/brian2/core/network.py:1080: in run
+    obj.run()
+../../../frozen_repos/brian2/brian2/core/base.py:183: in run
+    codeobj()
+../../../frozen_repos/brian2/brian2/codegen/codeobject.py:102: in __call__
+    return self.run()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <brian2.codegen.runtime.cython_rt.cython_rt.CythonCodeObject object at 0x7fd4ec16d350>
+
+    def run(self):
+>       return self.compiled_code.main(self.namespace)
+E       AttributeError: 'NoneType' object has no attribute 'main'
+
+../../../frozen_repos/brian2/brian2/codegen/runtime/cython_rt/cython_rt.py:153: AttributeError
+----------------------------- Captured stderr call -----------------------------
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index[0] += 1
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_randn_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:110:13: '_namespace_randn_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+
+
+cdef float _binomial_3(const int vectorisation_idx):
+    return _randn(vectorisation_idx) * 3.000000000000000 + 10.000000000000000
+
+cdef int32_t *_namespace_randn_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:88:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_randn_buffer_index
+cdef int64_t *_namespace_randn_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:111:13: '_namespace_randn_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+
+cdef float _binomial_3(const int vectorisation_idx):
+    return _randn(vectorisation_idx) * 3.000000000000000 + 10.000000000000000
+
+cdef int32_t *_namespace_randn_buffer_index
+cdef int64_t *_namespace_randn_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:89:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer = <int64_t *> _buf__randn_buffer.data
+    _namespace_num_randn_buffer = len(_namespace['_randn_buffer'])
+    # namespace for function randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:174:51: '_buf__randn_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:162:51: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:180:51: '_buf__randn_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function _randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:168:51: Previous declaration is here
+warning: /home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:174:51: cdef variable '_buf__randn_buffer_index' declared after it is used
+warning: /home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:180:51: cdef variable '_buf__randn_buffer' declared after it is used
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+                                               ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:163:48: local variable '_buf__randn_buffer_index' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function _randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+    _namespace_randn_buffer = <int64_t *> _buf__randn_buffer.data
+                                         ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:169:42: local variable '_buf__randn_buffer' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_7226acab70df8cc4867277920541201b.pyx:162:9: Compiler crash in AnalyseExpressionsTransform
+
+ModuleNode.body = StatListNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:6:0)
+StatListNode.stats[24] = StatListNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:135:0)
+StatListNode.stats[0] = DefNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:135:0,
+    modifiers = [...]/0,
+    name = u'main',
+    np_args_idx = [...]/0,
+    num_required_args = 1,
+    outer_attrs = [...]/2,
+    py_wrapper_required = True,
+    used = True)
+File 'Nodes.py', line 436, in analyse_expressions: StatListNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:136:4)
+File 'Nodes.py', line 5178, in analyse_expressions: SingleAssignmentNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:162:9,
+    first = True)
+File 'Nodes.py', line 5304, in analyse_types: SingleAssignmentNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:162:9,
+    first = True)
+File 'ExprNodes.py', line 2044, in analyse_target_types: NameNode(_cython_magic_7226acab70df8cc4867277920541201b.pyx:162:9,
+    cf_is_null = True,
+    cf_maybe_null = True,
+    cf_state = [...]/0,
+    is_name = True,
+    name = u'_buf__randn_buffer_index',
+    result_is_used = True,
+    use_managed_ref = True)
+
+Compiler crash traceback from this point on:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/ExprNodes.py", line 2044, in analyse_target_types
+    Buffer.used_buffer_aux_vars(entry)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/Buffer.py", line 285, in used_buffer_aux_vars
+    buffer_aux.buflocal_nd_var.used = True
+AttributeError: 'NoneType' object has no attribute 'buflocal_nd_var'
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+_________ test_binomial_values_synapse_dynamics_fixed_and_random_seed __________
+
+    @pytest.mark.standalone_compatible
+    @pytest.mark.multiple_runs
+    def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
+        my_f = BinomialFunction(100, 0.1, approximate=False)
+        my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
+    
+        G = NeuronGroup(10, 'z : 1')
+        S = Synapses(G, G, 'dv/dt = -v/(10*ms) + 0.1*(my_f() + my_f_approximated())*xi/sqrt(ms) : 1')
+        S.connect()
+        mon = StateMonitor(S, 'v', record=range(100))
+    
+        # first run
+        S.v = 0
+        seed()
+>       run(2*defaultclock.dt)
+
+../../tests/test_random_number_generation.py:702: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../frozen_repos/brian2/brian2/units/fundamentalunits.py:2392: in new_f
+    result = f(*args, **kwds)
+../../../frozen_repos/brian2/brian2/core/magic.py:374: in run
+    namespace=namespace, profile=profile, level=2+level)
+../../../frozen_repos/brian2/brian2/core/magic.py:232: in run
+    namespace=namespace, profile=profile, level=level+1)
+../../../frozen_repos/brian2/brian2/core/base.py:280: in device_override_decorated_function
+    return func(*args, **kwds)
+../../../frozen_repos/brian2/brian2/units/fundamentalunits.py:2392: in new_f
+    result = f(*args, **kwds)
+../../../frozen_repos/brian2/brian2/core/network.py:1080: in run
+    obj.run()
+../../../frozen_repos/brian2/brian2/core/base.py:183: in run
+    codeobj()
+../../../frozen_repos/brian2/brian2/codegen/codeobject.py:102: in __call__
+    return self.run()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <brian2.codegen.runtime.cython_rt.cython_rt.CythonCodeObject object at 0x7fd4ec2cfe90>
+
+    def run(self):
+>       return self.compiled_code.main(self.namespace)
+E       AttributeError: 'NoneType' object has no attribute 'main'
+
+../../../frozen_repos/brian2/brian2/codegen/runtime/cython_rt/cython_rt.py:153: AttributeError
+----------------------------- Captured stderr call -----------------------------
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index[0] += 1
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_randn_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:110:13: '_namespace_randn_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+
+
+cdef float _binomial_5(const int vectorisation_idx):
+    return _randn(vectorisation_idx) * 3.000000000000000 + 10.000000000000000
+
+cdef int32_t *_namespace_randn_buffer_index
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:88:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    if _namespace_randn_buffer_index[0] == 20000:
+        _namespace_randn_buffer_index[0] = 0
+    return val
+
+cdef int32_t *_namespace_randn_buffer_index
+cdef int64_t *_namespace_randn_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:111:13: '_namespace_randn_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+
+cdef float _binomial_5(const int vectorisation_idx):
+    return _randn(vectorisation_idx) * 3.000000000000000 + 10.000000000000000
+
+cdef int32_t *_namespace_randn_buffer_index
+cdef int64_t *_namespace_randn_buffer
+            ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:89:13: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer = <int64_t *> _buf__randn_buffer.data
+    _namespace_num_randn_buffer = len(_namespace['_randn_buffer'])
+    # namespace for function randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:176:51: '_buf__randn_buffer_index' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:164:51: Previous declaration is here
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:182:51: '_buf__randn_buffer' redeclared 
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function _randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+                                                  ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:170:51: Previous declaration is here
+warning: /home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:176:51: cdef variable '_buf__randn_buffer_index' declared after it is used
+warning: /home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:182:51: cdef variable '_buf__randn_buffer' declared after it is used
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+    _namespace_randn_buffer_index = <int32_t *> _buf__randn_buffer_index.data
+                                               ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:165:48: local variable '_buf__randn_buffer_index' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_num_randn_buffer_index = len(_namespace['_randn_buffer_index'])
+    # namespace for function _randn
+    global _namespace_randn_buffer
+    global _namespace_num_randn_buffer
+    cdef _numpy.ndarray[int64_t, ndim=1, mode='c'] _buf__randn_buffer = _namespace['_randn_buffer']
+    _namespace_randn_buffer = <int64_t *> _buf__randn_buffer.data
+                                         ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:171:42: local variable '_buf__randn_buffer' referenced before assignment
+
+Error compiling Cython file:
+------------------------------------------------------------
+...
+    _namespace_rand_buffer = <int64_t *> _buf__rand_buffer.data
+    _namespace_num_rand_buffer = len(_namespace['_rand_buffer'])
+    # namespace for function _randn
+    global _namespace_randn_buffer_index
+    global _namespace_num_randn_buffer_index
+    cdef _numpy.ndarray[int32_t, ndim=1, mode='c'] _buf__randn_buffer_index = _namespace['_randn_buffer_index']
+        ^
+------------------------------------------------------------
+
+/home/denis/.cython/brian_extensions/_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:164:9: Compiler crash in AnalyseExpressionsTransform
+
+ModuleNode.body = StatListNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:6:0)
+StatListNode.stats[24] = StatListNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:135:0)
+StatListNode.stats[0] = DefNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:135:0,
+    modifiers = [...]/0,
+    name = u'main',
+    np_args_idx = [...]/0,
+    num_required_args = 1,
+    outer_attrs = [...]/2,
+    py_wrapper_required = True,
+    used = True)
+File 'Nodes.py', line 436, in analyse_expressions: StatListNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:136:4)
+File 'Nodes.py', line 5178, in analyse_expressions: SingleAssignmentNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:164:9,
+    first = True)
+File 'Nodes.py', line 5304, in analyse_types: SingleAssignmentNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:164:9,
+    first = True)
+File 'ExprNodes.py', line 2044, in analyse_target_types: NameNode(_cython_magic_d6b733164964b6fe678ed673ae108489.pyx:164:9,
+    cf_is_null = True,
+    cf_maybe_null = True,
+    cf_state = [...]/0,
+    is_name = True,
+    name = u'_buf__randn_buffer_index',
+    result_is_used = True,
+    use_managed_ref = True)
+
+Compiler crash traceback from this point on:
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/ExprNodes.py", line 2044, in analyse_target_types
+    Buffer.used_buffer_aux_vars(entry)
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/Cython/Compiler/Buffer.py", line 285, in used_buffer_aux_vars
+    buffer_aux.buflocal_nd_var.used = True
+AttributeError: 'NoneType' object has no attribute 'buflocal_nd_var'
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+============= 2 failed, 11 passed, 682 deselected in 28.26 seconds =============
+Running standalone-specific tests
+============================= test session starts ==============================
+platform linux2 -- Python 2.7.18, pytest-4.6.4, py-1.10.0, pluggy-0.12.0 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, inifile: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 695 items / 691 deselected / 4 selected
+
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_rand_randn_regex <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 25%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_poisson_regex <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 50%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_rng_occurrence_counting <- ../../../brian2cuda/tests/test_random_number_generation.py PASSED [ 75%]
+../../../frozen_repos/brian2/brian2/test_random_number_generation.py::test_binomial_occurrence <- ../../../brian2cuda/tests/test_random_number_generation.py Test suite took 0 h 1 m 51 s.

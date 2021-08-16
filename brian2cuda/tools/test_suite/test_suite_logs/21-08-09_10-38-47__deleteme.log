@@ -1,0 +1,225 @@
+WARNING: clusterbot not installed. Can't notify slack.
+2021-08-09 08:38:48  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+
+==================================== ERRORS ====================================
+______ ERROR collecting brian2cuda/tests/test_random_number_generation.py ______
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/python.py:507: in _importtestmodule
+    mod = self.fspath.pyimport(ensuresyspath=importmode)
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/py/_path/local.py:704: in pyimport
+    __import__(modname)
+E     File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 1334
+E       
+E      ^
+E   SyntaxError: invalid syntax
+___ ERROR collecting brian2cuda/tools/benchmarking/test_max_network_sizes.py ___
+ImportError while importing test module '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../benchmarking/test_max_network_sizes.py:14: in <module>
+    import seaborn
+E   ImportError: No module named seaborn
+_______ ERROR collecting brian2cuda/tools/test_suite/run_single_test.py ________
+run_single_test.py:20: in <module>
+    args = utils.parse_arguments(parser)
+utils.py:49: in parse_arguments
+    args = parser.parse_args()
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:1708: in parse_args
+    self.error(msg % ' '.join(argv))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2378: in error
+    self.exit(2, _('%s: error: %s\n') % (self.prog, message))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2366: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+------------------------------- Captured stderr --------------------------------
+usage: run_test_suite.py [-h] [--only {single-run,multi-run,standalone-only}]
+                         [--targets [{cuda_standalone,genn,cpp_standalone} [{cuda_standalone,genn,cpp_standalone} ...]]]
+                         [--single-precision] [--no-bundles] [--no-atomics]
+                         [--num-blocks NUM_BLOCKS] [--all-prefs] [--jobs JOBS]
+                         [--dry-run]
+                         [test [test ...]]
+run_test_suite.py: error: unrecognized arguments: --notify-slack
+=============================== warnings summary ===============================
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334
+  /home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/mark/structures.py:334: PytestUnknownMarkWarning: Unknown pytest.mark.cuda_standalone - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/latest/mark.html
+    PytestUnknownMarkWarning,
+
+/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11
+  /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11: UserWarning: 
+  This call to matplotlib.use() has no effect because the backend has already
+  been chosen; matplotlib.use() must be called *before* pylab, matplotlib.pyplot,
+  or matplotlib.backends is imported for the first time.
+  
+  The backend was *originally* set to 'TkAgg' by the following code:
+    File "run_test_suite.py", line 41, in <module>
+      from brian2 import test, prefs
+    File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/__init__.py", line 42, in <module>
+      from pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/pylab.py", line 1, in <module>
+      from matplotlib.pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pylab.py", line 252, in <module>
+      from matplotlib import cbook, mlab, pyplot as plt
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pyplot.py", line 71, in <module>
+      from matplotlib.backends import pylab_setup
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/backends/__init__.py", line 17, in <module>
+      line for line in traceback.format_stack()
+  
+  
+    matplotlib.use('Agg')
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+458 deselected, 2 warnings, 3 error in 2.10 seconds
+Running standalone-compatible standard tests (multiple run statements)
+
+==================================== ERRORS ====================================
+______ ERROR collecting brian2cuda/tests/test_random_number_generation.py ______
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/python.py:507: in _importtestmodule
+    mod = self.fspath.pyimport(ensuresyspath=importmode)
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/py/_path/local.py:704: in pyimport
+    __import__(modname)
+E     File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 1334
+E       
+E      ^
+E   SyntaxError: invalid syntax
+___ ERROR collecting brian2cuda/tools/benchmarking/test_max_network_sizes.py ___
+ImportError while importing test module '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../benchmarking/test_max_network_sizes.py:14: in <module>
+    import seaborn
+E   ImportError: No module named seaborn
+_______ ERROR collecting brian2cuda/tools/test_suite/run_single_test.py ________
+run_single_test.py:20: in <module>
+    args = utils.parse_arguments(parser)
+utils.py:49: in parse_arguments
+    args = parser.parse_args()
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:1708: in parse_args
+    self.error(msg % ' '.join(argv))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2378: in error
+    self.exit(2, _('%s: error: %s\n') % (self.prog, message))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2366: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+------------------------------- Captured stderr --------------------------------
+usage: run_test_suite.py [-h] [--only {single-run,multi-run,standalone-only}]
+                         [--targets [{cuda_standalone,genn,cpp_standalone} [{cuda_standalone,genn,cpp_standalone} ...]]]
+                         [--single-precision] [--no-bundles] [--no-atomics]
+                         [--num-blocks NUM_BLOCKS] [--all-prefs] [--jobs JOBS]
+                         [--dry-run]
+                         [test [test ...]]
+run_test_suite.py: error: unrecognized arguments: --notify-slack
+=============================== warnings summary ===============================
+/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11
+  /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11: UserWarning: 
+  This call to matplotlib.use() has no effect because the backend has already
+  been chosen; matplotlib.use() must be called *before* pylab, matplotlib.pyplot,
+  or matplotlib.backends is imported for the first time.
+  
+  The backend was *originally* set to 'TkAgg' by the following code:
+    File "run_test_suite.py", line 41, in <module>
+      from brian2 import test, prefs
+    File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/__init__.py", line 42, in <module>
+      from pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/pylab.py", line 1, in <module>
+      from matplotlib.pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pylab.py", line 252, in <module>
+      from matplotlib import cbook, mlab, pyplot as plt
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pyplot.py", line 71, in <module>
+      from matplotlib.backends import pylab_setup
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/backends/__init__.py", line 17, in <module>
+      line for line in traceback.format_stack()
+  
+  
+    matplotlib.use('Agg')
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+628 deselected, 1 warnings, 3 error in 1.76 seconds
+Running standalone-specific tests
+
+==================================== ERRORS ====================================
+______ ERROR collecting brian2cuda/tests/test_random_number_generation.py ______
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/_pytest/python.py:507: in _importtestmodule
+    mod = self.fspath.pyimport(ensuresyspath=importmode)
+/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/py/_path/local.py:704: in pyimport
+    __import__(modname)
+E     File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 1334
+E       
+E      ^
+E   SyntaxError: invalid syntax
+___ ERROR collecting brian2cuda/tools/benchmarking/test_max_network_sizes.py ___
+ImportError while importing test module '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../benchmarking/test_max_network_sizes.py:14: in <module>
+    import seaborn
+E   ImportError: No module named seaborn
+_______ ERROR collecting brian2cuda/tools/test_suite/run_single_test.py ________
+run_single_test.py:20: in <module>
+    args = utils.parse_arguments(parser)
+utils.py:49: in parse_arguments
+    args = parser.parse_args()
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:1708: in parse_args
+    self.error(msg % ' '.join(argv))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2378: in error
+    self.exit(2, _('%s: error: %s\n') % (self.prog, message))
+/home/denis/.conda/envs/b2c/lib/python2.7/argparse.py:2366: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+------------------------------- Captured stderr --------------------------------
+usage: run_test_suite.py [-h] [--only {single-run,multi-run,standalone-only}]
+                         [--targets [{cuda_standalone,genn,cpp_standalone} [{cuda_standalone,genn,cpp_standalone} ...]]]
+                         [--single-precision] [--no-bundles] [--no-atomics]
+                         [--num-blocks NUM_BLOCKS] [--all-prefs] [--jobs JOBS]
+                         [--dry-run]
+                         [test [test ...]]
+run_test_suite.py: error: unrecognized arguments: --notify-slack
+=============================== warnings summary ===============================
+/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11
+  /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tools/benchmarking/test_max_network_sizes.py:11: UserWarning: 
+  This call to matplotlib.use() has no effect because the backend has already
+  been chosen; matplotlib.use() must be called *before* pylab, matplotlib.pyplot,
+  or matplotlib.backends is imported for the first time.
+  
+  The backend was *originally* set to 'TkAgg' by the following code:
+    File "run_test_suite.py", line 41, in <module>
+      from brian2 import test, prefs
+    File "/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/__init__.py", line 42, in <module>
+      from pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/pylab.py", line 1, in <module>
+      from matplotlib.pylab import *
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pylab.py", line 252, in <module>
+      from matplotlib import cbook, mlab, pyplot as plt
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/pyplot.py", line 71, in <module>
+      from matplotlib.backends import pylab_setup
+    File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/matplotlib/backends/__init__.py", line 17, in <module>
+      line for line in traceback.format_stack()
+  
+  
+    matplotlib.use('Agg')
+
+-- Docs: https://docs.pytest.org/en/latest/warnings.html
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+613 deselected, 1 warnings, 3 error in 1.84 seconds
+ERROR: 3/3 test suite(s) did not complete successfully (see above).
+2021-08-09 08:38:54  
+TARGET: CUDA_STANDALONE
+2021-08-09 08:38:54  
+FINISHED ALL RUNS
+
+                     1/1 CONFIGURATIONS FAILED:
+                     	1. run
+                     		default preferences
+Test suite took 0 h 0 m 7 s.

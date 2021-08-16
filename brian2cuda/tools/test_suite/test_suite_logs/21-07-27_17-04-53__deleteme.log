@@ -1,0 +1,11 @@
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda  (including long tests)
+Running Brian version 2.2.2.1+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone 
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+WARNING    Integrating equations with GSL is still considered experimental [brian2.stateupdaters.GSL]
+SSSSSSSSS.SSSSSSSERROR: CUDA_CHECK_ERROR() failed at code_objects/synapses_1_pre_codeobject.cu:468 : invalid configuration argument
+terminate called after throwing an instance of 'thrust::system::system_error'
+  what():  CUDA free failed: cudaErrorCudartUnloading: driver shutting down
+E....N...FTest suite took 0 h 2 m 11 s.

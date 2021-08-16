@@ -1,0 +1,37 @@
+python run_test_suite.py 
+2021-08-13 16:02:13  Turning off  compiler optimizations for fast compilation
+                     Suppressing compiler warnings
+                     Running with the following prefs combinations:
+
+                     1 run with default preferences
+                     
+
+Running tests in /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2, /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests  (including long tests)
+Running Brian version 2.3+git from '/home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2'
+Testing standalone
+
+Testing standalone device "cuda_standalone"
+Running standalone-compatible standard tests (single run statement)
+============================= test session starts ==============================
+platform linux -- Python 3.9.6, pytest-6.2.4, py-1.10.0, pluggy-0.13.1 -- /home/denis/.conda/envs/b2c/bin/python
+cachedir: .pytest_cache
+rootdir: /home/denis/tubcloud/home/projects/brian2cuda/brian2cuda_repository, configfile: frozen_repos/brian2/brian2/tests/pytest.ini
+collecting ... collected 693 items / 473 deselected / 220 selected
+
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_stateupdater_basic SKIPPED [  0%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_different_clocks SKIPPED [  0%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_default_function SKIPPED [  1%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_user_defined_function SKIPPED [  1%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_x_variable SKIPPED [  2%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_dimension_mismatch_unit SKIPPED [  2%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_dimension_mismatch_dimensionless1 SKIPPED [  3%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_dimension_mismatch_dimensionless2 SKIPPED [  3%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_nonexisting_variable SKIPPED [  4%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_incorrect_error_format SKIPPED [  4%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_nonODE_variable SKIPPED [  5%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_error_bounds SKIPPED [  5%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_non_autonomous SKIPPED [  5%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_refractory SKIPPED [  6%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_fixed_timestep_big_dt_small_error PASSED [  6%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_method_options_neurongroup SKIPPED [  7%]
+../../../frozen_repos/brian2/brian2/tests/test_GSL.py::test_GSL_method_options_spatialneuron SKIPPED [  7%]

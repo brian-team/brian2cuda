@@ -1,0 +1,363 @@
+Turning off  compiler optimizations for fast compilation
+Suppressing compiler warnings
+Running with the following prefs combinations:
+
+1 run with default preferences
+
+
+Running cuda_standalone with default preferences
+
+Running standalone-specific tests
+
+.WARNING    Came across an abstract code block that may not be well-defined: the outcome may depend on the order of execution. You can ignore this warning if you are sure that the order of operations does not matter. Abstract code: "x += rand() (in-place)"
+ [brian2.codegen.generators.base]
+WARNING    Came across an abstract code block that may not be well-defined: the outcome may depend on the order of execution. You can ignore this warning if you are sure that the order of operations does not matter. Abstract code: "x += randn() (in-place)"
+ [brian2.codegen.generators.base]
+@E@nvlink error   : Undefined reference to '_ZN5brian12S_my_f_a_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian32S_my_f_a_pre_num_synapses_by_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian31S_my_f_a_pre_synapse_ids_by_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian35S_my_f_a_pre_num_synapses_by_bundleE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian38S_my_f_a_pre_synapses_offset_by_bundleE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian24S_my_f_a_pre_synapse_idsE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian37S_my_f_a_pre_num_unique_delays_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian26S_my_f_a_pre_unique_delaysE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian42S_my_f_a_pre_global_bundle_id_start_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian40S_my_f_a_pre_unique_delays_offset_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian36S_my_f_a_pre_unique_delay_start_idcsE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian10S_my_f_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian30S_my_f_pre_num_synapses_by_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian29S_my_f_pre_synapse_ids_by_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian33S_my_f_pre_num_synapses_by_bundleE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian36S_my_f_pre_synapses_offset_by_bundleE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian22S_my_f_pre_synapse_idsE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian35S_my_f_pre_num_unique_delays_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian24S_my_f_pre_unique_delaysE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian40S_my_f_pre_global_bundle_id_start_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian38S_my_f_pre_unique_delays_offset_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian34S_my_f_pre_unique_delay_start_idcsE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+make: *** [makefile:22: executable] Error 255
+EWARNING    Came across an abstract code block that may not be well-defined: the outcome may depend on the order of execution. You can ignore this warning if you are sure that the order of operations does not matter. Abstract code: "x += my_f_a() (in-place)"
+ [brian2.codegen.generators.base]
+WARNING    Came across an abstract code block that may not be well-defined: the outcome may depend on the order of execution. You can ignore this warning if you are sure that the order of operations does not matter. Abstract code: "x += my_f() (in-place)"
+ [brian2.codegen.generators.base]
+@E@nvlink error   : Undefined reference to '_ZN5brian12S_my_f_a_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian32S_my_f_a_pre_num_synapses_by_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian31S_my_f_a_pre_synapse_ids_by_preE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian35S_my_f_a_pre_num_synapses_by_bundleE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian38S_my_f_a_pre_synapses_offset_by_bundleE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian24S_my_f_a_pre_synapse_idsE' in 'code_objects/S_my_f_a_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian37S_my_f_a_pre_num_unique_delays_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian26S_my_f_a_pre_unique_delaysE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian42S_my_f_a_pre_global_bundle_id_start_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian40S_my_f_a_pre_unique_delays_offset_by_preE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian36S_my_f_a_pre_unique_delay_start_idcsE' in 'code_objects/S_my_f_a_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian10S_my_f_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian30S_my_f_pre_num_synapses_by_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian29S_my_f_pre_synapse_ids_by_preE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian33S_my_f_pre_num_synapses_by_bundleE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian36S_my_f_pre_synapses_offset_by_bundleE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian22S_my_f_pre_synapse_idsE' in 'code_objects/S_my_f_pre_codeobject.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian35S_my_f_pre_num_unique_delays_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian24S_my_f_pre_unique_delaysE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian40S_my_f_pre_global_bundle_id_start_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian38S_my_f_pre_unique_delays_offset_by_preE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+@E@nvlink error   : Undefined reference to '_ZN5brian34S_my_f_pre_unique_delay_start_idcsE' in 'code_objects/S_my_f_pre_initialise_queue.o'
+make: *** [makefile:22: executable] Error 255
+nvlink warning : SM Arch ('sm_52') not found in 'synapses_classes.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/G_randn_stateupdater_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/G_randn_thresholder_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/G_rand_stateupdater_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/G_rand_thresholder_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_randn_pre_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_randn_pre_initialise_queue.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_randn_pre_push_spikes.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_randn_synapses_create_generator_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_rand_pre_codeobject.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_rand_pre_initialise_queue.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_rand_pre_push_spikes.o'
+nvlink warning : SM Arch ('sm_52') not found in 'code_objects/S_rand_synapses_create_generator_codeobject.o'
+/usr/bin/ld: code_objects/G_randn_stateupdater_codeobject.o: in function `_run_G_randn_stateupdater_codeobject()':
+tmpxft_000341b3_00000000-6_G_randn_stateupdater_codeobject.cudafe1.cpp:(.text+0x6b3): undefined reference to `brian::dev_G_randn_stateupdater_codeobject_randn'
+/usr/bin/ld: tmpxft_000341b3_00000000-6_G_randn_stateupdater_codeobject.cudafe1.cpp:(.text+0x6c1): undefined reference to `brian::dev_array_G_randn_x'
+/usr/bin/ld: code_objects/G_randn_thresholder_codeobject.o: in function `_run_G_randn_thresholder_codeobject()':
+tmpxft_000341b4_00000000-6_G_randn_thresholder_codeobject.cudafe1.cpp:(.text+0x6ab): undefined reference to `brian::current_idx_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341b4_00000000-6_G_randn_thresholder_codeobject.cudafe1.cpp:(.text+0x6b7): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341b4_00000000-6_G_randn_thresholder_codeobject.cudafe1.cpp:(.text+0x74d): undefined reference to `brian::current_idx_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341b4_00000000-6_G_randn_thresholder_codeobject.cudafe1.cpp:(.text+0x759): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: code_objects/G_rand_stateupdater_codeobject.o: in function `_run_G_rand_stateupdater_codeobject()':
+tmpxft_000341b5_00000000-6_G_rand_stateupdater_codeobject.cudafe1.cpp:(.text+0x6b3): undefined reference to `brian::dev_G_rand_stateupdater_codeobject_rand'
+/usr/bin/ld: tmpxft_000341b5_00000000-6_G_rand_stateupdater_codeobject.cudafe1.cpp:(.text+0x6c1): undefined reference to `brian::dev_array_G_rand_x'
+/usr/bin/ld: code_objects/G_rand_thresholder_codeobject.o: in function `_run_G_rand_thresholder_codeobject()':
+tmpxft_000341c5_00000000-6_G_rand_thresholder_codeobject.cudafe1.cpp:(.text+0x6ab): undefined reference to `brian::current_idx_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341c5_00000000-6_G_rand_thresholder_codeobject.cudafe1.cpp:(.text+0x6b7): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341c5_00000000-6_G_rand_thresholder_codeobject.cudafe1.cpp:(.text+0x74d): undefined reference to `brian::current_idx_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341c5_00000000-6_G_rand_thresholder_codeobject.cudafe1.cpp:(.text+0x759): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: code_objects/S_randn_pre_codeobject.o: in function `_run_S_randn_pre_codeobject()':
+tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x42e): undefined reference to `brian::_array_S_randn_N'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x442): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x46a): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x481): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x4a9): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x4f5): undefined reference to `brian::S_randn_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x671): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x6d5): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x6e4): undefined reference to `brian::S_randn_pre_scalar_delay'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x6f8): undefined reference to `brian::S_randn_pre_delay'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x705): undefined reference to `brian::S_randn_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x711): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x71f): undefined reference to `brian::_num__array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x7f9): undefined reference to `brian::dev_S_randn_pre_codeobject_randn'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x800): undefined reference to `brian::dev_array_S_randn_N'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x807): undefined reference to `brian::dev_array_G_randn_x'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x813): undefined reference to `brian::S_randn_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x81f): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: code_objects/S_randn_pre_codeobject.o: in function `_debugmsg_S_randn_pre_codeobject()':
+tmpxft_000341cb_00000000-6_S_randn_pre_codeobject.cudafe1.cpp:(.text+0x8e6): undefined reference to `brian::_array_S_randn_N'
+/usr/bin/ld: code_objects/S_randn_pre_initialise_queue.o: in function `_run_S_randn_pre_initialise_queue()':
+tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x49f): undefined reference to `brian::_array_S_randn_N'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x521): undefined reference to `brian::dev_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x528): undefined reference to `brian::_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x7ae): undefined reference to `brian::_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x811): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x830): undefined reference to `brian::_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x84f): undefined reference to `brian::_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x988): undefined reference to `brian::S_randn_pre_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x98f): undefined reference to `brian::dev_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x99b): undefined reference to `brian::dev_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xb73): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xb87): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xe74): undefined reference to `brian::S_randn_pre_max_num_unique_delays'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xe88): undefined reference to `brian::S_randn_pre_max_num_unique_delays'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xf8d): undefined reference to `brian::S_randn_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0xf9d): undefined reference to `brian::S_randn_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1245): undefined reference to `brian::S_randn_pre_num_synapses_by_pre'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1275): undefined reference to `brian::S_randn_pre_synapse_ids_by_pre'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x14cc): undefined reference to `brian::S_randn_pre_unique_delays'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x152c): undefined reference to `brian::S_randn_pre_mean_bundle_size'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x154d): undefined reference to `brian::S_randn_pre_synapse_ids'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x15ae): undefined reference to `brian::S_randn_pre_num_synapses_by_bundle'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x15f5): undefined reference to `brian::S_randn_pre_synapses_offset_by_bundle'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1625): undefined reference to `brian::S_randn_pre_global_bundle_id_start_by_pre'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1cc7): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1d08): undefined reference to `brian::_num__array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x1d87): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d4_00000000-6_S_randn_pre_initialise_queue.cudafe1.cpp:(.text+0x20fc): undefined reference to `brian::S_randn_pre_scalar_delay'
+/usr/bin/ld: code_objects/S_randn_pre_push_spikes.o: in function `_run_S_randn_pre_push_spikes()':
+tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x3cb): undefined reference to `brian::S_randn_pre_scalar_delay'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x3d6): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x3e4): undefined reference to `brian::current_idx_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x3ea): undefined reference to `brian::S_randn_pre_delay'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x3fd): undefined reference to `brian::S_randn_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x408): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x416): undefined reference to `brian::current_idx_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x422): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x500): undefined reference to `brian::S_randn_pre_max_size'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x6eb): undefined reference to `brian::current_idx_array_G_randn__spikespace'
+/usr/bin/ld: tmpxft_000341d9_00000000-6_S_randn_pre_push_spikes.cudafe1.cpp:(.text+0x6f7): undefined reference to `brian::dev_array_G_randn__spikespace'
+/usr/bin/ld: code_objects/S_randn_synapses_create_generator_codeobject.o: in function `_run_S_randn_synapses_create_generator_codeobject()':
+tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x447): undefined reference to `brian::dev_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x472): undefined reference to `brian::dev_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x489): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4b4): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4cb): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4f6): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x50d): undefined reference to `brian::dev_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x538): undefined reference to `brian::dev_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x562): undefined reference to `brian::_array_S_randn_N'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x5b3): undefined reference to `brian::_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x5c4): undefined reference to `brian::_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x786): undefined reference to `brian::_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7a0): undefined reference to `brian::_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7c0): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7d3): undefined reference to `brian::_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x815): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x832): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x849): undefined reference to `brian::_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x860): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x877): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x88e): undefined reference to `brian::dev_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x8a5): undefined reference to `brian::_dynamic_array_S_randn_delay'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x8f3): undefined reference to `brian::_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x90d): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x965): undefined reference to `brian::S_randn_multiple_pre_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x97a): undefined reference to `brian::_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x981): undefined reference to `brian::dev_dynamic_array_S_randn_N_incoming'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x98d): undefined reference to `brian::_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x994): undefined reference to `brian::dev_dynamic_array_S_randn_N_outgoing'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9a0): undefined reference to `brian::_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9a7): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_pre'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9b3): undefined reference to `brian::_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9ba): undefined reference to `brian::dev_dynamic_array_S_randn__synaptic_post'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9c6): undefined reference to `brian::_array_S_randn_N'
+/usr/bin/ld: tmpxft_000341e1_00000000-6_S_randn_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9cd): undefined reference to `brian::dev_array_S_randn_N'
+/usr/bin/ld: code_objects/S_rand_pre_codeobject.o: in function `_run_S_rand_pre_codeobject()':
+tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x42e): undefined reference to `brian::_array_S_rand_N'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x442): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x46a): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x481): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x4a9): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x4f5): undefined reference to `brian::S_rand_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x671): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x6d5): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x6e4): undefined reference to `brian::S_rand_pre_scalar_delay'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x6f8): undefined reference to `brian::S_rand_pre_delay'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x705): undefined reference to `brian::S_rand_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x711): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x71f): undefined reference to `brian::_num__array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x7f9): undefined reference to `brian::dev_S_rand_pre_codeobject_rand'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x800): undefined reference to `brian::dev_array_S_rand_N'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x807): undefined reference to `brian::dev_array_G_rand_x'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x813): undefined reference to `brian::S_rand_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x81f): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: code_objects/S_rand_pre_codeobject.o: in function `_debugmsg_S_rand_pre_codeobject()':
+tmpxft_000341ea_00000000-6_S_rand_pre_codeobject.cudafe1.cpp:(.text+0x8e6): undefined reference to `brian::_array_S_rand_N'
+/usr/bin/ld: code_objects/S_rand_pre_initialise_queue.o: in function `_run_S_rand_pre_initialise_queue()':
+tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x49f): undefined reference to `brian::_array_S_rand_N'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x521): undefined reference to `brian::dev_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x528): undefined reference to `brian::_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x7ae): undefined reference to `brian::_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x811): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x830): undefined reference to `brian::_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x84f): undefined reference to `brian::_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x988): undefined reference to `brian::S_rand_pre_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x98f): undefined reference to `brian::dev_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x99b): undefined reference to `brian::dev_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xb73): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xb87): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xe74): undefined reference to `brian::S_rand_pre_max_num_unique_delays'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xe88): undefined reference to `brian::S_rand_pre_max_num_unique_delays'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xf8d): undefined reference to `brian::S_rand_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0xf9d): undefined reference to `brian::S_rand_pre_max_bundle_size'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1245): undefined reference to `brian::S_rand_pre_num_synapses_by_pre'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1275): undefined reference to `brian::S_rand_pre_synapse_ids_by_pre'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x14cc): undefined reference to `brian::S_rand_pre_unique_delays'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x152c): undefined reference to `brian::S_rand_pre_mean_bundle_size'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x154d): undefined reference to `brian::S_rand_pre_synapse_ids'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x15ae): undefined reference to `brian::S_rand_pre_num_synapses_by_bundle'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x15f5): undefined reference to `brian::S_rand_pre_synapses_offset_by_bundle'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1625): undefined reference to `brian::S_rand_pre_global_bundle_id_start_by_pre'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1cc7): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1d08): undefined reference to `brian::_num__array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x1d87): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341eb_00000000-6_S_rand_pre_initialise_queue.cudafe1.cpp:(.text+0x20fc): undefined reference to `brian::S_rand_pre_scalar_delay'
+/usr/bin/ld: code_objects/S_rand_pre_push_spikes.o: in function `_run_S_rand_pre_push_spikes()':
+tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x3cb): undefined reference to `brian::S_rand_pre_scalar_delay'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x3d6): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x3e4): undefined reference to `brian::current_idx_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x3ea): undefined reference to `brian::S_rand_pre_delay'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x3fd): undefined reference to `brian::S_rand_pre_eventspace_idx'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x408): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x416): undefined reference to `brian::current_idx_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x422): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x500): undefined reference to `brian::S_rand_pre_max_size'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x6eb): undefined reference to `brian::current_idx_array_G_rand__spikespace'
+/usr/bin/ld: tmpxft_000341f0_00000000-6_S_rand_pre_push_spikes.cudafe1.cpp:(.text+0x6f7): undefined reference to `brian::dev_array_G_rand__spikespace'
+/usr/bin/ld: code_objects/S_rand_synapses_create_generator_codeobject.o: in function `_run_S_rand_synapses_create_generator_codeobject()':
+tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x447): undefined reference to `brian::dev_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x472): undefined reference to `brian::dev_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x489): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4b4): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4cb): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x4f6): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x50d): undefined reference to `brian::dev_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x538): undefined reference to `brian::dev_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x562): undefined reference to `brian::_array_S_rand_N'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x5b3): undefined reference to `brian::_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x5c4): undefined reference to `brian::_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x786): undefined reference to `brian::_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7a0): undefined reference to `brian::_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7c0): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x7d3): undefined reference to `brian::_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x815): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x832): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x849): undefined reference to `brian::_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x860): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x877): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x88e): undefined reference to `brian::dev_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x8a5): undefined reference to `brian::_dynamic_array_S_rand_delay'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x8f3): undefined reference to `brian::_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x90d): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x965): undefined reference to `brian::S_rand_multiple_pre_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x97a): undefined reference to `brian::_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x981): undefined reference to `brian::dev_dynamic_array_S_rand_N_incoming'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x98d): undefined reference to `brian::_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x994): undefined reference to `brian::dev_dynamic_array_S_rand_N_outgoing'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9a0): undefined reference to `brian::_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9a7): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_pre'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9b3): undefined reference to `brian::_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9ba): undefined reference to `brian::dev_dynamic_array_S_rand__synaptic_post'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9c6): undefined reference to `brian::_array_S_rand_N'
+/usr/bin/ld: tmpxft_000341f4_00000000-6_S_rand_synapses_create_generator_codeobject.cudafe1.cpp:(.text+0x9cd): undefined reference to `brian::dev_array_S_rand_N'
+collect2: error: ld returned 1 exit status
+make: *** [makefile:22: executable] Error 1
+E
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_rand_randn_occurence_counting
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 81, in test_rand_randn_occurence_counting
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1227, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1026, in build
+    self.compile_source(directory, cpp_compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+======================================================================
+ERROR: brian2cuda.tests.test_random_number_generation.test_binomial_occurence
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/denis/.conda/envs/b2c/lib/python2.7/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/tests/test_random_number_generation.py", line 116, in test_binomial_occurence
+    run(0*ms)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/units/fundamentalunits.py", line 2375, in new_f
+    result = f(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 371, in run
+    namespace=namespace, profile=profile, level=2+level)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/magic.py", line 231, in run
+    namespace=namespace, profile=profile, level=level+1)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/core/base.py", line 274, in device_override_decorated_function
+    return getattr(curdev, name)(*args, **kwds)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1227, in network_run
+    self.build(direct_call=False, **self.build_options)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/brian2cuda/device.py", line 1026, in build
+    self.compile_source(directory, cpp_compiler, debug, clean)
+  File "/home/denis/projects/brian2cuda/brian2cuda_repository/frozen_repos/brian2/brian2/devices/cpp_standalone/device.py", line 960, in compile_source
+    raise RuntimeError(error_message)
+RuntimeError: Project compilation failed (error code: 512). Consider running with "clean=True" to force a complete rebuild.
+-------------------- >> begin captured stdout << ---------------------
+('debug syn effect mode ', 'target')
+('debug syn effect mode ', 'target')
+
+--------------------- >> end captured stdout << ----------------------
+
+----------------------------------------------------------------------
+Ran 3 tests in 12.830s
+
+FAILED (errors=2)
+
+TARGET: CUDA_STANDALONE
+
+FINISHED ALL RUNS
+
+1/1 CONFIGURATIONS FAILED:
+	1. run
+		default preferences

@@ -61,10 +61,10 @@ def auto_find_examples(obj, headersymbol='='):
     txt = txt + '\n' + headersymbol * len(txt) + '\n\n'
     for tutname, tutloc in tutorials:
         tutname = tutname.replace('.ipynb', '')
-        txt += '* Tutorial :doc:`%s </resources/tutorials/%s>`\n' % (tutname, tutloc)
+        txt += f'* Tutorial :doc:`{tutname} </resources/tutorials/{tutloc}>`\n'
     for exname, exloc in examples:
         exname = exname.replace('.py', '')
-        txt += '* Example :doc:`%s </examples/%s>`\n' % (exname, exloc)
+        txt += f'* Example :doc:`{exname} </examples/{exloc}>`\n'
     return txt + '\n'
 
 
