@@ -1,3 +1,4 @@
+{# USES_VARIABLES { _group_idx } #}
 {% extends 'common_group.cu' %}
 
 {% block extra_headers %}
@@ -5,7 +6,6 @@
 {% endblock %}
 
 {% block kernel_maincode %}
-    {# USES_VARIABLES { _group_idx } #}
     ///// block kernel_maincode /////
 
     ///// scalar code /////

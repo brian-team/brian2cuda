@@ -129,7 +129,6 @@ __global__ void kernel_{{codeobj_name}}_coupling(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -247,7 +246,6 @@ __global__ void kernel_{{codeobj_name}}_combine(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -294,7 +292,6 @@ __global__ void kernel_{{codeobj_name}}_currents(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;

@@ -1,3 +1,4 @@
+{# USES_VARIABLES { N, _synaptic_pre} #}
 {% extends 'common_synapses.cu' %}
 
 {% set _non_synaptic = [] %}
@@ -33,7 +34,6 @@ kernel_{{codeobj_name}}(
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N, _synaptic_pre} #}
     using namespace brian;
 
     assert(THREADS_PER_BLOCK == blockDim.x);

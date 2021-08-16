@@ -1,5 +1,5 @@
-{% extends 'common_group.cu' %}
-{#
+{# TEMPLATE INFO
+
     Notes: This codeobject is run every time step and fills the spikespace of
            the spikegenerator neurongroup with the neuron IDs of the neurons that
            spike in this time step. If there are multiple circular spikespaces
@@ -34,9 +34,10 @@
     - For additional optimizations, see #193.
 #}
 
-{# USES_VARIABLES {_spikespace, neuron_index, _timebins, _period_bins, _lastindex, t_in_timesteps, N} #}
-
-
+{# USES_VARIABLES {_spikespace, neuron_index, _timebins, _period_bins, _lastindex,
+                   t_in_timesteps, N}
+#}
+{% extends 'common_group.cu' %}
 {% block kernel_maincode %}
     // The period in multiples of dt
     const int32_t _the_period = {{_period_bins}};
