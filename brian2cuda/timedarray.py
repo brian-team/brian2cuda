@@ -22,7 +22,7 @@ def _generate_cuda_code_1d(values, dt, name):
                 i = %NUM_VALUES%-1;
             return _namespace%NAME%_values[i];
         }
-        '''.replace('%NAME%', name).replace('%DT%', '%.18f' % dt).replace(
+        '''.replace('%NAME%', name).replace('%DT%', f'{dt:.18f}').replace(
             '%K%', str(K)).replace('%NUM_VALUES%', str(len(values)))
 
         return code
@@ -50,7 +50,7 @@ def _generate_cuda_code_2d(values, dt, name):
         }
         '''
         code = replace(code, {'%NAME%': name,
-                              '%DT%': '%.18f' % dt,
+                              '%DT%': f'{dt:.18f}',
                               '%K%': str(K),
                               '%COLS%': str(values.shape[1]),
                               '%ROWS%': str(values.shape[0])})

@@ -113,12 +113,12 @@ def main(rootpath, destdir):
         output += '\n'.join(['    ' + line for line in afterdoccode.split('\n')])
         output += '\n\n'
 
-        eximgpattern = os.path.join(eximgpath, '%s.*.png' % exname)
+        eximgpattern = os.path.join(eximgpath, f'{exname}.*.png')
         images = glob.glob(eximgpattern)
         for image in sorted(images):
             _, image = os.path.split(image)
             print('Found example image file', image)
-            output += '.. image:: ../resources/examples_images/%s\n\n' % image
+            output += f'.. image:: ../resources/examples_images/{image}\n\n'
 
         open(os.path.join(destdir, exname + '.rst'), 'w').write(output)
 
@@ -132,7 +132,7 @@ def main(rootpath, destdir):
         mainpage_text += '   :maxdepth: 1\n\n'
         curpath = ''
         for exname, basename in sorted(categories[category]):
-            mainpage_text += '   %s <%s>\n' % (basename, exname)
+            mainpage_text += f'   {basename} <{exname}>\n'
         return mainpage_text
 
     mainpage_text = insert_category('', mainpage_text)

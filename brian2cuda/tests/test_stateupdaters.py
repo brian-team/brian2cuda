@@ -56,9 +56,9 @@ def test_multiple_noise_variables_extended():
         for method_name in ['euler', 'heun']:
             mon = monitors[i][method_name]
             assert_allclose(mon.x[:], no_noise_x,
-                            err_msg='Method %s gave incorrect results' % method_name)
+                            err_msg=f'Method {method_name} gave incorrect results')
             assert_allclose(mon.y[:], no_noise_y,
-                            err_msg='Method %s gave incorrect results' % method_name)
+                            err_msg=f'Method {method_name} gave incorrect results')
 
 
 @pytest.mark.standalone_compatible
@@ -107,9 +107,9 @@ def test_multiple_noise_variables_deterministic_noise(fake_randn_randn_fixture):
         for method_name in ['euler', 'heun']:
             mon = monitors[i][method_name]
             assert_allclose(mon.x[:], no_noise_x,
-                            err_msg='Method %s gave incorrect results' % method_name)
+                            err_msg=f'Method {method_name} gave incorrect results')
             assert_allclose(mon.y[:], no_noise_y,
-                            err_msg='Method %s gave incorrect results' % method_name)
+                            err_msg=f'Method {method_name} gave incorrect results')
 
 
 @pytest.mark.standalone_compatible
@@ -129,7 +129,7 @@ def test_pure_noise_deterministic(fake_randn_randn_fixture):
     for method in ['euler', 'heun', 'milstein']:
         G = G_dict[method]
         assert_allclose(G.x, sqrt(dt)*sigma*0.5/sqrt(1*ms)*10,
-                        err_msg='method %s did not give the expected result' % method)
+                        err_msg=f'method {method} did not give the expected result')
 
 
 @pytest.mark.standalone_compatible
@@ -162,7 +162,7 @@ def test_subexpressions():
 
     for method in methods:
         G1, G2, mon1, mon2 = objects[method]
-        assert_equal(mon1.v, mon2.v, 'Results for method %s differed!' % method)
+        assert_equal(mon1.v, mon2.v, f'Results for method {method} differed!')
 
 
 @pytest.mark.standalone_compatible

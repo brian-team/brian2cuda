@@ -48,12 +48,12 @@ def create_readme(result_dir, description=''):
     result_md = []
     for name in test_names:
         plots_md = []
-        for plot_file in sorted(glob.glob(result_dir + "/plots/speed_test_{}_*".format(name))):
+        for plot_file in sorted(glob.glob(result_dir + f"/plots/speed_test_{name}_*")):
             filename = os.path.basename(plot_file)
-            md = "![]({plot})".format(plot="plots/{}".format(filename))
+            md = f"![](plots/{filename})"
             plots_md.append(md)
         profile_md = []
-        for nvprof_file in sorted(glob.glob(result_dir + "/nvprof/nvprof_{}_*".format(name))):
+        for nvprof_file in sorted(glob.glob(result_dir + f"/nvprof/nvprof_{name}_*")):
             nvprof_filename = os.path.splitext(os.path.basename(nvprof_file))[0]
             config = nvprof_filename.split('_')[2]
             N = nvprof_filename.split('_')[3].split('.')[0]
@@ -80,6 +80,6 @@ def create_readme(result_dir, description=''):
 
 if __name__ == '__main__':
 
-    assert len(sys.argv)== 2, 'Provide result directory as only command line argument! Got {}'.format(len(sys.argv)-1)
+    assert len(sys.argv)== 2, f'Provide result directory as only command line argument! Got {len(sys.argv) - 1}'
     result_dir = sys.argv[1]
     create_readme(result_dir)

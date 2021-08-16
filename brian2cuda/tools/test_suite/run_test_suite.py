@@ -112,8 +112,7 @@ for target in args.targets:
         prefs.read_preference_file(StringIO(stored_prefs))
 
         if prefs_dict is not None:
-            buffer.add("{}. RUN: test suite on CUDA_STANDALONE with prefs: "
-                       "".format(n + 1))
+            buffer.add(f"{n + 1}. RUN: test suite on CUDA_STANDALONE with prefs: ")
             # print and set preferences
             print_lines = utils.print_single_prefs(prefs_dict, set_prefs=prefs,
                                                    return_lines=True)
@@ -134,7 +133,7 @@ for target in args.targets:
 
         successes.append(success)
 
-    buffer.add("\nTARGET: {}".format(target.upper()))
+    buffer.add(f"\nTARGET: {target.upper()}")
     all_success, print_lines = utils.check_success(successes,
                                                    all_prefs_combinations,
                                                    return_lines=True)
@@ -153,7 +152,7 @@ if len(args.targets) > 1:
             sum(all_successes) - len(all_successes), len(all_successes)))
         for n, target in enumerate(args.targets):
             if not all_successes[n]:
-                buffer.add("\t{} failed.".format(target))
+                buffer.add(f"\t{target} failed.")
         buffer.print_all()
         sys.exit(1)
 

@@ -60,12 +60,12 @@ def test_rand_randn_regex():
     for i, co in enumerate(m):
         prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 1, \
-            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+            f"{i}: matches: {co.rng_calls['rand']} in '{co.code.cu_file}'"
 
     for i, co in enumerate(n):
         prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 0, \
-            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+            f"{i}: matches: {co.rng_calls['rand']} in '{co.code.cu_file}'"
 
 
 @pytest.mark.cuda_standalone
@@ -91,20 +91,20 @@ def test_poisson_regex():
     # If lambda is a literal (.01 and 5), it will be replaced by a
     # _ptr_array_{name}_poisson_<idx> variables, where the idx is ascending by
     # lambda value (lamda=.01 gets idx=0; lamda=5 gets idx=1)
-    replaced_code = '''
+    replaced_code = f'''
         _rand(_vectorisation_idx + 0 * _N)
         _poisson(l, _vectorisation_idx)
-        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 0 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 0 * _N)
-        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 1 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 1 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 2 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_1, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_1, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 2 * _N)
         _poisson(l, _vectorisation_idx)
-        '''.format(name=co.name)
+        '''
 
     for i, (cu_line, replaced_line) in enumerate(zip(co.code.cu_file.split('\n'),
                                                      replaced_code.split('\n'))):
-        assert_equal(cu_line, replaced_line, err_msg="Line {} is wrong".format(i))
+        assert_equal(cu_line, replaced_line, err_msg=f"Line {i} is wrong")
     assert_equal(co.code.cu_file, replaced_code)
 
 
@@ -151,7 +151,7 @@ def test_rng_occurrence_counting():
                     co_lamda = code_object.poisson_lamdas['poisson_0']
                     assert co_lamda == 1.0, co_lamda
                     d_lamda = device.all_poisson_lamdas[code_object.name]['poisson_0']
-                    assert d_lamda == 1.0, "{} {}".format(d_lamda, code_object.name)
+                    assert d_lamda == 1.0, f"{d_lamda} {code_object.name}"
 
                 assert not code_object.needs_curand_states
 

@@ -382,7 +382,7 @@ def test_default_function_convertion_preference():
     run(0*ms)
 
     assert G.v[0] != unrepresentable_int, G.v[0]
-    assert G2.v[0] == unrepresentable_int, '{} != {}'.format(G2.v[0], unrepresentable_int)
+    assert G2.v[0] == unrepresentable_int, f'{G2.v[0]} != {unrepresentable_int}'
 
 
 @pytest.mark.cuda_standalone

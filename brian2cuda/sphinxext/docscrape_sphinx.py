@@ -37,8 +37,7 @@ class SphinxDocString(NumpyDocString):
             out += self._str_field_list(name)
             out += ['']
             for param, param_type, desc in self[name]:
-                out += self._str_indent(['**%s** : %s' % (param.strip(),
-                                                          param_type)])
+                out += self._str_indent([f'**{param.strip()}** : {param_type}'])
                 out += ['']
                 out += self._str_indent(desc, 8)
                 out += ['']
@@ -64,11 +63,11 @@ class SphinxDocString(NumpyDocString):
             if not self[name]:
                 continue
 
-            out += ['.. rubric:: %s' % name, '']
+            out += [f'.. rubric:: {name}', '']
             prefix = getattr(self, '_name', '')
 
             if prefix:
-                prefix = '%s.' % prefix
+                prefix = f'{prefix}.'
 
             autosum = []
             for param, _, desc in self[name]:
@@ -90,9 +89,9 @@ class SphinxDocString(NumpyDocString):
                                                                doc='\n'.join(desc)))
 
                 if len(prefix):
-                    autosum += ["   ~%s%s" % (prefix, param)]
+                    autosum += [f"   ~{prefix}{param}"]
                 else:
-                    autosum += ["   %s" % param]
+                    autosum += [f"   {param}"]
 
             if autosum:
                 out += ['.. autosummary::', '']
@@ -116,9 +115,9 @@ class SphinxDocString(NumpyDocString):
 
             for param, _, _ in self[name]:
                 if name == 'Methods':
-                    out += ['.. automethod:: %s%s' % (prefix, param)]
+                    out += [f'.. automethod:: {prefix}{param}']
                 elif name == 'Attributes':
-                    out += ['.. autoattribute:: %s%s' % (prefix, param)]
+                    out += [f'.. autoattribute:: {prefix}{param}']
 
             out += ['']
         return out
@@ -147,7 +146,7 @@ class SphinxDocString(NumpyDocString):
         out = []
         out += self._str_header(name)
         for func, _, desc in self[name]:
-            out += [":exc:`%s`" % func]
+            out += [f":exc:`{func}`"]
             if desc:
                 out += self._str_indent([' '.join(desc)])
         out += ['']
@@ -166,14 +165,14 @@ class SphinxDocString(NumpyDocString):
         if len(idx) == 0:
             return out
 
-        out += ['.. index:: %s' % idx.get('default', '')]
+        out += [f".. index:: {idx.get('default', '')}"]
         for section, references in iteritems(idx):
             if section == 'default':
                 continue
             elif section == 'refguide':
-                out += ['   single: %s' % (', '.join(references))]
+                out += [f"   single: {', '.join(references)}"]
             else:
-                out += ['   %s: %s' % (section, ','.join(references))]
+                out += [f"   {section}: {','.join(references)}"]
         return out
 
     def _str_references(self):
@@ -195,7 +194,7 @@ class SphinxDocString(NumpyDocString):
                 m = re.match(r'.. \[([a-z0-9._-]+)\]', line, re.I)
                 if m:
                     items.append(m.group(1))
-            out += ['   ' + ", ".join(["[%s]_" % item for item in items]), '']
+            out += ['   ' + ", ".join([f"[{item}]_" for item in items]), '']
         return out
 
     def _str_examples(self):
