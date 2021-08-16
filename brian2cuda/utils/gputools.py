@@ -203,8 +203,7 @@ def _get_cuda_path():
     if os.path.exists("/usr/local/cuda"):
         cuda_path_usr = "/usr/local/cuda"
         logger.info(
-            "CUDA installation directory found in standard location: {}"
-            "".format(cuda_path_usr)
+            f"CUDA installation directory found in standard location: {cuda_path_usr}"
         )
         return cuda_path_usr
 
@@ -234,7 +233,7 @@ def _get_nvcc_path():
 
     nvcc_path = os.path.join(cuda_path, nvcc_bin)
     if not os.path.exists(nvcc_path):
-        raise RuntimeError("Couldn't find `nvcc` binary in {}.".format(nvcc_path))
+        raise RuntimeError(f"Couldn't find `nvcc` binary in {nvcc_path}.")
 
     return nvcc_path
 
@@ -283,12 +282,10 @@ def _select_gpu():
 
     gpu_name = ""
     if gpu_list is not None:
-        gpu_name = " ({})".format(gpu_list[gpu_id])
+        gpu_name = f" ({gpu_list[gpu_id]})"
 
     logger.info(
-        "Compiling device code for GPU {gpu_id}{gpu_name}".format(
-            gpu_id=gpu_id, gpu_name=gpu_name
-        )
+        f"Compiling device code for GPU {gpu_id}{gpu_name}"
     )
 
     return gpu_id, compute_capability
@@ -413,7 +410,7 @@ def get_compute_capability(gpu_id):
                 compute_capability_line = lines[i + 2]
                 assert compute_capability_line.strip().startswith(
                     "CUDA Capability Major/Minor version number"
-                ), "Unexpected line parsed: {}".format(compute_capability_line)
+                ), f"Unexpected line parsed: {compute_capability_line}"
                 # Last 3 chars are the compute capability
                 major = int(compute_capability_line[-3])
                 minor = int(compute_capability_line[-1])

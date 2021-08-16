@@ -14,5 +14,5 @@ from helpers import translate_pkl_to_csv
 
 for pattern in args.files:
     for pkl in glob.glob(pattern):
-        print("Extracting csv files from {}".format(pkl))
+        print(f"Extracting csv files from {pkl}")
         translate_pkl_to_csv(pkl)
