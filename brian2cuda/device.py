@@ -8,7 +8,6 @@ import tempfile
 from distutils import ccompiler
 import re
 from itertools import chain
-import sys
 
 import numpy as np
 
@@ -22,7 +21,7 @@ from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.utils.filetools import copy_directory, ensure_directory
-from brian2.utils.stringtools import get_identifiers
+from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
@@ -148,12 +147,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         prefix = prefix or ''
         choices = ['_ptr', 'dev', 'd', '']
         if prefix not in choices:
-            msg = "`prefix` has to be one of {choices} or `None`, got {prefix}"
-            raise ValueError(msg.format(choices=choices, prefix=prefix))
+            raise ValueError(
+                f"`prefix` has to be one of {choices} or `None`, got {prefix}"
+            )
 
         if not access_data and prefix in ['_ptr', 'd']:
-            msg = "Don't use `'{prefix}'` prefix for a dynamic array object."
-            raise ValueError(msg.format(prefix=prefix))
+            raise ValueError(
+                f"Don't use `'{prefix}'` prefix for a dynamic array object."
+            )
 
         array_name = ''
         if isinstance(var, DynamicArrayVariable):
@@ -341,8 +342,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # TODO: this overwrites if somebody sets a codeobject in the Synapses(..., codeobj_class=...)
             if prefs['devices.cuda_standalone.use_atomics'] and synaptic_effects != 'synapses':
                 codeobj_class = CUDAStandaloneAtomicsCodeObject
-                logger.debug("Using atomics in synaptic effect application of "
-                             "Synapses object {syn}".format(syn=name))
+                logger.debug(
+                    f"Using atomics in synaptic effect application of Synapses object "
+                    f"{name}"
+                )
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
@@ -453,48 +456,47 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # These lines delete `i`/`j` variables stored per synapse. They need to be called after
                     # synapses_initialise_queue codeobjects, therefore just before the network creation, so I
                     # put them here
-                    for arrname, boolean in self.delete_synaptic_pre.items():
+                    for synaptic_pre, boolean in self.delete_synaptic_pre.items():
                         if boolean:
-                            lines = '''
-                            dev{synaptic_pre}.clear();
-                            dev{synaptic_pre}.shrink_to_fit();
-                            '''.format(synaptic_pre=arrname)
-                            main_lines.extend(lines.split('\n'))
-                    for arrname, boolean in self.delete_synaptic_post.items():
+                            code = f'''
+                                dev{synaptic_pre}.clear();
+                                dev{synaptic_pre}.shrink_to_fit();
+                            '''
+                            main_lines.extend(stripped_deindented_lines(code))
+                    for synaptic_post, boolean in self.delete_synaptic_post.items():
                         if boolean:
-                            lines = '''
-                            dev{synaptic_post}.clear();
-                            dev{synaptic_post}.shrink_to_fit();
-                            '''.format(synaptic_post=arrname)
-                            main_lines.extend(lines.split('\n'))
+                            code = f'''
+                                dev{synaptic_post}.clear();
+                                dev{synaptic_post}.shrink_to_fit();
+                            '''
+                            main_lines.extend(stripped_deindented_lines(code))
                 main_lines.extend(netcode)
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                size_str = arrayname + ".size()" if is_dynamic else "_num_" + arrayname
-                code = '''
-                for(int i=0; i<{size_str}; i++)
-                {{
-                    {arrayname}[i] = {value};
-                }}
-                '''.format(arrayname=arrayname, size_str=size_str,
-                           value=CPPNodeRenderer().render_expr(repr(value)))
-                main_lines.extend(code.split('\n'))
+                size_str = f"{arrayname}.size()" if is_dynamic else f"_num_{arrayname}"
+                rendered_value = CPPNodeRenderer().render_expr(repr(value))
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname.endswith('space'):  # eventspace
                     pointer_arrayname += f'[current_idx{arrayname}]'
                 if is_dynamic:
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                line = '''
-                CUDA_SAFE_CALL(
-                        cudaMemcpy({pointer_arrayname},
-                                   &{arrayname}[0],
-                                   sizeof({arrayname}[0])*{size_str},
-                                   cudaMemcpyHostToDevice)
-                        );
-                '''.format(arrayname=arrayname, size_str=size_str, pointer_arrayname=pointer_arrayname,
-                           value=CPPNodeRenderer().render_expr(repr(value)))
-                main_lines.extend([line])
+                code = f'''
+                    for(int i=0; i<{size_str}; i++)
+                    {{
+                        {arrayname}[i] = {rendered_value};
+                    }}
+                    CUDA_SAFE_CALL(
+                        cudaMemcpy(
+                            {pointer_arrayname},
+                            &{arrayname}[0],
+                            sizeof({arrayname}[0])*{size_str},
+                            cudaMemcpyHostToDevice
+                        )
+                    );
+                '''
+                main_lines.extend(stripped_deindented_lines(code))
+                #main_lines.extend([code])
             elif func=='set_by_single_value':
                 arrayname, item, value = args
                 pointer_arrayname = f"dev{arrayname}"
@@ -502,58 +504,66 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname += f'[current_idx{arrayname}]'
                 if arrayname in self.dynamic_arrays.values():
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                code = '''
-                {arrayname}[{item}] = {value};
-                CUDA_SAFE_CALL(
-                        cudaMemcpy({pointer_arrayname} + {item},
-                                   &{arrayname}[{item}],
-                                   sizeof({arrayname}[{item}]),
-                                   cudaMemcpyHostToDevice)
-                        );
-                '''.format(pointer_arrayname=pointer_arrayname, arrayname=arrayname, item=item, value=value)
-                main_lines.extend([code])
+                code = f'''
+                    {arrayname}[{item}] = {value};
+                    CUDA_SAFE_CALL(
+                        cudaMemcpy(
+                            {pointer_arrayname} + {item},
+                            &{arrayname}[{item}],
+                            sizeof({arrayname}[{item}]),
+                            cudaMemcpyHostToDevice
+                        )
+                    );
+                '''
+                #main_lines.append(code)
+                main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                size = "_num_" + arrayname
+                size_str = "_num_" + arrayname
                 if is_dynamic:
-                    size = arrayname + ".size()"
-                code = '''
-                for(int i=0; i<_num_{staticarrayname}; i++)
-                {{
-                    {arrayname}[i] = {staticarrayname}[i];
-                }}
-                '''.format(arrayname=arrayname, staticarrayname=staticarrayname, size_str=size)
+                    size_str = arrayname + ".size()"
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname in self.dynamic_arrays.values():
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                main_lines.extend(code.split('\n'))
-                line = '''
-                CUDA_SAFE_CALL(
-                        cudaMemcpy({pointer_arrayname}, &{arrayname}[0],
-                                sizeof({arrayname}[0])*{size_str}, cudaMemcpyHostToDevice)
-                        );
-                '''.format(pointer_arrayname=pointer_arrayname, staticarrayname=staticarrayname, size_str=size, arrayname=arrayname)
-                main_lines.extend([line])
+                code = f'''
+                    for(int i=0; i<_num_{staticarrayname}; i++)
+                    {{
+                        {arrayname}[i] = {staticarrayname}[i];
+                    }}
+                    CUDA_SAFE_CALL(
+                        cudaMemcpy(
+                            {pointer_arrayname},
+                            &{arrayname}[0],
+                            sizeof({arrayname}[0])*{size_str},
+                            cudaMemcpyHostToDevice
+                        )
+                    );
+                '''
+                main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
-                code = '''
-                for(int i=0; i<_num_{staticarrayname_index}; i++)
-                {{
-                    {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
-                }}
-                CUDA_SAFE_CALL(
-                        cudaMemcpy(dev{arrayname}, &{arrayname}[0],
-                                sizeof({arrayname}[0])*_num_{arrayname}, cudaMemcpyHostToDevice)
-                        );
-                '''.format(arrayname=arrayname, staticarrayname_index=staticarrayname_index,
-                           staticarrayname_value=staticarrayname_value)
-                main_lines.extend(code.split('\n'))
+                code = f'''
+                    for(int i=0; i<_num_{staticarrayname_index}; i++)
+                    {{
+                        {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
+                    }}
+                    CUDA_SAFE_CALL(
+                        cudaMemcpy(
+                            dev{arrayname},
+                            &{arrayname}[0],
+                            sizeof({arrayname}[0])*_num_{arrayname},
+                            cudaMemcpyHostToDevice
+                        )
+                    );
+                '''
+                main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                main_lines.append('''
+                code = f'''
                     {array_name}.resize({new_size});
                     THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
-                '''.format(array_name=array_name, new_size=new_size))
+                '''
+                main_lines.extend(stripped_deindented_lines(code))
             elif func=='insert_code':
                 main_lines.append(args)
             elif func=='start_run_func':
@@ -585,6 +595,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
+        print("DEBUG MAIN LINES")
+        print(main_lines)
         user_headers = self.headers + prefs['codegen.cpp.headers']
         main_tmp = self.code_object_class().templater.main(None, None,
                                                            gpu_id=self.gpu_id,
@@ -602,9 +614,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         host_parameters = defaultdict(list)
         kernel_parameters = defaultdict(list)
         kernel_constants = defaultdict(list)
+        c_float_dtype = c_data_type(prefs['core.default_float_dtype'])
+        c_int_dtype = 'unsigned int'
         # Generate data for non-constant values
         for codeobj in self.code_objects.values():
             code_object_defs_lines = []
+            code_object_defs_lines_host_only = []
             host_parameters_lines = []
             kernel_parameters_lines = []
             kernel_constants_lines = []
@@ -629,33 +644,58 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
                 # code objects which only run once
                 if k in ["rand", "randn", "poisson"] and codeobj.runs_every_tick == False and codeobj.template_name != "synapses_create_generator":
+                    curand_suffix = ''
+                    if prefs['core.default_float_dtype'] == np.float64:
+                        curand_suffix = 'Double'
                     if k == "randn":
-                        code_snippet='''
-                            //genenerate an array of random numbers on the device
-                            {dtype}* dev_array_randn;
+                        num_calls = codeobj.rng_calls["randn"]
+                        code = f'''
+                            // genenerate an array of random numbers on the device
+                            {c_float_dtype}* dev_array_randn;
                             CUDA_SAFE_CALL(
-                                    cudaMalloc((void**)&dev_array_randn, sizeof({dtype})*{number_elements}*{num_calls})
-                                    );
-                            curandGenerateNormal{curand_suffix}(curand_generator, dev_array_randn, {number_elements}*{num_calls}, 0, 1);
-                            '''.format(number_elements=number_elements, num_calls=codeobj.rng_calls["randn"], dtype=c_data_type(prefs['core.default_float_dtype']),
-                                       curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
-                        additional_code.append(code_snippet)
-                        line = f"{c_data_type(prefs['core.default_float_dtype'])}* _ptr_array_{codeobj.name}_randn"
-                        kernel_parameters_lines.append(line)
+                                cudaMalloc(
+                                    (void**)&dev_array_randn,
+                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                )
+                            );
+                            CUDA_SAFE_CALL(
+                                curandGenerateNormal{curand_suffix}(
+                                    curand_generator,
+                                    dev_array_randn,
+                                    {number_elements}*{num_calls},
+                                    0,  // mean
+                                    1   // stddev
+                                )
+                            );
+                        '''
+                        additional_code.append(code)
+                        kernel_parameters_lines.append(
+                            f"{c_float_dtype}* _ptr_array_{codeobj.name}_randn"
+                        )
                         host_parameters_lines.append("dev_array_randn")
                     elif k == "rand":
-                        code_snippet = '''
-                            //genenerate an array of random numbers on the device
-                            {dtype}* dev_array_rand;
+                        num_calls = codeobj.rng_calls["rand"]
+                        code = f'''
+                            // genenerate an array of random numbers on the device
+                            {c_float_dtype}* dev_array_rand;
                             CUDA_SAFE_CALL(
-                                    cudaMalloc((void**)&dev_array_rand, sizeof({dtype})*{number_elements}*{num_calls})
-                                    );
-                            curandGenerateUniform{curand_suffix}(curand_generator, dev_array_rand, {number_elements}*{num_calls});
-                            '''.format(number_elements=number_elements, num_calls=codeobj.rng_calls["rand"], dtype=c_data_type(prefs['core.default_float_dtype']),
-                                       curand_suffix='Double' if prefs['core.default_float_dtype']==np.float64 else '')
-                        additional_code.append(code_snippet)
-                        line = f"{c_data_type(prefs['core.default_float_dtype'])}* _ptr_array_{codeobj.name}_rand"
-                        kernel_parameters_lines.append(line)
+                                cudaMalloc(
+                                    (void**)&dev_array_rand,
+                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                )
+                            );
+                            CUDA_SAFE_CALL(
+                                curandGenerateUniform{curand_suffix}(
+                                    curand_generator,
+                                    dev_array_rand,
+                                    {number_elements}*{num_calls}
+                                )
+                            );
+                        '''
+                        additional_code.append(code)
+                        kernel_parameters_lines.append(
+                            f"{c_float_dtype}* _ptr_array_{codeobj.name}_rand"
+                        )
                         host_parameters_lines.append("dev_array_rand")
                     elif k == "poisson":
                         # We are assuming that there can be at most one poisson call per expression,
@@ -674,22 +714,30 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             # There only one poisson call, hence we have only `poisson_0`
                             poisson_name = 'poisson_0'
                             # curand generates `unsigned int`, we cast it to `int32_t` in our `_poisson` implementation
-                            dtype = 'unsigned int'
-                            code_snippet = '''
-                                //genenerate an array of random numbers on the device
-                                {dtype}* dev_array_{poisson_name};
+                            num_calls = codeobj.rng_calls[poisson_name]
+                            lamda = codeobj.poisson_lamdas[poisson_name]
+                            code = f'''
+                                // genenerate an array of random numbers on the device
+                                {c_int_dtype}* dev_array_{poisson_name};
                                 CUDA_SAFE_CALL(
-                                        cudaMalloc((void**)&dev_array_{poisson_name}, sizeof(unsigned int)*{number_elements}*{num_calls})
-                                        );
-                                curandGeneratePoisson(curand_generator, dev_array_{poisson_name}, {number_elements}*{num_calls}, {lamda});
-                                '''.format(dtype=dtype,
-                                           number_elements=number_elements,
-                                           num_calls=codeobj.rng_calls[poisson_name],
-                                           poisson_name=poisson_name,
-                                           lamda=codeobj.poisson_lamdas[poisson_name])
-                            additional_code.append(code_snippet)
-                            line = f"{dtype}* _ptr_array_{codeobj.name}_{poisson_name}"
-                            kernel_parameters_lines.append(line)
+                                    cudaMalloc(
+                                        (void**)&dev_array_{poisson_name},
+                                        sizeof(unsigned int)*{number_elements}*{num_calls}
+                                    )
+                                );
+                                CUDA_SAFE_CALL(
+                                    curandGeneratePoisson(
+                                        curand_generator,
+                                        dev_array_{poisson_name},
+                                        {number_elements}*{num_calls},
+                                        {lamda}
+                                    )
+                                );
+                            '''
+                            additional_code.append(code)
+                            kernel_parameters_lines.append(
+                                f"{c_int_dtype}* _ptr_array_{codeobj.name}_{poisson_name}"
+                            )
                             host_parameters_lines.append(f"dev_array_{poisson_name}")
                 # Clock variables (t, dt, timestep)
                 elif hasattr(v, 'owner') and isinstance(v.owner, Clock):
@@ -728,33 +776,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         if isinstance(v, DynamicArrayVariable):
                             if v.ndim == 1:
 
-                                line = '{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
-                                line = line.format(dtype=dtype,
-                                                   array_name=array_name,
-                                                   dyn_array_name=dyn_array_name)
-                                code_object_defs_lines.append(line)
-
-                                line = 'const int _num{k} = {dyn_array_name}.size();'
-                                line = line.format(k=k, dyn_array_name=dyn_array_name)
-                                code_object_defs_lines.append(line)
+                                code_object_defs_lines.append(
+                                    f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
+                                )
+                                code_object_defs_lines.append(
+                                    f'const int _num{k} = {dyn_array_name}.size();'
+                                )
 
                                 # These lines are used to define the kernel call parameters, that
                                 # means only for codeobjects running on the device. The array names
                                 # always have a `_dev` prefix.
-                                line = f'{array_name}'
-                                host_parameters_lines.append(line)
+                                host_parameters_lines.append(f"{array_name}")
                                 host_parameters_lines.append(f"_num{k}")
 
                                 # These lines declare kernel parameters as the `_ptr` variables that
                                 # are used in `scalar_code` and `vector_code`.
                                 # TODO: here we should add const / __restrict and other optimizations
                                 #       for variables that are e.g. only read in the kernel
-                                line = "{dtype}* {ptr_array_name}"
-                                kernel_parameters_lines.append(line.format(dtype=dtype,
-                                                                           ptr_array_name=ptr_array_name))
-
-                                line = "const int _num{k}"
-                                kernel_parameters_lines.append(line.format(k=k))
+                                kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
+                                kernel_parameters_lines.append(f"const int _num{k}")
 
                         else:  # v is ArrayVariable but not DynamicArrayVariable
                             host_parameters_lines.append(f"{array_name}")
@@ -776,13 +816,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # RAND
             if codeobj.rng_calls["rand"] >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append(f"dev_{codeobj.name}_rand")
-                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_rand".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                name=codeobj.name))
+                kernel_parameters_lines.append(
+                    f"{c_float_dtype}* _ptr_array_{codeobj.name}_rand"
+                )
             # RANDN
             if codeobj.rng_calls["randn"] >= 1 and codeobj.runs_every_tick:
                 host_parameters_lines.append(f"dev_{codeobj.name}_randn")
-                kernel_parameters_lines.append("{dtype}* _ptr_array_{name}_randn".format(dtype=c_data_type(prefs['core.default_float_dtype']),
-                                                                                name=codeobj.name))
+                kernel_parameters_lines.append(
+                    f"{c_float_dtype}* _ptr_array_{codeobj.name}_randn"
+                )
             # POISSON (with scalar lamda)
             # Here, we don't use the hash define as for rand/n, instead we pass the
             # kernel paramter (_ptr...) directly to the _poisson function which returns
@@ -796,7 +838,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             f"dev_{codeobj.name}_{rng_type}"
                         )
                         kernel_parameters_lines.append(
-                            f"unsigned int* _ptr_array_{codeobj.name}_{rng_type}"
+                            f"{c_int_dtype}* _ptr_array_{codeobj.name}_{rng_type}"
                         )
 
             # Sometimes an array is referred to by to different keys in our
@@ -859,14 +901,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 sub = 't - lastupdate'
                 if sub in code:
                     code = code.replace(sub, f'float({sub})')
-                    logger.debug("Replaced {sub} with float({sub}) in {codeobj}"
-                                 "".format(sub=sub, codeobj=codeobj))
+                    logger.debug(f"Replaced {sub} with float({sub}) in {codeobj}")
                 # replace double-precision floating-point literals with their
                 # single-precision version (e.g. `1.0` -> `1.0f`)
                 code = replace_floating_point_literals(code)
-                logger.debug("Replaced floating point literals by single "
-                             "precision version (appending `f`) in {}."
-                             "".format(codeobj))
+                logger.debug(
+                    f"Replaced floating point literals by single precision version "
+                    f"(appending `f`) in {codeobj}."
+                )
 
             writer.write('code_objects/'+codeobj.name+'.cu', code)
             writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
@@ -969,7 +1011,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` will be ignored. "
                 "To get rid of this warning, set "
                 "`prefs.devices.cuda_standalone.brian_backend.compute_capability` to it's default "
-                "value `None`".format(self.minimal_compute_capability)
+                "value `None`"
             )
             # Ignore compute capability of chosen GPU and the one manually set via
             # `compute_capability` preferences.
@@ -988,10 +1030,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # check if compute capability is supported
             if self.compute_capability < self.minimal_compute_capability:
                 raise NotImplementedError(
-                    "Compute capability `{}` is not supported. Minimal supported "
-                    "compute capability is `{}`.".format(
-                        self.compute_capability, self.minimal_compute_capability
-                    )
+                    f"Compute capability `{self.compute_capability}` is not supported. "
+                    f"Minimal supported compute capability is "
+                    f"`{self.minimal_compute_capability}`."
                 )
 
         # If GPU architecture is detected automatically or set via `compute_capability`
@@ -1004,16 +1045,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Log compiled GPU architecture
         if self.compute_capability is None:
             logger.info(
-                "Compiling device code with manually set architecture flags "
-                "({}). Be aware that the minimal supported compute capability is {} "
-                "(we are not checking your compile flags)".format(
-                    gpu_arch_flags, self.minimal_compute_capability
-                )
+                f"Compiling device code with manually set architecture flags "
+                f"({gpu_arch_flags}). Be aware that the minimal supported compute "
+                f"capability is {self.minimal_compute_capability} "
+                "(we are not checking your compile flags)"
             )
         else:
             logger.info(
-                "Compiling device code for compute capability {} (compiler flags: {})"
-                "".format(self.compute_capability, gpu_arch_flags)
+                f"Compiling device code for compute capability "
+                f"{self.compute_capability} (compiler flags: {gpu_arch_flags})"
             )
 
         nvcc_path = get_nvcc_path()
@@ -1442,10 +1482,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # release version? (TODO)
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
         # run everything that is run on a clock
-        run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
-                                                                                              duration=float(duration),
-                                                                                              report_call=report_call,
-                                                                                              report_period=float(report_period)))
+        run_lines.append(
+            f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
+        )
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff
@@ -1612,9 +1651,7 @@ def prepare_codeobj_code_for_rng(codeobj):
             lamda = float(lamda_match)
             lamda_is_scalar = True
             logger.debug(
-                "Matched literal scalar lambda {lamda} for {poisson_name} in {codeobj.name}".format(
-                    lamda=lamda, poisson_name=poisson_name, codeobj=codeobj
-                )
+                f"Matched literal scalar lambda {lamda} for {poisson_name} in {codeobj.name}"
             )
         except ValueError:
             # lamda is not a float but a variable, e.g. `poisson(var)`
@@ -1628,9 +1665,7 @@ def prepare_codeobj_code_for_rng(codeobj):
                 const = codeobj.variables[lamda_match].constant
                 lamda_is_scalar = True
                 logger.debug(
-                    "Matched non-literal scalar lambda {lamda} for {poisson_name} in {codeobj.name}".format(
-                        lamda=lamda, poisson_name=poisson_name, codeobj=codeobj
-                    )
+                    f"Matched non-literal scalar lambda {lamda} for {poisson_name} in {codeobj.name}"
                 )
             else:
                 # lamda is an array variable
