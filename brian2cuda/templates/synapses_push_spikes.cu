@@ -1,15 +1,9 @@
 {# USES_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
+
+
 {# Get the name of the array that stores these events (e.g. the spikespace array) #}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
-#include "code_objects/{{codeobj_name}}.h"
-#include "brianlib/common_math.h"
-#include "brianlib/stdint_compat.h"
-#include "brianlib/cuda_utils.h"
-#include <assert.h>
-#include <math.h>
-#include <stdint.h>
-#include <ctime>
 
 
 {% block extra_device_helper %}
