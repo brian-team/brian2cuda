@@ -1,4 +1,23 @@
 {# USES_VARIABLES { N } #}
+
+{### BEFORE RUN ###}
+{% macro before_run_cu_file() %}
+{% block before_run_code %}
+{% endblock %}
+{% endmacro %}
+
+
+{% macro before_run_h_file() %}
+#ifndef _INCLUDED_{{codeobj_name}}_before
+#define _INCLUDED_{{codeobj_name}}_before
+
+void _before_run_{{codeobj_name}}();
+
+#endif
+{% endmacro %}
+
+
+{### RUN ###}
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
@@ -290,6 +309,22 @@ void _run_{{codeobj_name}}();
 
 {% block extra_functions_h %}
 {% endblock %}
+
+#endif
+{% endmacro %}
+
+
+{### AFTER RUN ###}
+{% macro after_run_cu_file() %}
+{% block after_run_code %}
+{% endblock %}
+{% endmacro %}
+
+{% macro after_run_h_file() %}
+#ifndef _INCLUDED_{{codeobj_name}}_after
+#define _INCLUDED_{{codeobj_name}}_afer
+
+void _after_run_{{codeobj_name}}();
 
 #endif
 {% endmacro %}

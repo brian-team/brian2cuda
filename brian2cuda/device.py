@@ -423,7 +423,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         runfuncs = {}
         run_counter = 0
         for func, args in self.main_queue:
-            if func=='run_code_object':
+            # TODO: Does that before/after run work as done here?
+            if func=='before_run_code_object':
+                codeobj, = args
+                main_lines.append('_before_run_%s();' % codeobj.name)
+            elif func=='run_code_object':
                 codeobj, = args
                 codeobj.runs_every_tick = False
                 # Need to check for RNG functions in code objects only run once (e.g.
@@ -440,6 +444,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # the random number buffer called at first clock cycle of the network
                         main_lines.append('random_number_buffer.ensure_enough_curand_states();')
                 main_lines.append(f'_run_{codeobj.name}();')
+            elif func == 'after_run_code_object':
+                codeobj, = args
+                main_lines.append(f'_after_run_{codeobj.name}();')
             elif func=='run_network':
                 net, netcode = args
                 if run_counter == 0:
@@ -814,6 +821,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # Generate the code objects
         for codeobj in self.code_objects.values():
             ns = codeobj.variables
+
+            # Before/after run code
+            for block in codeobj.before_after_blocks:
+                cu_code = getattr(codeobj.code, block + '_cu_file')
+                cu_code = self.freeze(cu_code, ns)
+                cu_code = cu_code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
+                h_code = getattr(codeobj.code, block + '_h_file')
+                writer.write('code_objects/' + block + '_' + codeobj.name + '.cu',
+                             cu_code)
+                writer.write('code_objects/' + block + '_' + codeobj.name + '.h',
+                             h_code)
+
+            # Main code
             # TODO: fix these freeze/HOST_CONSTANTS hacks somehow - they work but not elegant.
             code = self.freeze(codeobj.code.cu_file, ns)
 

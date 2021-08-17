@@ -56,8 +56,18 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     def __call__(self, **kwds):
         return self.run()
 
-    def run(self):
-        get_device().main_queue.append(('run_code_object', (self,)))
+    def compile_block(self, block):
+        pass  # Compilation will be handled in device
+
+    def run_block(self, block):
+        if block == 'run':
+            get_device().main_queue.append((block + '_code_object', (self,)))
+        else:
+            # Check the C++ code whether there is anything to run
+            cu_code = getattr(self.code, block + '_cu_file')
+            if len(cu_code) and 'EMPTY_CODE_BLOCK' not in cu_code:
+                get_device().main_queue.append((block + '_code_object', (self,)))
+                self.before_after_blocks.append(block)
 
 
 class CUDAStandaloneAtomicsCodeObject(CUDAStandaloneCodeObject):
