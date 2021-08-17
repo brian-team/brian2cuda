@@ -15,7 +15,7 @@ __global__ void
 {% if launch_bounds or syn_launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
-kernel_{{codeobj_name}}(
+_run_kernel_{{codeobj_name}}(
     {# TODO: we only need _N if we have random numbers per synapse, add a if test here #}
     int _N,
     int bid_offset,
@@ -267,7 +267,7 @@ if ({{pathway.name}}_max_size > 0)
     {% endif %}
         for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
         {
-            kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+            _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
                 _N,
                 bid_offset,
                 {{owner.clock.name}}.timestep[0],
@@ -289,7 +289,7 @@ if ({{pathway.name}}_max_size > 0)
     }
     {% endif %}
 
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
+    CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 }
 {% endblock kernel_call %}
 

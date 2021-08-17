@@ -10,27 +10,27 @@
 
 
 {% block prepare_kernel_inner %}
-_run_{{codeobj_name}}_init<<<1,1>>>();
+_init_kernel_{{codeobj_name}}<<<1,1>>>();
 
-CUDA_CHECK_ERROR("_run_{{codeobj_name}}_init");
+CUDA_CHECK_ERROR("_init_kernel_{{codeobj_name}}");
 num_blocks = 1;
 num_threads = 1;
 {% endblock prepare_kernel_inner %}
 
 
 {% block kernel_call %}
-kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+_run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
         _num{{eventspace_variable.name}}-1,
         dev_array_{{owner.name}}_count,
         // HOST_PARAMETERS
         %HOST_PARAMETERS%);
 
-CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
+CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 {% endblock %}
 
 
 {% block kernel %}
-__global__ void _run_{{codeobj_name}}_init()
+__global__ void _init_kernel_{{codeobj_name}}()
 {
     {% for varname, var in record_variables.items() %}
         monitor_{{varname}} = new cudaVector<{{c_data_type(var.dtype)}}>();
@@ -41,7 +41,7 @@ __global__ void
 {% if launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
-kernel_{{codeobj_name}}(
+_run_kernel_{{codeobj_name}}(
     int neurongroup_N,
     int32_t* count,
     // KERNEL_PARAMETERS
@@ -107,7 +107,7 @@ kernel_{{codeobj_name}}(
 {% endblock %}
 
 {% block extra_functions_cu %}
-__global__ void _run_debugmsg_{{codeobj_name}}_kernel(
+__global__ void _debugmsg_kernel_{{codeobj_name}}(
     // KERNEL_PARAMETERS
     %KERNEL_PARAMETERS%
 )
@@ -123,7 +123,7 @@ __global__ void _run_debugmsg_{{codeobj_name}}_kernel(
     printf("Number of spikes: %d\n", {{N}});
 }
 
-__global__ void _count_{{codeobj_name}}_kernel(
+__global__ void _count_kernel_{{codeobj_name}}(
     int* dev_num_events,
     // KERNEL_PARAMETERS
     %KERNEL_PARAMETERS%
@@ -152,7 +152,7 @@ __global__ void _count_{{codeobj_name}}_kernel(
     *dev_num_events = num_events;
 }
 
-__global__ void _copy_{{codeobj_name}}_kernel(
+__global__ void _copy_kernel_{{codeobj_name}}(
     {% for varname, var in record_variables.items() %}
     {{c_data_type(var.dtype)}}* dev_monitor_{{varname}},
     {% endfor %}
@@ -199,13 +199,13 @@ void _copyToHost_{{codeobj_name}}()
     // HOST_CONSTANTS
     %HOST_CONSTANTS%
 
-    _count_{{codeobj_name}}_kernel<<<1,1>>>(
+    _count_kernel_{{codeobj_name}}<<<1,1>>>(
         dev_num_events,
         // HOST_PARAMETERS
         %HOST_PARAMETERS%
         );
 
-    CUDA_CHECK_ERROR("_count_{{codeobj_name}}_kernel");
+    CUDA_CHECK_ERROR("_count_kernel_{{codeobj_name}}");
 
     CUDA_SAFE_CALL(
             cudaMemcpy(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost)
@@ -218,14 +218,14 @@ void _copyToHost_{{codeobj_name}}()
             );
     {% endfor %}
 
-    _copy_{{codeobj_name}}_kernel<<<1,1>>>(
+    _copy_kernel_{{codeobj_name}}<<<1,1>>>(
         {% for varname, var in record_variables.items() %}
         thrust::raw_pointer_cast(&dev_dynamic_array_{{owner.name}}_{{varname}}[0]),
         {% endfor %}
         0  {# dummy, becaus loop ends with comma #}
         );
 
-    CUDA_CHECK_ERROR("_copy_{{codeobj_name}}_kernel");
+    CUDA_CHECK_ERROR("_copy_kernel_{{codeobj_name}}");
 }
 
 void _debugmsg_{{codeobj_name}}()
@@ -238,12 +238,12 @@ void _debugmsg_{{codeobj_name}}()
     // TODO: can't we acces the correct _array_eventmonitor_N[0]
     //   value here without any kernel call?
     //   Yes: use _array_{{owner.name}}_N
-    _run_debugmsg_{{codeobj_name}}_kernel<<<1,1>>>(
+    _debugmsg_kernel_{{codeobj_name}}<<<1,1>>>(
             // HOST_PARAMETERS
             %HOST_PARAMETERS%
             );
 
-    CUDA_CHECK_ERROR("_run_debugmsg_{{codeobj_name}}_kernel");
+    CUDA_CHECK_ERROR("_debugmsg_kernel_{{codeobj_name}}");
 }
 {% endblock %}
 

@@ -44,14 +44,13 @@
 //         => trivial optimization possible by using three threads (one per rhs)
 //         => optimization possible e.g. by using cyclic reduction [more parallel]
 
-__global__ void kernel_{{codeobj_name}}_tridiagsolve(
+__global__ void _tridiagsolve_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -122,7 +121,7 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
 // remark: applies the Hines algorithm having O(branches) complexity
 //         => run with one block one thread
 
-__global__ void kernel_{{codeobj_name}}_coupling(
+__global__ void _coupling_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -239,7 +238,7 @@ __global__ void kernel_{{codeobj_name}}_coupling(
 // (independent: everything, i.e., compartments and branches)
 // remark: branch granularity in implementation used since parents/children are combined for each branch
 
-__global__ void kernel_{{codeobj_name}}_combine(
+__global__ void _combine_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -285,7 +284,7 @@ __global__ void kernel_{{codeobj_name}}_combine(
 // kernel 5: update currents
 // (independent: everything, i.e., compartments and branches)
 
-__global__ void kernel_{{codeobj_name}}_currents(
+__global__ void _currents_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -343,13 +342,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_tridiagsolve = _num_B-1;
     int num_threads_tridiagsolve = 1;
-    kernel_{{codeobj_name}}_tridiagsolve<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
+    _tridiagsolve_kernel_{{codeobj_name}}<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
             _N,
             num_threads_tridiagsolve,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_tridiagsolve");
+    CUDA_CHECK_ERROR("_tridiagsolve_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_tridiagsolve_profiling_info += (double)(std::clock() -_start_time_tridiagsolve)/CLOCKS_PER_SEC;
@@ -361,13 +360,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_coupling = 1;
     int num_threads_coupling = 1;
-    kernel_{{codeobj_name}}_coupling<<<num_blocks_coupling, num_threads_coupling>>>(
+    _coupling_kernel_{{codeobj_name}}<<<num_blocks_coupling, num_threads_coupling>>>(
             _N,
             num_threads_coupling,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_coupling");
+    CUDA_CHECK_ERROR("_coupling_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_coupling_profiling_info += (double)(std::clock() -_start_time_coupling)/CLOCKS_PER_SEC;
@@ -379,13 +378,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_combine = _num_B-1;
     int num_threads_combine = 1;
-    kernel_{{codeobj_name}}_combine<<<num_blocks_combine, num_threads_combine>>>(
+    _combine_kernel_{{codeobj_name}}<<<num_blocks_combine, num_threads_combine>>>(
             _N,
             num_threads_combine,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_combine");
+    CUDA_CHECK_ERROR("_combine_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_combine_profiling_info += (double)(std::clock() -_start_time_combine)/CLOCKS_PER_SEC;
@@ -431,7 +430,7 @@ __global__ void kernel_{{codeobj_name}}_currents(
             float occupancy_currents = (max_active_blocks_currents * num_threads_currents / num_threads_per_warp) /
                               (float)(max_threads_per_sm / num_threads_per_warp);
 
-            printf("INFO kernel_{{codeobj_name}}_currents\n"
+            printf("INFO _currents\n_kernel_{{codeobj_name}}"
                        "\t%u blocks\n"
                        "\t%u threads\n"
                        "\t%i registers per block\n"
@@ -452,13 +451,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
         std::clock_t _start_time_currents = std::clock();
         {% endif %}
         // run kernel 5
-        kernel_{{codeobj_name}}_currents<<<num_blocks_currents, num_threads_currents>>>(
+        _currents_kernel_{{codeobj_name}}<<<num_blocks_currents, num_threads_currents>>>(
                 _N,
                 num_threads_currents,
                 ///// HOST_PARAMETERS /////
                 %HOST_PARAMETERS%
             );
-        CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_currents");
+        CUDA_CHECK_ERROR("_currents_kernel_{{codeobj_name}}");
 
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
