@@ -2,15 +2,13 @@ from brian2 import *
 from brian2cuda import *
 import os
 import matplotlib.pyplot as plt
+from utils import get_directory
 plt.switch_backend('agg')
 
 # preference for memory saving
 device_name = "cpp_standalone"
-codefolder = "./consistency_test/BrunelHakimHeteroDelaysNarrowDistr/results/" + device_name
+codefolder = get_directory(device_name)
 set_device(device_name, directory = codefolder,debug=True)
-#prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
-#prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
-#prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 n = 100
 category = "Full examples"
@@ -71,8 +69,8 @@ LFP = PopulationRateMonitor(group)
 
 run(duration)
 
-if not os.path.exists("./consistency_test/BrunelHakimHeteroDelaysNarrowDistr/results/"):
-    os.makedirs("./consistency_test/BrunelHakimHeteroDelaysNarrowDistr/results/") # for plots and profiling txt file
+if not os.path.exists(codefolder):
+    os.makedirs(codefolder) # for plots and profiling txt file
 
 subplot(211)
 plot(M.t/ms, M.i, '.')
@@ -83,7 +81,7 @@ plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
 xlim(0, duration/ms)
 #show()
 
-plotpath = os.path.join("./consistency_test/BrunelHakimHeteroDelaysNarrowDistr/results/"+ device_name + "/", '{}.png'.format(name))
+plotpath = os.path.join(codefolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

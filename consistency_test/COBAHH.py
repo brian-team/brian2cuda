@@ -2,16 +2,14 @@ from brian2 import *
 from brian2cuda import *
 import os
 import matplotlib.pyplot as plt
+from utils import get_directory
 plt.switch_backend('agg')
 
-device_name = "cuda_standalone"
-codefolder = "./consistency_test/COBAHH/results/" + device_name
+device_name = "cpp_standalone"
+codefolder = get_directory(device_name)
 
 # preference for memory saving
 set_device(device_name, directory = codefolder,debug=True)
-#prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
-#prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
-#prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 
 name = "COBAHH"

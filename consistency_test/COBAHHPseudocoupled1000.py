@@ -1,11 +1,14 @@
 from brian2 import *
 from brian2cuda import *
+import os
+import matplotlib.pyplot as plt
+from utils import get_directory
+plt.switch_backend('agg')
 
 # preference for memory saving
-set_device("cuda_standalone", directory = './cuda_libs',debug=True)
-prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
-prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
-prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+device_name = "cpp_standalone"
+codefolder = get_directory(device_name)
+set_device(device_name, directory = codefolder,debug=True)
 
 
 name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
@@ -19,9 +22,10 @@ uncoupled = False
 
 n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
 n_range = [int(10**p) for p in n_power]
+n = 1000
 
 # fixed connectivity: 1000 neurons per synapse
-p = lambda self, n: 1000. / n
+p = lambda n: str(1000. / n)
 
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
@@ -92,19 +96,26 @@ P.v = 'El + (randn() * 5 - 5)*mV'
 P.ge = '(randn() * 1.5 + 4) * 10.*nS'
 P.gi = '(randn() * 12 + 20) * 10.*nS'
 
-spike_mon = SpikeMonitor(P)
-rate_mon = PopulationRateMonitor(P)
+spikemon = SpikeMonitor(P)
+popratemon = PopulationRateMonitor(P)
 #state_mon = StateMonitor(S, 'w', record=range(n_recorded), dt=0.1 * second)
-v_mon = StateMonitor(P, 'v', record=range(n_recorded))
+trace = StateMonitor(P, 'v', record=range(n_recorded))
 
 run(duration)
 
-#results = {}
-#device.build(directory=None, with_output=False)
-#results["cuda_standalone"] = {}
-#results["cuda_standalone"]['w'] = state_mon.w
-#results["cuda_standalone"]['v'] = v_mon.v
-#results["cuda_standalone"]['s'] = spike_mon.num_spi
-#results["cuda_standalone"]['r'] = rate_mon.rate[:]
+if not os.path.exists(codefolder):
+    os.mkdir(codefolder) # for plots and profiling txt file
 
-#print(results)
+
+subplot(311)
+plot(spikemon.t/ms, spikemon.i, ',k')
+subplot(312)
+plot(trace.t/ms, trace.v[:].T[:, :5])
+subplot(313)
+plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
+#show()
+
+plotpath = os.path.join(codefolder, '{}.png'.format(name))
+savefig(plotpath)
+print('plot saved in {}'.format(plotpath))
+print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

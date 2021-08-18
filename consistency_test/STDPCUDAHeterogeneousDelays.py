@@ -2,10 +2,11 @@ from brian2 import *
 from brian2cuda import *
 import os
 import matplotlib.pyplot as plt
+from utils import get_directory
 plt.switch_backend('agg')
 
-device_name = "cuda_standalone"
-codefolder = "./consistency_test/STDPCUDAHeterogenousDelays/results/" + device_name
+device_name = "cpp_standalone"
+codefolder = get_directory(device_name)
 
 # preference for memory saving
 set_device(device_name, directory = codefolder, debug=True)

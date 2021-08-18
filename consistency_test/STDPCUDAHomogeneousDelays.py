@@ -2,16 +2,14 @@ from brian2 import *
 from brian2cuda import *
 import os
 import matplotlib.pyplot as plt
+from utils import get_directory
 plt.switch_backend('agg')
 
 device_name = "cpp_standalone"
-codefolder = "./consistency_test/STDPCUDAHomogenousDelays/results/" + device_name
+codefolder = get_directory(device_name)
 
 # preference for memory saving
 set_device(device_name, directory = codefolder,debug=True)
-#prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
-#prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
-#prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 category = "Full examples"
 tags = ["Neurons", "Synapses"]
@@ -98,8 +96,8 @@ s_mon = SpikeMonitor(input)
 
 run(duration)
 
-if not os.path.exists("./consistency_test/STDPCUDAHomogenousDelays/results/"):
-    os.mkdir("./consistency_test/STDPCUDAHomogenousDelays/results/") # for plots and profiling txt file
+if not os.path.exists(codefolder):
+    os.mkdir(codefolder) # for plots and profiling txt file
 
 subplot(n,1,1)
 plot(S.w / gmax, '.k')
@@ -115,7 +113,7 @@ ylabel('Weight / gmax')
 tight_layout()
 #show()
 
-plotpath = os.path.join("./consistency_test/STDPCUDAHomogenousDelays/results/" + device_name, '{}.png'.format(name))
+plotpath = os.path.join(codefolder, '{}.png'.format(name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
