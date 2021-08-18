@@ -784,19 +784,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
                                     )
 
-                                    # These lines are used to define the kernel call parameters, that
-                                    # means only for codeobjects running on the device. The array names
-                                    # always have a `_dev` prefix.
-                                    host_parameters_lines.append(f"{array_name}")
+                                    # Add host and kernel parameters only for device pointers
+                                    if prefix == 'dev':
+                                        # These lines are used to define the kernel call parameters, that
+                                        # means only for codeobjects running on the device. The array names
+                                        # always have a `_dev` prefix.
+                                        host_parameters_lines.append(f"{array_name}")
 
-                                    # These lines declare kernel parameters as the `_ptr` variables that
-                                    # are used in `scalar_code` and `vector_code`.
-                                    # TODO: here we should add const / __restrict and other optimizations
-                                    #       for variables that are e.g. only read in the kernel
-                                    kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
+                                        # These lines declare kernel parameters as the `_ptr` variables that
+                                        # are used in `scalar_code` and `vector_code`.
+                                        # TODO: here we should add const / __restrict and other optimizations
+                                        #       for variables that are e.g. only read in the kernel
+                                        kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                                    # Add size variables `_num{array}` only once
-                                    if n_prefix == 0:
+                                    # Add size variables `_num{array}` only once and if
+                                    # there are two prefixes, base it on host array
+                                    # `{array}.size()`
+                                    if len(prefixes) == 1 or prefix == '':
                                         code_object_defs_lines.append(
                                             f'const int _num{k} = {dyn_array_name}.size();'
                                         )
@@ -804,12 +808,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         kernel_parameters_lines.append(f"const int _num{k}")
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
-                                idx = ''
-                                if k.endswith('space'):
-                                    bare_array_name = self.get_array_name(v)
-                                    idx = f'[current_idx{bare_array_name}]'
-                                host_parameters_lines.append(f"{array_name}{idx}")
-                                kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
+                                # Add host and kernel parameters only for device pointers
+                                if prefix == 'dev':
+                                    idx = ''
+                                    if k.endswith('space'):
+                                        bare_array_name = self.get_array_name(v)
+                                        idx = f'[current_idx{bare_array_name}]'
+                                    host_parameters_lines.append(f"{array_name}{idx}")
+                                    kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
 
                                 # Add size variables `_num{array}` only once
                                 if n_prefix == 0:
