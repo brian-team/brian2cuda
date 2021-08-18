@@ -21,21 +21,9 @@ void _before_run_{{codeobj_name}}()
 {
     using namespace brian;
 
-    {% if profiled %}
-    const std::clock_t _start_time = std::clock();
-    {% endif %}
-
     {% block before_run_host_maincode %}
     // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
     {% endblock %}
-
-    {% if profiled %}
-    CUDA_SAFE_CALL(
-            cudaDeviceSynchronize()
-            );
-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-    {{codeobj_name}}_profiling_info += _run_time;
-    {% endif %}
 }
 {% endmacro %}
 
@@ -368,21 +356,9 @@ void _after_run_{{codeobj_name}}()
 {
     using namespace brian;
 
-    {% if profiled %}
-    const std::clock_t _start_time = std::clock();
-    {% endif %}
-
     {% block after_run_host_maincode %}
     // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
     {% endblock %}
-
-    {% if profiled %}
-    CUDA_SAFE_CALL(
-            cudaDeviceSynchronize()
-            );
-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-    {{codeobj_name}}_profiling_info += _run_time;
-    {% endif %}
 }
 {% endmacro %}
 
