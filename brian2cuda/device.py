@@ -362,12 +362,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if template_name in ["threshold", "spikegenerator"]:
             template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
-                                                               template_name, variable_indices,
-                                                               codeobj_class=codeobj_class,
-                                                               template_kwds=template_kwds,
-                                                               override_conditional_write=override_conditional_write,
-                                                               compiler_kwds=compiler_kwds,
-                                                               )
+                                                                template_name, variable_indices,
+                                                                codeobj_class=codeobj_class,
+                                                                template_kwds=template_kwds,
+                                                                override_conditional_write=override_conditional_write,
+                                                                compiler_kwds=compiler_kwds,
+                                                                )
         return codeobj
 
     def check_openmp_compatible(self, nb_threads):
