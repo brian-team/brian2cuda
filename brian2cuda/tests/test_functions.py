@@ -12,6 +12,30 @@ from brian2.codegen.generators import CodeGenerator
 from brian2.codegen.codeobject import CodeObject
 
 
+# TODO: Remove this and import from brian2.tests.utils once we track brian2 version
+# with merged PR brian2#1315
+def exc_isinstance(exc_info, expected_exception, raise_not_implemented=False):
+    # XXX: This will fails once the function is importable from brian2
+    try:
+        from brian2.tests.utils import exc_isinstance as _
+    except ImportError:
+        pass
+    else:
+        raise AssertionError("Remove this function and import from brian2")
+
+    if exc_info is None:
+        return False
+    if hasattr(exc_info, 'value'):
+        exc_info = exc_info.value
+
+    if isinstance(exc_info, expected_exception):
+        return True
+    elif raise_not_implemented and isinstance(exc_info, NotImplementedError):
+        raise exc_info
+
+    return exc_isinstance(exc_info.__cause__, expected_exception,
+                          raise_not_implemented=raise_not_implemented)
+
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_user_defined_function():
@@ -114,9 +138,9 @@ def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args1():
                        y : volt''')
     mon = StateMonitor(G, 'func', record=True)
     net = Network(G, mon)
-    with pytest.raises(ValueError):
+    with pytest.raises(BrianObjectException) as exc:
         net.run(defaultclock.dt, namespace={'foo': foo})
-
+    assert exc_isinstance(exc, ValueError)
 
 
 @pytest.mark.cuda_standalone
@@ -139,8 +163,9 @@ def test_manual_user_defined_function_cuda_standalone_wrong_compiler_args2():
                        y : volt''')
     mon = StateMonitor(G, 'func', record=True)
     net = Network(G, mon)
-    with pytest.raises(TypeError):
+    with pytest.raises(BrianObjectException) as exc:
         net.run(defaultclock.dt, namespace={'foo': foo})
+    assert exc_isinstance(exc, TypeError)
 
 
 @pytest.mark.cuda_standalone
