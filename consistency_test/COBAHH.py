@@ -1,5 +1,5 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
@@ -9,7 +9,11 @@ device_name = "cpp_standalone"
 codefolder = get_directory(device_name)
 
 # preference for memory saving
-set_device(device_name, directory = codefolder,debug=True)
+set_device(device = device_name, directory=codefolder, debug=True)
+
+prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 
 name = "COBAHH"
@@ -25,7 +29,7 @@ n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)] 
 n_range = [int(10**p) for p in n_power]
 
 # fixed connectivity: 1000 neurons per synapse
-p = lambda n: str(1000. / n)
+p = lambda n: 1000. / n
 
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
@@ -86,8 +90,8 @@ if not uncoupled:
     Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
 
     # connection probability p can depend on network size n
-    Ce.connect(p(n))
-    Ci.connect(p(n))
+    Ce.connect(str(p(n)))
+    Ci.connect(str(p(n)))
     Ce.we = we  # excitatory synaptic weight
     Ci.wi = wi  # inhibitory synaptic weight
 

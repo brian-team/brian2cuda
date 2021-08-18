@@ -1,11 +1,12 @@
 import random as py_random
 from brian2 import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
 plt.switch_backend('agg')
 
-device_name = "cuda_standalone"
+device_name = "cpp_standalone"
 
 codefolder = get_directory(device_name)
 
