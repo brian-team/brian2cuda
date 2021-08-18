@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import argparse
 parser = argparse.ArgumentParser(description=("Recreate plots from pickled SpeedTest objects. "
                                               "Overwrites already existing plots of same name."))
@@ -19,6 +19,6 @@ from helpers import plot_from_pkl
 
 for pattern in args.files:
     for pkl in glob.glob(pattern):
-        print("Plotting from {} ...".format(pkl))
+        print(f"Plotting from {pkl} ...")
         plot_from_pkl(pkl, args.plot_dir)
 

@@ -28,8 +28,8 @@
  # sorted by their delay (if they have any).
  #}
 
-{% macro cu_file() %}
 {# USES_VARIABLES { delay, N, _n_sources, _n_targets, _source_dt } #}
+{% macro cu_file() %}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <thrust/unique.h>

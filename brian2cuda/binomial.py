@@ -18,7 +18,7 @@ def _generate_cuda_code(n, p, use_normal, name):
         # TODO: mark issue
         raise NameError("Currently the `name` parameter of `BinomialFunction` "
                         "needs to have '_binomial' in it, got "
-                        "'{}'".format(name))
+                        f"'{name}'")
     float_suffix = ''
     float_dtype = 'float'
     if prefs['core.default_float_dtype'] == np.float64:
@@ -40,8 +40,8 @@ def _generate_cuda_code(n, p, use_normal, name):
         #endif
         }
         '''
-        cuda_code = replace(cuda_code, {'%SCALE%': '%.15f' % scale,
-                                        '%LOC%': '%.15f' % loc,
+        cuda_code = replace(cuda_code, {'%SCALE%': f'{scale:.15f}',
+                                        '%LOC%': f'{loc:.15f}',
                                         '%NAME%': name,
                                         '%DTYPE%': float_dtype,
                                         '%SUFFIX%': float_suffix})
@@ -89,10 +89,10 @@ def _generate_cuda_code(n, p, use_normal, name):
         }
         '''
         cuda_code = replace(cuda_code, {'%N%': '%d' % n,
-                                        '%P%': '%.15f' % P,
-                                        '%Q%': '%.15f' % q,
-                                        '%QN%': '%.15f' % qn,
-                                        '%BOUND%': '%.15f' % bound,
+                                        '%P%': f'{P:.15f}',
+                                        '%Q%': f'{q:.15f}',
+                                        '%QN%': f'{qn:.15f}',
+                                        '%BOUND%': f'{bound:.15f}',
                                         '%RETURN_VALUE%': '%d-X' % n if reverse else 'X',
                                         '%NAME%': name,
                                         '%DTYPE%': float_dtype,

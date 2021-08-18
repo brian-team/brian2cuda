@@ -29,7 +29,7 @@ class CUDAStandaloneConfigurationBase(Configuration):
 
     def before_run(self):
         # set brian preferences
-        for key, value in self.extra_prefs.iteritems():
+        for key, value in self.extra_prefs.items():
             brian2.prefs[key] = value
         if self.name is None:
             raise NotImplementedError("You need to set the name attribute.")
@@ -62,23 +62,20 @@ class DynamicConfigCreator(object):
         if self.git_commit is not None:
             # check if config_name is a branch name
             try:
-                commit_sha = self._subprocess('git rev-parse --verify {}'.format(self.git_commit))
+                commit_sha = self._subprocess(f'git rev-parse --verify {self.git_commit}')
             except subprocess.CalledProcessError as err:
-                raise ValueError("`git_commit` is not a valid branch or commit sha: {} {}".format(err, err.output))
-            self.name += ' ({})'.format(commit_sha[:6])
+                raise ValueError(f"`git_commit` is not a valid branch or commit sha: {err} {err.output}")
+            self.name += f' ({commit_sha[:6]})'
 
         # make sure printing np.float32 prints actually 'float32' and not '<type ...>'
         print_prefs = prefs.copy()
         if 'core.default_float_dtype' in prefs:
             print_prefs['core.default_float_dtype'] = prefs['core.default_float_dtype'].__name__
-        clsname = ("DynamicConfigCreator('{config_name}',"
-                   "{d}{git_commit}{d},{prefs},{set_device_kwargs})".format(
-                       config_name=config_name,
-                       git_commit=git_commit,
-                       prefs=print_prefs,
-                       set_device_kwargs=set_device_kwargs,
-                       d="" if git_commit is None else "'"
-                   ))
+        d = ""
+        if git_commit is not None:
+            d = "'"
+        clsname = (f"DynamicConfigCreator('{config_name}',"
+                   f"{d}{git_commit}{d},{print_prefs},{set_device_kwargs})")
         # little hack: this way in brian2.tests.features.base.result() the
         # DynamicCUDAStandaloneConfiguration class will be correctly recreated
         self.__name__ = clsname
@@ -99,11 +96,7 @@ class DynamicConfigCreator(object):
         try:
             output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT, **kwargs)
         except subprocess.CalledProcessError as error:
-            logger.diagnostic(
-                "Command '{cmd}' failed: {error}, {error.output}".format(
-                    cmd=cmd, error=error
-                )
-            )
+            logger.diagnostic(f"Command '{cmd}' failed: {error}, {error.output}")
             output = None
             if not fails_ok:
                 raise
@@ -116,18 +109,18 @@ class DynamicConfigCreator(object):
             # RESTORE PREVIOUS GIT STATE
             assert hasattr(self, 'original_branch')
             try:
-                self._subprocess('git checkout {}'.format(self.original_branch))
-                logger.diagnostic('Checked out original branch {}.'.format(self.original_branch))
+                self._subprocess(f'git checkout {self.original_branch}')
+                logger.diagnostic(f'Checked out original branch {self.original_branch}')
                 if self.stashed:
                     self._subprocess('git stash pop')
                     logger.diagnostic("Popped original stash.")
             except subprocess.CalledProcessError as err:
-                raise RuntimeError("Coulnd't restore previous git state! Error: "
-                                   "{}. Output: {}".format(err, err.output))
+                raise RuntimeError(f"Coulnd't restore previous git state! Error: "
+                                   f"{err}. Output: {err.output}")
         else:
             # CHECK OUT TARGET COMMIT
             self.original_branch = self._subprocess('git rev-parse --abbrev-ref HEAD').rstrip()
-            logger.diagnostic("Original branch is {}.".format(self.original_branch))
+            logger.diagnostic(f"Original branch is {self.original_branch}.")
             # stash the current changes if we are checking out another commit
             old_stash = self._subprocess('git rev-parse -q --verify refs/stash', fails_ok=True)
             self._subprocess('git stash')
@@ -138,8 +131,8 @@ class DynamicConfigCreator(object):
                 self.stashed = new_stash
                 logger.diagnostic("Stashed current state in original branch.")
             try:
-                self._subprocess('git checkout {}'.format(self.git_commit))
-                logger.diagnostic("Checked out target {}.".format(self.git_commit))
+                self._subprocess(f'git checkout {self.git_commit}')
+                logger.diagnostic(f"Checked out target {self.git_commit}.")
             except subprocess.CalledProcessError as err:
                 raise RuntimeError("Couldn't check out target commit, "
                                    "trying to restore original ({}). "
@@ -159,10 +152,10 @@ class DynamicConfigCreator(object):
             sha = self.original_branch
 
         try:
-            self._subprocess('git checkout {} -- :/{}'.format(sha, module_file))
-            logger.diagnostic("Checked out feature {} from {}".format(module_file, sha))
+            self._subprocess(f'git checkout {sha} -- :/{module_file}')
+            logger.diagnostic(f"Checked out feature {module_file} from {sha}")
         except subprocess.CalledProcessError as err:
-            raise ValueError("Couldn't check out module file: {} {}".format(err, err.output))
+            raise ValueError(f"Couldn't check out module file: {err} {err.output}")
 
     def git_reset(self):
         try:
@@ -170,7 +163,7 @@ class DynamicConfigCreator(object):
             self._subprocess('git checkout :/')
             logger.diagnostic("Reset changes in current working directory")
         except subprocess.CalledProcessError as err:
-            raise ValueError("Couldn't reset changes: {} {}".format(err, err.output))
+            raise ValueError(f"Couldn't reset changes: {err} {err.output}")
 
 
 class CUDAStandaloneConfiguration(CUDAStandaloneConfigurationBase):
@@ -270,7 +263,7 @@ class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfiguration):
     else:
         known = False
         openmp_threads = multiprocessing.cpu_count()
-    name = 'C++ standalone (OpenMP, {} threads)'.format(openmp_threads)
+    name = f'C++ standalone (OpenMP, {openmp_threads} threads)'
 
     def before_run(self):
         brian2.prefs.reset_to_defaults()
@@ -293,12 +286,12 @@ class CPPStandaloneConfigurationOpenMPMaxThreadsProfile(CPPStandaloneConfigurati
 
 class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision(CPPStandaloneConfigurationOpenMPMaxThreads):
     # TODO: this is pretty hacky... instead just to the hostname stuff outside class definitions and use the global var...
-    name = 'C++ standalone (OpenMP, single_precision, {} threads)'.format(CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads)
+    name = f'C++ standalone (OpenMP, single_precision, {CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads} threads)'
     single_precision = True
     profile = False
 
 class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStandaloneConfigurationOpenMPMaxThreads):
-    name = 'C++ standalone (OpenMP, single_precision, {} threads)'.format(CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads)
+    name = f'C++ standalone (OpenMP, single_precision, {CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads} threads)'
     single_precision = True
     profile = True
 

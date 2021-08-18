@@ -1,7 +1,7 @@
-{% extends 'common_group.cu' %}
 {# USES_VARIABLES { N, rate, t, _spikespace, _clock_t, _clock_dt,
                     _num_source_neurons, _source_start, _source_stop } #}
 {# WRITES_TO_READ_ONLY_VARIABLES { N } #}
+{% extends 'common_group.cu' %}
 
 {% block define_N %}
 {% endblock %}

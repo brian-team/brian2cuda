@@ -86,7 +86,7 @@ def brianobj_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
     '''
     if text in prefs:
         linktext = text.replace('_', '-').replace('.', '-')
-        text = '%s <brian-pref-%s>' % (text, linktext)
+        text = f'{text} <brian-pref-{linktext}>'
         # Use sphinx's cross-reference role
         xref = XRefRole(warn_dangling=True)
         return xref('std:ref', rawtext, text, lineno, inliner, options, content)
@@ -144,7 +144,7 @@ def mangle_docstrings(app, what, name, obj, options, lines,
         if exported_members:
             lines.append('*Exported members:* ')
             # do not print more than 25 members
-            lines.append(', '.join(['`%s`' % member for
+            lines.append(', '.join([f'`{member}`' for
                                     member in exported_members[:25]]))
             if len(exported_members) > 25:
                 lines.append('... (%d more members)' % (len(exported_members) - 25))
@@ -172,10 +172,10 @@ def mangle_docstrings(app, what, name, obj, options, lines,
                     new_r = "R%d" % (reference_offset[0] + int(r))
                 else:
                     new_r = "%s%d" % (r, reference_offset[0])
-                lines[i] = lines[i].replace('[%s]_' % r,
-                                            '[%s]_' % new_r)
-                lines[i] = lines[i].replace('.. [%s]' % r,
-                                            '.. [%s]' % new_r)
+                lines[i] = lines[i].replace(f'[{r}]_',
+                                            f'[{new_r}]_')
+                lines[i] = lines[i].replace(f'.. [{r}]',
+                                            f'.. [{new_r}]')
 
     reference_offset[0] += len(references)
 

@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 if args.dry_run:
     import sys
-    print("Dry run completed, {} arguments valid.".format(__file__))
+    print(f"Dry run completed, {__file__} arguments valid.")
     sys.exit()
 
 if args.results_dir is None:
@@ -41,7 +41,7 @@ matplotlib.use('Agg')
 
 import time
 import datetime
-import cPickle as pickle
+import pickle as pickle
 
 from brian2 import *
 from brian2.tests.features import *
@@ -256,7 +256,7 @@ os.makedirs(data_dir)
 os.makedirs(plot_dir)
 os.makedirs(log_dir)
 os.makedirs(prof_dir)
-print("Saving results in {}.".format(plot_dir))
+print(f"Saving results in {plot_dir}.")
 
 shutil.copy(os.path.realpath(__file__), os.path.join(directory, 'run_benchmark_suite.py'))
 
@@ -269,7 +269,7 @@ with open(os.path.join(directory, 'git.diff'), 'w') as diff_file:
 try:
     for n, (st, name, sl) in enumerate(speed_tests):
         start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
-        print("Starting {} on {}.".format(name, start))
+        print(f"Starting {name} on {start}.")
         maximum_run_time = 1000*second
         res = run_speed_tests(configurations=configurations,
                               speed_tests=[st],
@@ -285,17 +285,17 @@ try:
                              )
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
-        print("Running {} took {}.".format(name, diff))
+        print(f"Running {name} took {diff}.")
         res.plot_all_tests()
         ## this needs modification of brian2 code
         #res.plot_all_tests(print_relative=True)
-        savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(speed_tests[n][1])))
+        savefig(os.path.join(plot_dir, f'speed_test_{speed_tests[n][1]}_absolute.png'))
         res.plot_all_tests(relative=True)
-        savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+        savefig(os.path.join(plot_dir, f'speed_test_{name}_relative.png'))
         res.plot_all_tests(profiling_minimum=0.05)
-        savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+        savefig(os.path.join(plot_dir, f'speed_test_{name}_profiling.png'))
         if 3 != len(get_fignums()):
-            print("WARNING: There were {} plots created, but only {} saved.".format(len(get_fignums()), 3*(n+1)))
+            print(f"WARNING: There were {len(get_fignums())} plots created, but only {3 * (n + 1)} saved.")
         for n in get_fignums():
             close(n)
 
@@ -310,17 +310,17 @@ try:
         try:
             for key in res.brian_stdouts.keys():
                 config_key, st_key, n_key = key
-                suffix = '{st}_{conf}_{n}.txt'.format(st=st_key, conf=config_key, n=n_key)
-                stdout_file = os.path.join(log_dir, 'stdout_{}'.format(suffix))
+                suffix = f'{st_key}_{config_key}_{n_key}.txt'
+                stdout_file = os.path.join(log_dir, f'stdout_{suffix}')
                 with open(stdout_file, 'w+') as sfile:
                     sfile.write(res.brian_stdouts[key])
-                print("Written {}".format(stdout_file))
-                tb_file = os.path.join(log_dir, 'tb_{}'.format(suffix))
+                print(f"Written {stdout_file}")
+                tb_file = os.path.join(log_dir, f'tb_{suffix}')
                 with open(tb_file, 'w+') as tfile:
                     tfile.write(res.tracebacks[key])
-                print("Written {}".format(tb_file))
+                print(f"Written {tb_file}")
         except Exception as err:
-            print("ERROR writing stdout files: {}".format(err))
+            print(f"ERROR writing stdout files: {err}")
         except:
             print("ERROR writing stdout files and couldn't catch Exception...")
 
@@ -334,14 +334,14 @@ try:
                                 os.path.join(log_dir, 'stdout_{st}_{conf}_{n}.txt'.format(st=name, conf=proj_dir,
                                                                                            n=st.n_range[sl][-1])))
                 else:
-                    print("WARNING Couldn't save {},file not found.".format(stdout_file))
+                    print(f"WARNING Couldn't save {stdout_file},file not found.")
 
         # run nvprof on n_range[2]
         for conf, proj_dir in zip(configurations, project_dirs):
             main_arg = ''
             if proj_dir in ['cuda_standalone', 'GeNNworkspace']:
                 if proj_dir == 'GeNNworkspace':
-                    main_arg = 'test {time} 1'.format(time=st.duration/second)
+                    main_arg = f'test {st.duration / second} 1'
                 ns = st.n_range[sl]
                 idx = 4
                 max_runtime = 20
@@ -349,7 +349,7 @@ try:
                     conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')
                 else:
                     conf_name = conf.__name__
-                print("Rerunning {} with n = {} for nvprof profiling".format(conf_name, st.n_range[idx]))
+                print(f"Rerunning {conf_name} with n = {st.n_range[idx]} for nvprof profiling")
                 tb, res, runtime, prof_info = results(conf, st, st.n_range[idx], maximum_run_time=maximum_run_time)
                 if not isinstance(res, Exception) and runtime < max_runtime:
                     option = '--profile-from-start-off' if proj_dir == 'cuda_standalone' else ''
@@ -362,18 +362,18 @@ try:
                     try:
                         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
                     except subprocess.CalledProcessError as err:
-                        print("ERROR: nvprof failed with:{} output: {}".format(err, err.output))
+                        print(f"ERROR: nvprof failed with:{err} output: {err.output}")
                         raise
                     prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
                     prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
-                    print("Profiling took {} for runtime of {}".format(prof_diff, runtime))
+                    print(f"Profiling took {prof_diff} for runtime of {runtime}")
                 elif isinstance(res, Exception):
                     print("Didn't run nvprof, got an Exception", res)
                 else:  # runtime >= max_runtime
-                    print("Didn't run nvprof, runtime ({}) >= max_runtime ({}".format(runtime, max_runtime))
+                    print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime}")
 finally:
     create_readme(directory)
-    print("\nSummarized speed test results in {}".format(directory + '/README.md'))
+    print(f"\nSummarized speed test results in {directory + '/README.md'}")
     script_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
     script_diff = datetime.datetime.strptime(script_end, time_format) - datetime.datetime.strptime(script_start, time_format)
     print("Finished speed test on {}. Total time = {}.".format(

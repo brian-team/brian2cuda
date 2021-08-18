@@ -2,11 +2,11 @@
 Package implementing the CUDA "standalone" `Device` and `CodeObject`.
 '''
 
-import cuda_prefs
+from . import cuda_prefs
 from .codeobject import CUDAStandaloneCodeObject
 from .device import cuda_standalone_device
-import binomial
-import timedarray
+from . import binomial
+from . import timedarray
 
 # TODO: Remove for release, until then debug logs by default
 from brian2.utils.logger import BrianLogger

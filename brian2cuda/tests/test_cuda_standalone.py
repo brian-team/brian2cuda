@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 import os
 
 import pytest
@@ -44,8 +44,8 @@ def test_cuda_standalone():
     device.build(directory=None, with_output=False)
     # we do an approximate equality here because depending on minor details of how it was compiled, the results
     # may be slightly different (if -ffast-math is on)
-    assert len(M.i)>=17000 and len(M.i)<=18000, "len:{}, array:{}".format(len(M.i), M.i)
-    assert len(M.t) == len(M.i), "{} != {}".format(len(M.t), len(M.i))
+    assert len(M.i)>=17000 and len(M.i)<=18000, f"len:{len(M.i)}, array:{M.i}"
+    assert len(M.t) == len(M.i), f"{len(M.t)} != {len(M.i)}"
     assert M.t[0] == 0., M.t[0]
     reset_device()
 

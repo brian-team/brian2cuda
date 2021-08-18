@@ -2,25 +2,9 @@
 Preferences that relate to the brian2cuda interface.
 '''
 
-from brian2.core.preferences import prefs, BrianPreference, PreferenceError
+from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
 import numpy as np
-
-
-def compute_capability_validator(cc):
-    """
-    This function checks compute capability preference and raises an error if it is
-    larger than the minimal supported compute capability.
-    """
-    if cc is not None:
-        pref_name = "prefs.devices.cuda_standalone.cuda_backend.compute_capability"
-        if not isinstance(cc, float):
-            raise PreferenceError(
-                "Preference `{}` has to be of type float "
-                "(e.g. `6.1`), got `{}`".format(pref_name, type(cc))
-            )
-
-    return True
 
 
 # Preferences
@@ -186,7 +170,7 @@ prefs.register_preferences(
         docs='''Manually set the compute capability for which CUDA code will be
         compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
         chosen depending on GPU in use. ''',
-        validator=compute_capability_validator,
+        validator=lambda v: v is None or isinstance(v, float),
         default=None),
 
     cuda_path=BrianPreference(

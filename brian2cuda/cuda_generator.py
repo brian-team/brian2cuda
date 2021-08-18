@@ -18,10 +18,7 @@ from brian2.devices import get_device
 from brian2cuda.utils.gputools import get_cuda_runtime_version
 
 
-__all__ = ['CUDACodeGenerator',
-           'CUDAAtomicsCodeGenerator'
-           'c_data_type'
-           ]
+__all__ = ['CUDACodeGenerator', 'CUDAAtomicsCodeGenerator', 'c_data_type']
 
 
 logger = get_logger('brian2.codegen.generators.cuda_generator')
@@ -82,9 +79,9 @@ def _generate_atomic_support_code():
                 {{
                 '''
                 if arg_dtype in ['int', 'float']:
-                    code += '''
+                    code += f'''
                     {hardware_implementation}
-                    '''.format(hardware_implementation=hardware_implementation)
+                    '''
                 elif arg_dtype == 'double':
                     if cuda_runtime_version >= 8.0:
                         # Check for CC in at runtime to use software or hardware
@@ -247,9 +244,9 @@ class CUDACodeGenerator(CodeGenerator):
         # set clip function to either use all float or all double arguments
         # see #51 for details
         if prefs['core.default_float_dtype'] == np.float64:
-            self.float_dtype = 'float'
-        else:  # np.float32
             self.float_dtype = 'double'
+        else:  # np.float32
+            self.float_dtype = 'float'
 
 
     @property
@@ -305,7 +302,7 @@ class CUDACodeGenerator(CodeGenerator):
             firstline = True
             # bool assigns is a sequence of (var, value) pairs giving the conditions under
             # which the simplified expression simp_expr holds
-            for bool_assigns, simp_expr in bool_simp.iteritems():
+            for bool_assigns, simp_expr in bool_simp.items():
                 # generate a boolean expression like ``var1 && var2 && !var3``
                 atomics = []
                 for boolvar, boolval in bool_assigns:
@@ -368,7 +365,7 @@ class CUDACodeGenerator(CodeGenerator):
         if statement.var in conditional_write_vars:
             subs = {}
             condvar = conditional_write_vars[statement.var]
-            lines.append('if(%s)' % condvar)
+            lines.append(f'if({condvar})')
             lines.append('    ' + line)
         else:
             lines.append(line)
@@ -440,9 +437,10 @@ class CUDACodeGenerator(CodeGenerator):
                             if int64_type is not None:
                                 logger.warn("Detected code statement with default function and 64bit integer type in the same line. "
                                             "Using 64bit integer types as default function arguments is not type safe due to convertion of "
-                                            "integer to 64bit floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
-                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
-                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            "integer to 64bit floating-point types in device code. (relevant functions: {})\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(
+                                                ', '.join(functions_C99), line, statements
+                                            ),
                                             once=True)
                                 self.warned_integral_convertion = True
                                 self.previous_convertion_pref = np.float64
@@ -453,9 +451,10 @@ class CUDACodeGenerator(CodeGenerator):
                                 logger.warn("Detected code statement with default function and 32bit or 64bit integer type in the same line and the "
                                             "preference for default_functions_integral_convertion is 'float32'. "
                                             "Using 32bit or 64bit integer types as default function arguments is not type safe due to convertion of "
-                                            "integer to single-precision floating-point types in device code. (relevant functions: sin, cos, tan, sinh, "
-                                            "cosh, tanh, exp, log, log10, sqrt, ceil, floor, arcsin, arccos, arctan)\nDetected code "
-                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(line, statements),
+                                            "integer to single-precision floating-point types in device code. (relevant functions: {})\nDetected code "
+                                            "statement:\n\t{}\nGenerated from abstract code statements:\n\t{}\n".format(
+                                                ', '.join(functions_C99), line, statements
+                                            ),
                                             once=True)
                                 self.warned_integral_convertion = True
                                 self.previous_convertion_pref = np.float32
@@ -488,9 +487,7 @@ class CUDACodeGenerator(CodeGenerator):
             else:
                 decl = ''
                 op = statement.op
-            line = '{decl}{var} {op} {expr};'.format(decl=decl,
-                                                     var=statement.var, op=op,
-                                                     expr=expr)
+            line = f'{decl}{statement.var} {op} {expr};'
             line = [line]
         elif statement.inplace:
             sign = ''
@@ -541,9 +538,7 @@ class CUDACodeGenerator(CodeGenerator):
             collected_writes = set()
             atomic_lines = []
             for stmt in statements:
-                lines.append('//  Abstract code:  {var} {op} {expr}'.format(var=stmt.var,
-                                                                            op=stmt.op,
-                                                                            expr=stmt.expr))
+                lines.append(f'//  Abstract code:  {stmt.var} {stmt.op} {stmt.expr}')
                 # We treat every statement individually with its own read and write code
                 # to be on the safe side
                 read, write, indices, conditional_write_vars = self.arrays_helper([stmt])
@@ -631,18 +626,18 @@ class CUDACodeGenerator(CodeGenerator):
         if varname in functions_C99:
             funccode = funccode.format(default_type=self.default_func_type,
                                        other_type=self.other_func_type)
-        if varname == 'clip':
+        elif varname in ['clip', 'exprel']:
             funccode = funccode.format(float_dtype=self.float_dtype)
         ###
 
-        if isinstance(funccode, basestring):
+        if isinstance(funccode, str):
             funccode = {'support_code': funccode}
         if funccode is not None:
             # To make namespace variables available to functions, we
             # create global variables and assign to them in the main
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
-            for ns_key, ns_value in func_namespace.iteritems():
+            for ns_key, ns_value in func_namespace.items():
                 # This section is adapted from CPPCodeGenerator such that file
                 # global namespace pointers can be used in both host and device
                 # code.
@@ -680,7 +675,7 @@ class CUDACodeGenerator(CodeGenerator):
         dep_support_code = []
         dep_kernel_lines = []
         if impl.dependencies is not None:
-            for dep_name, dep in impl.dependencies.iteritems():
+            for dep_name, dep in impl.dependencies.items():
                 if dep_name not in self.variables:
                     self.variables[dep_name] = dep
                     dep_impl = dep.implementations[self.codeobj_class]
@@ -713,7 +708,7 @@ class CUDACodeGenerator(CodeGenerator):
         # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
-        for varname, var in self.variables.iteritems():
+        for varname, var in self.variables.items():
             if isinstance(var, ArrayVariable):
                 # This is the "true" array name, not the restricted pointer.
                 array_name = device.get_array_name(var)
@@ -737,7 +732,7 @@ class CUDACodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in self.variables.items():
+        for varname, variable in list(self.variables.items()):
             if isinstance(variable, Function):
                 hd, ps, sc, uf, kl = self._add_user_function(varname, variable)
                 user_functions.extend(uf)
@@ -762,7 +757,7 @@ class CUDACodeGenerator(CodeGenerator):
 
         # Clock variables (t, dt, timestep) are passed by value to kernels and
         # need to be translated back into pointers for scalar/vector code.
-        for varname, variable in self.variables.iteritems():
+        for varname, variable in self.variables.items():
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
                 arrayname = self.get_array_name(variable, prefix='')
@@ -800,7 +795,7 @@ functions_C99 = []
 func_translations = []
 # Functions that exist under the same name in C++
 for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
-             'log10', 'sqrt', 'ceil', 'floor']:
+             'log10', 'expm1', 'log1p', 'sqrt', 'ceil', 'floor']:
     func_translations.append((func, func))
 
 # Functions that exist under a different name in C++
@@ -830,8 +825,24 @@ for func, func_cuda in func_translations:
         # depending on user prefs (which are not yet set when this code snippet is created)
     DEFAULT_FUNCTIONS[func].implementations.add_implementation(CUDACodeGenerator,
                                                                code=cuda_code,
-                                                               name='_brian_{}'.format(func_cuda)
+                                                               name=f'_brian_{func_cuda}'
                                                                )
+
+# TODO: make float version type safe or print warning (see #233)
+exprel_code = '''
+__host__ __device__
+static inline {float_dtype} _brian_exprel({float_dtype} x)
+{{
+    if (fabs(x) < 1e-16)
+        return 1.0;
+    if (x > 717)
+        return INFINITY;
+    return expm1(x)/x;
+}}
+'''
+DEFAULT_FUNCTIONS['exprel'].implementations.add_implementation(CUDACodeGenerator,
+                                                               code=exprel_code,
+                                                               name='_brian_exprel')
 
 # std::abs is available and already overloaded for integral types in device code
 abs_code = '''

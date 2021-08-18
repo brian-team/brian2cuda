@@ -77,9 +77,7 @@ def get_cuda_installation():
         'runtime_version': get_cuda_runtime_version(),
     }
     global _cuda_installation
-    assert (
-        sorted(cuda_installation.keys()) == sorted(_cuda_installation.keys())
-    ), "{} != {}".format(cuda_installation.keys(), _cuda_installation.keys())
+    _assert_keys_equal(cuda_installation, _cuda_installation)
     return cuda_installation
 
 
@@ -92,7 +90,7 @@ def get_gpu_selection():
         'selected_gpu_compute_capability': compute_capability,
     }
     global _gpu_selection
-    assert gpu_selection.keys() == _gpu_selection.keys()
+    _assert_keys_equal(gpu_selection, _gpu_selection)
     return gpu_selection
 
 
@@ -145,10 +143,12 @@ def reset_gpu_selection():
 def restore_cuda_installation(cuda_installation):
     """Set global cuda installation dictionary to `cuda_installation`"""
     global _cuda_installation
-    if _cuda_installation.keys() != cuda_installation.keys():
+    if sorted(_cuda_installation.keys()) != sorted(cuda_installation.keys()):
         raise KeyError(
             "`cuda_installation` has to have the following keys: {}. Got instead: "
-            "{}".format(cuda_installation.keys(), _cuda_installation.keys())
+            "{}".format(
+                sorted(cuda_installation.keys()), sorted(_cuda_installation.keys())
+            )
         )
     _cuda_installation.update(cuda_installation)
 
@@ -156,12 +156,18 @@ def restore_cuda_installation(cuda_installation):
 def restore_gpu_selection(gpu_selection):
     """Set global gpu selection dictionary to `gpu_selection`"""
     global _gpu_selection
-    if _gpu_selection.keys() != gpu_selection.keys():
+    if sorted(_gpu_selection.keys()) != sorted(gpu_selection.keys()):
         raise KeyError(
             "`gpu_selection` has to have the following keys: {}. Got instead: "
-            "{}".format(gpu_selection.keys(), _gpu_selection.keys())
+            "{}".format(sorted(gpu_selection.keys()), sorted(_gpu_selection.keys()))
         )
     _gpu_selection.update(gpu_selection)
+
+
+def _assert_keys_equal(dict1, dict2):
+    keys1 = sorted(dict1.keys())
+    keys2 = sorted(dict2.keys())
+    assert keys1 == keys2, f"{keys1} != {keys2}"
 
 
 def _get_cuda_path():
@@ -184,17 +190,7 @@ def _get_cuda_path():
         return cuda_path
 
     # Use nvcc path if `nvcc` binary in PATH
-    # TODO: Remove this and use shutil.which once we moved to Python 3
-    def which(pgm):
-        path = os.getenv("PATH")
-        for p in path.split(os.path.pathsep):
-            p = os.path.join(p, pgm)
-            if os.path.exists(p) and os.access(p, os.X_OK):
-                return p
-    nvcc_path = which("nvcc")
-    import sys
-    assert not sys.version.startswith("3"), "Update code here for Python 3!"
-    #nvcc_path = shutil.which("nvcc")
+    nvcc_path = shutil.which("nvcc")
     if nvcc_path is not None:
         cuda_path_nvcc = os.path.dirname(os.path.dirname(nvcc_path))
         logger.info(
@@ -207,8 +203,7 @@ def _get_cuda_path():
     if os.path.exists("/usr/local/cuda"):
         cuda_path_usr = "/usr/local/cuda"
         logger.info(
-            "CUDA installation directory found in standard location: {}"
-            "".format(cuda_path_usr)
+            f"CUDA installation directory found in standard location: {cuda_path_usr}"
         )
         return cuda_path_usr
 
@@ -238,7 +233,7 @@ def _get_nvcc_path():
 
     nvcc_path = os.path.join(cuda_path, nvcc_bin)
     if not os.path.exists(nvcc_path):
-        raise RuntimeError("Couldn't find `nvcc` binary in {}.".format(nvcc_path))
+        raise RuntimeError(f"Couldn't find `nvcc` binary in {nvcc_path}.")
 
     return nvcc_path
 
@@ -287,12 +282,10 @@ def _select_gpu():
 
     gpu_name = ""
     if gpu_list is not None:
-        gpu_name = " ({})".format(gpu_list[gpu_id])
+        gpu_name = f" ({gpu_list[gpu_id]})"
 
     logger.info(
-        "Compiling device code for GPU {gpu_id}{gpu_name}".format(
-            gpu_id=gpu_id, gpu_name=gpu_name
-        )
+        f"Compiling device code for GPU {gpu_id}{gpu_name}"
     )
 
     return gpu_id, compute_capability
@@ -316,19 +309,14 @@ def _run_command_with_output(command, *args):
         command_split = [command] + list(args)
 
     try:
-        output = subprocess.check_output(command_split)
+        output = subprocess.check_output(command_split, encoding='UTF-8')
     except subprocess.CalledProcessError as err:
         raise RuntimeError(
             "Running `{binary}` failed with error code {err.returncode}: {err.output}"
             "".format(binary=command_split[0], err=err)
         )
-    # TODO: In Python 3 this needs to be FileNotFoundError
-    except OSError as err:
-        raise OSError(
-            "Binary not found: `{binary}` ({err})".format(
-                binary=command_split[0], err=err
-            )
-        )
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"Binary not found: `{command_split[0]}`") from err
 
     return output
 
@@ -341,8 +329,7 @@ def _get_available_gpus():
     command = "nvidia-smi -L"
     try:
         gpu_info_lines = _run_command_with_output(command).split("\n")
-    # TODO: In Python 3 version, replace OSError with FileNotFoundError
-    except (RuntimeError, OSError) as excepted_error:
+    except (RuntimeError, FileNotFoundError) as excepted_error:
         new_error = RuntimeError(
             "Running `{command}` failed. If `nvidia-smi` is not available in your "
             "system, you can disable automatic detection of GPU name and compute "
@@ -351,9 +338,7 @@ def _get_available_gpus():
                 command=command
             )
         )
-        # TODO: In Python 3, do this:
-        # raise new_error from excepted_error
-        raise new_error
+        raise new_error from excepted_error
 
     all_gpu_list = []
     if gpu_info_lines is not None:
@@ -425,7 +410,7 @@ def get_compute_capability(gpu_id):
                 compute_capability_line = lines[i + 2]
                 assert compute_capability_line.strip().startswith(
                     "CUDA Capability Major/Minor version number"
-                ), "Unexpected line parsed: {}".format(compute_capability_line)
+                ), f"Unexpected line parsed: {compute_capability_line}"
                 # Last 3 chars are the compute capability
                 major = int(compute_capability_line[-3])
                 minor = int(compute_capability_line[-1])

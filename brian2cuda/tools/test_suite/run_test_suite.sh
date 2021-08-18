@@ -62,6 +62,6 @@ done
 test_suite_args=$@
 
 # add timestemp to name
-task_name="$(date +%y-%m-%d_%H-%M-%S)"__"$task_name".log
+task_name="$task_name"_"$(date +%y-%m-%d_%H-%M-%S)".log
 
 bash _run_test_suite.sh "$task_name" "$logdir" "$test_suite_args"

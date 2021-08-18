@@ -11,7 +11,7 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-def parse_arguments(parser):
+def parse_arguments(parser, parse_unknown=False):
 
     parser.add_argument('--targets', '-t', nargs='*',
                         default=['cuda_standalone'], type=str,
@@ -46,14 +46,20 @@ def parse_arguments(parser):
                         help=("Exit script after argument parsing. Used to check "
                               "validity of arguments"))
 
-    args = parser.parse_args()
+    if parse_unknown:
+        args, unknown_args = parser.parse_known_args()
+    else:
+        args = parser.parse_args()
 
     if args.dry_run:
         import sys
-        print("Dry run completed, {} arguments valid.".format(__file__))
+        print(f"Dry run completed, {__file__} arguments valid.")
         sys.exit()
 
-    return args
+    if parse_unknown:
+        return args, unknown_args
+    else:
+        return args
 
 
 def print_single_prefs(prefs_dict, set_prefs=None, return_lines=False):
@@ -75,7 +81,7 @@ def print_single_prefs(prefs_dict, set_prefs=None, return_lines=False):
             except AttributeError:
                 # int and bool don't have __name__ attribute
                 pass
-            prints.append("\t\tprefs[{}] = {}".format(k, v))
+            prints.append(f"\t\tprefs[{k}] = {v}")
 
     if return_lines:
         return prints
@@ -87,7 +93,7 @@ def print_prefs_combinations(configurations, condition=None, return_lines=False)
     prints = []
     for n, d in enumerate(configurations):
         if condition is None or condition[n]:
-            prints.append("\t{}. run".format(n + 1))
+            prints.append(f"\t{n + 1}. run")
             prints.extend(print_single_prefs(d, return_lines=True))
 
     if return_lines:
@@ -128,11 +134,11 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'
         if '-j' not in prefs[k]:
-            prints.append("WARNING: -j is not anymore in default pref[{}]".format(k))
+            prints.append(f"WARNING: -j is not anymore in default pref[{k}]")
         new_j = ['-j' + str(args.jobs[0])]
         prefs[k].remove('-j')
         prefs[k].extend(new_j)
-        prints.append("Compiling with make {}".format(new_j[0]))
+        prints.append(f"Compiling with make {new_j[0]}")
 
     if args.all_prefs:
         all_prefs_list = []
@@ -197,7 +203,7 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
     elif fixed_prefs_dict:
         prints.append("1 run with explicitly set preferences:")
         for k, v in fixed_prefs_dict.items():
-            prints.append("\t\tprefs[{}] = {}".format(k, v))
+            prints.append(f"\t\tprefs[{k}] = {v}")
     else:
         prints.append("1 run with default preferences")
     prints.append("\n")
@@ -273,7 +279,7 @@ class PrintBuffer(object):
         import time
         timestemp = time.gmtime()
         formatted = time.strftime("%Y-%m-%d %H:%M:%S", timestemp)
-        if isinstance(new_lines, basestring):
+        if isinstance(new_lines, str):
             new_lines = [new_lines]
         for i in range(len(new_lines)):
             if i == 0:
@@ -282,7 +288,7 @@ class PrintBuffer(object):
             else:
                 # add empty string offset
                 prefix = ' ' * len(formatted)
-            new_lines[i] = "{}  {}".format(prefix, new_lines[i])
+            new_lines[i] = f"{prefix}  {new_lines[i]}"
         self._lines.extend(new_lines)
 
     def print_all(self):

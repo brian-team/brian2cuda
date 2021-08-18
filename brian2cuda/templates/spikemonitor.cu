@@ -1,7 +1,6 @@
-{% extends 'common_group.cu' %}
-{# USES_VARIABLES { N, count,
-                    _source_start, _source_stop} #}
+{# USES_VARIABLES { N, count, _source_start, _source_stop} #}
 {# WRITES_TO_READ_ONLY_VARIABLES { N, count } #}
+{% extends 'common_group.cu' %}
 {% block extra_device_helper %}
     {% for varname, var in record_variables.items() %}
     // declare monitor cudaVectors
@@ -142,7 +141,7 @@ __global__ void _count_{{codeobj_name}}_kernel(
 
     {# If there are any record_variables, get the size of one arbitrary monitor #}
     {% if record_variables %}
-    {% set varname = record_variables.keys()[0] %}
+    {% set varname = record_variables.keys() | first %}
     num_events = monitor_{{varname}}->size();
     {{N}} = num_events;
     {# If there are no record_variables, we add the count after each kernel call #}

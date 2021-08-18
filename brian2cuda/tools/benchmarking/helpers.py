@@ -1,5 +1,5 @@
 import os
-import cPickle as pickle
+import pickle as pickle
 import pandas as pd
 import brian2
 from brian2.tests.features.base import SpeedTestResults
@@ -149,13 +149,13 @@ def plot_from_pkl(pkl_file, plot_dir, base_config='C++ standalone'):
     # only one benchmark per pkl file
     name = res.speed_tests[0].__name__
     res.plot_all_tests()
-    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_absolute.png'.format(name)))
+    plt.savefig(os.path.join(plot_dir, f'speed_test_{name}_absolute.png'))
     plt.close()
     res.plot_all_tests(relative=True)
-    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_relative.png'.format(name)))
+    plt.savefig(os.path.join(plot_dir, f'speed_test_{name}_relative.png'))
     plt.close()
     res.plot_all_tests(profiling_minimum=0.05)
-    plt.savefig(os.path.join(plot_dir, 'speed_test_{}_profiling.png'.format(name)))
+    plt.savefig(os.path.join(plot_dir, f'speed_test_{name}_profiling.png'))
     plt.close()
 
 

@@ -20,10 +20,21 @@ parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
 
 parser.add_argument('--notify-slack', action='store_true',
                     help="Send progress reports through Slack via ClusterBot "
-                          "(if installed)")
+                         "(if installed)")
 
-parser.add_argument('-v', '--verbosity', action='count', default=None,
-                    help="Increase pytest verbosity.")
+parser.add_argument('-k', default=None, type=str,
+                    help="Passed to pytest's ``-k`` option. Can be used to select only "
+                         "some tests, e.g. `-k 'test_functions` or `-k 'not "
+                         "test_funcions'`")
+
+parser.add_argument('-c', '--cache-dir', type=str, default=None,
+                    help="Pytest cache directory")
+
+parser.add_argument('-q', '--quiet', action='store_true',
+                    help="Disable all verbosity")
+
+parser.add_argument('-d', '--debug', action='store_true',
+                    help=("Debug mode, set pytest to not capture outputs."))
 
 args = utils.parse_arguments(parser)
 
@@ -39,7 +50,7 @@ if args.notify_slack:
 buffer = utils.PrintBuffer(clusterbot=bot)
 
 import os, sys
-from StringIO import StringIO
+from io import StringIO
 
 import brian2
 from brian2 import test, prefs
@@ -57,18 +68,30 @@ if args.test_parallel is None:
 
 stored_prefs = prefs.as_file
 
-# Only the conftest.py located in the `rootdir` of a pytest run is loaded and used for
-# all tests (else each conftest.py applies only to the tests in its own directory).
-# To use brian2's conftest.py also for our brian2cuda tests, we set `rootdir` to the
-# `brian2` directory, where `brian2/conftest.py` is located.
-# XXX: If we ever want to have an own conftest.py, we need to pass `--confcutdir` here
-# (which overwrites the `--confcutdir` default option in `make_argv`), such that the
-# search of conftest.py files does not stop at `brian2` but at a higher directory, which
-# should include the conftest.py we want to load.
-additional_args = ['--rootdir={}'.format(os.path.dirname(brian2.__file__))]
+# Set confcutdir, such that all `conftest.py` files inside the brian2 and brian2cuda
+# directories are loaded (this overwrites confcutdir set in brian2's `make_argv`, which
+# stops searching for `conftest.py` files outside the `brian2` directory)
+additional_args = [
+    f'--confcutdir={os.path.commonpath([brian2.__file__, brian2cuda.__file__])}',
+]
 
-if args.verbosity is not None:
-   additional_args += ['-{}'.format(args.verbosity * 'v')]
+if args.cache_dir is not None:
+    # set pytest cache directory
+    additional_args += ['-o', f'cache_dir={args.cache_dir}']
+
+if not args.quiet:
+    # set verbosity to max(?)
+    additional_args += ['-vvv']
+
+if args.k is not None:
+    additional_args += ['-k', args.k]
+
+build_options = None
+if args.debug:
+    # disable output capture
+    additional_args += ['-s']
+    # enable brian2 output
+    build_options = {'with_output': True}
 
 all_successes = []
 for target in args.targets:
@@ -89,8 +112,7 @@ for target in args.targets:
         prefs.read_preference_file(StringIO(stored_prefs))
 
         if prefs_dict is not None:
-            buffer.add("{}. RUN: test suite on CUDA_STANDALONE with prefs: "
-                       "".format(n + 1))
+            buffer.add(f"{n + 1}. RUN: test suite on CUDA_STANDALONE with prefs: ")
             # print and set preferences
             print_lines = utils.print_single_prefs(prefs_dict, set_prefs=prefs,
                                                    return_lines=True)
@@ -106,11 +128,12 @@ for target in args.targets:
                        test_in_parallel=test_in_parallel,
                        extra_test_dirs=extra_test_dirs,
                        float_dtype=None,
-                       additional_args=additional_args)
+                       additional_args=additional_args,
+                       build_options=build_options)
 
         successes.append(success)
 
-    buffer.add("\nTARGET: {}".format(target.upper()))
+    buffer.add(f"\nTARGET: {target.upper()}")
     all_success, print_lines = utils.check_success(successes,
                                                    all_prefs_combinations,
                                                    return_lines=True)
@@ -129,7 +152,7 @@ if len(args.targets) > 1:
             sum(all_successes) - len(all_successes), len(all_successes)))
         for n, target in enumerate(args.targets):
             if not all_successes[n]:
-                buffer.add("\t{} failed.".format(target))
+                buffer.add(f"\t{target} failed.")
         buffer.print_all()
         sys.exit(1)
 

@@ -7,7 +7,7 @@ from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
 from brian2.utils.logger import catch_logs
-from brian2.devices.device import device
+from brian2.devices.device import device, reinit_and_delete
 
 import brian2cuda
 from brian2cuda.device import prepare_codeobj_code_for_rng
@@ -60,12 +60,12 @@ def test_rand_randn_regex():
     for i, co in enumerate(m):
         prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 1, \
-            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+            f"{i}: matches: {co.rng_calls['rand']} in '{co.code.cu_file}'"
 
     for i, co in enumerate(n):
         prepare_codeobj_code_for_rng(co)
         assert co.rng_calls["rand"] == 0, \
-            "{}: matches: {} in '{}'".format(i, co.rng_calls["rand"], co.code.cu_file)
+            f"{i}: matches: {co.rng_calls['rand']} in '{co.code.cu_file}'"
 
 
 @pytest.mark.cuda_standalone
@@ -91,20 +91,20 @@ def test_poisson_regex():
     # If lambda is a literal (.01 and 5), it will be replaced by a
     # _ptr_array_{name}_poisson_<idx> variables, where the idx is ascending by
     # lambda value (lamda=.01 gets idx=0; lamda=5 gets idx=1)
-    replaced_code = '''
+    replaced_code = f'''
         _rand(_vectorisation_idx + 0 * _N)
         _poisson(l, _vectorisation_idx)
-        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 0 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 0 * _N)
-        _poisson(_ptr_array_{name}_poisson_1, _vectorisation_idx + 1 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 1 * _N)
-        _poisson(_ptr_array_{name}_poisson_0, _vectorisation_idx + 2 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_1, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 0 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_1, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 1 * _N)
+        _poisson(_ptr_array_{co.name}_poisson_0, _vectorisation_idx + 2 * _N)
         _poisson(l, _vectorisation_idx)
-        '''.format(name=co.name)
+        '''
 
     for i, (cu_line, replaced_line) in enumerate(zip(co.code.cu_file.split('\n'),
                                                      replaced_code.split('\n'))):
-        assert_equal(cu_line, replaced_line, err_msg="Line {} is wrong".format(i))
+        assert_equal(cu_line, replaced_line, err_msg=f"Line {i} is wrong")
     assert_equal(co.code.cu_file, replaced_code)
 
 
@@ -151,7 +151,7 @@ def test_rng_occurrence_counting():
                     co_lamda = code_object.poisson_lamdas['poisson_0']
                     assert co_lamda == 1.0, co_lamda
                     d_lamda = device.all_poisson_lamdas[code_object.name]['poisson_0']
-                    assert d_lamda == 1.0, "{} {}".format(d_lamda, code_object.name)
+                    assert d_lamda == 1.0, f"{d_lamda} {code_object.name}"
 
                 assert not code_object.needs_curand_states
 
@@ -1215,12 +1215,60 @@ def test_poisson_variable_lambda_set_template_random_seed():
 
 
 if __name__ == '__main__':
-    test_rand()
-    test_random_number_generation_with_multiple_runs()
-    test_random_values_fixed_and_random()
-    test_random_values_codeobject_every_tick()
-    test_rand_randn_regex()
-    test_poisson_regex()
+    import brian2cuda
+    from brian2cuda.tests.conftest import fake_randn
+    for test in [
+        test_rand_randn_regex,
+        test_poisson_regex,
+        test_rng_occurrence_counting,
+        test_binomial_occurrence,
+        test_rand,
+        test_random_number_generation_with_multiple_runs,
+        test_random_values_fixed_and_random_seed,
+        test_poisson_scalar_values_fixed_and_random_seed,
+        test_poisson_vectorized_values_fixed_and_random_seed,
+        test_random_values_codeobject_every_tick,
+        test_binomial_values,
+        test_random_values_set_synapses_random_seed,
+        test_random_values_set_synapses_fixed_seed,
+        test_random_values_synapse_dynamics_fixed_and_random_seed,
+        test_random_values_init_synapses_fixed_and_random_seed,
+        test_binomial_values_random_seed,
+        test_binomial_values_fixed_seed,
+        test_binomial_values_fixed_and_random_seed,
+        test_binomial_values_set_synapses_random_seed,
+        test_binomial_values_set_synapses_fixed_seed,
+        test_binomial_values_synapse_dynamics_fixed_and_random_seed,
+        test_binomial_values_init_synapses_fixed_and_random_seed,
+        test_random_binomial_set_template_random_seed,
+        test_random_binomial_poisson_scalar_lambda_values_set_synapses_fixed_seed,
+        test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed,
+        test_poisson_scalar_lambda_values_random_seed,
+        test_poisson_variable_lambda_values_random_seed,
+        test_poisson_scalar_lambda_values_fixed_seed,
+        test_poisson_variable_lambda_values_fixed_seed,
+        test_poisson_scalar_lambda_values_fixed_and_random_seed,
+        test_poisson_variable_lambda_values_fixed_and_random_seed,
+        test_poisson_scalar_lambda_values_set_synapses_random_seed,
+        test_poisson_variable_lambda_values_set_synapses_random_seed,
+        test_poisson_scalar_lambda_values_set_synapses_fixed_seed,
+        test_poisson_variable_lambda_values_set_synapses_fixed_seed,
+        test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed,
+        test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed,
+        test_poisson_values_init_synapses_fixed_and_random_seed,
+        test_poisson_scalar_lambda_set_template_random_seed,
+        test_poisson_variable_lambda_set_template_random_seed,
+    ]:
+        print()
+        print(test.__name__)
+        pytestmarks = [mark.name for mark in test.pytestmark]
+        build_on_run = True
+        if 'multiple_runs' in pytestmarks:
+            build_on_run = False
+        set_device('cuda_standalone', build_on_run=build_on_run, directory=None)
+        test()
+
+        reinit_and_delete()
 
 
 

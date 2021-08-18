@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import argparse
 parser = argparse.ArgumentParser(description=("Extract benchmark data from pickled SpeedTest "
                                               "obejct into csv files from pickle file. Overwrites "
@@ -14,5 +14,5 @@ from helpers import translate_pkl_to_csv
 
 for pattern in args.files:
     for pkl in glob.glob(pattern):
-        print("Extracting csv files from {}".format(pkl))
+        print(f"Extracting csv files from {pkl}")
         translate_pkl_to_csv(pkl)
