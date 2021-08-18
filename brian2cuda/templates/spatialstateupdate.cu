@@ -15,20 +15,7 @@
 
 
 {### BEFORE RUN ###}
-{% block before_run_code %}
-#include "code_objects/{{codeobj_name}}.h"
-#include "objects.h"
-#include "brianlib/common_math.h"
-#include "brianlib/cuda_utils.h"
-#include "brianlib/stdint_compat.h"
-#include <cmath>
-#include <stdint.h>
-#include <ctime>
-#include <stdio.h>
-
-void _before_run_{{codeobj_name}}()
-{
-    using namespace brian;
+{% block before_run_host_maincode %}
 
     ///// HOST_CONSTANTS ///////////
     %HOST_CONSTANTS%
@@ -97,8 +84,7 @@ void _before_run_{{codeobj_name}}()
                 cudaMemcpyHostToDevice)
             );
     {% endfor %}
-}
-{% endblock before_run_code %}
+{% endblock before_run_host_maincode %}
 
 
 {### RUN ###}

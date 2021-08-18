@@ -1,16 +1,13 @@
 {# USES_VARIABLES { N, delay, _n_sources, _n_targets, _source_dt } #}
 {% extends 'common_group.cu' %}
 
-
 {# Get the name of the array that stores these events (e.g. the spikespace array) #}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 
-
 {### BEFORE RUN ###}
-{% block before_run_code %}
 {# TEMPLATE INFO
  # This template creates the connectivity matrix for this SynapticPathway
- # ({{pathobj}}). It's form depends on the delay and for heterogeneous delays
+ # ({{owner.name}}). It's form depends on the delay and for heterogeneous delays
  # on the propagation mode.
  #
  # DELAY MODE
@@ -37,7 +34,7 @@
  # IDs are sorted by (preID, postBlock) pairs and per (preID, postBlock)
  # sorted by their delay (if they have any).
  #}
-
+{% block before_run_headers %}
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <thrust/unique.h>
@@ -51,8 +48,10 @@
 #include "objects.h"
 #include "code_objects/{{codeobj_name}}.h"
 #include "brianlib/cuda_utils.h"
-{% set pathobj = owner.name %}
+{% endblock before_run_headers %}
 
+
+{% block before_run_defines %}
 // Makro for file and line information in _cudaSafeCall
 #define COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(a, b, c, d) \
     _copyHostArrayToDeviceSymbol(a, b, c, d, __FILE__, __LINE__)
@@ -130,7 +129,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
 
-    {{pathobj}}.queue->prepare(
+    {{owner.name}}.queue->prepare(
         tid,
         _num_threads,
         _num_blocks,
@@ -138,24 +137,22 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         _source_N,
         _syn_N,
         num_queues,
-        {{pathobj}}_num_synapses_by_pre,
-        {{pathobj}}_num_synapses_by_bundle,
-        {{pathobj}}_num_unique_delays_by_pre,
-        {{pathobj}}_unique_delays,
-        {{pathobj}}_global_bundle_id_start_by_pre,
-        {{pathobj}}_synapses_offset_by_bundle,
-        {{pathobj}}_synapse_ids,
-        {{pathobj}}_synapse_ids_by_pre,
-        {{pathobj}}_unique_delays_offset_by_pre,
-        {{pathobj}}_unique_delay_start_idcs);
-    {{pathobj}}.no_or_const_delay_mode = new_mode;
+        {{owner.name}}_num_synapses_by_pre,
+        {{owner.name}}_num_synapses_by_bundle,
+        {{owner.name}}_num_unique_delays_by_pre,
+        {{owner.name}}_unique_delays,
+        {{owner.name}}_global_bundle_id_start_by_pre,
+        {{owner.name}}_synapses_offset_by_bundle,
+        {{owner.name}}_synapse_ids,
+        {{owner.name}}_synapse_ids_by_pre,
+        {{owner.name}}_unique_delays_offset_by_pre,
+        {{owner.name}}_unique_delay_start_idcs);
+    {{owner.name}}.no_or_const_delay_mode = new_mode;
 }
+{% endblock before_run_defines %}
 
 
-void _before_run_{{codeobj_name}}()
-{
-    using namespace brian;
-
+{% block before_run_host_maincode %}
     std::clock_t start_timer = std::clock();
     const double to_MB = 1.0 / (1024.0 * 1024.0);
 
@@ -427,8 +424,8 @@ void _before_run_{{codeobj_name}}()
 
         int num_elements = h_vec_synapse_ids_by_pre[i].size();
         size_connectivity_matrix += num_elements;
-        if (num_elements > {{pathobj}}_max_size)
-            {{pathobj}}_max_size = num_elements;
+        if (num_elements > {{owner.name}}_max_size)
+            {{owner.name}}_max_size = num_elements;
 
         {% if not no_or_const_delay_mode %}
         if (!scalar_delay)
@@ -477,8 +474,8 @@ void _before_run_{{codeobj_name}}()
             int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
             sum_num_unique_elements += num_unique_elements;
 
-            if (num_unique_elements > {{pathobj}}_max_num_unique_delays)
-                {{pathobj}}_max_num_unique_delays = num_unique_elements;
+            if (num_unique_elements > {{owner.name}}_max_num_unique_delays)
+                {{owner.name}}_max_num_unique_delays = num_unique_elements;
 
             {% if bundle_mode %}
             // we need a start ID per i (pre_post_block_id) to calc the global
@@ -497,8 +494,8 @@ void _before_run_{{codeobj_name}}()
                 else
                     num_synapses = h_vec_unique_delay_start_idcs_by_pre[i][bundle_idx + 1] - synapses_start_idx;
                 h_num_synapses_by_bundle.push_back(num_synapses);
-                if (num_synapses > {{pathobj}}_max_bundle_size)
-                    {{pathobj}}_max_bundle_size = num_synapses;
+                if (num_synapses > {{owner.name}}_max_bundle_size)
+                    {{owner.name}}_max_bundle_size = num_synapses;
 
                 // copy this bundle to device and store the device pointer
                 int32_t* d_this_bundle = d_ptr_synapse_ids + sum_bundle_sizes;
@@ -554,11 +551,11 @@ void _before_run_{{codeobj_name}}()
     {
         // synapses size
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_synapses_by_pre,
-                {{pathobj}}_num_synapses_by_pre, num_pre_post_blocks,
+                {{owner.name}}_num_synapses_by_pre, num_pre_post_blocks,
                 "number of synapses per pre/post block");
         // synapses id
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_synapse_ids_by_pre,
-                {{pathobj}}_synapse_ids_by_pre, num_pre_post_blocks,
+                {{owner.name}}_synapse_ids_by_pre, num_pre_post_blocks,
                 "pointers to synapse IDs");
     }
 
@@ -650,7 +647,7 @@ void _before_run_{{codeobj_name}}()
 
         // pointer to start of unique delays array
         CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol({{pathobj}}_unique_delays,
+                cudaMemcpyToSymbol({{owner.name}}_unique_delays,
                                    &d_ptr_unique_delays,
                                    sizeof(d_ptr_unique_delays))
                 );
@@ -662,36 +659,36 @@ void _before_run_{{codeobj_name}}()
         h_global_bundle_id_start_by_pre[num_pre_post_blocks] = num_bundle_ids;
 
         // floor(mean(h_num_synapses_by_bundle))
-        {{pathobj}}_mean_bundle_size = sum_bundle_sizes / num_bundle_ids;
+        {{owner.name}}_mean_bundle_size = sum_bundle_sizes / num_bundle_ids;
 
         // pointer to start of synapse IDs array
         CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol({{pathobj}}_synapse_ids, &d_ptr_synapse_ids,
+                cudaMemcpyToSymbol({{owner.name}}_synapse_ids, &d_ptr_synapse_ids,
                                    sizeof(d_ptr_synapse_ids))
                 );
 
         // size by bundle
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
                 thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
-                {{pathobj}}_num_synapses_by_bundle, num_bundle_ids,
+                {{owner.name}}_num_synapses_by_bundle, num_bundle_ids,
                 "number of synapses per bundle");
 
         // synapses offset by bundle
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
                 thrust::raw_pointer_cast(&h_synapses_offset_by_bundle[0]),
-                {{pathobj}}_synapses_offset_by_bundle, num_bundle_ids,
+                {{owner.name}}_synapses_offset_by_bundle, num_bundle_ids,
                 "synapses bundle offset");
 
         // global bundle id start idx by pre
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
                 h_global_bundle_id_start_by_pre,
-                {{pathobj}}_global_bundle_id_start_by_pre,
+                {{owner.name}}_global_bundle_id_start_by_pre,
                 num_pre_post_blocks + 1, "global bundle ID start");
 
         {% else %}{# not bundle_mode #}
         // pointer to start of unique delay start indices array
         CUDA_SAFE_CALL(
-                cudaMemcpyToSymbol({{pathobj}}_unique_delay_start_idcs,
+                cudaMemcpyToSymbol({{owner.name}}_unique_delay_start_idcs,
                                    &d_ptr_unique_delay_start_idcs,
                                    sizeof(d_ptr_unique_delay_start_idcs))
                 );
@@ -699,12 +696,12 @@ void _before_run_{{codeobj_name}}()
         // unique delay offset
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
                 h_unique_delays_offset_by_pre,
-                {{pathobj}}_unique_delays_offset_by_pre,
+                {{owner.name}}_unique_delays_offset_by_pre,
                 num_pre_post_blocks, "unique delays offset by pre");
 
         // unique delay size
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_unique_delays_by_pre,
-                {{pathobj}}_num_unique_delays_by_pre, num_pre_post_blocks,
+                {{owner.name}}_num_unique_delays_by_pre, num_pre_post_blocks,
                 "number of unique delays");
         {% endif %}{# bundle_mode #}
 
@@ -747,7 +744,7 @@ void _before_run_{{codeobj_name}}()
     // print memory information
     std::cout.precision(1);
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
-    std::cout << "INFO: synapse statistics and memory usage for {{pathobj}}:\n"
+    std::cout << "INFO: synapse statistics and memory usage for {{owner.name}}:\n"
         << "\tnumber of synapses: " << syn_N << "\n"
     {% if not no_or_const_delay_mode and bundle_mode %}
         << "\tnumber of bundles: " << num_bundle_ids << "\n"
@@ -889,15 +886,15 @@ void _before_run_{{codeobj_name}}()
     {% endif %}
 
     {% if no_or_const_delay_mode %}
-    {{pathobj}}_scalar_delay = true;
+    {{owner.name}}_scalar_delay = true;
     {% else %}
-    {{pathobj}}_scalar_delay = scalar_delay;
+    {{owner.name}}_scalar_delay = scalar_delay;
     {% endif %}
 
     cudaError_t status = cudaGetLastError();
     if (status != cudaSuccess)
     {
-        printf("ERROR initialising {{pathobj}} in %s:%d %s\n",
+        printf("ERROR initialising {{owner.name}} in %s:%d %s\n",
                 __FILE__, __LINE__, cudaGetErrorString(status));
         _dealloc_arrays();
         exit(status);
@@ -905,7 +902,7 @@ void _before_run_{{codeobj_name}}()
 
     CUDA_CHECK_MEMORY();
     double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-    std::cout << "INFO: {{pathobj}} initialisation took " <<  time_passed << "s";
+    std::cout << "INFO: {{owner.name}} initialisation took " <<  time_passed << "s";
     if (used_device_memory_after_dealloc < used_device_memory_start){
         size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
         std::cout << ", freed " << freed_bytes * to_MB << "MB";
@@ -915,8 +912,7 @@ void _before_run_{{codeobj_name}}()
         std::cout << " and used " << used_bytes * to_MB << "MB of device memory.";
     }
     std::cout << std::endl;
-}
-{% endblock before_run_code %}
+{% endblock before_run_host_maincode %}
 
 
 {### RUN ###}

@@ -2,9 +2,41 @@
 
 {### BEFORE RUN ###}
 {% macro before_run_cu_file() %}
-{% block before_run_code %}
-// EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+{% block before_run_headers %}
+#include "code_objects/{{codeobj_name}}.h"
+#include "objects.h"
+#include "brianlib/common_math.h"
+#include "brianlib/cuda_utils.h"
+#include "brianlib/stdint_compat.h"
+#include <cmath>
+#include <stdint.h>
+#include <ctime>
+#include <stdio.h>
+{% endblock before_run_headers %}
+
+{% block before_run_defines %}
 {% endblock %}
+
+void _before_run_{{codeobj_name}}()
+{
+    using namespace brian;
+
+    {% if profiled %}
+    const std::clock_t _start_time = std::clock();
+    {% endif %}
+
+    {% block before_run_host_maincode %}
+    // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+    {% endblock %}
+
+    {% if profiled %}
+    CUDA_SAFE_CALL(
+            cudaDeviceSynchronize()
+            );
+    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_profiling_info += _run_time;
+    {% endif %}
+}
 {% endmacro %}
 
 
@@ -317,14 +349,47 @@ void _run_{{codeobj_name}}();
 
 {### AFTER RUN ###}
 {% macro after_run_cu_file() %}
-{% block after_run_code %}
-// EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+{% block after_run_headers %}
+#include "code_objects/{{codeobj_name}}.h"
+#include "objects.h"
+#include "brianlib/common_math.h"
+#include "brianlib/cuda_utils.h"
+#include "brianlib/stdint_compat.h"
+#include <cmath>
+#include <stdint.h>
+#include <ctime>
+#include <stdio.h>
+{% endblock after_run_headers %}
+
+{% block after_run_defines %}
 {% endblock %}
+
+void _after_run_{{codeobj_name}}()
+{
+    using namespace brian;
+
+    {% if profiled %}
+    const std::clock_t _start_time = std::clock();
+    {% endif %}
+
+    {% block after_run_host_maincode %}
+    // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+    {% endblock %}
+
+    {% if profiled %}
+    CUDA_SAFE_CALL(
+            cudaDeviceSynchronize()
+            );
+    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_profiling_info += _run_time;
+    {% endif %}
+}
 {% endmacro %}
+
 
 {% macro after_run_h_file() %}
 #ifndef _INCLUDED_{{codeobj_name}}_after
-#define _INCLUDED_{{codeobj_name}}_afer
+#define _INCLUDED_{{codeobj_name}}_affer
 
 void _after_run_{{codeobj_name}}();
 
