@@ -49,22 +49,21 @@ index 338f581d..e58a160e 100644
          net._clocks = {obj.clock for obj in all_objects}
          t_end = net.t+duration
 diff --git a/brian2/devices/cpp_standalone/templates/makefile b/brian2/devices/cpp_standalone/templates/makefile
-index f3a9ca0f..77b9d6e8 100644
+index f3a9ca0f..671fd787 100644
 --- a/brian2/devices/cpp_standalone/templates/makefile
 +++ b/brian2/devices/cpp_standalone/templates/makefile
-@@ -4,9 +4,9 @@ SRCS = {{source_files}}
+@@ -4,9 +4,8 @@ SRCS = {{source_files}}
  H_SRCS = {{header_files}}
  OBJS = ${SRCS:.cpp=.o}
  OBJS := ${OBJS:.c=.o}
 -CC = @g++
-+$(info $$OBJS is [${OBJS}])
  OPTIMISATIONS = {{ compiler_flags }}
 -CFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
 +CXXFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
  LFLAGS = {{ openmp_pragma('compilation') }} {{ linker_flags }} {{ linker_debug_flags }}
  DEPS = make.deps
  
-@@ -15,17 +15,17 @@ all: $(PROGRAM)
+@@ -15,17 +14,17 @@ all: $(PROGRAM)
  .PHONY: all clean
  
  $(PROGRAM): $(OBJS) $(DEPS) makefile
