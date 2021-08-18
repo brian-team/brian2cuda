@@ -757,7 +757,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # These templates run on host and device (e.g. synapses_push_spikes
                     # has a before_run codeobject that runs on host only while the run
                     # codeobject runs on the device)
-                    host_and_device_codeobjects = ['synapses_push_spikes']
+                    host_and_device_codeobjects = ['synapses_push_spikes',
+                                                   'spatialstateupdate']
                     prefixes = ['dev']
                     if codeobj.template_name in host_codeobjects:
                         prefixes = ['']
