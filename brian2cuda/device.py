@@ -1271,14 +1271,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
 
         self.write_static_arrays(directory)
-        self.find_synapses()
-
-        # Not sure what the best place is to call Network.after_run -- at the
-        # moment the only important thing it does is to clear the objects stored
-        # in magic_network. If this is not done, this might lead to problems
-        # for repeated runs of standalone (e.g. in the test suite).
-        for net in self.networks:
-            net.after_run()
 
         # Check that all names are globally unique
         names = [obj.name for net in self.networks for obj in net.objects]
@@ -1305,9 +1297,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.codeobjects_with_rng["host_api"]["all_runs"][key].extend(run_codeobj[key])
 
         self.generate_codeobj_source(self.writer)
+
+        net_synapses = [s for net in self.networks
+                        for s in net.objects
+                        if isinstance(s, Synapses)]
+
         self.generate_objects_source(self.writer, self.arange_arrays,
-                                     self.net_synapses,
-                                     self.static_array_specs,
+                                     net_synapses, self.static_array_specs,
                                      self.networks)
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
@@ -1322,6 +1318,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                cpp_linker_flags,
                                debug,
                                disable_asserts)
+
+        # Not sure what the best place is to call Network.after_run -- at the
+        # moment the only important thing it does is to clear the objects stored
+        # in magic_network. If this is not done, this might lead to problems
+        # for repeated runs of standalone (e.g. in the test suite).
+        for net in self.networks:
+            net.after_run()
 
         logger.info("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
@@ -1343,6 +1346,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ###################################################
         ### This part is copied from CPPStandaoneDevice ###
         ###################################################
+        self.networks.add(net)
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
                          '%s') % ', '.join(kwds.keys()))

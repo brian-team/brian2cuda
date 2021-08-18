@@ -345,19 +345,45 @@ def test_delete_directory():
     assert not os.path.exists(device.project_dir)
 
 
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_multiple_standalone_runs():
+    # see github issue #1189
+    set_device('cuda_standalone', directory=None)
+
+    network = Network()
+    Pe = NeuronGroup(1, 'v : 1', threshold='False')
+    C_ee = Synapses(Pe, Pe, on_pre='v += 1')
+    C_ee.connect()
+    network.add(Pe, C_ee)
+    network.run(defaultclock.dt)
+
+    device.reinit()
+    device.activate(directory=None)
+
+    network2 = Network()
+    Pe = NeuronGroup(1, 'v : 1', threshold='False')
+    C_ee = Synapses(Pe, Pe, on_pre='v += 1')
+    C_ee.connect()
+    network2.add(Pe, C_ee)
+    network2.run(defaultclock.dt)
+
+
 if __name__=='__main__':
-    for t in [
-             test_cuda_standalone,
-             test_multiple_connects,
-             test_storing_loading,
-             test_duplicate_names_across_nets,
-             test_cuda_scalar_writes,
-             test_time_after_run,
-             test_array_cache,
-             test_run_with_debug,
-             test_changing_profile_arg,
-             test_delete_code_data,
-             test_delete_directory
-             ]:
+    tests = [
+        test_cuda_standalone,
+        test_multiple_connects,
+        test_storing_loading,
+        test_duplicate_names_across_nets,
+        test_cuda_scalar_writes,
+        test_time_after_run,
+        test_array_cache,
+        test_run_with_debug,
+        test_changing_profile_arg,
+        test_delete_code_data,
+        test_delete_directory,
+        test_multiple_standalone_runs
+    ]
+    for t in tests:
         t()
         reinit_and_delete()
