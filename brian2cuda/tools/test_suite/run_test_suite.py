@@ -38,23 +38,32 @@ parser.add_argument('-d', '--debug', action='store_true',
 
 args = utils.parse_arguments(parser)
 
-bot = None
-if args.notify_slack:
-    try:
-        from clusterbot import ClusterBot
-        bot = ClusterBot()
-    except ImportError:
-        print("WARNING: clusterbot not installed. Can't notify slack.")
-        pass
-
-buffer = utils.PrintBuffer(clusterbot=bot)
-
+import traceback
 import os, sys
 from io import StringIO
 
 import brian2
 from brian2 import test, prefs
 import brian2cuda
+
+bot = None
+if args.notify_slack:
+    try:
+        from clusterbot import ClusterBot
+    except ImportError:
+        print("WARNING: clusterbot not installed. Can't notify slack.")
+    else:
+        try:
+            bot = ClusterBot()
+        except Exception:
+            print(
+                f"ERROR: ClusterBot failed to initialize correctly. Can't notify "
+                f"slack. Here is the error traceback:\n{traceback.format_exc()}"
+            )
+            bot = None
+
+buffer = utils.PrintBuffer(clusterbot=bot)
+
 
 all_prefs_combinations, print_lines = utils.set_preferences(args, prefs,
                                                             return_lines=True)
