@@ -16,8 +16,8 @@ with <options>:
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
     -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
     -l|--log-dir              Remote path to directory where logfiles will be stored.
-    -s|--remote-conda-sh      Remote path to conda.sh
-    -e|--remote-conda-env     Conda environment name with brian2cuda on remote
+    -S|--remote-conda-sh      Remote path to conda.sh
+    -E|--remote-conda-env     Conda environment name with brian2cuda on remote
     -k|--keep-remote-repo     Don't delete remote repository after run
 END
 )
@@ -51,8 +51,8 @@ source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:g:c:r:l:s:e:k
-long_args=help,name:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
+short_args=hn:s:g:c:r:l:S:E:k
+long_args=help,name:,suffix:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -98,11 +98,11 @@ while true; do
             test_suite_remote_dir="$2"
             shift 2
             ;;
-        -s | --remote-conda-sh )
+        -S | --remote-conda-sh )
             path_conda_sh_remote="$2"
             shift 2
             ;;
-        -e | --remote-conda-env )
+        -E | --remote-conda-env )
             conda_env_remote="$2"
             shift 2
             ;;
