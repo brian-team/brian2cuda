@@ -34,14 +34,14 @@ num_blocks = 1;
 {% endblock %}
 
 {% block kernel_call %}
-kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+_run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
     thrust::raw_pointer_cast(&(dev{{_dynamic_rate}}[0])),
     thrust::raw_pointer_cast(&(dev{{_dynamic_t}}[0])),
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 
-CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
+CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 {% endblock %}
 
 {% block kernel %}
@@ -49,7 +49,7 @@ __global__ void
 {% if launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
-kernel_{{codeobj_name}}(
+_run_kernel_{{codeobj_name}}(
     int32_t current_iteration,
     {% set c_type = c_data_type(variables['rate'].dtype) %}
     {{c_type}}* ratemonitor_rate,

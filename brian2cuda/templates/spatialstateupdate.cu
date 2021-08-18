@@ -1,4 +1,4 @@
-{# USES_VARIABLES { Cm, dt, v, N, Ic,
+{# USES_VARIABLES { Cm, dt, v, N, Ic, Ri,
                   _ab_star0, _ab_star1, _ab_star2, _b_plus, _b_minus,
                   _v_star, _u_plus, _u_minus,
                   _v_previous,
@@ -7,12 +7,87 @@
                   _P_diag, _P_parent, _P_children,
                   _B, _morph_parent_i, _starts, _ends,
                   _morph_children, _morph_children_num, _morph_idxchild,
-                  _invr0, _invrn} #}
+                  _invr0, _invrn, _invr,
+                  r_length_1, r_length_2, area } #}
 
 
 {% extends 'common_group.cu' %}
 
 
+{### BEFORE RUN ###}
+{% block before_run_host_maincode %}
+
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
+
+    {# needed to translate _array... to _ptr_array... #}
+    ///// pointers_lines /////
+    {{pointers_lines|autoindent}}
+
+    // The following code is simply copied from spatialneuron_prepare.cpp
+    // of the cpp_standalone device (except for copying to GPU memory at bottom of file)
+
+    const double _Ri = {{Ri}};  // Ri is a shared variable
+
+    // Inverse axial resistance
+    {# {{ openmp_pragma('parallel-static') }} #}
+    for (int _i=1; _i<N; _i++)
+        {{_invr}}[_i] = 1.0/(_Ri*(1/{{r_length_2}}[_i-1] + 1/{{r_length_1}}[_i]));
+    // Cut sections
+    {# {{ openmp_pragma('parallel-static') }} #}
+    for (int _i=0; _i<_num_starts; _i++)
+        {{_invr}}[{{_starts}}[_i]] = 0;
+
+    // Linear systems
+    // The particular solution
+    // a[i,j]=ab[u+i-j,j]   --  u is the number of upper diagonals = 1
+    {# {{ openmp_pragma('parallel-static') }} #}
+    for (int _i=0; _i<N; _i++)
+        {{_ab_star1}}[_i] = (-({{Cm}}[_i] / {{dt}}) - {{_invr}}[_i] / {{area}}[_i]);
+    {# {{ openmp_pragma('parallel-static') }} #}
+    for (int _i=1; _i<N; _i++)
+    {
+        {{_ab_star0}}[_i] = {{_invr}}[_i] / {{area}}[_i-1];
+        {{_ab_star2}}[_i-1] = {{_invr}}[_i] / {{area}}[_i];
+        {{_ab_star1}}[_i-1] -= {{_invr}}[_i] / {{area}}[_i-1];
+    }
+
+    // Set the boundary conditions
+    for (int _counter=0; _counter<_num_starts; _counter++)
+    {
+        const int _first = {{_starts}}[_counter];
+        const int _last = {{_ends}}[_counter] - 1;  // the compartment indices are in the interval [starts, ends[
+        // Inverse axial resistances at the ends: r0 and rn
+        const double _invr0 = {{r_length_1}}[_first]/_Ri;
+        const double _invrn = {{r_length_2}}[_last]/_Ri;
+        {{_invr0}}[_counter] = _invr0;
+        {{_invrn}}[_counter] = _invrn;
+        // Correction for boundary conditions
+        {{_ab_star1}}[_first] -= (_invr0 / {{area}}[_first]);
+        {{_ab_star1}}[_last] -= (_invrn / {{area}}[_last]);
+        // RHS for homogeneous solutions
+        {{_b_plus}}[_last] = -(_invrn / {{area}}[_last]);
+        {{_b_minus}}[_first] = -(_invr0 / {{area}}[_first]);
+    }
+
+    // Copy prepared arrays to GPU
+    {% for var in ['_invr', 'Ri', 'Cm', 'dt', 'area', 'r_length_1',
+                       'r_length_2', '_ab_star0', '_ab_star1', '_ab_star2',
+                       '_starts', '_ends', '_invr0', '_invrn', '_b_plus',
+                       '_b_minus'] %}
+    {% set varname = get_array_name(variables[var], access_data=False) %}
+
+    // {{var}}
+    CUDA_SAFE_CALL(
+            cudaMemcpy(dev{{varname}}, {{varname}},
+                sizeof({{c_data_type(variables[var].dtype)}})*_num_{{varname}},
+                cudaMemcpyHostToDevice)
+            );
+    {% endfor %}
+{% endblock before_run_host_maincode %}
+
+
+{### RUN ###}
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 // FIRST: KERNEL DEFINITIONS
@@ -44,14 +119,13 @@
 //         => trivial optimization possible by using three threads (one per rhs)
 //         => optimization possible e.g. by using cyclic reduction [more parallel]
 
-__global__ void kernel_{{codeobj_name}}_tridiagsolve(
+__global__ void _tridiagsolve_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
 {
-    {# USES_VARIABLES { N } #}
     using namespace brian;
 
     int tid = threadIdx.x;
@@ -122,7 +196,7 @@ __global__ void kernel_{{codeobj_name}}_tridiagsolve(
 // remark: applies the Hines algorithm having O(branches) complexity
 //         => run with one block one thread
 
-__global__ void kernel_{{codeobj_name}}_coupling(
+__global__ void _coupling_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -239,7 +313,7 @@ __global__ void kernel_{{codeobj_name}}_coupling(
 // (independent: everything, i.e., compartments and branches)
 // remark: branch granularity in implementation used since parents/children are combined for each branch
 
-__global__ void kernel_{{codeobj_name}}_combine(
+__global__ void _combine_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -285,7 +359,7 @@ __global__ void kernel_{{codeobj_name}}_combine(
 // kernel 5: update currents
 // (independent: everything, i.e., compartments and branches)
 
-__global__ void kernel_{{codeobj_name}}_currents(
+__global__ void _currents_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -343,13 +417,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_tridiagsolve = _num_B-1;
     int num_threads_tridiagsolve = 1;
-    kernel_{{codeobj_name}}_tridiagsolve<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
+    _tridiagsolve_kernel_{{codeobj_name}}<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
             _N,
             num_threads_tridiagsolve,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_tridiagsolve");
+    CUDA_CHECK_ERROR("_tridiagsolve_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_tridiagsolve_profiling_info += (double)(std::clock() -_start_time_tridiagsolve)/CLOCKS_PER_SEC;
@@ -361,13 +435,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_coupling = 1;
     int num_threads_coupling = 1;
-    kernel_{{codeobj_name}}_coupling<<<num_blocks_coupling, num_threads_coupling>>>(
+    _coupling_kernel_{{codeobj_name}}<<<num_blocks_coupling, num_threads_coupling>>>(
             _N,
             num_threads_coupling,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_coupling");
+    CUDA_CHECK_ERROR("_coupling_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_coupling_profiling_info += (double)(std::clock() -_start_time_coupling)/CLOCKS_PER_SEC;
@@ -379,13 +453,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
     {% endif %}
     int num_blocks_combine = _num_B-1;
     int num_threads_combine = 1;
-    kernel_{{codeobj_name}}_combine<<<num_blocks_combine, num_threads_combine>>>(
+    _combine_kernel_{{codeobj_name}}<<<num_blocks_combine, num_threads_combine>>>(
             _N,
             num_threads_combine,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_combine");
+    CUDA_CHECK_ERROR("_combine_kernel_{{codeobj_name}}");
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_combine_profiling_info += (double)(std::clock() -_start_time_combine)/CLOCKS_PER_SEC;
@@ -409,7 +483,7 @@ __global__ void kernel_{{codeobj_name}}_currents(
 
             CUDA_SAFE_CALL(
                     cudaOccupancyMaxPotentialBlockSize(&min_num_threads_currents, &num_threads_currents,
-                        kernel_{{codeobj_name}}_currents, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
+                        _currents_kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
                     );
 
             // Round up according to array size
@@ -417,7 +491,7 @@ __global__ void kernel_{{codeobj_name}}_currents(
             // ensure our grid is executable
             struct cudaFuncAttributes funcAttrib_currents;
             CUDA_SAFE_CALL(
-                    cudaFuncGetAttributes(&funcAttrib_currents, kernel_{{codeobj_name}}_currents)
+                    cudaFuncGetAttributes(&funcAttrib_currents, _currents_kernel_{{codeobj_name}})
                     );
             assert(num_threads_currents <= funcAttrib_currents.maxThreadsPerBlock);
 
@@ -425,13 +499,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
             int max_active_blocks_currents;
             CUDA_SAFE_CALL(
                     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks_currents,
-                        kernel_{{codeobj_name}}_currents, num_threads_currents, 0)
+                        _currents_kernel_{{codeobj_name}}, num_threads_currents, 0)
                     );
 
             float occupancy_currents = (max_active_blocks_currents * num_threads_currents / num_threads_per_warp) /
                               (float)(max_threads_per_sm / num_threads_per_warp);
 
-            printf("INFO kernel_{{codeobj_name}}_currents\n"
+            printf("INFO _currents\n_kernel_{{codeobj_name}}"
                        "\t%u blocks\n"
                        "\t%u threads\n"
                        "\t%i registers per block\n"
@@ -452,13 +526,13 @@ __global__ void kernel_{{codeobj_name}}_currents(
         std::clock_t _start_time_currents = std::clock();
         {% endif %}
         // run kernel 5
-        kernel_{{codeobj_name}}_currents<<<num_blocks_currents, num_threads_currents>>>(
+        _currents_kernel_{{codeobj_name}}<<<num_blocks_currents, num_threads_currents>>>(
                 _N,
                 num_threads_currents,
                 ///// HOST_PARAMETERS /////
                 %HOST_PARAMETERS%
             );
-        CUDA_CHECK_ERROR("kernel_{{codeobj_name}}_currents");
+        CUDA_CHECK_ERROR("_currents_kernel_{{codeobj_name}}");
 
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());

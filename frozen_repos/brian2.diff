@@ -22,10 +22,10 @@ index ca1acba6..3a7ca446 100644
          if not fail_for_not_implemented:
              if call.excinfo.errisinstance(NotImplementedError):
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 1dcc3ce5..f75728a3 100644
+index 338f581d..e58a160e 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1026,6 +1026,7 @@ def run(self, directory, with_output, run_args):
+@@ -1047,6 +1047,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -33,7 +33,7 @@ index 1dcc3ce5..f75728a3 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1350,6 +1351,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1371,6 +1372,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile
@@ -49,22 +49,21 @@ index 1dcc3ce5..f75728a3 100644
          net._clocks = {obj.clock for obj in all_objects}
          t_end = net.t+duration
 diff --git a/brian2/devices/cpp_standalone/templates/makefile b/brian2/devices/cpp_standalone/templates/makefile
-index f3a9ca0f..77b9d6e8 100644
+index f3a9ca0f..671fd787 100644
 --- a/brian2/devices/cpp_standalone/templates/makefile
 +++ b/brian2/devices/cpp_standalone/templates/makefile
-@@ -4,9 +4,9 @@ SRCS = {{source_files}}
+@@ -4,9 +4,8 @@ SRCS = {{source_files}}
  H_SRCS = {{header_files}}
  OBJS = ${SRCS:.cpp=.o}
  OBJS := ${OBJS:.c=.o}
 -CC = @g++
-+$(info $$OBJS is [${OBJS}])
  OPTIMISATIONS = {{ compiler_flags }}
 -CFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
 +CXXFLAGS = -c -Wno-write-strings $(OPTIMISATIONS) -I. {{ openmp_pragma('compilation') }} {{ compiler_debug_flags }}
  LFLAGS = {{ openmp_pragma('compilation') }} {{ linker_flags }} {{ linker_debug_flags }}
  DEPS = make.deps
  
-@@ -15,17 +15,17 @@ all: $(PROGRAM)
+@@ -15,17 +14,17 @@ all: $(PROGRAM)
  .PHONY: all clean
  
  $(PROGRAM): $(OBJS) $(DEPS) makefile

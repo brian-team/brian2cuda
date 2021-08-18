@@ -1,6 +1,47 @@
 {# USES_VARIABLES { N } #}
+
+{### BEFORE RUN ###}
+{% macro before_run_cu_file() %}
+{% block before_run_headers %}
+#include "code_objects/{{codeobj_name}}.h"
+#include "objects.h"
+#include "brianlib/common_math.h"
+#include "brianlib/cuda_utils.h"
+#include "brianlib/stdint_compat.h"
+#include <cmath>
+#include <stdint.h>
+#include <ctime>
+#include <stdio.h>
+{% endblock before_run_headers %}
+
+{% block before_run_defines %}
+{% endblock %}
+
+void _before_run_{{codeobj_name}}()
+{
+    using namespace brian;
+
+    {% block before_run_host_maincode %}
+    // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+    {% endblock %}
+}
+{% endmacro %}
+
+
+{% macro before_run_h_file() %}
+#ifndef _INCLUDED_{{codeobj_name}}_before
+#define _INCLUDED_{{codeobj_name}}_before
+
+void _before_run_{{codeobj_name}}();
+
+#endif
+{% endmacro %}
+
+
+{### RUN ###}
 {% macro cu_file() %}
 #include "code_objects/{{codeobj_name}}.h"
+#include "objects.h"
 #include "brianlib/common_math.h"
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
@@ -14,7 +55,7 @@
 
 {% for name in user_headers %}
 #include {{name}}
-{%endfor %}
+{% endfor %}
 
 ////// SUPPORT CODE ///////
 namespace {
@@ -65,7 +106,7 @@ __global__ void
 {% if launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
-kernel_{{codeobj_name}}(
+_run_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
@@ -113,6 +154,7 @@ kernel_{{codeobj_name}}(
 }
 {% endblock kernel %}
 
+
 void _run_{{codeobj_name}}()
 {
     using namespace brian;
@@ -138,6 +180,7 @@ void _run_{{codeobj_name}}()
 
     {% block prepare_kernel %}
     static int num_threads, num_blocks;
+    static size_t needed_shared_memory = 0;
     static bool first_run = true;
     if (first_run)
     {
@@ -149,7 +192,7 @@ void _run_{{codeobj_name}}()
 
         CUDA_SAFE_CALL(
                 cudaOccupancyMaxPotentialBlockSize(&min_num_threads, &num_threads,
-                    kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
+                    _run_kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
                 );
 
         // Round up according to array size
@@ -163,17 +206,19 @@ void _run_{{codeobj_name}}()
         num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
         {% endif %}
 
+
         {% block modify_kernel_dimensions %}
         {% endblock %}
 
         {% endblock prepare_kernel_inner %}
+
 
         {% block occupancy %}
         // calculate theoretical occupancy
         int max_active_blocks;
         CUDA_SAFE_CALL(
                 cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-                    kernel_{{codeobj_name}}, num_threads, 0)
+                    _run_kernel_{{codeobj_name}}, num_threads, needed_shared_memory)
                 );
 
         float occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
@@ -186,14 +231,14 @@ void _run_{{codeobj_name}}()
         // first max. occupancy)
         struct cudaFuncAttributes funcAttrib;
         CUDA_SAFE_CALL(
-                cudaFuncGetAttributes(&funcAttrib, kernel_{{codeobj_name}})
+                cudaFuncGetAttributes(&funcAttrib, _run_kernel_{{codeobj_name}})
                 );
         if (num_threads > funcAttrib.maxThreadsPerBlock)
         {
             // use the max num_threads before launch failure
             num_threads = funcAttrib.maxThreadsPerBlock;
             printf("WARNING Not enough ressources available to call "
-                   "kernel_{{codeobj_name}} "
+                   "_run_kernel_{{codeobj_name}} "
                    "with maximum possible threads per block (%u). "
                    "Reducing num_threads to %u. (Kernel needs %i "
                    "registers per block, %i bytes of "
@@ -208,19 +253,21 @@ void _run_{{codeobj_name}}()
             // calculate theoretical occupancy for new num_threads
             CUDA_SAFE_CALL(
                     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
-                        kernel_{{codeobj_name}}, num_threads, 0)
+                        _run_kernel_{{codeobj_name}}, num_threads, needed_shared_memory)
                     );
 
             occupancy = (max_active_blocks * num_threads / num_threads_per_warp) /
                         (float)(max_threads_per_sm / num_threads_per_warp);
             {% endblock update_occupancy %}
         }
+
         {% block extra_info_msg %}
         {% endblock %}
+
         {% block kernel_info %}
         else
         {
-            printf("INFO kernel_{{codeobj_name}}\n"
+            printf("INFO _run_kernel_{{codeobj_name}}\n"
                    "\t%u blocks\n"
                    "\t%u threads\n"
                    "\t%i registers per block\n"
@@ -245,14 +292,14 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block kernel_call %}
-    kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
 
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
+    CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
     {% endblock kernel_call %}
 
     {% block extra_kernel_call_post %}
@@ -279,12 +326,48 @@ void _run_{{codeobj_name}}()
 #ifndef _INCLUDED_{{codeobj_name}}
 #define _INCLUDED_{{codeobj_name}}
 
-#include "objects.h"
-
 void _run_{{codeobj_name}}();
 
 {% block extra_functions_h %}
 {% endblock %}
+
+#endif
+{% endmacro %}
+
+
+{### AFTER RUN ###}
+{% macro after_run_cu_file() %}
+{% block after_run_headers %}
+#include "code_objects/{{codeobj_name}}.h"
+#include "objects.h"
+#include "brianlib/common_math.h"
+#include "brianlib/cuda_utils.h"
+#include "brianlib/stdint_compat.h"
+#include <cmath>
+#include <stdint.h>
+#include <ctime>
+#include <stdio.h>
+{% endblock after_run_headers %}
+
+{% block after_run_defines %}
+{% endblock %}
+
+void _after_run_{{codeobj_name}}()
+{
+    using namespace brian;
+
+    {% block after_run_host_maincode %}
+    // EMPTY_CODE_BLOCK  -- will be overwritten in child templates
+    {% endblock %}
+}
+{% endmacro %}
+
+
+{% macro after_run_h_file() %}
+#ifndef _INCLUDED_{{codeobj_name}}_after
+#define _INCLUDED_{{codeobj_name}}_affer
+
+void _after_run_{{codeobj_name}}();
 
 #endif
 {% endmacro %}

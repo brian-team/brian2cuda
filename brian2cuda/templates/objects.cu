@@ -140,12 +140,14 @@ __global__ void {{path.name}}_init(
 {% for codeobj in profiled_codeobjects | sort %}
 double brian::{{codeobj}}_profiling_info = 0.0;
 {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
+{#
 // Profiling information for each of the 5 kernels in spatialstateupdate
 double brian::{{codeobj}}_kernel_integration_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_tridiagsolve_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_coupling_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_combine_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
+#}
 {% endif %}
 {% endfor %}
 {% endif %}

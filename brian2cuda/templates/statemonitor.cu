@@ -72,7 +72,7 @@ if(current_iteration >= num_iterations)
 if (_num__array_{{owner.name}}__indices > 0)
 // TODO we get invalid launch configuration if this is 0, which happens e.g. for StateMonitor(..., variables=[])
 {
-    kernel_{{codeobj_name}}<<<1, _num__array_{{owner.name}}__indices>>>(
+    _run_kernel_{{codeobj_name}}<<<1, _num__array_{{owner.name}}__indices>>>(
         _num__array_{{owner.name}}__indices,
         dev_array_{{owner.name}}__indices,
         current_iteration - start_offset,
@@ -84,7 +84,7 @@ if (_num__array_{{owner.name}}__indices > 0)
         %HOST_PARAMETERS%
         );
 
-    CUDA_CHECK_ERROR("kernel_{{codeobj_name}}");
+    CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 }
 {% endblock kernel_call %}
 
@@ -93,7 +93,7 @@ __global__ void
 {% if launch_bounds %}
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
-kernel_{{codeobj_name}}(
+_run_kernel_{{codeobj_name}}(
     int _num_indices,
     int32_t* indices,
     int current_iteration,
