@@ -496,7 +496,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     );
                 '''
                 main_lines.extend(stripped_deindented_lines(code))
-                #main_lines.extend([code])
             elif func=='set_by_single_value':
                 arrayname, item, value = args
                 pointer_arrayname = f"dev{arrayname}"
@@ -515,7 +514,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         )
                     );
                 '''
-                #main_lines.append(code)
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
@@ -595,8 +593,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
 
-        print("DEBUG MAIN LINES")
-        print(main_lines)
         user_headers = self.headers + prefs['codegen.cpp.headers']
         main_tmp = self.code_object_class().templater.main(None, None,
                                                            gpu_id=self.gpu_id,
@@ -755,60 +751,73 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         f"const {dtype} _value{arrayname}")
                 # ArrayVariables (dynamic and not)
                 elif isinstance(v, ArrayVariable):
-                    prefix = 'dev'
-                    # These codeobjects run on the host
+                    # These templates run on the host
                     host_codeobjects = ['synapses_create_generator',
-                                        'synapses_create_array',
-                                        'synapses_initialise_queue']
+                                        'synapses_create_array']
+                    # These templates run on host and device (e.g. synapses_push_spikes
+                    # has a before_run codeobject that runs on host only while the run
+                    # codeobject runs on the device)
+                    host_and_device_codeobjects = ['synapses_push_spikes']
+                    prefixes = ['dev']
                     if codeobj.template_name in host_codeobjects:
-                        prefix = ''
-                    try:
-                        dyn_array_name = self.get_array_name(v,
-                                                             access_data=False,
-                                                             prefix=prefix)
-                        array_name = self.get_array_name(v,
-                                                         access_data=True,
-                                                         prefix=prefix)
-                        ptr_array_name = self.get_array_name(v,
+                        prefixes = ['']
+                    elif codeobj.template_name in host_and_device_codeobjects:
+                        # Start with no prefix, such that `_num{array}` variables are
+                        # determined from the host vector if array is dynamic
+                        prefixes = ['', 'dev']
+                    for n_prefix, prefix in enumerate(prefixes):
+                        try:
+                            dyn_array_name = self.get_array_name(v,
+                                                                 access_data=False,
+                                                                 prefix=prefix)
+                            array_name = self.get_array_name(v,
                                                              access_data=True,
-                                                             prefix='_ptr')
-                        dtype = c_data_type(v.dtype)
-                        if isinstance(v, DynamicArrayVariable):
-                            if v.ndim == 1:
+                                                             prefix=prefix)
+                            ptr_array_name = self.get_array_name(v,
+                                                                 access_data=True,
+                                                                 prefix='_ptr')
+                            dtype = c_data_type(v.dtype)
+                            if isinstance(v, DynamicArrayVariable):
+                                if v.ndim == 1:
 
-                                code_object_defs_lines.append(
-                                    f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
-                                )
-                                code_object_defs_lines.append(
-                                    f'const int _num{k} = {dyn_array_name}.size();'
-                                )
+                                    code_object_defs_lines.append(
+                                        f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
+                                    )
 
-                                # These lines are used to define the kernel call parameters, that
-                                # means only for codeobjects running on the device. The array names
-                                # always have a `_dev` prefix.
-                                host_parameters_lines.append(f"{array_name}")
-                                host_parameters_lines.append(f"_num{k}")
+                                    # These lines are used to define the kernel call parameters, that
+                                    # means only for codeobjects running on the device. The array names
+                                    # always have a `_dev` prefix.
+                                    host_parameters_lines.append(f"{array_name}")
 
-                                # These lines declare kernel parameters as the `_ptr` variables that
-                                # are used in `scalar_code` and `vector_code`.
-                                # TODO: here we should add const / __restrict and other optimizations
-                                #       for variables that are e.g. only read in the kernel
-                                kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
-                                kernel_parameters_lines.append(f"const int _num{k}")
+                                    # These lines declare kernel parameters as the `_ptr` variables that
+                                    # are used in `scalar_code` and `vector_code`.
+                                    # TODO: here we should add const / __restrict and other optimizations
+                                    #       for variables that are e.g. only read in the kernel
+                                    kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                        else:  # v is ArrayVariable but not DynamicArrayVariable
-                            host_parameters_lines.append(f"{array_name}")
-                            line = f'{dtype}* {ptr_array_name}'
-                            kernel_parameters_lines.append(line)
+                                    # Add size variables `_num{array}` only once
+                                    if n_prefix == 0:
+                                        code_object_defs_lines.append(
+                                            f'const int _num{k} = {dyn_array_name}.size();'
+                                        )
+                                        host_parameters_lines.append(f"_num{k}")
+                                        kernel_parameters_lines.append(f"const int _num{k}")
 
-                            code_object_defs_lines.append(f'const int _num{k} = {v.size};')
-                            kernel_constants_lines.append(f'const int _num{k} = {v.size};')
-                            if k.endswith('space'):
-                                bare_array_name = self.get_array_name(v)
-                                idx = f'[current_idx{bare_array_name}]'
-                                host_parameters_lines[-1] += idx
-                    except TypeError:
-                        pass
+                            else:  # v is ArrayVariable but not DynamicArrayVariable
+                                idx = ''
+                                if k.endswith('space'):
+                                    bare_array_name = self.get_array_name(v)
+                                    idx = f'[current_idx{bare_array_name}]'
+                                host_parameters_lines.append(f"{array_name}{idx}")
+                                kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
+
+                                # Add size variables `_num{array}` only once
+                                if n_prefix == 0:
+                                    code_object_defs_lines.append(f'const int _num{k} = {v.size};')
+                                    kernel_constants_lines.append(f'const int _num{k} = {v.size};')
+
+                        except TypeError:
+                            pass
 
             # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
             # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
@@ -864,11 +873,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for codeobj in self.code_objects.values():
             ns = codeobj.variables
 
+            def _replace_constants_and_parameters(code):
+                # HOST_CONSTANTS are equivalent to C++ Standalone's CONSTANTS
+                code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+                # KERNEL_CONSTANTS are the same for inside device kernels
+                code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
+                # HOST_PARAMETERS are parameters that device kernels are called with from host code
+                code = code.replace('%HOST_PARAMETERS%', ',\n\t\t\t'.join(host_parameters[codeobj.name]))
+                # KERNEL_PARAMETERS are the same names of the same parameters inside the device kernels
+                code = code.replace('%KERNEL_PARAMETERS%', ',\n\t'.join(kernel_parameters[codeobj.name]))
+                code = code.replace('%CODEOBJ_NAME%', codeobj.name)
+                return code
+
             # Before/after run code
             for block in codeobj.before_after_blocks:
                 cu_code = getattr(codeobj.code, block + '_cu_file')
                 cu_code = self.freeze(cu_code, ns)
-                cu_code = cu_code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
+                cu_code = _replace_constants_and_parameters(cu_code)
                 h_code = getattr(codeobj.code, block + '_h_file')
                 writer.write('code_objects/' + block + '_' + codeobj.name + '.cu',
                              cu_code)
@@ -883,16 +904,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 host_parameters[codeobj.name].append("0")
                 kernel_parameters[codeobj.name].append("int dummy")
 
-            # HOST_CONSTANTS are equivalent to C++ Standalone's CONSTANTS
-            code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
-            # KERNEL_CONSTANTS are the same for inside device kernels
-            code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
-            # HOST_PARAMETERS are parameters that device kernels are called with from host code
-            code = code.replace('%HOST_PARAMETERS%', ',\n\t\t\t'.join(host_parameters[codeobj.name]))
-            # KERNEL_PARAMETERS are the same names of the same parameters inside the device kernels
-            code = code.replace('%KERNEL_PARAMETERS%', ',\n\t'.join(kernel_parameters[codeobj.name]))
-            code = code.replace('%CODEOBJ_NAME%', codeobj.name)
-            code = '#include "objects.h"\n'+code
+            code = _replace_constants_and_parameters(code)
 
             # substitue in generated code double types with float types in
             # single-precision mode

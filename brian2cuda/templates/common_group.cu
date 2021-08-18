@@ -3,6 +3,7 @@
 {### BEFORE RUN ###}
 {% macro before_run_cu_file() %}
 {% block before_run_code %}
+// EMPTY_CODE_BLOCK  -- will be overwritten in child templates
 {% endblock %}
 {% endmacro %}
 
@@ -317,6 +318,7 @@ void _run_{{codeobj_name}}();
 {### AFTER RUN ###}
 {% macro after_run_cu_file() %}
 {% block after_run_code %}
+// EMPTY_CODE_BLOCK  -- will be overwritten in child templates
 {% endblock %}
 {% endmacro %}
 
