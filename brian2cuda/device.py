@@ -16,7 +16,7 @@ from brian2.codegen.translation import make_statements
 from brian2.core.clocks import Clock, defaultclock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.preferences import prefs, PreferenceError
-from brian2.core.variables import ArrayVariable, DynamicArrayVariable
+from brian2.core.variables import ArrayVariable, DynamicArrayVariable, Constant
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.devices.device import all_devices
 from brian2.synapses.synapses import Synapses, SynapticPathway
@@ -819,11 +819,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
                                 # Add size variables `_num{array}` only once
                                 if n_prefix == 0:
-                                    code_object_defs_lines.append(f'const int _num{k} = {v.size};')
-                                    kernel_constants_lines.append(f'const int _num{k} = {v.size};')
+                                    line = f'const int _num{k} = {v.size};'
+                                    code_object_defs_lines.append(line)
+                                    kernel_constants_lines.append(line)
 
                         except TypeError:
                             pass
+                # Constant variables
+                elif isinstance(v, Constant):
+                    rendered_value = CPPNodeRenderer().render_expr(repr(v.value))
+                    c_type = c_data_type(v.dtype)
+                    line = f'const {c_type} {k} = {rendered_value};'
+                    code_object_defs_lines.append(line)
+                    kernel_constants_lines.append(line)
 
             # This rand stuff got a little messy... we pass a device pointer as kernel variable and have a hash define for rand() -> _ptr_..._rand[]
             # The device pointer is advanced every clock cycle in rand.cu and reset when the random number buffer is refilled (also in rand.cu)
@@ -894,7 +902,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             # Before/after run code
             for block in codeobj.before_after_blocks:
                 cu_code = getattr(codeobj.code, block + '_cu_file')
-                cu_code = self.freeze(cu_code, ns)
                 cu_code = _replace_constants_and_parameters(cu_code)
                 h_code = getattr(codeobj.code, block + '_h_file')
                 writer.write('code_objects/' + block + '_' + codeobj.name + '.cu',
@@ -903,8 +910,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                              h_code)
 
             # Main code
-            # TODO: fix these freeze/HOST_CONSTANTS hacks somehow - they work but not elegant.
-            code = self.freeze(codeobj.code.cu_file, ns)
+            code = codeobj.code.cu_file
 
             if len(host_parameters[codeobj.name]) == 0:
                 host_parameters[codeobj.name].append("0")
