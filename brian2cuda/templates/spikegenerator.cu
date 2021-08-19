@@ -91,6 +91,8 @@
 
         int _idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+        const int N = {{owner.N}};
+
         // We need kernel_lines for time variables
         ///// kernel_lines /////
         {{kernel_lines|autoindent}}
