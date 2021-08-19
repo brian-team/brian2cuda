@@ -44,17 +44,17 @@ logger = get_logger('brian2.devices.cuda_standalone')
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
         self.project_dir = project_dir
-        self.source_files = []
-        self.header_files = []
+        self.source_files = set()
+        self.header_files = set()
 
     def write(self, filename, contents):
         logger.diagnostic(f'Writing file {filename}:\n{contents}')
         if filename.lower().endswith('.cu'):
-            self.source_files.append(filename)
+            self.source_files.add(filename)
         if filename.lower().endswith('.cpp'):
-            self.source_files.append(filename)
+            self.source_files.add(filename)
         elif filename.lower().endswith('.h'):
-            self.header_files.append(filename)
+            self.header_files.add(filename)
         elif filename.endswith('.*'):
             self.write(filename[:-1]+'cu', contents.cu_file)
             self.write(filename[:-1]+'h', contents.h_file)
@@ -969,11 +969,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         brianlib_files = copy_directory(brianlib_dir, os.path.join(directory, 'brianlib'))
         for file in brianlib_files:
             if file.lower().endswith('.cpp'):
-                writer.source_files.append('brianlib/'+file)
+                writer.source_files.add('brianlib/'+file)
             if file.lower().endswith('.cu'):
-                writer.source_files.append('brianlib/'+file)
+                writer.source_files.add('brianlib/'+file)
             elif file.lower().endswith('.h'):
-                writer.header_files.append('brianlib/'+file)
+                writer.header_files.add('brianlib/'+file)
 
     def generate_network_source(self, writer):
         maximum_run_time = self._maximum_run_time
@@ -1098,8 +1098,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
-                source_files=' '.join(writer.source_files),
-                header_files=' '.join(writer.header_files),
+                source_files=' '.join(sorted(writer.source_files)),
+                header_files=' '.join(sorted(writer.header_files)),
                 cpp_compiler_flags=' '.join(cpp_compiler_flags),
                 compiler_debug_flags=compiler_debug_flags,
                 linker_debug_flags=linker_debug_flags,
@@ -1310,7 +1310,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.generate_rand_source(self.writer)
         self.copy_source_files(self.writer, directory)
 
-        self.writer.source_files.extend(additional_source_files)
+        self.writer.source_files.update(additional_source_files)
 
         self.generate_makefile(self.writer, cpp_compiler,
                                cpp_compiler_flags,

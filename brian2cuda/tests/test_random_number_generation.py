@@ -351,6 +351,13 @@ def test_random_values_codeobject_every_tick():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_binomial_values():
+
+    # On Denis' local computer this test blows up all available RAM + SWAP when
+    # compiling with all threads in parallel. Use half the threads instead.
+    import socket
+    if socket.gethostname() == 'selene':
+        prefs.devices.cpp_standalone.extra_make_args_unix = ['-j4']
+
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
     my_f = BinomialFunction(100, 0.1, approximate=False)
 
