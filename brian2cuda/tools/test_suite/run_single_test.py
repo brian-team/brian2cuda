@@ -103,7 +103,7 @@ if args.k:
     test_patterns = args.k
 
 if test_patterns is not None:
-    additional_args += [f'-k {test_patterns}']
+    additional_args += ['-k', f'{test_patterns}']
 
 with_output = False
 if args.debug:

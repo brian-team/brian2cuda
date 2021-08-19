@@ -426,7 +426,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         runfuncs = {}
         run_counter = 0
         for func, args in self.main_queue:
-            # TODO: Does that before/after run work as done here?
             if func=='before_run_code_object':
                 codeobj, = args
                 main_lines.append('_before_run_%s();' % codeobj.name)
@@ -1271,14 +1270,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         logger.diagnostic("Writing CUDA standalone project to directory "+os.path.normpath(directory))
 
         self.write_static_arrays(directory)
-        self.find_synapses()
-
-        # Not sure what the best place is to call Network.after_run -- at the
-        # moment the only important thing it does is to clear the objects stored
-        # in magic_network. If this is not done, this might lead to problems
-        # for repeated runs of standalone (e.g. in the test suite).
-        for net in self.networks:
-            net.after_run()
 
         # Check that all names are globally unique
         names = [obj.name for net in self.networks for obj in net.objects]
@@ -1305,9 +1296,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.codeobjects_with_rng["host_api"]["all_runs"][key].extend(run_codeobj[key])
 
         self.generate_codeobj_source(self.writer)
+
+        net_synapses = [s for net in self.networks
+                        for s in net.objects
+                        if isinstance(s, Synapses)]
+
         self.generate_objects_source(self.writer, self.arange_arrays,
-                                     self.net_synapses,
-                                     self.static_array_specs,
+                                     net_synapses, self.static_array_specs,
                                      self.networks)
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
@@ -1323,11 +1318,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                debug,
                                disable_asserts)
 
+        # Not sure what the best place is to call Network.after_run -- at the
+        # moment the only important thing it does is to clear the objects stored
+        # in magic_network. If this is not done, this might lead to problems
+        # for repeated runs of standalone (e.g. in the test suite).
+        for net in self.networks:
+            net.after_run()
+
         logger.info("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
                 logger.info(f"\t{pref_name} = {prefs[pref_name]}")
- 
+
         logger.debug("Using the following brian preferences:")
         for pref_name in prefs:
             if pref_name not in prefs:
@@ -1343,6 +1345,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         ###################################################
         ### This part is copied from CPPStandaoneDevice ###
         ###################################################
+        self.networks.add(net)
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
                          '%s') % ', '.join(kwds.keys()))
@@ -1381,6 +1384,33 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # Code for a progress reporting function
         standard_code = '''
+        std::string _format_time(float time_in_s)
+        {
+            float divisors[] = {24*60*60, 60*60, 60, 1};
+            char letters[] = {'d', 'h', 'm', 's'};
+            float remaining = time_in_s;
+            std::string text = "";
+            int time_to_represent;
+            for (int i =0; i < sizeof(divisors)/sizeof(float); i++)
+            {
+                time_to_represent = int(remaining / divisors[i]);
+                remaining -= time_to_represent * divisors[i];
+                if (time_to_represent > 0 || text.length())
+                {
+                    if(text.length() > 0)
+                    {
+                        text += " ";
+                    }
+                    text += (std::to_string(time_to_represent)+letters[i]);
+                }
+            }
+            //less than one second
+            if(text.length() == 0)
+            {
+                text = "< 1s";
+            }
+            return text;
+        }
         void report_progress(const double elapsed, const double completed, const double start, const double duration)
         {
             if (completed == 0.0)
@@ -1388,11 +1418,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 %STREAMNAME% << "Starting simulation at t=" << start << " s for duration " << duration << " s";
             } else
             {
-                %STREAMNAME% << completed*duration << " s (" << (int)(completed*100.) << "%) simulated in " << elapsed << " s";
+                %STREAMNAME% << completed*duration << " s (" << (int)(completed*100.) << "%) simulated in " << _format_time(elapsed);
                 if (completed < 1.0)
                 {
                     const int remaining = (int)((1-completed)/completed*elapsed+0.5);
-                    %STREAMNAME% << ", estimated " << remaining << " s remaining.";
+                    %STREAMNAME% << ", estimated " << _format_time(remaining) << " remaining.";
                 }
             }
 
