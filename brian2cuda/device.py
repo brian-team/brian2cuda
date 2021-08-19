@@ -426,7 +426,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         runfuncs = {}
         run_counter = 0
         for func, args in self.main_queue:
-            # TODO: Does that before/after run work as done here?
             if func=='before_run_code_object':
                 codeobj, = args
                 main_lines.append('_before_run_%s();' % codeobj.name)
