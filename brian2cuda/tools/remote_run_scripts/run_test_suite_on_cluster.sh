@@ -13,6 +13,7 @@ with <options>:
                               used.
     -s|--suffix <string>      Name suffix for the logfile (<name>_<suffix>_<timestemp>)
     -g|--gpu <K40|RTX2080>    Which GPU to run on
+    -H|--host                 Which compute node to run on (e.g. cognition13)
     -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
     -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
     -l|--log-dir              Remote path to directory where logfiles will be stored.
@@ -44,6 +45,7 @@ test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 # keep remote (false by default)
 keep_remote_repo=1
 # $suffix unset by default
+# $remote_host unset by default
 
 # Load configuration file
 script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -51,8 +53,8 @@ source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:s:g:c:r:l:S:E:k
-long_args=help,name:,suffix:,gpu:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
+short_args=hn:s:g:H:c:r:l:S:E:k
+long_args=help,name:,suffix:,gpu:,host:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -84,6 +86,10 @@ while true; do
                 exit 1
             fi
             test_suite_gpu="\"1($gpu)\""
+            shift 2
+            ;;
+        -H | --host )
+            remote_host="$2"
             shift 2
             ;;
         -c | --cores )
@@ -217,13 +223,20 @@ rsync -avzz \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 
+if [ -n "$remote_host" ]; then
+    ressources="cuda=$test_suite_gpu,h=$remote_host"
+else
+    ressources="cuda=$test_suite_gpu"
+fi
+
+
 bash_script=brian2cuda/tools/test_suite/_run_test_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
         -wd $remote_ge_log_dir \
         -q cognition-all.q \
-        -l cuda=$test_suite_gpu \
+        -l $ressources \
         -N $qsub_name \
         -binding linear:$test_suite_cores \
         $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
