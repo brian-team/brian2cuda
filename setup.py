@@ -11,5 +11,6 @@ setup(
                                  'templates/win_makefile',
                                  'brianlib/*.cu',
                                  'brianlib/*.h'],
-                 }
+                 },
+    install_requires=['brian2>=2.4.2'],
 )
