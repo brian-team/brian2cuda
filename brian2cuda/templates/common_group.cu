@@ -165,15 +165,15 @@ void _run_{{codeobj_name}}()
     {% endif %}
     {% endblock %}
 
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
+
     {% block define_N %}
     {# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
        synapses, we therefore have to take care to get its value in the right
        way. #}
     const int _N = {{constant_or_scalar('N', variables['N'])}};
     {% endblock %}
-
-    ///// HOST_CONSTANTS ///////////
-    %HOST_CONSTANTS%
 
     {% block host_maincode %}
     {% endblock %}
