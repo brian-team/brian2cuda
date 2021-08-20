@@ -56,6 +56,7 @@
             using namespace brian;
 
             int _idx = blockIdx.x * blockDim.x + threadIdx.x;
+            const int N = {{owner.N}};
 
             if (_idx >= N) {
                 return;
