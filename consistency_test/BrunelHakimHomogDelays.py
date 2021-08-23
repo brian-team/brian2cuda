@@ -26,9 +26,6 @@ heterog_delays = None  # string syntax
 
 name = "BrunelHakimwithHomogeneous"
 tags = ["Neurons", "Synapses", "Delays"]
-#n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000, 500000, 900000]
-n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(912500)]  #pass: 912500, fail: 925000
-n_range = [int(10**p) for p in n_power]
 
 # all delays 2 ms
 homog_delays = 2*ms
@@ -52,8 +49,17 @@ J = .1*mV
 muext = muext
 sigmaext = sigmaext
 
+
+np.random.seed(123)
+
+num_time_steps = duration // defaultclock.dt
+rand_array = TimedArray(np.random.rand(num_time_steps, n), dt=defaultclock.dt)
+# For the xi variable, brian scales it with sqrt(dt), see
+# https://brian2.readthedocs.io/en/stable/user/models.html#time-scaling-of-noise
+xi_array = rand_array * np.sqrt(defaultclock.dt)
+
 eqs = """
-dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi_array)/tau : volt
 """
 
 group = NeuronGroup(n, eqs, threshold='V>theta',

@@ -1,5 +1,5 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
@@ -43,6 +43,9 @@ taui = 10*ms
 Ee = 0*mV
 Ei = -80*mV
 
+we = 'rand() * 1e-9*nS'
+wi = 'rand() * 1e-9*nS'
+
 # The model
 eqs = Equations('''
 dv/dt = (gl*(El-v)+ge*(Ee-v)+gi*(Ei-v)-
@@ -78,8 +81,8 @@ if not uncoupled:
     Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
 
     # connection probability p can depend on network size n
-    Ce.connect(p(n))
-    Ci.connect(p(n))
+    Ce.connect(p=1000. / len(P))
+    Ci.connect(p=1000. / len(P))
     Ce.we = we  # excitatory synaptic weight
     Ci.wi = wi  # inhibitory synaptic weight
 

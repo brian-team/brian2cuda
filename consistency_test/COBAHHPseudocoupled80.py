@@ -1,5 +1,5 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
@@ -27,7 +27,8 @@ n_range = [int(10**p) for p in n_power]
 p = lambda n: str(80. / n)
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
-we = wi = 'rand() * 1e-9*nS'
+we = 'rand() * 1e-9*nS'
+wi = 'rand() * 1e-9*nS'
 
 # Parameters
 area = 20000*umetre**2
@@ -84,8 +85,8 @@ if not uncoupled:
     Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
 
     # connection probability p can depend on network size n
-    Ce.connect(p(n))
-    Ci.connect(p(n))
+    Ce.connect(p = 80./ len(P))
+    Ci.connect(p = 80./ len(P))
     Ce.we = we  # excitatory synaptic weight
     Ci.wi = wi  # inhibitory synaptic weight
 

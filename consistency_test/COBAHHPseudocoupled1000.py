@@ -1,5 +1,5 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
@@ -11,7 +11,7 @@ codefolder = get_directory(device_name)
 set_device(device_name, directory = codefolder,debug=True)
 
 
-name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
+name = "COBAHHPseudocoupled1000"
 category = "Full examples"
 n_label = 'Num neurons'
 
@@ -29,7 +29,8 @@ p = lambda n: str(1000. / n)
 
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
-we = wi = 'rand() * 1e-9*nS'
+we = 'rand() * 1e-9*nS'
+wi = 'rand() * 1e-9*nS'
 
 # Parameters
 area = 20000*umetre**2
@@ -86,8 +87,8 @@ if not uncoupled:
     Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
 
     # connection probability p can depend on network size n
-    Ce.connect(p(n))
-    Ci.connect(p(n))
+    Ce.connect(p= 1000./len(P))
+    Ci.connect(p= 1000./len(P))
     Ce.we = we  # excitatory synaptic weight
     Ci.wi = wi  # inhibitory synaptic weight
 

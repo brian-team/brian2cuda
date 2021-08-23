@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from utils import get_directory
 plt.switch_backend('agg')
 
-device_name = "cpp_standalone"
+device_name = "cuda_standalone"
 codefolder = get_directory(device_name)
 
 # preference for memory saving
@@ -25,15 +25,14 @@ duration = 10 *second
 
 uncoupled = False
 
-n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
-n_range = [int(10**p) for p in n_power]
-
 # fixed connectivity: 1000 neurons per synapse
+n = 4000
 p = lambda n: 1000. / n
 
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
-we = wi = 'rand() * 1e-9*nS'
+we = 'rand() * 1e-9*nS'
+wi = 'rand() * 1e-9*nS'
 
 # Parameters
 area = 20000*umetre**2
@@ -77,7 +76,6 @@ beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 ''')
 
 n_recorded = 10
-n = 4000
 
 P = NeuronGroup(n, model=eqs, threshold='v>-20*mV', refractory=3*ms,
                 method='exponential_euler')
@@ -86,8 +84,8 @@ if not uncoupled:
     num_exc = int(0.8 * n)
     Pe = P[:num_exc]
     Pi = P[num_exc:]
-    Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we', delay=0*ms)
-    Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
+    Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we')
+    Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi')
 
     # connection probability p can depend on network size n
     Ce.connect(str(p(n)))
