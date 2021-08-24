@@ -13,7 +13,7 @@ py_random.seed(123)
 
 device_name = "cpp_standalone"
 
-codefolder = get_directory(device_name,delete_dir=True)
+codefolder = get_directory(device_name, delete_dir=False)
 
 # preference for memory saving
 set_device(device = device_name, directory=codefolder, debug=True)
@@ -163,16 +163,16 @@ eKC_eKC.connect()
 # First set all synapses as "inactive", then set 20% to active
 pn_ikc_max_synapses = N_AL*N_MB
 pn_ikc_array = TimedArray(np.random.randn(1, pn_ikc_max_synapses), dt= duration)
-#PN_iKC.weight = '10*nS + 1.25*nS*pn_ikc_array(0*ms, i + j*N_post)'
-PN_iKC.weight = '10*nS + 1.25*nS*randn()'
+PN_iKC.weight = '10*nS + 1.25*nS*pn_ikc_array(0*ms, i + j*N_pre)'
+#PN_iKC.weight = '10*nS + 1.25*nS*randn()'
 
 ikc_ekc_max_synapses = N_MB*N_LB
 ikc_ekc_array1 = TimedArray(np.random.rand(1, ikc_ekc_max_synapses), dt= duration)
-#iKC_eKC.g_raw = 'ikc_ekc_array1(0*ms, i +j*N_post)*g_max/10/g_scaling'
-iKC_eKC.g_raw = 'rand()*g_max/10/g_scaling'
+iKC_eKC.g_raw = 'ikc_ekc_array1(0*ms, i +j*N_pre)*g_max/10/g_scaling'
+#iKC_eKC.g_raw = 'rand()*g_max/10/g_scaling'
 ikc_ekc_array2 = TimedArray(np.random.rand(1, ikc_ekc_max_synapses), dt= duration)
 ikc_ekc_array3 = TimedArray(np.random.randn(1, ikc_ekc_max_synapses), dt= duration)
-iKC_eKC.g_raw['ikc_ekc_array2(0*ms, i+j*N_post) < 0.2'] = '(2.5*nS + 0.5*nS*ikc_ekc_array3(0*ms, i+j*N_post))/g_scaling'
+iKC_eKC.g_raw['ikc_ekc_array2(0*ms, i+j*N_pre) < 0.2'] = '(2.5*nS + 0.5*nS*ikc_ekc_array3(0*ms, i+j*N_pre))/g_scaling'
 #iKC_eKC.g_raw['rand() < 0.2'] = '(2.5*nS + 0.5*nS*randn())/g_scaling'
 iKC.V = E_leak
 iKC.h = 1
@@ -203,7 +203,9 @@ for p, M in enumerate(plot_array):
               (plot_array_name[p], M.num_spikes/(duration/second*len(M.source))))
     #show()
 
-plotpath = os.path.join(codefolder, '{}_{}.png'.format(name,device_name))
+plotfolder = get_directory(device_name, basedir='plots')
+os.makedirs(plotfolder, exist_ok=True)
+plotpath = os.path.join(plotfolder, '{}_{}.pdf'.format(name,device_name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
