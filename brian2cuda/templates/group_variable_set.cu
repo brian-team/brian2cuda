@@ -20,11 +20,7 @@
     ///// endblock kernel_maincode /////
 {% endblock %}
 
-{# _num_group_idx is defined in HOST_CONSTANTS, so we can't set _N before #}
 {% block define_N %}
-{% endblock %}
-
-{% block host_maincode %}
 const int _N = _num_group_idx;
 {% endblock %}
 

@@ -152,6 +152,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 {% endblock before_run_defines %}
 
 
+{% block define_N %}
+{% endblock %}
+
+
 {% block before_run_host_maincode %}
     std::clock_t start_timer = std::clock();
     const double to_MB = 1.0 / (1024.0 * 1024.0);
@@ -973,23 +977,6 @@ _run_kernel_{{codeobj_name}}(
     }
 }
 {% endblock kernel %}
-
-
-{% block define_N %}
-{% endblock %}
-
-
-void _run_{{codeobj_name}}()
-{
-    using namespace brian;
-
-    {% if profiled %}
-    const std::clock_t _start_time = std::clock();
-    {% endif %}
-
-    ///// HOST_CONSTANTS /////
-    %HOST_CONSTANTS%
-
 
 
 {% block host_maincode %}

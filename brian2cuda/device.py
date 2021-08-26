@@ -609,27 +609,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         host_parameters = defaultdict(list)
         kernel_parameters = defaultdict(list)
         kernel_constants = defaultdict(list)
+        additional_host_code = defaultdict(list)
         c_float_dtype = c_data_type(prefs['core.default_float_dtype'])
         c_int_dtype = 'unsigned int'
         # Generate data for non-constant values
         for codeobj in self.code_objects.values():
             code_object_defs_lines = []
-            code_object_defs_lines_host_only = []
             host_parameters_lines = []
             kernel_parameters_lines = []
             kernel_constants_lines = []
-            additional_code = []
-            number_elements = ""
-            if hasattr(codeobj, 'owner') and hasattr(codeobj.owner, '_N') and codeobj.owner._N != 0:
-                number_elements = str(codeobj.owner._N)
-            else:
-                number_elements = "_N"
+            additional_host_code_lines = []
             # We need the functions to be sorted by keys for reproducable rng with a
             # given seed: For codeobjects that are only run once, we generate the random
             # numbers using the curand host API. For that, we insert code into the
-            # `additional_code` block in the host function. If we use multiple random
-            # function in one codeobject (e.g. rand() and randn()), the order in which
-            # they are generated can differ between two codeobjects, which makes the
+            # `additional_host_code_lines` block in the host function. If we use
+            # multiple random function in one codeobject (e.g. rand() and randn()), the
+            # order in which they are generated can differ between two codeobjects,
+            # which makes the
             # brian2.tests.test_neurongroup.test_random_values_fixed_seed fail.
             for k, v in sorted(codeobj.variables.items()):
                 if k == 'dt' and prefs['core.default_float_dtype'] == np.float32:
@@ -645,25 +641,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     if k == "randn":
                         num_calls = codeobj.rng_calls["randn"]
                         code = f'''
-                            // genenerate an array of random numbers on the device
+                            // Genenerate an array of random numbers on the device
+                            // Make sure we generate an even number of random numbers
+                            int32_t _randn_N = (_N % 2 == 0) ? _N : _N + 1;
                             {c_float_dtype}* dev_array_randn;
                             CUDA_SAFE_CALL(
                                 cudaMalloc(
                                     (void**)&dev_array_randn,
-                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                    sizeof({c_float_dtype})*_randn_N*{num_calls}
                                 )
                             );
                             CUDA_SAFE_CALL(
                                 curandGenerateNormal{curand_suffix}(
                                     curand_generator,
                                     dev_array_randn,
-                                    {number_elements}*{num_calls},
+                                    _randn_N*{num_calls},
                                     0,  // mean
                                     1   // stddev
                                 )
                             );
                         '''
-                        additional_code.append(code)
+                        additional_host_code_lines.append(code)
                         kernel_parameters_lines.append(
                             f"{c_float_dtype}* _ptr_array_{codeobj.name}_randn"
                         )
@@ -671,23 +669,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     elif k == "rand":
                         num_calls = codeobj.rng_calls["rand"]
                         code = f'''
-                            // genenerate an array of random numbers on the device
+                            // Genenerate an array of random numbers on the device
+                            // Make sure we generate an even number of random numbers
+                            int32_t _rand_N = (_N % 2 == 0) ? _N : _N + 1;
                             {c_float_dtype}* dev_array_rand;
                             CUDA_SAFE_CALL(
                                 cudaMalloc(
                                     (void**)&dev_array_rand,
-                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                    sizeof({c_float_dtype})*_rand_N*{num_calls}
                                 )
                             );
                             CUDA_SAFE_CALL(
                                 curandGenerateUniform{curand_suffix}(
                                     curand_generator,
                                     dev_array_rand,
-                                    {number_elements}*{num_calls}
+                                    _rand_N*{num_calls}
                                 )
                             );
                         '''
-                        additional_code.append(code)
+                        additional_host_code_lines.append(code)
                         kernel_parameters_lines.append(
                             f"{c_float_dtype}* _ptr_array_{codeobj.name}_rand"
                         )
@@ -712,24 +712,26 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             num_calls = codeobj.rng_calls[poisson_name]
                             lamda = codeobj.poisson_lamdas[poisson_name]
                             code = f'''
-                                // genenerate an array of random numbers on the device
+                                // Genenerate an array of random numbers on the device
+                                // Make sure we generate an even number of random numbers
+                                int32_t _{poisson_name}_N = (_N % 2 == 0) ? _N : _N + 1;
                                 {c_int_dtype}* dev_array_{poisson_name};
                                 CUDA_SAFE_CALL(
                                     cudaMalloc(
                                         (void**)&dev_array_{poisson_name},
-                                        sizeof(unsigned int)*{number_elements}*{num_calls}
+                                        sizeof(unsigned int)*_{poisson_name}_N*{num_calls}
                                     )
                                 );
                                 CUDA_SAFE_CALL(
                                     curandGeneratePoisson(
                                         curand_generator,
                                         dev_array_{poisson_name},
-                                        {number_elements}*{num_calls},
+                                        _{poisson_name}_N*{num_calls},
                                         {lamda}
                                     )
                                 );
                             '''
-                            additional_code.append(code)
+                            additional_host_code_lines.append(code)
                             kernel_parameters_lines.append(
                                 f"{c_int_dtype}* _ptr_array_{codeobj.name}_{poisson_name}"
                             )
@@ -878,10 +880,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for line in chain(kernel_constants_lines):
                 if not line in kernel_constants[codeobj.name]:
                     kernel_constants[codeobj.name].append(line)
-
-            for line in additional_code:
-                if not line in code_object_defs[codeobj.name]:
-                    code_object_defs[codeobj.name].append(line)
+            for line in additional_host_code_lines:
+                if not line in additional_host_code[codeobj.name]:
+                    additional_host_code[codeobj.name].append(line)
 
         # Generate the code objects
         for codeobj in self.code_objects.values():
@@ -890,6 +891,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             def _replace_constants_and_parameters(code):
                 # HOST_CONSTANTS are equivalent to C++ Standalone's CONSTANTS
                 code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
+                # ADDITIONAL_HOST_CODE is extra code, which needs `_N`
+                code = code.replace('%ADDITIONAL_HOST_CODE%', '\n\t\t'.join(additional_host_code[codeobj.name]))
                 # KERNEL_CONSTANTS are the same for inside device kernels
                 code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
                 # HOST_PARAMETERS are parameters that device kernels are called with from host code

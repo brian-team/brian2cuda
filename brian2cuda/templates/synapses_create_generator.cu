@@ -143,9 +143,6 @@ int32_t _host_poisson(double lam, int32_t _idx) {
 {% block kernel_info %}
 {% endblock %}
 
-{% block define_N %}
-{% endblock %}
-
 {% block profiling_start %}
 std::clock_t start_timer = std::clock();
 
