@@ -150,7 +150,7 @@ for target in args.targets:
             pref_plugin.device_options = {'directory': None, 'with_output': with_output}
             argv = make_argv(tests, markers='standalone_compatible and not multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
-            pref_success = pref_success and (exit_code == 0)
+            pref_success = pref_success and exit_code in [0, 5]
 
             clear_caches()
             reset_device()
@@ -163,7 +163,7 @@ for target in args.targets:
                                           'build_on_run': False}
             argv = make_argv(tests, markers='standalone_compatible and multiple_runs')
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
-            pref_success = pref_success and (exit_code == 0)
+            pref_success = pref_success and exit_code in [0, 5]
 
             clear_caches()
             reset_device()
@@ -176,7 +176,7 @@ for target in args.targets:
                                           'build_on_run': False}
             argv = make_argv(tests, markers=target)
             exit_code = pytest.main(argv + additional_args, plugins=[pref_plugin])
-            pref_success = pref_success and (exit_code == 0)
+            pref_success = pref_success and exit_code in [0, 5]
 
             successes.append(pref_success)
 

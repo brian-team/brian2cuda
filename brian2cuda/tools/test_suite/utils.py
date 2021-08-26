@@ -46,12 +46,14 @@ def parse_arguments(parser, parse_unknown=False):
                         help=("Exit script after argument parsing. Used to check "
                               "validity of arguments"))
 
+    unknown_args = None
     if parse_unknown:
         args, unknown_args = parser.parse_known_args()
     else:
         args = parser.parse_args()
 
-    if args.dry_run:
+    # If we have unkonwn arguments, we need to do handle dry run in the main script
+    if args.dry_run and unknown_args is None:
         import sys
         print(f"Dry run completed, {__file__} arguments valid.")
         sys.exit()
@@ -256,16 +258,19 @@ def dict_to_name(prefs_dict):
 class PrintBuffer(object):
     """Collect lines to print in a buffer to print them later all at once."""
 
-    def __init__(self, clusterbot=None):
+    def __init__(self, clusterbot=None, disable_print=False):
         """
         Parameters
         ----------
         clusterbot : ClusterBot
             ClusterBot instance that sends messages to Slack. If None
             (default), messages will only be printed to stdout (using print).
+        disable_print : bool
+            If `True`, don't print anything.
         """
         self._lines = []
         self._clusterbot = clusterbot
+        self._disable_print = disable_print
 
     def add(self, new_lines):
         """
@@ -276,7 +281,6 @@ class PrintBuffer(object):
         new_lines : str or list
             A string or list of strings. Each string is one line to print.
         """
-        import time
         timestemp = time.gmtime()
         formatted = time.strftime("%Y-%m-%d %H:%M:%S", timestemp)
         if isinstance(new_lines, str):
@@ -296,16 +300,17 @@ class PrintBuffer(object):
         Print all lines in buffer to stdout (using print) and delete buffer. If
         ``clusterbot`` was given at init, also send the message to Slack.
         """
-        message = "\n".join(self._lines)
-        # print to stdout
-        print(message)
-        # post to Slack
-        if self._clusterbot is not None:
-            try:
-                self._clusterbot.send(message)
-            except Exception:
-                # doesn't catch KeyboardInterrupt or SystemExit
-                print("ERROR CLUSTERBOT PRINT:", traceback.format_exc())
-                pass
+        if not self._disable_print:
+            message = "\n".join(self._lines)
+            # print to stdout
+            print(message)
+            # post to Slack
+            if self._clusterbot is not None:
+                try:
+                    self._clusterbot.send(message)
+                except Exception:
+                    # doesn't catch KeyboardInterrupt or SystemExit
+                    print("ERROR CLUSTERBOT PRINT:", traceback.format_exc())
+                    pass
         # delete buffer
         self._lines = []
