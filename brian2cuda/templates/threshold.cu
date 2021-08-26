@@ -56,15 +56,15 @@
             using namespace brian;
 
             int _idx = blockIdx.x * blockDim.x + threadIdx.x;
-            const int N = {{owner.N}};
+            const int _N = {{owner.N}};
 
-            if (_idx >= N) {
+            if (_idx >= _N) {
                 return;
             }
 
             if (_idx == 0) {
                 // reset eventspace counter
-                eventspace[N] = 0;
+                eventspace[_N] = 0;
             }
 
             // reset eventspace
