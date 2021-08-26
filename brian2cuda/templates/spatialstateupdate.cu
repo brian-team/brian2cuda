@@ -400,15 +400,19 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {% block extra_kernel_call_post %}
 
     // kernel 1 is automatically run (via common_group.cu), particularly with full occupancy
+{#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_integration_profiling_info += (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
     {% endif %}
+#}
 
     // run kernel 2 (tridiag solve): branches many blocks with one thread each
+{#
     {% if profiled %}
     std::clock_t _start_time_tridiagsolve = std::clock();
     {% endif %}
+#}
     int num_blocks_tridiagsolve = _num_B-1;
     int num_threads_tridiagsolve = 1;
     _tridiagsolve_kernel_{{codeobj_name}}<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
@@ -417,15 +421,19 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             %HOST_PARAMETERS%
         );
     CUDA_CHECK_ERROR("_tridiagsolve_kernel_{{codeobj_name}}");
+{#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_tridiagsolve_profiling_info += (double)(std::clock() -_start_time_tridiagsolve)/CLOCKS_PER_SEC;
     {% endif %}
+#}
 
     // kernel 3 (coupling): one block one thread
+{#
     {% if profiled %}
     std::clock_t _start_time_coupling = std::clock();
     {% endif %}
+#}
     int num_blocks_coupling = 1;
     int num_threads_coupling = 1;
     _coupling_kernel_{{codeobj_name}}<<<num_blocks_coupling, num_threads_coupling>>>(
@@ -434,15 +442,19 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             %HOST_PARAMETERS%
         );
     CUDA_CHECK_ERROR("_coupling_kernel_{{codeobj_name}}");
+{#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_coupling_profiling_info += (double)(std::clock() -_start_time_coupling)/CLOCKS_PER_SEC;
     {% endif %}
+#}
 
     // kernel 4 (combine): branches many blocks with one thread each
+{#
     {% if profiled %}
     std::clock_t _start_time_combine = std::clock();
     {% endif %}
+#}
     int num_blocks_combine = _num_B-1;
     int num_threads_combine = 1;
     _combine_kernel_{{codeobj_name}}<<<num_blocks_combine, num_threads_combine>>>(
@@ -451,10 +463,12 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             %HOST_PARAMETERS%
         );
     CUDA_CHECK_ERROR("_combine_kernel_{{codeobj_name}}");
+{#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_combine_profiling_info += (double)(std::clock() -_start_time_combine)/CLOCKS_PER_SEC;
     {% endif %}
+#}
 
     // kernel 5 (final currents): max. occupancy
 
@@ -513,9 +527,11 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 
         }
 
+{#
         {% if profiled %}
         std::clock_t _start_time_currents = std::clock();
         {% endif %}
+#}
         // run kernel 5
         _currents_kernel_{{codeobj_name}}<<<num_blocks_currents, num_threads_currents>>>(
                 _N,
@@ -524,10 +540,12 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             );
         CUDA_CHECK_ERROR("_currents_kernel_{{codeobj_name}}");
 
+{#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
     {{codeobj_name}}_kernel_currents_profiling_info += (double)(std::clock() -_start_time_currents)/CLOCKS_PER_SEC;
     {% endif %}
+#}
 
 
 {% endblock extra_kernel_call_post %}
