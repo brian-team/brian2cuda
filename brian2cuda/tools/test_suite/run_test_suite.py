@@ -36,10 +36,11 @@ parser.add_argument('-q', '--quiet', action='store_true',
 parser.add_argument('-d', '--debug', action='store_true',
                     help=("Debug mode, set pytest to not capture outputs."))
 
-args = utils.parse_arguments(parser)
+args, unknown_args = utils.parse_arguments(parser, parse_unknown=True)
 
+import sys
+import os
 import traceback
-import os, sys
 from io import StringIO
 
 import brian2
@@ -62,7 +63,7 @@ if args.notify_slack:
             )
             bot = None
 
-buffer = utils.PrintBuffer(clusterbot=bot)
+buffer = utils.PrintBuffer(clusterbot=bot, disable_print=args.dry_run)
 
 
 all_prefs_combinations, print_lines = utils.set_preferences(args, prefs,
@@ -101,6 +102,12 @@ if args.debug:
     additional_args += ['-s']
     # enable brian2 output
     build_options = {'with_output': True}
+
+if unknown_args:
+    additional_args += unknown_args
+
+if args.dry_run:
+    additional_args += ['--collect-only', '-q']
 
 all_successes = []
 for target in args.targets:

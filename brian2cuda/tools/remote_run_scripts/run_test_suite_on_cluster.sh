@@ -135,6 +135,7 @@ test_suite_args="--notify-slack --cache-dir $pytest_cache_dir/$test_suite_task_n
 test_suite_remote_logdir="$test_suite_remote_dir/results"
 
 # Check that test_suite_args are valid arguments for run_test_suite.py
+echo "Performing pytest dry run locally ..."
 dry_run_output=$(python ../test_suite/run_test_suite.py --dry-run $test_suite_args 2>&1)
 if [ $? -ne 0 ]; then
     echo_usage
