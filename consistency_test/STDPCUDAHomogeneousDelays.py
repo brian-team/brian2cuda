@@ -1,9 +1,11 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
 plt.switch_backend('agg')
+
+np.random.seed(123)
 
 device_name = "cpp_standalone"
 codefolder = get_directory(device_name)
@@ -15,8 +17,6 @@ category = "Full examples"
 tags = ["Neurons", "Synapses"]
 n_label = 'Num neurons'
 name = "STDPhomogeneousdelays"
-n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11325000, fail:11520000
-n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
 # configuration options
 duration = 10*second
@@ -66,7 +66,12 @@ else:
     # here: white noise process is added with similar mean and variance as
     # poissongroup input that is disabled in this case
     gsyn = K_poisson * F * gmax / 2. # assuming avg weight gmax/2 which holds approx. true for the bimodal distrib.
-    eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
+    num_time_steps = duration // defaultclock.dt
+    num_neurons = int(N / K_poisson)
+    rand_array_neurons = TimedArray(np.random.rand(num_time_steps, num_neurons), dt=defaultclock.dt)
+    xi_array = rand_array_neurons * np.sqrt(defaultclock.dt)
+    eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi_array(t, i)')
+    #eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
     # eqs_neurons = eqs_neurons.format('')
 on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
@@ -84,7 +89,9 @@ S = Synapses(input, neurons,
             )
 #S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
 S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
-S.w = 'rand() * gmax'
+max_num_synapses = int(N / K_poisson)*N_poisson
+rand_array = TimedArray(np.random.rand(1, max_num_synapses), dt=duration)
+#S.w = 'rand() * gmax'
 
 if heterog_delay is not None:
     assert homog_delay is None
@@ -113,7 +120,9 @@ ylabel('Weight / gmax')
 tight_layout()
 #show()
 
-plotpath = os.path.join(codefolder, '{}.png'.format(name))
+plotfolder = get_directory(device_name, basedir='plots')
+os.makedirs(plotfolder, exist_ok=True)
+plotpath = os.path.join(plotfolder, '{}_{}.pdf'.format(name,device_name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

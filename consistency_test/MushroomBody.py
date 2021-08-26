@@ -151,7 +151,10 @@ iKC_eKC = Synapses(iKC, eKC,
                    delay=0*ms)
 eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC', delay=0*ms)
 # bu.insert_benchmark_point()
-PN_iKC.connect(p=0.15)
+pn_ikc_max_synapses = N_AL*N_MB
+p_e_array = TimedArray(np.random.rand(1,pn_ikc_max_synapses), dt=duration)
+#PN_iKC.connect(p=0.15)
+PN_iKC.connect('p_e_array(0*ms, i)<0.15')
 
 if (N_MB > 10000):
     iKC_eKC.connect(p=float(10000)/N_MB)
@@ -161,7 +164,6 @@ eKC_eKC.connect()
 # bu.insert_benchmark_point()
 
 # First set all synapses as "inactive", then set 20% to active
-pn_ikc_max_synapses = N_AL*N_MB
 pn_ikc_array = TimedArray(np.random.randn(1, pn_ikc_max_synapses), dt= duration)
 PN_iKC.weight = '10*nS + 1.25*nS*pn_ikc_array(0*ms, i + j*N_pre)'
 #PN_iKC.weight = '10*nS + 1.25*nS*randn()'
