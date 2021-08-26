@@ -108,7 +108,6 @@ __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 _run_kernel_{{codeobj_name}}(
     int _N,
-    int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -117,7 +116,7 @@ _run_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = bid * blockDim.x + tid;
     int _vectorisation_idx = _idx;
 
     ///// KERNEL_CONSTANTS /////
@@ -125,8 +124,6 @@ _run_kernel_{{codeobj_name}}(
 
     ///// kernel_lines /////
     {{kernel_lines|autoindent}}
-
-    assert(THREADS_PER_BLOCK == blockDim.x);
 
     {% block additional_variables %}
     {% endblock %}
@@ -165,15 +162,18 @@ void _run_{{codeobj_name}}()
     {% endif %}
     {% endblock %}
 
+    ///// HOST_CONSTANTS ///////////
+    %HOST_CONSTANTS%
+
     {% block define_N %}
     {# N is a constant in most cases (NeuronGroup, etc.), but a scalar array for
-       synapses, we therefore have to take care to get its value in the right
-       way. #}
+        synapses, we therefore have to take care to get its value in the right
+            way. #}
     const int _N = {{constant_or_scalar('N', variables['N'])}};
     {% endblock %}
 
-    ///// HOST_CONSTANTS ///////////
-    %HOST_CONSTANTS%
+    ///// ADDITIONAL_HOST_CODE /////
+    %ADDITIONAL_HOST_CODE%
 
     {% block host_maincode %}
     {% endblock %}
@@ -294,7 +294,6 @@ void _run_{{codeobj_name}}()
     {% block kernel_call %}
     _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
-            num_threads,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
