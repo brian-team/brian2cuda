@@ -151,6 +151,9 @@ _run_kernel_{{codeobj_name}}(
 }
 {% endblock kernel %}
 
+{% block extra_kernel_definitions %}
+{% endblock %}
+
 
 void _run_{{codeobj_name}}()
 {
