@@ -12,6 +12,7 @@ import distutils
 from brian2.core.preferences import prefs, PreferenceError
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.utils.logger import get_logger
+from brian2cuda.utils.logger import report_issue_message
 
 logger = get_logger("brian2.devices.cuda_standalone")
 
@@ -47,7 +48,9 @@ def get_cuda_path():
     # If cuda_path was already detected, reuse the global variable
     global _cuda_installation
     if _cuda_installation["cuda_path"] is None:
-        _cuda_installation["cuda_path"] = _get_cuda_path()
+        cuda_path, detected_from = _get_cuda_path()
+        _check_cuda_path(cuda_path, detected_from)
+        _cuda_installation["cuda_path"] = cuda_path
     return _cuda_installation["cuda_path"]
 
 
@@ -107,9 +110,10 @@ def get_available_gpus():
 
 def select_gpu():
     """
-    Select GPU for simulation, based on user preference `prefs.devices.cuda_standalone.cuda_backend.gpu_id` or (if
-    not provided) pick the GPU with highest compute capability. Returns tuple of
-    (gpu_id, compute_capability) of type (int, float).
+    Select GPU for simulation, based on user preference
+    `prefs.devices.cuda_standalone.cuda_backend.gpu_id` or (if not provided) pick the
+    GPU with highest compute capability. Returns tuple of (gpu_id, compute_capability)
+    of type (int, float).
     """
     global _gpu_selection
     if _gpu_selection["selected_gpu_id"] is None:
@@ -178,7 +182,7 @@ def _get_cuda_path():
             "CUDA installation directory given via preference "
             "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
         )
-        return cuda_path_pref
+        return (cuda_path_pref, 'pref')
 
     # Use environment variable if set
     cuda_path = os.environ.get("CUDA_PATH", "")  # Nvidia default on Windows
@@ -187,7 +191,7 @@ def _get_cuda_path():
             "CUDA installation directory given via environment variable `CUDA_PATH={}`"
             "".format(cuda_path)
         )
-        return cuda_path
+        return (cuda_path, 'env')
 
     # Use nvcc path if `nvcc` binary in PATH
     nvcc_path = shutil.which("nvcc")
@@ -197,7 +201,7 @@ def _get_cuda_path():
             "CUDA installation directory detected via location of `nvcc` binary: {}"
             "".format(cuda_path_nvcc)
         )
-        return cuda_path_nvcc
+        return (cuda_path_nvcc, 'nvcc')
 
     # Use typical path if nothing else worked
     if os.path.exists("/usr/local/cuda"):
@@ -205,7 +209,7 @@ def _get_cuda_path():
         logger.info(
             f"CUDA installation directory found in standard location: {cuda_path_usr}"
         )
-        return cuda_path_usr
+        return (cuda_path_usr, 'default')
 
     # Raise error if cuda path not found
     raise RuntimeError(
@@ -215,7 +219,34 @@ def _get_cuda_path():
     )
 
 
-def _get_nvcc_path():
+def _check_cuda_path(cuda_path, detected_from):
+    # Trigger nvcc path detection now to raise an error if it isn't found
+    nvcc_path = _get_nvcc_path(cuda_path=cuda_path)
+
+    if not os.path.exists(nvcc_path):
+        # If we detected the cuda_path based on nvcc binary, this should not happen
+        assert detected_from != "nvcc", report_issue_message
+
+        msg = f"Couldn't find `nvcc` binary in {nvcc_path}."
+        if detected_from == "prefs":
+            msg += (
+                f" Are you sure your "
+                "prefs.devices.cuda_standalone.cuda_backend.cuda_path preference "
+                "is correct?"
+            )
+        elif detected_from == "env":
+            msg += f" Are you sure your CUDA_PATH environment variable is correct?"
+
+        if prefs.devices.cuda_standalone.cuda_backend.detect_cuda:
+            raise RuntimeError(msg)
+        else:
+            logger.warn(msg)
+
+
+def _get_nvcc_path(cuda_path=None):
+    """
+    Get the nvcc path from the CUDA installation path (path/to/cuda/bin/nvcc)
+    """
     # TODO: Check if NVCC is specific to cupy and if we want to support it?
     # If so, make sure cuda_path and nvcc_path fit together, see:
     # https://github.com/cupy/cupy/blob/cb29c07ccbae346841adb3c8bfa33aba463e2588/install/build.py#L65-L70
@@ -223,7 +254,8 @@ def _get_nvcc_path():
     #if nvcc:
     #    return distutils.util.split_quoted(nvcc)
 
-    cuda_path = get_cuda_path()
+    if cuda_path is None:
+        cuda_path = get_cuda_path()
 
     compiler, _ = get_compiler_and_args()
     if compiler == "msvc":  # Windows
@@ -232,15 +264,24 @@ def _get_nvcc_path():
         nvcc_bin = "bin/nvcc"
 
     nvcc_path = os.path.join(cuda_path, nvcc_bin)
-    if not os.path.exists(nvcc_path):
-        raise RuntimeError(f"Couldn't find `nvcc` binary in {nvcc_path}.")
-
     return nvcc_path
 
 
 def _get_cuda_runtime_version():
-    """ Get CUDA runtime version form `nvcc --version` """
-    nvcc_path = get_nvcc_path()
+    """ Get CUDA runtime version """
+    version_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version
+    if version_pref is not None:
+        # CUDA runtime version set via preference
+        return version_pref
+
+    # Get runtime Version from `nvcc --verion`
+    try:
+        nvcc_path = get_nvcc_path()
+    except RuntimeError as error:
+        raise RuntimeError(
+            "Couldn't detect CUDA runtime version. You can specify it via "
+            "`prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version`"
+        ) from error
     nvcc_output = _run_command_with_output(nvcc_path, "--version")
     nvcc_lines = nvcc_output.split("\n")
     # version_line example: "Cuda compilation tools, release 11.2, V11.2.67"
@@ -326,19 +367,29 @@ def _get_available_gpus():
     Detect available GPUs and return a list of their names, where list index corresponds
     to GPU id.
     """
+    if not prefs.devices.cuda_standalone.cuda_backend.detect_gpus:
+        logger.debug("GPU detection is disabled, can't get available GPUs.")
+        return None
+
     command = "nvidia-smi -L"
     try:
         gpu_info_lines = _run_command_with_output(command).split("\n")
     except (RuntimeError, FileNotFoundError) as excepted_error:
         new_error = RuntimeError(
-            "Running `{command}` failed. If `nvidia-smi` is not available in your "
+            f"Running `{command}` failed. If `nvidia-smi` is not available in your "
             "system, you can disable automatic detection of GPU name and compute "
             "capability by setting "
-            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`".format(
-                command=command
-            )
+            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`"
         )
         raise new_error from excepted_error
+
+    if gpu_info_lines and gpu_info_lines[0].startswith("No devices found"):
+        raise RuntimeError(
+            "`nvidia-smi` couldn't find any GPUs on your system. Are you sure you have "
+            "a GPU? If you are trying to generate the CUDA standalone code on a system "
+            "without GPU, you have to set "
+            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False` "
+        )
 
     all_gpu_list = []
     if gpu_info_lines is not None:
@@ -352,7 +403,10 @@ def _get_available_gpus():
             # Remove the UUID part
             gpu_info = gpu_info.split(" (UUID")[0]
             # Split ID and NAME parts
-            id_str, gpu_name = gpu_info.split(": ")
+            try:
+                id_str, gpu_name = gpu_info.split(": ")
+            except ValueError as err:
+                raise AssertionError(f"gpu_info: '{gpu_info}', gpu_info_lines: '{gpu_info_lines}', err: '{err}'")
             assert id_str.startswith("GPU ")
             gpu_id = id_str[4]
             assert int(gpu_id) == i
@@ -377,19 +431,18 @@ def get_compute_capability(gpu_id):
     cuda_path = get_cuda_path()
     device_query_path = os.path.join(cuda_path, "extras", "demo_suite", "deviceQuery")
     if not os.path.exists(device_query_path):
-        # Note: If `deviceQuery` is not reliably available of user systems, we could
+        # Note: If `deviceQuery` is not reliably available on user systems, we could
         # 1. use this github gist to scrape compute capabilities for GPU names from the
         #    nvidia website:
         #    https://gist.github.com/huitseeker/b2c79e5b763d58b06b9985de2b3c0d4d
         # 2. add a preference to point to the self-compiled binary?
         raise RuntimeError(
-            "Couldn't find `{}` binary to detect the compute capability of "
-            "the GPU. Please open an issue at "
-            "https://github.com/brian-team/brian2cuda/issues/new. To continue, you can "
-            "set the compute capability manually via "
-            "`prefs.devices.cuda_standalone.cuda_backend.compute_capability` (visit "
-            "https://developer.nvidia.com/cuda-gpus to find the compute capability of "
-            "your GPU).".format(device_query_path)
+            f"Couldn't find `{device_query_path}` binary to detect the compute "
+            "capability of your GPU. Please set "
+            "`prefs.devices.cuda_standalone.cuda_backend.device_query_path` to point "
+            "to the deviceQuery binary (you can compile it from the CUDA Samples) or "
+            "disable GPU " "detection via "
+            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpu = False`"
         )
     device_query_output = _run_command_with_output(device_query_path)
     lines = device_query_output.split("\n")

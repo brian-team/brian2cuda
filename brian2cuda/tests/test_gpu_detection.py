@@ -1,5 +1,6 @@
 import os
 import logging
+from io import StringIO
 
 import pytest
 from numpy.testing import assert_equal
@@ -13,7 +14,7 @@ from brian2cuda.utils.gputools import (
     restore_cuda_installation,
     reset_gpu_selection,
     get_gpu_selection,
-    restore_gpu_selection
+    restore_gpu_selection,
 )
 
 
@@ -39,24 +40,68 @@ def reset_gpu_detection():
     restore_gpu_selection(backup)
 
 
+@pytest.fixture()
+def use_default_prefs():
+    # reset all preferences to their default values
+    stored_prefs = prefs.as_file
+    prefs.read_preference_file(StringIO(prefs.defaults_as_file))
+    prefs._backup()
+    yield
+    # restore the user preferences
+    prefs.read_preference_file(StringIO(stored_prefs))
+    prefs._backup()
+
+
 ### Tests ###
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
-def test_wrong_cuda_path_error(reset_cuda_detection):
+def test_wrong_cuda_path_error(reset_cuda_detection, use_default_prefs, monkeypatch):
     set_device("cuda_standalone", directory=None)
-    # store global _cuda_installation and environment variable before changing them
-    cuda_path_env = os.environ.get('CUDA_PATH', None)
-
     # Set wrong CUDA_PATH
-    os.environ['CUDA_PATH'] = '/tmp'
-    with pytest.raises(RuntimeError):
+    monkeypatch.setenv("CUDA_PATH", "/tmp")
+    with pytest.raises(RuntimeError) as exc:
         run(0*ms)
 
-    # reset env variable
-    if cuda_path_env is None:
-        del os.environ['CUDA_PATH']
-    else:
-        os.environ['CUDA_PATH'] = cuda_path_env
+    exc.match("Couldn't find `nvcc` binary .*")
+
+
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_wrong_cuda_path_error2(reset_cuda_detection, use_default_prefs, monkeypatch):
+    # When cuda detection is off and compute capability not given, we get a RuntimError
+    # because deviceQuery is not found
+    set_device("cuda_standalone", directory=None)
+    prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
+    # Set wrong CUDA_PATH
+    monkeypatch.setenv("CUDA_PATH", "/tmp")
+    with pytest.raises(RuntimeError) as exc:
+        run(0*ms)
+
+    device_query_path = os.path.join("/tmp", "extras", "demo_suite", "deviceQuery")
+    exc.match(f"Couldn't find `{device_query_path}` binary .*")
+
+
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_wrong_cuda_path_warning(reset_cuda_detection, use_default_prefs, monkeypatch):
+    # When cuda detection is off, gpu detection is off and gpu_id and compute_capability
+    # are set, we should get a warning that nvcc is not found (but no error)
+    set_device("cuda_standalone", directory=None, compile=False)
+    prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
+    # Set wrong CUDA_PATH
+    monkeypatch.setenv("CUDA_PATH", "/tmp")
+
+    with catch_logs() as logs:
+        run(0*ms)
+
+    assert len(logs) == 1, logs
+    log = logs[0]
+    assert log[0] == "WARNING"
+    assert log[1] == "brian2.devices.cuda_standalone"
+    assert log[2].startswith("Couldn't find `nvcc` binary ")
 
 
 @pytest.mark.cuda_standalone
@@ -86,7 +131,7 @@ def test_unsupported_compute_capability_error(reset_gpu_detection):
 
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
-def test_warning_compute_capability_set_twice(reset_gpu_detection):
+def test_warning_compute_capability_set_twice(reset_gpu_detection, use_default_prefs):
     set_device("cuda_standalone", directory=None)
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
     prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc.append('-arch=sm_37')
@@ -102,7 +147,7 @@ def test_warning_compute_capability_set_twice(reset_gpu_detection):
 
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
-def test_no_gpu_detection_preference_error(reset_gpu_detection):
+def test_no_gpu_detection_preference_error(reset_gpu_detection, use_default_prefs):
     set_device("cuda_standalone", directory=None)
     # reset cuda installation, such that it will be detected again during `run()`
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
@@ -113,7 +158,7 @@ def test_no_gpu_detection_preference_error(reset_gpu_detection):
 
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
-def test_no_gpu_detection_preference(reset_gpu_detection):
+def test_no_gpu_detection_preference(reset_gpu_detection, use_default_prefs):
     set_device("cuda_standalone", directory=None)
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False

@@ -584,7 +584,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 raise NotImplementedError("Unknown main queue function type "+func)
 
         # Store the GPU ID and it's compute capability. The latter can be overwritten in
-        # self.generate_makefile() via preferces
+        # self.generate_makefile() via preferences
         self.gpu_id, self.compute_capability = select_gpu()
 
         # generate the finalisations

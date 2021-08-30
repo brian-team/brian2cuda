@@ -171,13 +171,28 @@ prefs.register_preferences(
         compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
         chosen depending on GPU in use. ''',
         validator=lambda v: v is None or isinstance(v, float),
-        default=None),
+        default=None
+    ),
+
+    detect_cuda=BrianPreference(
+        docs='''Whether to try to detect CUDA installation paths and version. Disable
+        this if you want to generae CUDA standalone code on a system without CUDA
+        installed.''',
+        default=True,
+        validator=lambda v: isinstance(v, bool)
+    ),
 
     cuda_path=BrianPreference(
         docs='''The path to the CUDA installation. If set, this preferences takes
         precedence over environment variable `CUDA_PATH`.''',
         default=None,
         validator=lambda v: v is None or isinstance(v, str)
-    )
+    ),
+
+    cuda_runtime_version=BrianPreference(
+        docs='''The CUDA runtime version.''',
+        default=None,
+        validator=lambda v: v is None or isinstance(v, float)
+    ),
 
 )
