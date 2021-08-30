@@ -11,15 +11,21 @@ with <options>:
                               multiple times with the same --name, pytest
                               options --last-failed or --failed-first can be
                               used.
-    -s|--suffix <string>      Name suffix for the logfile (<name>_<suffix>_<timestemp>)
+    -s|--suffix <string>      Name suffix for the logfile
+                              (<name>_<suffix>_<timestemp>)
     -g|--gpu <K40|RTX2080>    Which GPU to run on
+    -p|--parallel <n_tasks>   Submit all tests in parallel using '2*<n_cores>'
+                              pytest-xdist workers, which each compile in
+                              parallel with <n_tasks> qmake jobs.
     -H|--host                 Which compute node to run on (e.g. cognition13)
-    -c|--cores <int>          Number of CPU cores to request (-binding linear:<>)
-    -r|--remote <head-node>   Remote machine url or name (if configured in ~/.ssh/config)
+    -c|--cores <n_cores>      Number of CPU cores to request (-binding linear:<>).
+    -r|--remote <head-node>   Remote machine url or name (if configured in
+                              ~/.ssh/config)
     -l|--log-dir              Remote path to directory where logfiles will be stored.
     -S|--remote-conda-sh      Remote path to conda.sh
     -E|--remote-conda-env     Conda environment name with brian2cuda on remote
     -k|--keep-remote-repo     Don't delete remote repository after run
+    -a|--after <job-id>       Hold this job until 'job-id' is finished
 END
 )
 
@@ -32,8 +38,9 @@ echo_usage() {
 remote="cluster"
 # default task name
 test_suite_task_name=noname
-# -l cuda=$test_suite_gpu
-test_suite_gpu=1
+# -l cuda=$gpu_ressource
+gpu="None"
+gpu_ressource=1
 # number of cores, with 2 threads per core
 test_suite_cores=2
 # path to conda.sh on remote
@@ -44,6 +51,10 @@ conda_env_remote="b2c"
 test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 # keep remote (false by default)
 keep_remote_repo=1
+# By default, don't use parallel jobs (0)
+$parallel=0
+# If given, hold this job until $hold_job_id is finished
+hold_job_id=""
 # $suffix unset by default
 # $remote_host unset by default
 
@@ -53,8 +64,8 @@ source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:s:g:H:c:r:l:S:E:k
-long_args=help,name:,suffix:,gpu:,host:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo
+short_args=hn:s:g:p:H:c:r:l:S:E:ka:
+long_args=help,name:,suffix:,gpu:,parallel:,host:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo,after:
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -85,7 +96,11 @@ while true; do
                 echo -e "\n$0: error: invalid argument $gpu for $1"
                 exit 1
             fi
-            test_suite_gpu="\"1($gpu)\""
+            gpu_ressource="\"1($gpu)\""
+            shift 2
+            ;;
+        -p | --parallel )
+            parallel="$2"
             shift 2
             ;;
         -H | --host )
@@ -116,6 +131,10 @@ while true; do
             keep_remote_repo=0
             shift 1
             ;;
+        -a | --after )
+            hold_job_id="-hold_jid $2"
+            shift 2
+            ;;
         -- )
             # $@ has all arguments after --
             shift
@@ -128,20 +147,53 @@ while true; do
     esac
 done
 
-# all args after -- are passed to run_test_suite.py (collected in $@)
 pytest_cache_dir="$test_suite_remote_dir"/.pytest_caches
-test_suite_args="--notify-slack --cache-dir $pytest_cache_dir/$test_suite_task_name $@"
+test_suite_args="--notify-slack --cache-dir $pytest_cache_dir/$test_suite_task_name"
+if [ ! "$parallel" -eq 0 ]; then
+    # parallel run -> the ./main binaries request the GPU in run_test_suite.py
+    # TODO: jobs don't have to be 2*cores. We will compile with 2*cors * jobs
+    # and will have 2 * cores tests in the pipeline
+    test_suite_args+=" --grid-engine \
+        --test-parallel \
+        --grid-engine-gpu $gpu \
+        --jobs $parallel"
+    # cognition08 is not a submit host
+    grid_engine_ressources="h=!cognition08"
+    if [ "$parallel" -eq 1 ]; then
+        # Not using qmake but make on the node itself, needs nvcc
+        grid_engine_ressources+=",cuda=0"
+    fi
+else
+    # not running in parallel -> submit entire test suite script to GPU node
+    grid_engine_ressources="cuda=$gpu_ressource"
+fi
+if [ -n "$remote_host" ]; then
+    # add host ressource
+    grid_engine_ressources+=",h=$remote_host"
+fi
+if [ -n "$grid_engine_ressources" ]; then
+    grid_engine_ressources="-l $grid_engine_ressources"
+fi
+
+
+# all args after -- are passed to run_test_suite.py (collected in $@)
+test_suite_args+=" $@"
 
 test_suite_remote_logdir="$test_suite_remote_dir/results"
 
 # Check that test_suite_args are valid arguments for run_test_suite.py
 echo "Performing pytest dry run locally ..."
-dry_run_output=$(python ../test_suite/run_test_suite.py --dry-run $test_suite_args 2>&1)
+dry_run_cmd="python ../test_suite/run_test_suite.py --dry-run $test_suite_args 2>&1"
+echo $dry_run_cmd
+dry_run_output=$(eval $dry_run_cmd)
 if [ $? -ne 0 ]; then
     echo_usage
     echo -e "$0: error: invalid <run_test_suite.py arguments>\n"
     echo "$dry_run_output"
     exit 1
+else
+    echo ... OK
+    echo
 fi
 
 # get path to this git repo (brian2cuda)
@@ -223,23 +275,16 @@ rsync -avzz \
     --exclude 'worktrees' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
-
-if [ -n "$remote_host" ]; then
-    ressources="cuda=$test_suite_gpu,h=$remote_host"
-else
-    ressources="cuda=$test_suite_gpu"
-fi
-
-
 bash_script=brian2cuda/tools/test_suite/_run_test_suite.sh
 # submit test suite script through qsub on cluster headnote
 ssh $remote "source /opt/ge/default/common/settings.sh && \
     qsub \
         -wd $remote_ge_log_dir \
         -q cognition-all.q \
-        -l $ressources \
+        $grid_engine_ressources \
         -N $qsub_name \
         -binding linear:$test_suite_cores \
+        $hold_job_id \
         $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
             $bash_script \
             $remote_b2c_dir \
@@ -247,10 +292,12 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
             $path_conda_sh_remote \
             $conda_env_remote \
             $keep_remote_repo \
+            $parallel \
             $test_suite_args"
-            # $1: bash_script $2: b2c_dir, $3: logfile, $4 remote conda.sh
-            # $5 remote conda env $6 bool for keeping tmp remote b2c dir
-            # $@ (the rest): arguments passed to test suite script
+            # $1: bash_script $2: b2c_dir, $3: logfile, $4: remote conda.sh
+            # $5: remote conda env $6: bool for keeping tmp remote b2c dir
+            # $7: bool for running in parallel
+            # $@ (the rest): arguments passed to benchmark script
             # (_on_headnode.sh)
 
 

@@ -22,10 +22,55 @@ index 5a97ac81..c36a40a7 100644
          if not fail_for_not_implemented:
              exc_cause = getattr(call.excinfo.value, '__cause__', None)
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 5791bb61..03174381 100644
+index 5791bb61..57fe3100 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1035,6 +1035,7 @@ def run(self, directory, with_output, run_args):
+@@ -65,6 +65,21 @@
+         neurons. Now, its value is ignored.
+         '''
+         ),
++    make_cmd_unix=BrianPreference(
++        default='make',
++        docs='''
++        The make command used to compile the standalone project. Defaults to the
++        standard GNU make commane "make".'''
++        ),
++    run_cmd_unix=BrianPreference(
++        default='./main',
++        validator=lambda val: isinstance(val, str) or isinstance(val, list),
++        docs='''
++        The command used to run the compiled standalone project. Defaults to executing
++        the compiled binary with "./main". Must be a single binary as string or a list
++        of command arguments (e.g. ["./binary", "--key", "value"]).
++        '''
++        ),
+     extra_make_args_unix=BrianPreference(
+         default=['-j'],
+         docs='''
+@@ -978,8 +993,9 @@ def compile_source(self, directory, compiler, debug, clean):
+                 with std_silent(debug):
+                     if clean:
+                         os.system('make clean >/dev/null 2>&1')
++                    make_cmd = prefs.devices.cpp_standalone.make_cmd_unix
+                     make_args = ' '.join(prefs.devices.cpp_standalone.extra_make_args_unix)
+-                    x = os.system('make %s' % (make_args, ))
++                    x = os.system('%s %s' % (make_cmd, make_args, ))
+                     if x != 0:
+                         error_message = ('Project compilation failed (error '
+                                          'code: %u).') % x
+@@ -1019,7 +1035,10 @@ def run(self, directory, with_output, run_args):
+             if os.name == 'nt':
+                 x = subprocess.call(['main'] + run_args, stdout=stdout)
+             else:
+-                x = subprocess.call(['./main'] + run_args, stdout=stdout)
++                run_cmd = prefs.devices.cpp_standalone.run_cmd_unix
++                if isinstance(run_cmd, str):
++                    run_cmd = [run_cmd]
++                x = subprocess.call(run_cmd + run_args, stdout=stdout)
+             if stdout is not None:
+                 stdout.close()
+             if x:
+@@ -1035,6 +1054,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -33,7 +78,7 @@ index 5791bb61..03174381 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1362,6 +1363,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1362,6 +1382,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile

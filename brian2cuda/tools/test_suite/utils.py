@@ -107,7 +107,6 @@ def print_prefs_combinations(configurations, condition=None, return_lines=False)
 def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
                     suppress_brian_infos=True, return_lines=False):
 
-    import socket
     import brian2cuda  # need it for preferences (or set prefs conditinally)
 
     prints = []
