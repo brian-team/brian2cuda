@@ -195,4 +195,11 @@ prefs.register_preferences(
         validator=lambda v: v is None or isinstance(v, float)
     ),
 
+    device_query_path=BrianPreference(
+        docs='''Path to CUDA's deviceQuery binary. Used to detect a GPUs compute
+        capability''',
+        default=None,
+        validator=lambda v: v is None or isinstance(v, str)
+    ),
+
 )

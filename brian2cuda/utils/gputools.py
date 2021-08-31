@@ -428,22 +428,40 @@ def get_compute_capability(gpu_id):
     Get compute capability of GPU with ID `gpu_id`. Returns a float (e.g. `6.1`).
     """
     gpu_list = get_available_gpus()
-    cuda_path = get_cuda_path()
-    device_query_path = os.path.join(cuda_path, "extras", "demo_suite", "deviceQuery")
-    if not os.path.exists(device_query_path):
-        # Note: If `deviceQuery` is not reliably available on user systems, we could
-        # 1. use this github gist to scrape compute capabilities for GPU names from the
-        #    nvidia website:
-        #    https://gist.github.com/huitseeker/b2c79e5b763d58b06b9985de2b3c0d4d
-        # 2. add a preference to point to the self-compiled binary?
-        raise RuntimeError(
-            f"Couldn't find `{device_query_path}` binary to detect the compute "
-            "capability of your GPU. Please set "
-            "`prefs.devices.cuda_standalone.cuda_backend.device_query_path` to point "
-            "to the deviceQuery binary (you can compile it from the CUDA Samples) or "
-            "disable GPU " "detection via "
-            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpu = False`"
+    # Use preference if set
+    device_query_path = prefs.devices.cuda_standalone.cuda_backend.device_query_path
+    if device_query_path is None:
+        # Look for it in the demo_suite directory
+        cuda_path = get_cuda_path()
+        device_query_path = os.path.join(
+            cuda_path, "extras", "demo_suite", "deviceQuery"
         )
+        if not os.path.exists(device_query_path):
+            # Note: If `deviceQuery` is not reliably available on user systems, we could
+            # 1. use this github gist to scrape compute capabilities for GPU names from the
+            #    nvidia website:
+            #    https://gist.github.com/huitseeker/b2c79e5b763d58b06b9985de2b3c0d4d
+            # 2. add a preference to point to the self-compiled binary?
+            raise RuntimeError(
+                f"Couldn't find `{device_query_path}` binary to detect the compute "
+                "capability of your GPU. Please set "
+                "`prefs.devices.cuda_standalone.cuda_backend.device_query_path` to point "
+                "to the deviceQuery binary (you can compile it from the CUDA Samples) or "
+                "disable GPU " "detection via "
+                "`prefs.devices.cuda_standalone.cuda_backend.detect_gpu = False`"
+            )
+    else:
+        logger.info(
+            "Path to `deviceQuery` binary set via "
+            "`prefs.devices.cuda_standalone.cuda_backend.device_query_path = "
+            f"{device_query_path}`"
+        )
+        if not os.path.exists(device_query_path):
+            raise RuntimeError(
+                f"Couldn't find `{device_query_path}` binary to detect the compute "
+                "capability of your GPU. You set it via "
+                "`prefs.devices.cuda_standalone.cuda_backend.device_query_path`"
+            )
     device_query_output = _run_command_with_output(device_query_path)
     lines = device_query_output.split("\n")
     compute_capability = None
