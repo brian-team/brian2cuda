@@ -182,6 +182,8 @@ def _get_cuda_path():
             "CUDA installation directory given via preference "
             "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
         )
+        # Allow home directory as `~` in path
+        cuda_path_pref = os.path.expanduser(cuda_path_pref)
         return (cuda_path_pref, 'pref')
 
     # Use environment variable if set
@@ -456,6 +458,8 @@ def get_compute_capability(gpu_id):
             "`prefs.devices.cuda_standalone.cuda_backend.device_query_path = "
             f"{device_query_path}`"
         )
+        # Allow home directory as `~` in path
+        device_query_path = os.path.expanduser(device_query_path)
         if not os.path.exists(device_query_path):
             raise RuntimeError(
                 f"Couldn't find `{device_query_path}` binary to detect the compute "
