@@ -151,8 +151,6 @@ pytest_cache_dir="$test_suite_remote_dir"/.pytest_caches
 test_suite_args="--notify-slack --cache-dir $pytest_cache_dir/$test_suite_task_name"
 if [ ! "$parallel" -eq 0 ]; then
     # parallel run -> the ./main binaries request the GPU in run_test_suite.py
-    # TODO: jobs don't have to be 2*cores. We will compile with 2*cors * jobs
-    # and will have 2 * cores tests in the pipeline
     test_suite_args+=" --grid-engine \
         --test-parallel \
         --grid-engine-gpu $gpu \

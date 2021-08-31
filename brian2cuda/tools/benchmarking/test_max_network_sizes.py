@@ -1,48 +1,18 @@
-import os
-import shutil
-import glob
-import subprocess
-import sys
-import socket
-import shlex
-
 # run tests without X-server
 import matplotlib
 matplotlib.use('Agg')
 
-# pretty plots
-import seaborn
-
 import time
 import datetime
-import pickle as pickle
 
 from brian2 import *
 from brian2.tests.features import *
 from brian2.tests.features.base import *
 from brian2.tests.features.base import results
-from brian2.utils.logger import BrianLogger
 
 import brian2cuda
-from brian2cuda.utils.logger import suppress_brian2_logs
-from brian2cuda.tests.features.cuda_configuration import DynamicConfigCreator
-from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfiguration,
-                                                          CUDAStandaloneConfigurationNoAssert,
-                                                          CUDAStandaloneConfigurationExtraThresholdKernel,
-                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPI,
-                                                          CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU,
-                                                          CUDAStandaloneConfiguration2BlocksPerSM,
-                                                          CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds,
-                                                          CUDAStandaloneConfigurationSynLaunchBounds,
-                                                          CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds,
-                                                          CUDAStandaloneConfigurationProfileGPU,
-                                                          CUDAStandaloneConfigurationProfileCPU)
+from brian2cuda.tests.features.cuda_configuration import CUDAStandaloneConfiguration
 from brian2cuda.tests.features.speed import *
-
-from brian2genn.correctness_testing import GeNNConfiguration, GeNNConfigurationCPU, GeNNConfigurationOptimized
-
-from create_readme import create_readme
-from helpers import pickle_results
 
 
 speed_tests = [# feature_test                     name                                  n_slice
@@ -92,9 +62,13 @@ speed_tests = [# feature_test                     name                          
 time_format = '%d.%m.%Y at %H:%M:%S'
 for (ft, name, sl) in speed_tests:
     codes = []
+    # Example: ft.n_range = [10, 100, 1000, 10000]
     length = len(ft.n_range)
+    # Example: with sl = slice(None) -> sl_idcs = (0, 4, 1)
     sl_idcs = sl.indices(length)
+    # Example: max_idx = 4 - 1 = 3 (last index in n_range)
     max_idx = sl_idcs[1] - sl_idcs[2]
+    # Example: n_init = 10000
     n_init = ft.n_range[max_idx]
     n = n_prev = n_init
     #n = ft.n_range[0]
@@ -114,7 +88,8 @@ for (ft, name, sl) in speed_tests:
             print("LOG FAILED:\n", res, tb)
             has_failed = True
             if i == 0:
-                print(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nt\ttb={tb}")
+                #print(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nt\ttb={tb}")
+                print(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nTraceback printed above.")
                 break
             # assuming the first run passes, when we fail we always go down half the abs distance
             n -= int(0.5 * diff)
