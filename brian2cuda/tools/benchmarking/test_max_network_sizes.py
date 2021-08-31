@@ -59,6 +59,8 @@ speed_tests = [# feature_test                     name                          
                #(COBAHHFixedConnectivity,                        'COBAHHFixedConnectivity',                      slice(None)         ),
 ]
 
+prefs_dict = {}
+#prefs_dict = {"devices.cuda_standalone.cuda_backend.compute_capability": 7.5}
 time_format = '%d.%m.%Y at %H:%M:%S'
 for (ft, name, sl) in speed_tests:
     codes = []
@@ -79,7 +81,7 @@ for (ft, name, sl) in speed_tests:
         start = time.time()
         script_start = datetime.datetime.fromtimestamp(start).strftime(time_format)
         print(f"LOG RUNNING {name} with n={n} (start at {script_start})")
-        tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n)
+        tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n, prefs_dict=prefs_dict)
         print(f"LOG FINISHED {name} with n={n} in {time.time() - start:.2f}s")
         codes.append((n, res, tb))
         diff = np.abs(n - n_prev)
