@@ -30,7 +30,9 @@ class CUDAStandaloneConfigurationBase(Configuration):
         # set brian preferences
         slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
         if slurm_cluster == "hpc":
-            device_query_path = "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+            device_query_path = os.path.expanduser(
+                "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+            )
             brian2.prefs.devices.cuda_standalone.cuda_backend.device_query_path = (
                 device_query_path
             )
