@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import socket
 import subprocess
 import shlex
@@ -29,6 +28,13 @@ class CUDAStandaloneConfigurationBase(Configuration):
 
     def before_run(self):
         # set brian preferences
+        slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
+        if slurm_cluster == "hpc":
+            device_query_path = "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+            brian2.prefs.devices.cuda_standalone.cuda_backend.device_query_path = (
+                device_query_path
+            )
+
         for key, value in self.extra_prefs.items():
             brian2.prefs[key] = value
         if self.name is None:

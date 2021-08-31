@@ -1,6 +1,7 @@
 """Utility funcitons"""
 import traceback
 import time
+import os
 import numpy as np
 from itertools import chain, combinations
 
@@ -131,6 +132,14 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         compile_args = ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
         prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].extend(compile_args)
         prints.append("Suppressing compiler warnings")
+
+    slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
+    if slurm_cluster == "hpc":
+        device_query_path = "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+        prefs.devices.cuda_standalone.cuda_backend.device_query_path = (
+            device_query_path
+        )
+        prints.append(f"Setting `device_query_path = {device_query_path}")
 
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'
