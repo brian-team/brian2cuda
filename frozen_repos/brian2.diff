@@ -21,6 +21,28 @@ index 5a97ac81..c36a40a7 100644
          reinit_devices()
          if not fail_for_not_implemented:
              exc_cause = getattr(call.excinfo.value, '__cause__', None)
+diff --git a/brian2/core/preferences.py b/brian2/core/preferences.py
+index 3663c276..40cc65a6 100644
+--- a/brian2/core/preferences.py
++++ b/brian2/core/preferences.py
+@@ -6,7 +6,7 @@
+ import re
+ import os
+ from collections.abc import MutableMapping
+-from io import BytesIO
++from io import StringIO
+ 
+ from brian2.utils.stringtools import deindent, indent
+ from brian2.units.fundamentalunits import have_same_dimensions, Quantity
+@@ -457,7 +457,7 @@ def reset_to_defaults(self):
+         '''
+         Resets the parameters to their default values.
+         '''
+-        self.read_preference_file(BytesIO(self.defaults_as_file))
++        self.read_preference_file(StringIO(self.defaults_as_file))
+ 
+     def register_preferences(self, prefbasename, prefbasedoc, **prefs):
+         '''
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
 index 5791bb61..57fe3100 100644
 --- a/brian2/devices/cpp_standalone/device.py
@@ -580,3 +602,17 @@ index 317bbf6d..0b6ba2f6 100644
  
  
  if __name__ == '__main__':
+diff --git a/brian2/tests/test_preferences.py b/brian2/tests/test_preferences.py
+index 1c2941f9..9ba7e72f 100644
+--- a/brian2/tests/test_preferences.py
++++ b/brian2/tests/test_preferences.py
+@@ -169,6 +169,9 @@ def test_brianglobalpreferences():
+     # check that load_preferences works, but nothing about its values
+     gp = BrianGlobalPreferences()
+     gp.load_preferences()
++    # Check that resetting to default preferences works
++    gp = BrianGlobalPreferences()
++    gp.reset_to_defaults()
+ 
+ 
+ @pytest.mark.codegen_independent
