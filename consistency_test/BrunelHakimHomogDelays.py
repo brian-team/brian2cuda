@@ -3,9 +3,14 @@ import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
+import sys
 plt.switch_backend('agg')
 
-device_name = "cpp_standalone"
+np.random.seed(123)
+
+device_name = sys.argv[1]
+print("Running in device:")
+print(device_name)
 codefolder = get_directory(device_name)
 # preference for memory saving
 set_device(device_name, directory = codefolder,debug=True)
@@ -49,17 +54,15 @@ J = .1*mV
 muext = muext
 sigmaext = sigmaext
 
-
-np.random.seed(123)
-
-num_time_steps = duration // defaultclock.dt
-rand_array = TimedArray(np.random.rand(num_time_steps, n), dt=defaultclock.dt)
-# For the xi variable, brian scales it with sqrt(dt), see
-# https://brian2.readthedocs.io/en/stable/user/models.html#time-scaling-of-noise
-xi_array = rand_array * np.sqrt(defaultclock.dt)
+num_neurons = n
+num_time_steps = int(duration // defaultclock.dt)
+custom_xi = TimedArray(
+    np.random.rand(num_time_steps, num_neurons) / np.sqrt(defaultclock.dt),
+    dt=defaultclock.dt
+)
 
 eqs = """
-dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi_array)/tau : volt
+dV/dt = (-V+muext + sigmaext * sqrt(tau) * custom_xi(t, i))/tau : volt
 """
 
 group = NeuronGroup(n, eqs, threshold='V>theta',
@@ -92,7 +95,9 @@ plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
 xlim(0, duration/ms)
 #show()
 
-plotpath = os.path.join(codefolder, '{}.png'.format(name))
+plotfolder = get_directory(device_name, basedir='plots')
+os.makedirs(plotfolder, exist_ok=True)
+plotpath = os.path.join(plotfolder, '{}_{}.pdf'.format(name,device_name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

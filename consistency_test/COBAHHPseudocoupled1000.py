@@ -3,10 +3,15 @@ import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
+import sys
 plt.switch_backend('agg')
 
+np.random.seed(123)
+
 # preference for memory saving
-device_name = "cpp_standalone"
+device_name = sys.argv[1]
+print("Running in device:")
+print(device_name)
 codefolder = get_directory(device_name)
 set_device(device_name, directory = codefolder,debug=True)
 
@@ -20,17 +25,22 @@ duration = 10 *second
 
 uncoupled = False
 
-n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
-n_range = [int(10**p) for p in n_power]
-n = 1000
+n = 4000
 
 # fixed connectivity: 1000 neurons per synapse
 p = lambda n: str(1000. / n)
 
 # weights set to tiny values, s.t. they are effectively zero but don't
 # result in compiler optimisations
-we = 'rand() * 1e-9*nS'
-wi = 'rand() * 1e-9*nS'
+we_max_synapses = n*n
+we_array = TimedArray(np.random.rand(1, we_max_synapses), dt= duration)
+we = 'we_array(0*ms,i) * 1e-9*nS'
+#we = 'rand() * 1e-9*nS'
+
+wi_max_synapses = n*n
+wi_array = TimedArray(np.random.rand(1, wi_max_synapses), dt= duration)
+wi = 'wi_array(0*ms,i) * 1e-9*nS'
+#wi = 'rand() * 1e-9*nS'
 
 # Parameters
 area = 20000*umetre**2
@@ -74,7 +84,6 @@ beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 ''')
 
 n_recorded = 10
-n = 4000
 
 P = NeuronGroup(n, model=eqs, threshold='v>-20*mV', refractory=3*ms,
                 method='exponential_euler')
@@ -87,15 +96,30 @@ if not uncoupled:
     Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
 
     # connection probability p can depend on network size n
-    Ce.connect(p= 1000./len(P))
-    Ci.connect(p= 1000./len(P))
+    ce_max_synapses = n*n
+    ce_array = TimedArray(np.random.rand(1,ce_max_synapses), dt=duration)
+    Ce.connect('ce_array(0*ms, i)<1000./n')
+    #Ce.connect(p = 1000./ len(P))
+
+    ci_max_synapses = n*n
+    ci_array = TimedArray(np.random.rand(1,ci_max_synapses), dt=duration)
+    Ci.connect('ci_array(0*ms, i)<1000./n')
+    #Ci.connect(p = 1000./ len(P))
     Ce.we = we  # excitatory synaptic weight
     Ci.wi = wi  # inhibitory synaptic weight
 
 # Initialization
-P.v = 'El + (randn() * 5 - 5)*mV'
-P.ge = '(randn() * 1.5 + 4) * 10.*nS'
-P.gi = '(randn() * 12 + 20) * 10.*nS'
+p_array = TimedArray(np.random.randn(1, n), dt= duration)
+P.v = 'El + (p_array(0*ms, i) * 5 - 5)*mV'
+#P.v = 'El + (randn() * 5 - 5)*mV'
+
+p_ge_array = TimedArray(np.random.randn(1, n), dt= duration)
+P.ge = '(p_ge_array(0*ms, i) * 1.5 + 4) * 10.*nS'
+#P.ge = '(randn() * 1.5 + 4) * 10.*nS'
+
+p_gi_array = TimedArray(np.random.randn(1, n), dt= duration)
+P.gi = '(p_gi_array(0*ms, i) * 12 + 20) * 10.*nS'
+#P.gi = '(randn() * 12 + 20) * 10.*nS'
 
 spikemon = SpikeMonitor(P)
 popratemon = PopulationRateMonitor(P)
@@ -116,7 +140,9 @@ subplot(313)
 plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
 #show()
 
-plotpath = os.path.join(codefolder, '{}.png'.format(name))
+plotfolder = get_directory(device_name, basedir='plots')
+os.makedirs(plotfolder, exist_ok=True)
+plotpath = os.path.join(plotfolder, '{}_{}.pdf'.format(name,device_name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

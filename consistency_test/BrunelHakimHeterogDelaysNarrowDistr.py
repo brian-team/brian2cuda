@@ -1,12 +1,16 @@
 from brian2 import *
-from brian2cuda import *
+import brian2cuda
 import os
 import matplotlib.pyplot as plt
 from utils import get_directory
+import sys
 plt.switch_backend('agg')
+np.random.seed(123)
 
 # preference for memory saving
-device_name = "cpp_standalone"
+device_name = sys.argv[1]
+print("Running in device:")
+print(device_name)
 codefolder = get_directory(device_name)
 set_device(device_name, directory = codefolder,debug=True)
 
@@ -20,9 +24,6 @@ duration = 10*second
 
 name = "BrunelHakimwithheterogeneousdelays"
 tags = ["Neurons", "Synapses", "Delays"]
-#n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]
-n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 423826, fail: 430661
-n_range = [int(10**p) for p in n_power]
 
 # delays 2 ms += dt
 heterog_delays = "2*ms + 2 * dt * rand() - dt"
@@ -31,8 +32,6 @@ sigmaext = 1*mV
 muext = 25*mV
 
 homog_delays = None  # second
-
-
 
 assert not (heterog_delays is not None and
             homog_delays is not None), \
@@ -48,8 +47,16 @@ J = .1*mV
 muext = muext
 sigmaext = sigmaext
 
+
+num_neurons = n
+num_time_steps = int(duration // defaultclock.dt)
+custom_xi = TimedArray(
+    np.random.rand(num_time_steps, num_neurons) / np.sqrt(defaultclock.dt),
+    dt=defaultclock.dt
+)
+
 eqs = """
-dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
+dV/dt = (-V+muext + sigmaext * sqrt(tau) * custom_xi(t, i))/tau : volt
 """
 
 group = NeuronGroup(n, eqs, threshold='V>theta',
@@ -81,7 +88,9 @@ plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
 xlim(0, duration/ms)
 #show()
 
-plotpath = os.path.join(codefolder, '{}.png'.format(name))
+plotfolder = get_directory(device_name, basedir='plots')
+os.makedirs(plotfolder, exist_ok=True)
+plotpath = os.path.join(plotfolder, '{}_{}.pdf'.format(name,device_name))
 savefig(plotpath)
 print('plot saved in {}'.format(plotpath))
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
