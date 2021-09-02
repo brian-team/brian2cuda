@@ -51,10 +51,13 @@ sigmaext = sigmaext
 
 num_neurons = n
 num_time_steps = int(duration // defaultclock.dt)
-xi_array = TimedArray(np.random.rand(num_time_steps, num_neurons)*np.sqrt(defaultclock.dt), dt=defaultclock.dt)
+custom_xi = TimedArray(
+    np.random.rand(num_time_steps, num_neurons) / np.sqrt(defaultclock.dt),
+    dt=defaultclock.dt
+)
 
 eqs = """
-dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi_array(t, i))/tau : volt
+dV/dt = (-V+muext + sigmaext * sqrt(tau) * custom_xi(t, i))/tau : volt
 """
 # eqs = """
 # dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
