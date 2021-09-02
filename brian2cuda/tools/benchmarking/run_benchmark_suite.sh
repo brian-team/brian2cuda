@@ -1,17 +1,71 @@
-# Run benchmark suite with current repository (sets PYTHONPATH).
-# $1 task name (optional, default: noname)
-# $2 logdir (optional, default: test_suit_logs)
+#!/bin/bash
+usage=$(cat << END
+usage: $0 <options> -- <run_test_suite.py arguments>
 
-run_name=${1:-noname}       # default: noname
-benchmarks_result_dir=${2:-results}  # default: results
+with <options>:
+    -h|--help                 Show usage message
+    -n|--name <string>        Name for test suite run (default: 'noname')
+    -l|--log-dir              Directory for test suite logs (default: 'test_suite_logs')
+END
+)
+
+echo_usage() {
+    echo "$usage"
+}
+
+# DEFAULTS
+benchmark_suite_task_name=noname
+benchmark_result_dir="results"
+
+# long args seperated by comma, short args not
+# colon after arg indicates that an option is expected (kwarg)
+short_args=hn:l:
+long_args=help,name:,log-dir:
+opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
+if [ "$?" -ne 0 ]; then
+    echo_usage
+    exit 1
+fi
+
+eval set -- "$opts"
+
+# parse arguments
+while true; do
+    case "$1" in
+        -h | --help)
+            echo_usage
+            exit 0
+            ;;
+        -n | --name )
+            benchmark_suite_task_name="$2"
+            shift 2
+            ;;
+        -l | --log-dir )
+            benchmark_result_dir="$2"
+            shift 2
+            ;;
+        -- )
+            # $@ has all arguments after --
+            shift
+            break
+            ;;
+        * )
+            echo_usage
+            exit 1
+            ;;
+    esac
+done
+
+# all args after --
+test_suite_args=$@
 
 # add timestemp to name
-run_name="$run_name"_"$(date +%y-%m-%d_%H-%M-%S)"
+benchmark_suite_task_name="$benchmark_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"
 logfile_name="full.log"
-results_dir="$benchmarks_result_dir/$run_name"
+results_dir="$benchmark_result_dir/$benchmark_suite_task_name"
 
 # Set GeNN environment variales such that they always use the GeNN from the
 # frozen_repos/genn submodule
 source ../../../frozen_repos/init_genn.sh
 
-bash _run_benchmark_suite.sh "$logfile_name" "$results_dir" -d "$results_dir"
+bash _run_benchmark_suite.sh "$logfile_name" "$results_dir" -d "$results_dir" "$test_suite_args"

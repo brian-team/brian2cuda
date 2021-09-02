@@ -8,12 +8,13 @@ def update_benchmark_readme(directory=None):
 
     lines = []
     for readme in sorted(glob(directory + '/*/README.md'), reverse=True):
-        d = os.path.split(readme)[0]
+        d = os.path.dirname(readme)
         lines.append("[{d}]({d})\n".format(d=os.path.basename(os.path.normpath(d))))
 
     readme_md = '\n'.join(lines)
 
-    with open(directory + "/README.md", "w") as readme_file:
+    readme_filename = os.path.join(directory,  "README.md")
+    with open(readme_filename, "w") as readme_file:
         readme_file.write(readme_md)
 
 

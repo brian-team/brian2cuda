@@ -40,7 +40,7 @@ Profile summary for `N = {N}`:
 
 def create_readme(result_dir, description=''):
     test_names = set()
-    for plot_file in sorted(glob.glob(result_dir + "/plots/*")):
+    for plot_file in sorted(glob.glob(f"{result_dir}/plots/*")):
         name = os.path.splitext(os.path.basename(plot_file))[0].split('_')[2]
         test_names.add(name)
     test_names = sorted(test_names)
@@ -48,12 +48,12 @@ def create_readme(result_dir, description=''):
     result_md = []
     for name in test_names:
         plots_md = []
-        for plot_file in sorted(glob.glob(result_dir + f"/plots/speed_test_{name}_*")):
+        for plot_file in sorted(glob.glob(f"{result_dir}/plots/speed_test_{name}_*")):
             filename = os.path.basename(plot_file)
             md = f"![](plots/{filename})"
             plots_md.append(md)
         profile_md = []
-        for nvprof_file in sorted(glob.glob(result_dir + f"/nvprof/nvprof_{name}_*")):
+        for nvprof_file in sorted(glob.glob(f"{result_dir}/nvprof/nvprof_{name}_*")):
             nvprof_filename = os.path.splitext(os.path.basename(nvprof_file))[0]
             config = nvprof_filename.split('_')[2]
             N = nvprof_filename.split('_')[3].split('.')[0]
@@ -72,8 +72,9 @@ def create_readme(result_dir, description=''):
                                    results='\n***\n'.join(result_md))
 
 
-    with open(result_dir + "/README.md", "w") as readme_file:
-        readme_file.write(readme_md)
+    readme_filename = os.path.join(result_dir, "README.md")
+    with open(readme_filename, "w") as readme_file:
+        count = readme_file.write(readme_md)
 
     result_dir_parent = os.path.dirname(result_dir)
     update_benchmark_readme(directory=result_dir_parent)

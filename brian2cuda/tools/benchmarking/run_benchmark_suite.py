@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run brian2cuda benchmarks')
 
-parser.add_argument('-d', '--results-dir', default=None,
+parser.add_argument('-d', '--results-dir', type=str, default=None,
                     help="Directory where results will be stored")
 
 parser.add_argument('--dry-run', action='store_true',
@@ -22,7 +22,8 @@ if args.results_dir is None:
         "`run_benchmark_suite.sh` instead."
     )
 else:
-    directory = args.results_dir
+    # Remove traling "/" if present
+    directory = args.results_dir.rstrip("/")
 
 import os
 import shutil
@@ -373,7 +374,7 @@ try:
                     print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime}")
 finally:
     create_readme(directory)
-    print(f"\nSummarized speed test results in {directory + '/README.md'}")
+    print(f"\nSummarized speed test results in {os.path.join(directory, 'README.md')}")
     script_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
     script_diff = datetime.datetime.strptime(script_end, time_format) - datetime.datetime.strptime(script_start, time_format)
     print("Finished speed test on {}. Total time = {}.".format(

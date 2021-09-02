@@ -56,7 +56,7 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
         be created. If None, all recorded code objects are translated to .csv.
     -------
     '''
-    with open(pkl_file) as f:
+    with open(pkl_file, 'rb') as f:
         speed_test_res = pickle.load(f)
 
     # we have only one speed test per .pkl file
@@ -131,7 +131,7 @@ def plot_from_pkl(pkl_file, plot_dir, base_config='C++ standalone'):
 
     import matplotlib.pyplot as plt
 
-    with open(pkl_file) as f:
+    with open(pkl_file, 'rb') as f:
         # SpeedTestResults object
         res = pickle.load(f)
 
