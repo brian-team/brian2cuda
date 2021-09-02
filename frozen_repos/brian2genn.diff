@@ -1,35 +1,23 @@
 diff --git a/brian2genn/device.py b/brian2genn/device.py
-index c6936e2..42bf135 100644
+index f942a9c..aa71eb0 100644
 --- a/brian2genn/device.py
 +++ b/brian2genn/device.py
-@@ -853,8 +853,8 @@ class GeNNDevice(CPPStandaloneDevice):
-                 check_call(cmd, cwd=directory)
-             else:
-                 # print ["./main", "test", str(self.run_duration), gpu_arg]
--                check_call(["./main", "test", str(self.run_duration), gpu_arg],
--                           cwd=directory)
-+                check_call("./main test {} {}".format(str(self.run_duration), gpu_arg),
-+                           cwd=directory, shell=True)
-         self.has_been_run = True
-         last_run_info = open(
-             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
-@@ -981,9 +981,11 @@ class GeNNDevice(CPPStandaloneDevice):
-                 args = [buildmodel_cmd, 'magicnetwork_model.cpp']
-                 if not use_GPU:
-                     args += ['-c']
--                check_call(args, cwd=directory, env=env)
-+                args = ['PATH=~/defapps/genn:$PATH'] + args
-+                args_str = ' '.join(args)
-+                check_call(args_str, cwd=directory, env=env, shell=True)
-                 call(["make", "clean"], cwd=directory, env=env)
--                check_call(["make"], cwd=directory, env=env)
-+                check_call("PATH=~/defapps/genn/:$PATH make -j", cwd=directory, env=env, shell=True)
+@@ -1791,9 +1791,9 @@ class GeNNDevice(CPPStandaloneDevice):
  
-     def add_parameter(self, model, varname, variable):
-         model.parameters.append(varname)
-@@ -1618,6 +1620,31 @@ class GeNNDevice(CPPStandaloneDevice):
-                                             level=level + 1)
+     def network_run(self, net, duration, report=None, report_period=10 * second,
+                     namespace=None, profile=False, level=0, **kwds):
+-        if profile is True:
+-            raise NotImplementedError('Brian2GeNN does not yet support '
+-                                      'detailed profiling.')
++        #if profile is True:
++        #    raise NotImplementedError('Brian2GeNN does not yet support '
++        #                              'detailed profiling.')
+ 
+         if kwds:
+             logger.warn(('Unsupported keyword argument(s) provided for run: '
+@@ -1826,6 +1826,35 @@ class GeNNDevice(CPPStandaloneDevice):
          self.run_statement_used = True
+ 
  
 +    def network_get_profiling_info(self, net):
 +        fname = os.path.join(self.project_dir, 'test_output', 'test.time')
@@ -38,24 +26,40 @@ index c6936e2..42bf135 100644
 +        if not prefs['devices.genn.kernel_timing']:
 +            raise ValueError("No profiling info collected (need to set "
 +                             "`prefs['devices.genn.kernel_timing'] = True`?)")
-+        for kt in ('neuron_tme', 'synapse_tme', 'learning_tme', 'synDyn_tme'):
-+            if self.ktimer[kt]:
-+                keys.append(kt)
++        keys = ['neuronUpdateTime',
++                'presynapticUpdateTime',
++                'postsynapticUpdateTime',
++                'synapseDynamicsTime',
++                'initTime',
++                'initSparseTime']
 +        with open(fname) as f:
 +            # times are appended as new line in each run
 +            last_line = f.read().splitlines()[-1]
 +        times = last_line.split()
 +        # total elapses time is always recorded
-+        assert len(times) == len(keys) + 1, \
-+                '{} != {} + 1\ntimes: {}\nkeys: {}'.format(len(times),
-+                                                           len(keys), times,
-+                                                           keys)
-+        for key, val in zip(keys, times):
-+            net._profiling_info.append((key, float(val)*second))
++        n_time = len(times)
++        n_key = len(keys)
++        assert n_time == n_key, (
++            f'{n_time} != {n_key} \ntimes: {times}\nkeys: {keys}'
++        )
++        for key, time in zip(keys, times):
++            net._profiling_info.append((key, float(time)*second))
 +        return sorted(net._profiling_info, key=lambda item: item[1],
 +                      reverse=True)
 +
 +
- 
  # ------------------------------------------------------------------------------
  # End of GeNNDevice
+ # ------------------------------------------------------------------------------
+diff --git a/brian2genn/templates/main.cpp b/brian2genn/templates/main.cpp
+index 8be3b0d..1e75fa5 100644
+--- a/brian2genn/templates/main.cpp
++++ b/brian2genn/templates/main.cpp
+@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
+   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
+   fprintf(timef,"%f ", {{kt}});
+   {% endfor %}
++  fprintf(timef,"\n");
+   {% endif %} 
+ 
+   // get the final results from the GPU 
