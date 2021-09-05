@@ -20,6 +20,7 @@ n_label = 'Num neurons'
 
 # configuration options
 duration = 10*second
+n = 1000
 
 
 name = "BrunelHakimwithheterogeneousdelaysuniform"
@@ -27,7 +28,10 @@ tags = ["Neurons", "Synapses", "Delays"]
 
 # delays [0, 4] ms
 
-heterog_delays = "4*ms * rand()"
+r_array = TimedArray(np.random.rand(1, n), dt= duration)
+heterog_delays = "4*ms * r_array(0*ms,i)"
+#heterog_delays = "4*ms * rand()"
+
 # homogeneous delays
 homog_delays = None  # second
 
@@ -46,7 +50,6 @@ tau = 20*ms
 delta = 2*ms
 taurefr = 2*ms
 C = 1000
-n = 1000
 sparseness = float(C)/n
 J = .1*mV
 muext = muext

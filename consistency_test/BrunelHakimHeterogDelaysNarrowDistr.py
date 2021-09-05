@@ -8,7 +8,8 @@ plt.switch_backend('agg')
 np.random.seed(123)
 
 # preference for memory saving
-device_name = sys.argv[1]
+#device_name = sys.argv[1]
+device_name = "cpp_standalone"
 print("Running in device:")
 print(device_name)
 codefolder = get_directory(device_name)
@@ -26,7 +27,9 @@ name = "BrunelHakimwithheterogeneousdelays"
 tags = ["Neurons", "Synapses", "Delays"]
 
 # delays 2 ms += dt
-heterog_delays = "2*ms + 2 * dt * rand() - dt"
+r_array = TimedArray(np.random.rand(1, n), dt= duration)
+heterog_delays = "2*ms + 2 * dt * r_array(0*ms,i) - dt"
+#heterog_delays = "2*ms + 2 * dt * rand() - dt"
 
 sigmaext = 1*mV
 muext = 25*mV

@@ -28,15 +28,17 @@ n_label = 'Num neurons'
 duration = 10*second
 post_effects = True
 
+N = 1000
 
 homog_delay = None
-heterog_delay = "2 * 2*ms * rand()"
+r_array = TimedArray(np.random.rand(1, N), dt= duration)
+heterog_delay = "2 * 2*ms * r_array(0*ms,i)"
+#heterog_delay = "2 * 2*ms * rand()"
 name = "STDPheterogeneousdelays"
 
 
 # we draw by random K_poisson out of N_poisson (on avg.) and connect
 # them to each post neuron
-N = 1000
 N_poisson = N
 K_poisson = 1000
 taum = 10*ms
