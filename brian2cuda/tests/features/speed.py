@@ -539,9 +539,9 @@ class STDPEventDriven(SpeedTest):
                         dApost/dt = -Apost / taupost : 1 (event-driven)''',
                      on_pre='''ge += w
                         Apre += dApre
-                        w = clip(w + Apost, 0, gmax)''',
+                        w = clip(w + Apost, 0*siemens, gmax)''',
                      on_post='''Apost += dApost
-                         w = clip(w + Apre, 0, gmax)'''
+                        w = clip(w + Apre, 0*siemens, gmax)'''
                     )
         S.connect()
         S.w = 'rand() * gmax'
@@ -678,11 +678,11 @@ class MushroomBody(SpeedTest):
                               ''',
                            on_pre='''g_iKC_eKC += g_raw
                                      Apre += dApre
-                                     g_raw = clip(g_raw + Apost, 0, g_max)
+                                     g_raw = clip(g_raw + Apost, 0*siemens, g_max)
                                      ''',
                            on_post='''
                                       Apost += dApost
-                                      g_raw = clip(g_raw + Apre, 0, g_max)''',
+                                      g_raw = clip(g_raw + Apre, 0*siemens, g_max)''',
                            delay=0*ms)
         eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC', delay=0*ms)
         # bu.insert_benchmark_point()
