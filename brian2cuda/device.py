@@ -596,6 +596,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         main_tmp = self.code_object_class().templater.main(None, None,
                                                            gpu_id=self.gpu_id,
                                                            main_lines=main_lines,
+                                                           code_lines=self.code_lines,
                                                            code_objects=self.code_objects.values(),
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
