@@ -1,9 +1,12 @@
 '''
 Check the speed of different Brian 2 configurations (with additional models for brian2cuda)
 '''
+import brian2
 from brian2 import *
 from brian2.tests.features import SpeedTest
 from brian2.tests.features.speed import *
+
+from brian2cuda.tests.features.cuda_configuration import insert_benchmark_point
 
 from brian2.tests.features.speed import __all__
 __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
@@ -24,7 +27,21 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'MushroomBody'
                ])
 
-class COBAHHBase(SpeedTest):
+
+# Add a time measurement of the `brian2.run()` call in the `timed_run()` calls
+class TimedSpeedTest(SpeedTest):
+    def __init__(self, n):
+        self.runtime = None
+        super().__init__(n)
+
+    def timed_run(self, duration):
+        start = time.time()
+        # Can't use `super().timed_run()` since the `level` argument would be too low
+        brian2.run(duration, level=1)
+        self.runtime = time.time() - start
+
+
+class COBAHHBase(TimedSpeedTest):
     """Base class for COBAHH benchmarks with different connectivity"""
 
     category = "Full examples"
@@ -93,8 +110,10 @@ class COBAHHBase(SpeedTest):
             Ce = Synapses(Pe, P, 'we : siemens (constant)', on_pre='ge+=we', delay=0*ms)
             Ci = Synapses(Pi, P, 'wi : siemens (constant)', on_pre='gi+=wi', delay=0*ms)
             # connection probability p can depend on network size n
+            insert_benchmark_point("before_synapses_connect")
             Ce.connect(p=self.p(self.n))
             Ci.connect(p=self.p(self.n))
+            insert_benchmark_point("after_synapses_connect")
             Ce.we = self.we  # excitatory synaptic weight
             Ci.wi = self.wi  # inhibitory synaptic weight
 
@@ -184,7 +203,7 @@ class COBAHHPseudocoupledZeroWeights80(COBAHHPseudocoupled80):
     we = wi = 0
 
 
-class BrunelHakimBase(SpeedTest):
+class BrunelHakimBase(TimedSpeedTest):
     """
     Base class for BrunelHakim benchmarks with different delay
     distributions
@@ -231,7 +250,10 @@ class BrunelHakimBase(SpeedTest):
 
         conn = Synapses(group, group, on_pre='V += -J',
                         delay=self.homog_delays)
+
+        insert_benchmark_point("before_synapses_connect")
         conn.connect(p=sparseness)
+        insert_benchmark_point("after_synapses_connect")
 
         if self.heterog_delays is not None:
             assert self.homog_delays is None
@@ -289,14 +311,14 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
     n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 423826, fail: 430661
     n_range = [int(10**p) for p in n_power]
 
-    # delays 2 ms += dt
+    # delays 2 ms +- dt
     heterog_delays = "2*ms + 2 * dt * rand() - dt"
 
     sigmaext = 1*mV
     muext = 25*mV
 
 
-class SynapsesOnlyHeterogeneousDelays(SpeedTest):
+class SynapsesOnlyHeterogeneousDelays(TimedSpeedTest):
     category = "Synapses only with heterogeneous delays"
     tags = ["Synapses"]
     n_range = [100, 1000, 10000, 100000, 1000000]
@@ -314,7 +336,9 @@ class SynapsesOnlyHeterogeneousDelays(SpeedTest):
         G = NeuronGroup(M, 'v:1', threshold='True')
         H = NeuronGroup(N, 'w:1')
         S = Synapses(G, H, on_pre='w += 1.0')
+        insert_benchmark_point("before_synapses_connect")
         S.connect(True, p=self.p)
+        insert_benchmark_point("after_synapses_connect")
         S.delay = '4*ms * rand()'
         #M = SpikeMonitor(G)
         self.timed_run(self.duration,
@@ -323,21 +347,21 @@ class SynapsesOnlyHeterogeneousDelays(SpeedTest):
         #plot(M.t/ms, M.i, ',k')
 
 
-class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
+class DenseMediumRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays):
     name = "Dense, medium rate"
     rate = 10 * Hz
     p = 1.0
     n_range = [100, 1000, 10000, 100000, 200000, 462500]  #fail: 468750
 
 
-class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays, SpeedTest):
+class SparseLowRateSynapsesOnlyHeterogeneousDelays(SynapsesOnlyHeterogeneousDelays):
     name = "Sparse, low rate"
     rate = 1 * Hz
     p = 0.2
     n_range = [100, 1000, 10000, 100000, 500000, 1000000, 3281250]  #fail: 3312500
 
 
-class CUBAFixedConnectivityNoMonitor(SpeedTest):
+class CUBAFixedConnectivityNoMonitor(TimedSpeedTest):
 
     category = "Full examples"
     name = "CUBA fixed connectivity, no monitor"
@@ -375,13 +399,15 @@ class CUBAFixedConnectivityNoMonitor(SpeedTest):
         wi = (-20 * 4.5 / 10) * mV  # inhibitory synaptic weight
         Ce = Synapses(P, P, on_pre='ge += we')
         Ci = Synapses(P, P, on_pre='gi += wi')
+        insert_benchmark_point("before_synapses_connect")
         Ce.connect('i<Ne', p=80. / N)
         Ci.connect('i>=Ne', p=80. / N)
+        insert_benchmark_point("after_synapses_connect")
 
         self.timed_run(self.duration)
 
 
-class STDPCUDA(SpeedTest):
+class STDPCUDA(TimedSpeedTest):
     """
     STDP benchmark with postsynaptic effects. On average 1000 out of N
     presynaptic Poisson neurons are randomly connected to N/1000 postsynaptic
@@ -462,8 +488,10 @@ class STDPCUDA(SpeedTest):
                          w = clip(w + Apre, 0, gmax)''',
                      delay=self.homog_delay
                     )
+        insert_benchmark_point("before_synapses_connect")
         #S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
         S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
+        insert_benchmark_point("after_synapses_connect")
         S.w = 'rand() * gmax'
 
         if self.heterog_delay is not None:
@@ -498,7 +526,7 @@ class STDPCUDANoPostEffects(STDPCUDA):
     post_effects = False
 
 
-class STDPEventDriven(SpeedTest):
+class STDPEventDriven(TimedSpeedTest):
 
     category = "Full examples"
     name = "STDP (event-driven)"
@@ -543,12 +571,14 @@ class STDPEventDriven(SpeedTest):
                      on_post='''Apost += dApost
                         w = clip(w + Apre, 0*siemens, gmax)'''
                     )
+        insert_benchmark_point("before_synapses_connect")
         S.connect()
+        insert_benchmark_point("after_synapses_connect")
         S.w = 'rand() * gmax'
         self.timed_run(self.duration)
 
 
-class MushroomBody(SpeedTest):
+class MushroomBody(TimedSpeedTest):
 
     category = "Full examples"
     name = "Mushroom Body example from brian2GeNN benchmarks"
@@ -685,7 +715,7 @@ class MushroomBody(SpeedTest):
                                       g_raw = clip(g_raw + Apre, 0*siemens, g_max)''',
                            delay=0*ms)
         eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC', delay=0*ms)
-        # bu.insert_benchmark_point()
+        insert_benchmark_point("before_synapses_connect")
         PN_iKC.connect(p=0.15)
 
         if (N_MB > 10000):
@@ -693,7 +723,7 @@ class MushroomBody(SpeedTest):
         else:
             iKC_eKC.connect()
         eKC_eKC.connect()
-        # bu.insert_benchmark_point()
+        insert_benchmark_point("after_synapses_connect")
 
         # First set all synapses as "inactive", then set 20% to active
         PN_iKC.weight = '10*nS + 1.25*nS*randn()'

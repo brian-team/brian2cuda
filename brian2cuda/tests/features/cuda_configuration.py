@@ -1,14 +1,16 @@
 import os
 import shutil
-import socket
 import subprocess
 import shlex
-import multiprocessing
+import time
 
 import brian2
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 from brian2.utils.logger import get_logger
+from brian2.devices import device, set_device, get_device
+from brian2 import prefs
+from brian2.tests.features.base import SpeedTest
 
 try:
     import brian2genn
@@ -19,37 +21,133 @@ logger = get_logger('brian2.devices.cuda_standalone.cuda_configuration')
 
 __all__ = ['CUDAStandaloneConfiguration']
 
-class CUDAStandaloneConfigurationBase(Configuration):
-    '''Base class for CUDAStandaloneConfigurations'''
+
+# Get information about the environment this script is run in
+_slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
+_num_available_threads = len(os.sched_getaffinity(0))
+
+
+SETUP_TIMER = '''
+std::chrono::high_resolution_clock::time_point _benchmark_start, _benchmark_now;
+_benchmark_start = std::chrono::high_resolution_clock::now();
+std::ofstream _benchmark_file;
+_benchmark_file.open("{fname}");
+'''
+
+TIME_DIFF = '''
+_benchmark_now = std::chrono::high_resolution_clock::now();
+_benchmark_file << "{name}" << " "
+                << std::chrono::duration_cast<std::chrono::microseconds>(
+                       _benchmark_now - _benchmark_start
+                   ).count()
+                << std::endl;
+'''
+
+CLOSE_TIMER = '''
+_benchmark_file.close();
+'''
+
+def insert_benchmark_point(name):
+    device.insert_code("main", TIME_DIFF.format(name=name))
+
+
+class BenchmarkConfiguration(Configuration):
+    '''Base class for all configurations used for benchmarking'''
     name = None
-    commit = None
-    device_kwargs = {}
+    devicename = None
+    single_precision = False
+    profile = False
     extra_prefs = {}
+    device_kwargs = {}
+    commit = None
 
-    def before_run(self):
-        # set brian preferences
-        slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
-        if slurm_cluster == "hpc":
-            device_query_path = "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
-            brian2.prefs.devices.cuda_standalone.cuda_backend.device_query_path = (
-                device_query_path
-            )
-
-        for key, value in self.extra_prefs.items():
-            brian2.prefs[key] = value
+    def __init__(self, feature_test):
+        self.feature_test = feature_test
+        self.feature_test_name = self.feature_test.__class__.__name__
+        self.n = self.feature_test.n
+        self.project_dir = None
+        self.benchmark_file = None
         if self.name is None:
             raise NotImplementedError("You need to set the name attribute.")
-        brian2.set_device('cuda_standalone', build_on_run=False,
-                          **self.device_kwargs)
+        if self.devicename is None:
+            raise NotImplementedError("You need to set the devicename attribute.")
+        super().__init__()
+
+    @classmethod
+    def get_project_dir(cls, feature_name, n):
+        directory = os.path.join(f"{cls.devicename}_runs",
+                                 f"{feature_name}_{n}_{cls.name}")
+        for symbol in [" ", ",", "(", ")"]:
+            directory = directory.replace(symbol, "-")
+        return directory
+
+    def set_profiling(self):
+        if self.profile:
+            self.device_kwargs["profile"] = self.profile
+
+    def before_run(self):
+        self.project_dir = self.get_project_dir(self.feature_test_name, self.n)
+        # Remove project directory if it already exists
+        if os.path.exists(self.project_dir):
+            shutil.rmtree(self.project_dir)
+
+        prefs.reset_to_defaults()
+
+        # Enable/disable profiling, can be overwritten (e.g. in GeNNConfiguration)
+        self.set_profiling()
+
+        set_device(self.devicename,
+                   directory=self.project_dir,
+                   build_on_run=True,  # GeNN doesn't allow building after run
+                   with_output=True,  # Generates the results/stdout.txt files
+                   **self.device_kwargs)
+
+        # Need chrono header for timing functions
+        prefs.codegen.cpp.headers += ["<chrono>"]
+        if self.single_precision:
+            prefs["core.default_float_dtype"] = brian2.float32
+
+        # Set preferences
+        for key, value in self.extra_prefs.items():
+            prefs[key] = value
+
+        prefs._backup()
+
+        # Insert benchmarking code
+        self.benchmark_file = os.path.join(self.project_dir, "results", "benchmark.time")
+        device.insert_code("before_start", SETUP_TIMER.format(fname=self.benchmark_file))
+        device.insert_code("after_start", TIME_DIFF.format(name="after_start"))
+        device.insert_code("before_run", TIME_DIFF.format(name="before_run"))
+        device.insert_code("after_run", TIME_DIFF.format(name="after_run"))
+        device.insert_code("before_end", TIME_DIFF.format(name="before_end"))
+        device.insert_code("after_end", TIME_DIFF.format(name="after_end"))
+        device.insert_code("after_end", CLOSE_TIMER)
 
     def after_run(self):
-        if os.path.exists('cuda_standalone'):
-            shutil.rmtree('cuda_standalone')
-        brian2.device.build(directory='cuda_standalone', compile=True, run=True,
-                            with_output=True)
+        # Add Python-side compile + run time measurment (taken in
+        # `TimedSpeedTest.timed_run()`) to benchmarking file
+        with open(self.benchmark_file, "a") as file:
+            file.write(f"total {self.feature_test.runtime}")
+
+
+class CUDAStandaloneConfigurationBase(BenchmarkConfiguration):
+    '''Base class for CUDAStandaloneConfigurations'''
+    devicename = "cuda_standalone"
+
+    def before_run(self):
+        # Set the path for self-compiled deviceQuery on the TU HPC cluster
+        if _slurm_cluster == "hpc":
+            pref_key = "devices.cuda_standalone.cuda_backend.device_query_path"
+            if pref_key not in self.extra_prefs:
+                self.extra_prefs[pref_key] = (
+                    "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+                )
+        super().before_run()
+
 
 class DynamicConfigCreator(object):
-    def __init__(self, config_name, git_commit=None, prefs={}, set_device_kwargs={}):
+    def __init__(self, config_name, git_commit=None, profile=None,
+                 single_precision=None, prefs={}, set_device_kwargs={}):
         # self.name is needed in brian2.tests.featues.base.run_feature_tests()
         # where we pretend this class is a Configuration class
         self.name = config_name
@@ -57,6 +155,8 @@ class DynamicConfigCreator(object):
         self.set_device_kwargs = set_device_kwargs
         self.stashed = None
         self.checked_out_feature = None
+        self.profile = profile
+        self.single_precision = single_precision
 
         # make sure float_dtypes that were converted to strings (see below)
         # are converted back into brian2.float... types
@@ -86,17 +186,20 @@ class DynamicConfigCreator(object):
         # DynamicCUDAStandaloneConfiguration class will be correctly recreated
         self.__name__ = clsname
 
-    def __call__(self):
+    def __call__(self, feature_test):
         # we can't acces the self from DynamicConfigCreator inside the nested
         # DynamicCUDAStandaloneConfiguration class -> make a copy
         DynamicConfigCreator_self = self
         class DynamicCUDAStandaloneConfiguration(CUDAStandaloneConfigurationBase):
             name = DynamicConfigCreator_self.name
+            devicename = CUDAStandaloneConfigurationBase.devicename
+            single_precision = DynamicConfigCreator_self.single_precision
+            profile = DynamicConfigCreator_self.profile
+            extra_prefs = DynamicConfigCreator_self.prefs
             device_kwargs = DynamicConfigCreator_self.set_device_kwargs
             commit = DynamicConfigCreator_self.git_commit
-            extra_prefs = DynamicConfigCreator_self.prefs
 
-        return DynamicCUDAStandaloneConfiguration()
+        return DynamicCUDAStandaloneConfiguration(feature_test)
 
     def _subprocess(self, cmd, fails_ok=False, **kwargs):
         try:
@@ -190,7 +293,7 @@ class CUDAStandaloneConfigurationNoCudaOccupancyAPI(CUDAStandaloneConfigurationB
 class CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU(CUDAStandaloneConfigurationBase):
     name = "CUDA standalone (not cuda occupancy API and profile='blocking')"
     extra_prefs = {'devices.cuda_standalone.calc_occupancy': False}
-    device_kwargs = {'profile': 'blocking'}
+    profile = 'blocking'
 
 class CUDAStandaloneConfiguration2BlocksPerSM(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone with 2 blocks per SM'
@@ -212,11 +315,11 @@ class CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds(CUDAStandaloneConfi
 
 class CUDAStandaloneConfigurationProfileGPU(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone (profile=True)'
-    device_kwargs = {'profile': True}
+    profile = True
 
 class CUDAStandaloneConfigurationProfileCPU(CUDAStandaloneConfigurationBase):
     name = "CUDA standalone (profile='blocking')"
-    device_kwargs = {'profile': 'blocking'}
+    profile = 'blocking'
 
 class CUDAStandaloneConfigurationBundles(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone bundles'
@@ -225,147 +328,124 @@ class CUDAStandaloneConfigurationBundles(CUDAStandaloneConfigurationBase):
 class CUDAStandaloneConfigurationBundlesProfileCPU(CUDAStandaloneConfigurationBase):
     name = "CUDA standalone bundles (profile='blocking')"
     commit = 'nemo_bundles'
-    device_kwargs = {'profile': 'blocking'}
+    profile = 'blocking'
 
-class CPPStandaloneConfiguration(Configuration):
+
+######################################
+###  CPP STANDALONE CONFIGURATIONS ###
+######################################
+class CPPStandaloneConfigurationBase(BenchmarkConfiguration):
     name = 'C++ standalone'
-    profile = False
-    single_precision = False
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        if self.single_precision:
-            brian2.prefs['core.default_float_dtype'] = brian2.float32
-            brian2.prefs._backup()
-        brian2.set_device('cpp_standalone', build_on_run=False, profile=self.profile)
-        
-    def after_run(self):
-        if os.path.exists('cpp_standalone'):
-            shutil.rmtree('cpp_standalone')
-        brian2.device.build(directory='cpp_standalone', compile=True, run=True,
-                            with_output=True)
+    devicename = 'cpp_standalone'
 
-class CPPStandaloneConfigurationProfile(CPPStandaloneConfiguration):
+class CPPStandaloneConfiguration(CPPStandaloneConfigurationBase):
+    single_precision = False
+    profile = False
+
+class CPPStandaloneConfigurationProfile(CPPStandaloneConfigurationBase):
     single_precision = False
     profile = True
 
-class CPPStandaloneConfigurationSinglePrecision(CPPStandaloneConfiguration):
+class CPPStandaloneConfigurationSinglePrecision(CPPStandaloneConfigurationBase):
     name = 'C++ standalone (single precision)'
     single_precision = True
     profile = False
 
-class CPPStandaloneConfigurationSinglePrecisionProfile(CPPStandaloneConfiguration):
+class CPPStandaloneConfigurationSinglePrecisionProfile(CPPStandaloneConfigurationBase):
     name = 'C++ standalone (single precision)'
     single_precision = True
     profile = True
 
-class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfiguration):
-    single_precision = False
-    profile = False
-    openmp_threads = None
-    hostname = socket.gethostname()
-    known = True
-    if hostname.startswith("cognition"):
-        openmp_threads = 24
-    else:
-        known = False
-        openmp_threads = multiprocessing.cpu_count()
-    name = f'C++ standalone (OpenMP, {openmp_threads} threads)'
+##################################
+###  CPP OPENMP CONFIGURATIONS ###
+##################################
+class CPPStandaloneConfigurationOpenMPBase(CPPStandaloneConfigurationBase):
+    name = f'C++ standalone (OpenMP, {_num_available_threads} threads)'
 
     def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        if self.single_precision:
-            brian2.prefs['core.default_float_dtype'] = brian2.float32
-        brian2.set_device('cpp_standalone', build_on_run=False, profile=self.profile)
-        brian2.prefs['devices.cpp_standalone.openmp_threads'] = self.openmp_threads
-        brian2.prefs._backup()
-        if self.known:
-            logger.info("Running CPPStandaloneConfigurationOpenMP with {} "
-                        "threads".format(self.openmp_threads))
-        else:
-            logger.warn("Unknown hostname. Using number of logical cores ({}) "
-                        "as threads for CPPStandaloneConfigurationOpenMP"
-                        "".format(self.openmp_threads))
+        # Use as many threads as are available to this process
+        pref_key = "devices.cpp_standalone.openmp_threads"
+        if pref_key not in self.extra_prefs:
+            self.extra_prefs[pref_key] = _num_available_threads
+        super().before_run()
 
-class CPPStandaloneConfigurationOpenMPMaxThreadsProfile(CPPStandaloneConfigurationOpenMPMaxThreads):
+
+class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfigurationOpenMPBase):
+    single_precision = False
+    profile = False
+
+class CPPStandaloneConfigurationOpenMPMaxThreadsProfile(CPPStandaloneConfigurationOpenMPBase):
     single_precision = False
     profile = True
 
-class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision(CPPStandaloneConfigurationOpenMPMaxThreads):
-    # TODO: this is pretty hacky... instead just to the hostname stuff outside class definitions and use the global var...
-    name = f'C++ standalone (OpenMP, single_precision, {CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads} threads)'
+class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision(CPPStandaloneConfigurationOpenMPBase):
+    name = (
+        f'C++ standalone (OpenMP, single_precision, {_num_available_threads} threads)'
+    )
     single_precision = True
     profile = False
 
-class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStandaloneConfigurationOpenMPMaxThreads):
-    name = f'C++ standalone (OpenMP, single_precision, {CPPStandaloneConfigurationOpenMPMaxThreads.openmp_threads} threads)'
+class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStandaloneConfigurationOpenMPBase):
+    name = (
+        f'C++ standalone (OpenMP, single_precision, {_num_available_threads} threads)'
+    )
     single_precision = True
     profile = True
 
-# Copied from brian2genn.correctness_testing
-class GeNNConfigurationOptimized(Configuration):
-    name = 'GeNN_optimized'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs._backup()
-        brian2.set_device('genn')
 
-class GeNNConfigurationOptimizedProfile(Configuration):
-    name = 'GeNN_optimized'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['devices.genn.kernel_timing'] = True
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+#############################
+###  GENN CONFIGURATIONS  ###
+#############################
 
-class GeNNConfigurationOptimizedSinglePrecision(Configuration):
-    name = 'GeNN_optimized (single precision)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['core.default_float_dtype'] = brian2.float32
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+# Adapted from brian2genn.correctness_testing
+class GeNNConfigurationBase(BenchmarkConfiguration):
+    devicename = 'genn'
 
-class GeNNConfigurationOptimizedSinglePrecisionProfile(Configuration):
-    name = 'GeNN_optimized (single precision)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['core.default_float_dtype'] = brian2.float32
-        brian2.prefs['devices.genn.kernel_timing'] = True
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+    # Overwrite how GeNN sets profiling
+    def set_profiling(self):
+        if self.profile:
+            self.extra_prefs['devices.genn.kernel_timing'] = True
 
-class GeNNConfigurationOptimizedSpanTypePre(Configuration):
-    name = 'GeNN_optimized (span type PRE)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+class GeNNConfiguration(GeNNConfigurationBase):
+    name = 'GeNN'
+    single_precision = False
+    profile = False
 
-class GeNNConfigurationOptimizedSpanTypePreProfile(Configuration):
-    name = 'GeNN_optimized (span type PRE)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
-        brian2.prefs['devices.genn.kernel_timing'] = True
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+class GeNNConfigurationProfile(GeNNConfigurationBase):
+    name = 'GeNN'
+    single_precision = False
+    profile = True
 
-class GeNNConfigurationOptimizedSinglePrecisionSpanTypePre(Configuration):
-    name = 'GeNN_optimized (single precision, span type PRE)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['core.default_float_dtype'] = brian2.float32
-        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+class GeNNConfigurationSinglePrecision(GeNNConfigurationBase):
+    name = 'GeNN (single precision)'
+    single_precision = True
+    profile = False
 
-class GeNNConfigurationOptimizedSinglePrecisionSpanTypePreProfile(Configuration):
-    name = 'GeNN_optimized (single precision, span type PRE)'
-    def before_run(self):
-        brian2.prefs.reset_to_defaults()
-        brian2.prefs['core.default_float_dtype'] = brian2.float32
-        brian2.prefs['devices.genn.synapse_span_type'] = 'PRESYNAPTIC'
-        brian2.prefs['devices.genn.kernel_timing'] = True
-        brian2.prefs._backup()
-        brian2.set_device('genn')
+class GeNNConfigurationSinglePrecisionProfile(GeNNConfigurationBase):
+    name = 'GeNN (single precision)'
+    single_precision = True
+    profile = True
+
+class GeNNConfigurationSpanTypePre(GeNNConfigurationBase):
+    name = 'GeNN (span type PRE)'
+    single_precision = False
+    profile = False
+    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
+
+class GeNNConfigurationSpanTypePreProfile(GeNNConfigurationBase):
+    name = 'GeNN (span type PRE)'
+    single_precision = False
+    profile = True
+    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
+
+class GeNNConfigurationSinglePrecisionSpanTypePre(GeNNConfigurationBase):
+    name = 'GeNN (single precision, span type PRE)'
+    single_precision = True
+    profile = False
+    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
+
+class GeNNConfigurationSinglePrecisionSpanTypePreProfile(GeNNConfigurationBase):
+    name = 'GeNN (single precision, span type PRE)'
+    single_precision = True
+    profile = True
+    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}

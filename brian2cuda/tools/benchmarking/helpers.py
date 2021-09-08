@@ -36,6 +36,7 @@ def pickle_results(results, filename):
         configurations_to_dict(results.configurations),
         results.speed_tests,
         results.brian_stdouts,
+        results.brian_stderrs,
         results.tracebacks
     )
     with open(filename, 'wb') as output:
