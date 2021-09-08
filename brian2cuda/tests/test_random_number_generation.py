@@ -1221,6 +1221,20 @@ def test_poisson_variable_lambda_set_template_random_seed():
     assert np.var(G.v1[:] - G.v2[:]) > 0
 
 
+@pytest.mark.standalone_compatible
+def test_single_tick_rng_uneven_group_size():
+    # cuRAND host API fails when generating an uneven number random numbers, make sure
+    # we take care of that (just test for run not failing)
+    G = NeuronGroup(9, '''dv1/dt = rand() * randn() * poisson(l) / ms : 1
+                          dv2/dt = rand() * randn() * poisson(5) / ms : 1
+                          l  : 1''')
+
+    G.l = arange(9)
+    G.v1[:7] = 'rand() + randn() + poisson(l)'
+    G.v2[:7] = 'rand() + randn() + poisson(5)'
+    run(defaultclock.dt)
+
+
 if __name__ == '__main__':
     import brian2cuda
     from brian2cuda.tests.conftest import fake_randn
@@ -1265,6 +1279,7 @@ if __name__ == '__main__':
         test_poisson_values_init_synapses_fixed_and_random_seed,
         test_poisson_scalar_lambda_set_template_random_seed,
         test_poisson_variable_lambda_set_template_random_seed,
+        test_single_tick_rng_uneven_group_size,
     ]:
         print()
         print(test.__name__)
