@@ -646,19 +646,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     if k == "randn":
                         num_calls = codeobj.rng_calls["randn"]
                         code = f'''
-                            // genenerate an array of random numbers on the device
+                            // Genenerate an array of random numbers on the device
+                            // Make sure we generate an even number of random numbers
+                            int32_t _randn_N = ({number_elements} % 2 == 0) ? {number_elements} : {number_elements} + 1;
                             {c_float_dtype}* dev_array_randn;
                             CUDA_SAFE_CALL(
                                 cudaMalloc(
                                     (void**)&dev_array_randn,
-                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                    sizeof({c_float_dtype})*_randn_N*{num_calls}
                                 )
                             );
                             CUDA_SAFE_CALL(
                                 curandGenerateNormal{curand_suffix}(
                                     curand_generator,
                                     dev_array_randn,
-                                    {number_elements}*{num_calls},
+                                    _randn_N*{num_calls},
                                     0,  // mean
                                     1   // stddev
                                 )
@@ -672,19 +674,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     elif k == "rand":
                         num_calls = codeobj.rng_calls["rand"]
                         code = f'''
-                            // genenerate an array of random numbers on the device
+                            // Genenerate an array of random numbers on the device
+                            // Make sure we generate an even number of random numbers
+                            int32_t _rand_N = ({number_elements} % 2 == 0) ? {number_elements} : {number_elements} + 1;
                             {c_float_dtype}* dev_array_rand;
                             CUDA_SAFE_CALL(
                                 cudaMalloc(
                                     (void**)&dev_array_rand,
-                                    sizeof({c_float_dtype})*{number_elements}*{num_calls}
+                                    sizeof({c_float_dtype})*_rand_N*{num_calls}
                                 )
                             );
                             CUDA_SAFE_CALL(
                                 curandGenerateUniform{curand_suffix}(
                                     curand_generator,
                                     dev_array_rand,
-                                    {number_elements}*{num_calls}
+                                    _rand_N*{num_calls}
                                 )
                             );
                         '''
@@ -713,19 +717,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             num_calls = codeobj.rng_calls[poisson_name]
                             lamda = codeobj.poisson_lamdas[poisson_name]
                             code = f'''
-                                // genenerate an array of random numbers on the device
+                                // Genenerate an array of random numbers on the device
+                                // Make sure we generate an even number of random numbers
+                                int32_t _{poisson_name}_N = ({number_elements} % 2 == 0) ? {number_elements} : {number_elements} + 1;
                                 {c_int_dtype}* dev_array_{poisson_name};
                                 CUDA_SAFE_CALL(
                                     cudaMalloc(
                                         (void**)&dev_array_{poisson_name},
-                                        sizeof(unsigned int)*{number_elements}*{num_calls}
+                                        sizeof(unsigned int)*_{poisson_name}_N*{num_calls}
                                     )
                                 );
                                 CUDA_SAFE_CALL(
                                     curandGeneratePoisson(
                                         curand_generator,
                                         dev_array_{poisson_name},
-                                        {number_elements}*{num_calls},
+                                        _{poisson_name}_N*{num_calls},
                                         {lamda}
                                     )
                                 );
