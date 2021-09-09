@@ -17,14 +17,23 @@ from brian2cuda.tests.features.cuda_configuration import CUDAStandaloneConfigura
 from brian2cuda.tests.features.speed import *
 
 
-def print_flushed(string, slack=True):
+def print_flushed(string, slack=True, new_reply=False, format_code=True):
+    print(string, flush=True)
+    to_return = None
     if slack and bot is not None:
         assert slack_thread is not None
+        if format_code:
+            string = f"```{os.linesep}{string}{os.linesep}```"
         try:
-            bot.reply(slack_thread, string)
+            if new_reply:
+                new_append_message = bot.reply(slack_thread, string)
+                to_return = new_append_message
+            else:
+                assert append_message is not None
+                bot.append(append_message, string)
         except:
             print("ERROR: Failed to send message to slack.", flush=True)
-    print(string, flush=True)
+    return to_return
 
 
 bot = None
@@ -90,16 +99,17 @@ speed_tests = [# feature_test                     name                          
 
 
 slack_thread = None
+append_message = None
 
 script = os.path.basename(__file__)
 host = socket.gethostname()
 
 
-start_msg = f"RUNNING `{script}` on `{host}`"
+start_msg = f"Running `{script}` on `{host}`"
 if bot is not None:
     try:
-        slack_thread = bot.send(start_msg)
-        bot.init_pbar(max_value=len(speed_tests), ts=slack_thread)
+        bot.init_pbar(max_value=len(speed_tests), title=start_msg)
+        slack_thread = bot.pbar_id
     except Exception as exc:
         print_flushed(f"Failed to init slack notifications, no slack messages will be sent\n{exc}")
         bot = None
@@ -147,7 +157,10 @@ try:
                 n = (n//1000) * 1000
             start = time.time()
             script_start = datetime.datetime.fromtimestamp(start).strftime(time_format)
-            print_flushed(f"LOG RUNNING {name} with n={n} (start at {script_start})")
+            append_message = print_flushed(
+                f"LOG RUNNING {name} with n={n} (start at {script_start})",
+                new_reply=True
+            )
             tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n)
             took = datetime.timedelta(seconds=int(time.time() - start))
             print_flushed(f"LOG FINISHED {name} with n={n} in {took}")
@@ -202,9 +215,9 @@ try:
 
 except KeyboardInterrupt:
     print_flushed("\nCaught KeyboardInterrupt! Exiting...", slack=False)
-    final_msg = "INTERRUPTED"
+    final_msg = "❌ INTERRUPTED"
 else:
-    final_msg = "FINISHED"
+    final_msg = "✅ FINISHED"
 
 total_time = datetime.timedelta(seconds=int(time.time() - total_start))
 final_msg += f" `{script}` on `{host}` after {total_time}"
