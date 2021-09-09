@@ -83,15 +83,24 @@ class BenchmarkConfiguration(Configuration):
             directory = directory.replace(symbol, "-")
         return directory
 
+    @classmethod
+    def delete_project_dir(cls, feature_name, n, config_name=None):
+        project_dir = cls.get_project_dir(feature_name, n, config_name=config_name)
+        if os.path.exists(project_dir):
+            logger.debug(f"Deleting project directory {project_dir}")
+            shutil.rmtree(project_dir)
+        else:
+            logger.debug(f"Can't delete {project_dir}, it doesn't exist.")
+
     def set_profiling(self):
         if self.profile:
             self.device_kwargs["profile"] = self.profile
 
     def before_run(self):
         self.project_dir = self.get_project_dir(self.feature_test_name, self.n)
+
         # Remove project directory if it already exists
-        if os.path.exists(self.project_dir):
-            shutil.rmtree(self.project_dir)
+        self.delete_project_dir(self.feature_test_name, self.n)
 
         prefs.reset_to_defaults()
 
@@ -194,8 +203,14 @@ class DynamicConfigCreator(object):
         For DynamicConfigCreator configurations, we pass the call to the actual
         configuration class.
         """
-        return CUDAStandaloneConfigurationBase.get_project_dir(feature_name, n,
-                                                               config_name=self.name)
+        return CUDAStandaloneConfigurationBase.get_project_dir(
+            feature_name, n, config_name=self.name
+        )
+
+    def delete_project_dir(self, feature_name, n):
+        return CUDAStandaloneConfigurationBase.delete_project_dir(
+            feature_name, n, config_name=self.name
+        )
 
     def __call__(self, feature_test):
         # we can't acces the self from DynamicConfigCreator inside the nested

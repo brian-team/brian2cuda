@@ -116,6 +116,7 @@ if bot is not None:
 
 print_flushed(start_msg, slack=False)
 
+config = CUDAStandaloneConfiguration
 
 total_start = time.time()
 time_format = '%d.%m.%Y at %H:%M:%S'
@@ -131,9 +132,11 @@ try:
             sl_idcs = sl.indices(length)
             # Example: max_idx = 4 - 1 = 3 (last index in n_range)
             max_idx = sl_idcs[1] - sl_idcs[2]
-            # Example: n_init = 10000
-            #n_init = ft.n_range[max_idx]
-            n_init = ft.n_range[-1] * 2
+            if host == "gpu055":  # A100 GPU
+                n_init = ft.n_range[-1] * 2
+            else:
+                # Example: n_init = 10000
+                n_init = ft.n_range[-1]
         else:
             if isinstance(sl, int):
                 sl = [sl]
@@ -161,7 +164,7 @@ try:
                 f"LOG RUNNING {name} with n={n} (start at {script_start})",
                 new_reply=True
             )
-            tb, res, runtime, prof_info = results(CUDAStandaloneConfiguration, ft, n)
+            tb, res, runtime, prof_info = results(config, ft, n)
             took = datetime.timedelta(seconds=int(time.time() - start))
             print_flushed(f"LOG FINISHED {name} with n={n} in {took}")
             codes.append((n, res, tb))
@@ -173,6 +176,7 @@ try:
                     if i == 0:
                         print_flushed(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nt\ttb={tb}")
                         #print_flushed(f"LOG FAILED at first run ({name}) n={n}\n\terror={res}\nTraceback printed above.")
+                        config.delete_project_dir(feature_name=ft.__name__, n=n_prev)
                         break
                     # assuming the first run passes, when we fail we always go down half the abs distance
                     n -= int(0.5 * diff)
@@ -198,7 +202,11 @@ try:
 
             if break_after_first or (i != 0 and diff <= 10000):
                 print_flushed(f"LOG BREAK {name} after n={n} (diff={diff})")
+                config.delete_project_dir(feature_name=ft.__name__, n=n_prev)
                 break
+
+            config.delete_project_dir(feature_name=ft.__name__, n=n_prev)
+
         print_flushed(f"LOG FINAL RESULTS FOR {name}:")
         for n, res, tb in codes:
             if isinstance(res, Exception):
@@ -215,6 +223,7 @@ try:
 
 except KeyboardInterrupt:
     print_flushed("\nCaught KeyboardInterrupt! Exiting...", slack=False)
+    config.delete_project_dir(feature_name=ft.__name__, n=n_prev)
     final_msg = "❌ INTERRUPTED"
 else:
     final_msg = "✅ FINISHED"

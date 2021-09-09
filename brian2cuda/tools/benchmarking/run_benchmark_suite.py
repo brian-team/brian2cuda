@@ -363,6 +363,12 @@ try:
                         print("Didn't run nvprof, got an Exception", res)
                     else:  # runtime >= max_runtime
                         print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
+
+        # Delete project directories when done
+        for conf in configurations:
+            for n in speed_test.n_range[n_slice]:
+                conf.delete_project_dir(feature_name=test_name, n=n)
+
 finally:
     create_readme(directory)
     print(f"\nSummarized speed test results in {os.path.join(directory, 'README.md')}")
