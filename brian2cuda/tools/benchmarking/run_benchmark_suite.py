@@ -334,7 +334,9 @@ try:
                     print(f"Rerunning {conf_name} with n = {speed_test.n_range[idx]} for nvprof profiling")
                     #tb, res, runtime, prof_info = results(conf, speed_test, speed_test.n_range[idx], maximum_run_time=maximum_run_time)
                     runtime = res.full_results[conf.name, speed_test.fullname(), n, 'All']
-                    if not isinstance(res, Exception) and runtime < max_runtime:
+                    this_res = res.feature_result[conf.name, speed_test.fullname(), n]
+                    tb = res.tracebacks[conf.name, speed_test.fullname(), n]
+                    if not isinstance(this_res, Exception) and runtime < max_runtime:
                         nvprof_args = '--profile-from-start-off' if proj_dir.startswith("cuda_standalone") else ''
                         nvprof_n = speed_test.n_range[idx]
                         log_file=os.path.join(
@@ -360,7 +362,7 @@ try:
                     elif isinstance(res, Exception):
                         print("Didn't run nvprof, got an Exception", res)
                     else:  # runtime >= max_runtime
-                        print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime}")
+                        print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
 finally:
     create_readme(directory)
     print(f"\nSummarized speed test results in {os.path.join(directory, 'README.md')}")

@@ -33,6 +33,7 @@ def pickle_results(results, filename):
     assert isinstance(results, SpeedTestResults)
     to_pickle = SpeedTestResults(
         results.full_results,
+        results.feature_result,
         configurations_to_dict(results.configurations),
         results.speed_tests,
         results.brian_stdouts,

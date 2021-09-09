@@ -74,9 +74,11 @@ class BenchmarkConfiguration(Configuration):
         super().__init__()
 
     @classmethod
-    def get_project_dir(cls, feature_name, n):
+    def get_project_dir(cls, feature_name, n, config_name=None):
+        if config_name is None:
+            config_name = cls.name
         directory = os.path.join(f"{cls.devicename}_runs",
-                                 f"{feature_name}_{n}_{cls.name}")
+                                 f"{feature_name}_{n}_{config_name}")
         for symbol in [" ", ",", "(", ")"]:
             directory = directory.replace(symbol, "-")
         return directory
@@ -186,14 +188,14 @@ class DynamicConfigCreator(object):
         # DynamicCUDAStandaloneConfiguration class will be correctly recreated
         self.__name__ = clsname
 
-    @classmethod
-    def get_project_dir(cls, feature_name, n):
+    def get_project_dir(self, feature_name, n):
         """
         The run_benchmarck_suite.py determines the project directory from the config.
         For DynamicConfigCreator configurations, we pass the call to the actual
         configuration class.
         """
-        return CUDAStandaloneConfigurationBase.get_project_dir(feature_name, n)
+        return CUDAStandaloneConfigurationBase.get_project_dir(feature_name, n,
+                                                               config_name=self.name)
 
     def __call__(self, feature_test):
         # we can't acces the self from DynamicConfigCreator inside the nested
