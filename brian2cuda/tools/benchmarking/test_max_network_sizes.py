@@ -36,10 +36,10 @@ else:
     print_flushed("Starting ClusterBot...", slack=False)
     try:
         bot = ClusterBot()
-    except Exception:
+    except Exception as exc:
         print(
             f"ERROR: ClusterBot failed to initialize correctly. Can't notify "
-            f"slack. Here is the error traceback:\n{traceback.format_exc()}"
+            f"slack. Here is the error:\n{exc}"
         )
         bot = None
 
