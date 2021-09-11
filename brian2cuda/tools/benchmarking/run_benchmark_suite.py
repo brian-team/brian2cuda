@@ -259,13 +259,21 @@ try:
         res.plot_all_tests()
         ## this needs modification of brian2 code
         #res.plot_all_tests(print_relative=True)
-        savefig(os.path.join(plot_dir, f'speed_test_{speed_tests[i][1]}_absolute.png'))
+        savefig(os.path.join(plot_dir, f'speed_test_{test_name}_absolute.png'))
         res.plot_all_tests(relative=True)
         savefig(os.path.join(plot_dir, f'speed_test_{test_name}_relative.png'))
         res.plot_all_tests(profiling_minimum=0.05)
         savefig(os.path.join(plot_dir, f'speed_test_{test_name}_profiling.png'))
-        if 3 != len(get_fignums()):
-            print(f"WARNING: There were {len(get_fignums())} plots created, but only {3 * (i + 1)} saved.")
+        res.plot_all_tests(only="python_", exclude=(), profiling_minimum=0)
+        savefig(os.path.join(plot_dir, f'speed_test_{test_name}_python_timers.png'))
+        res.plot_all_tests(only="standalone_", exclude=(), profiling_minimum=0)
+        savefig(os.path.join(plot_dir, f'speed_test_{test_name}_standalone_timers.png'))
+        res.plot_all_tests(only="standalone_",
+                           exclude=("standalone_before_", "standalone_after_"),
+                           profiling_minimum=0)
+        savefig(os.path.join(plot_dir, f'speed_test_{test_name}_standalone_timers_without_extra_diffs.png'))
+        if 6 != len(get_fignums()):
+            print(f"WARNING: There were {len(get_fignums())} plots created, but only {6 * (i + 1)} saved.")
         for f in get_fignums():
             close(f)
 
@@ -319,55 +327,60 @@ try:
         # run nvprof on n_range[2] for all configurations
         if not args.no_nvprof:
             for conf in configurations:
-                for n in speed_test.n_range[n_slice]:
-                    proj_dir = conf.get_project_dir(feature_name=test_name, n=n)
-                    main_args = ''
-                    if 'genn_runs' in proj_dir:
-                        main_args = f'test {speed_test.duration / second}'
-                    ns = speed_test.n_range[n_slice]
-                    idx = 4
-                    max_runtime = 20
-                    if isinstance(conf, DynamicConfigCreator):
-                        conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')
-                    else:
-                        conf_name = conf.__name__
-                    print(f"Rerunning {conf_name} with n = {speed_test.n_range[idx]} for nvprof profiling")
-                    #tb, res, runtime, prof_info = results(conf, speed_test, speed_test.n_range[idx], maximum_run_time=maximum_run_time)
-                    runtime = res.full_results[conf.name, speed_test.fullname(), n, 'All']
-                    this_res = res.feature_result[conf.name, speed_test.fullname(), n]
-                    tb = res.tracebacks[conf.name, speed_test.fullname(), n]
-                    if not isinstance(this_res, Exception) and runtime < max_runtime:
-                        nvprof_args = '--profile-from-start-off' if proj_dir.startswith("cuda_standalone") else ''
-                        nvprof_n = speed_test.n_range[idx]
-                        log_file=os.path.join(
-                            prof_dir, f'nvprof_{test_name}_{conf_name}_{nvprof_n}.log'
-                        )
-                        cmd = (
-                            f'cd {proj_dir}'
-                            f' && nvprof'
-                                f' {nvprof_args}'
-                                f' --log-file ../{log_file}'
-                                f' ./main {main_args}'
-                        )
-                        prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
-                        cmd = cmd.replace('(', '\(').replace(')', '\)')
-                        try:
-                            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-                        except subprocess.CalledProcessError as err:
-                            print(f"ERROR: nvprof failed with:{err} output: {err.output}")
-                            raise
-                        prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
-                        prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
-                        print(f"Profiling took {prof_diff} for runtime of {runtime}")
-                    elif isinstance(res, Exception):
-                        print("Didn't run nvprof, got an Exception", res)
-                    else:  # runtime >= max_runtime
-                        print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
+                #for n in speed_test.n_range[n_slice]:
+                ns = speed_test.n_range[n_slice]
+                idx = 4
+                nvprof_n = speed_test.n_range[idx]
+                max_runtime = 20
+                proj_dir = conf.get_project_dir(feature_name=test_name, n=n)
+                main_args = ''
+                if 'cpp_standalone_runs' in proj_dir:
+                    break
+                elif 'genn_runs' in proj_dir:
+                    main_args = f'test {speed_test.duration / second}'
+                if isinstance(conf, DynamicConfigCreator):
+                    conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')
+                else:
+                    conf_name = conf.__name__
+                print(f"Rerunning {conf_name} with n = {nvprof_n} for nvprof profiling")
+                #tb, res, runtime, prof_info = results(conf, speed_test, speed_test.n_range[idx], maximum_run_time=maximum_run_time)
+                runtime = res.full_results[conf.name, speed_test.fullname(), n, 'All']
+                this_res = res.feature_results[conf.name, speed_test.fullname(), n]
+                tb = res.tracebacks[conf.name, speed_test.fullname(), n]
+                if not isinstance(this_res, Exception) and runtime < max_runtime:
+                    nvprof_args = '--profile-from-start-off' if proj_dir.startswith("cuda_standalone") else ''
+                    log_file=os.path.join(
+                        os.path.abspath(prof_dir),
+                        f'nvprof_{test_name}_{conf_name}_{nvprof_n}.log'
+                    )
+                    cmd = (
+                        f'cd {proj_dir}'
+                        f' && nvprof'
+                            f' {nvprof_args}'
+                            f' --log-file {log_file}'
+                            f' ./main {main_args}'
+                    )
+                    prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+                    cmd = cmd.replace('(', '\(').replace(')', '\)')
+                    print(f"Running nvprof: {cmd}")
+                    try:
+                        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                    except subprocess.CalledProcessError as err:
+                        print(f"ERROR: nvprof failed with:{err} output: {err.output}")
+                        raise
+                    prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
+                    prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
+                    print(f"Profiling took {prof_diff} for runtime of {runtime}")
+                elif isinstance(res, Exception):
+                    print("Didn't run nvprof, got an Exception", res)
+                else:  # runtime >= max_runtime
+                    print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
 
         # Delete project directories when done
-        for conf in configurations:
-            for n in speed_test.n_range[n_slice]:
-                conf.delete_project_dir(feature_name=test_name, n=n)
+        if delete_project_dirs:
+            for conf in configurations:
+                for n in speed_test.n_range[n_slice]:
+                    conf.delete_project_dir(feature_name=test_name, n=n)
 
 finally:
     create_readme(directory)

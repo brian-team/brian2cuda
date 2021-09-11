@@ -33,7 +33,7 @@ def pickle_results(results, filename):
     assert isinstance(results, SpeedTestResults)
     to_pickle = SpeedTestResults(
         results.full_results,
-        results.feature_result,
+        results.feature_results,
         configurations_to_dict(results.configurations),
         results.speed_tests,
         results.brian_stdouts,
@@ -71,11 +71,23 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
     num_genn_configs = len([c['classname'] for c in configs if
                             c['classname'].lower().startswith('genn')])
 
-    recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
-    recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                      if not key[0].lower().startswith('genn')])
-    recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                  if key[0].lower().startswith('genn')])
+    #recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
+    #recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+    #                                  if not key[0].lower().startswith('genn')])
+    #recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+    #                              if key[0].lower().startswith('genn')])
+    recorded_suffixes = set()
+    recorded_not_genn_suffixes = set()
+    recorded_genn_suffixes = set()
+    for key in full_results_dict.keys():
+        configname = key[0]
+        suffix = key[-1]
+        if True: #not suffix.startswith(("standalone_", "python_")):
+            recorded_suffixes.add(suffix)
+            if configname.lower().startswith('genn'):
+                recorded_genn_suffixes.add(suffix)
+            else:
+                recorded_not_genn_suffixes.add(suffix)
 
     if len(recorded_suffixes) <= 3:
         assert 'lrcf' in recorded_suffixes

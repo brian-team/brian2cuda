@@ -44,7 +44,7 @@ index 3663c276..40cc65a6 100644
      def register_preferences(self, prefbasename, prefbasedoc, **prefs):
          '''
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 5791bb61..f88e36be 100644
+index 5791bb61..e7911f7e 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
 @@ -13,6 +13,8 @@
@@ -78,7 +78,7 @@ index 5791bb61..f88e36be 100644
      extra_make_args_unix=BrianPreference(
          default=['-j'],
          docs='''
-@@ -182,7 +199,9 @@ def __init__(self):
+@@ -182,7 +199,13 @@ def __init__(self):
          self.code_lines = {'before_start': [],
                             'after_start': [],
                             'before_end': [],
@@ -86,21 +86,30 @@ index 5791bb61..f88e36be 100644
 +                           'after_end': [],
 +                           'before_run': [],
 +                           'after_run': []}
++
++        self.timers = {'run_binary': None,
++                       'compile': {'clean':None,
++                                   'make': None}}
  
          self.clocks = set([])
  
-@@ -978,8 +997,9 @@ def compile_source(self, directory, compiler, debug, clean):
+@@ -977,9 +1000,14 @@ def compile_source(self, directory, compiler, debug, clean):
+             else:
                  with std_silent(debug):
                      if clean:
++                        _start_timer = time.time()
                          os.system('make clean >/dev/null 2>&1')
++                        self.timers['compile']['clean'] = time.time() - _start_timer
 +                    make_cmd = prefs.devices.cpp_standalone.make_cmd_unix
                      make_args = ' '.join(prefs.devices.cpp_standalone.extra_make_args_unix)
 -                    x = os.system('make %s' % (make_args, ))
++                    _start_timer = time.time()
 +                    x = os.system('%s %s' % (make_cmd, make_args, ))
++                    self.timers['compile']['make'] = time.time() - _start_timer
                      if x != 0:
                          error_message = ('Project compilation failed (error '
                                           'code: %u).') % x
-@@ -1019,7 +1039,10 @@ def run(self, directory, with_output, run_args):
+@@ -1019,7 +1047,12 @@ def run(self, directory, with_output, run_args):
              if os.name == 'nt':
                  x = subprocess.call(['main'] + run_args, stdout=stdout)
              else:
@@ -108,11 +117,13 @@ index 5791bb61..f88e36be 100644
 +                run_cmd = prefs.devices.cpp_standalone.run_cmd_unix
 +                if isinstance(run_cmd, str):
 +                    run_cmd = [run_cmd]
++                _start_timer = time.time()
 +                x = subprocess.call(run_cmd + run_args, stdout=stdout)
++                self.timers['run_binary'] = time.time() - _start_timer
              if stdout is not None:
                  stdout.close()
              if x:
-@@ -1035,6 +1058,7 @@ def run(self, directory, with_output, run_args):
+@@ -1035,6 +1068,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -120,23 +131,7 @@ index 5791bb61..f88e36be 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1251,9 +1275,15 @@ def build(self, directory='output',
-             net.after_run()
- 
-         if compile:
-+            start = time.time()
-             self.compile_source(directory, compiler, debug, clean)
-+            took = str(datetime.timedelta(seconds=time.time() - start))
-+            print(f"BENCHMARKING: compilation took {took}")
-             if run:
-+                start = time.time()
-                 self.run(directory, with_output, run_args)
-+                took = str(datetime.timedelta(seconds=time.time() - start))
-+                print(f"BENCHMARKING: run took {took}")
- 
-     def delete(self, code=True, data=True, directory=True, force=False):
-         if self.project_dir is None:
-@@ -1362,6 +1392,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1362,6 +1396,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile
@@ -151,7 +146,7 @@ index 5791bb61..f88e36be 100644
          all_objects = net.sorted_objects
          net._clocks = {obj.clock for obj in all_objects}
          t_end = net.t+duration
-@@ -1487,10 +1525,12 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1487,10 +1529,12 @@ def network_run(self, net, duration, report=None, report_period=10*second,
              if clock not in all_clocks:
                  run_lines.append('{net.name}.add(&{clock.name}, NULL);'.format(clock=clock, net=net))
  
@@ -201,7 +196,7 @@ index f3a9ca0f..671fd787 100644
 -	$(CC) $(CFLAGS) $< -o $@
 +	$(CXX) $(CXXFLAGS) $< -o $@
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 03a81bfe..3886ec49 100644
+index 03a81bfe..1b7c2350 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
 @@ -10,6 +10,8 @@
@@ -261,7 +256,7 @@ index 03a81bfe..3886ec49 100644
      configuration.after_run()
      results = feature.results()
      run_time = time.time()-start_time
-@@ -248,39 +267,83 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -248,41 +267,116 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
              pass
      lrcf = configuration.get_last_run_completed_fraction()
      run_time = run_time/lrcf
@@ -332,6 +327,8 @@ index 03a81bfe..3886ec49 100644
 +        sys.stderr.write(stderr)
      with open(tempfilename, 'rb') as f:
 -        tb, res, runtime, profiling_info = pickle.load(f)
+-    return tb, res, runtime, profiling_info
+-    
 +        tb, res, runtime, profiling_info, lrcf = pickle.load(f)
 +    os.remove(tempfilename)
 +    if isinstance(res, Exception):
@@ -345,26 +342,59 @@ index 03a81bfe..3886ec49 100644
 +        profiling_info = [(codeobj, time)
 +                              for (codeobj, time) in profiling_info
 +                              if codeobj in network_codeobjects]
++    # Load additional benchmarking times
++    benchmark_file = configuration.get_benchmark_file(
++        feature_name=feature.__name__, n=n
++    )
++    standalone_benchmarks = {}
++    with open(benchmark_file, "r") as f:
++        for line in f.readlines():
++            name, time = line.split()
++            if time == "None":
++                time = None
++            else:
++                # We record in microseconds, convert to seconds
++                time = float(time) / 10e6
++            standalone_benchmarks[name] = time
++    python_benchmark_file = configuration.get_python_benchmark_file(
++        feature_name=feature.__name__, n=n
++    )
++    python_benchmarks = {}
++    with open(python_benchmark_file, "r") as f:
++        for line in f.readlines():
++            name, time = line.split()
++            if time == "None":
++                time = None
++            else:
++                time = float(time)
++            python_benchmarks[name] = time
++
 +    if hasattr(configuration, 'git_commit') and configuration.git_commit is not None:
 +        # reset the current changes before checking out original commit
 +        configuration.git_reset()
 +        # check out the original commit
 +        configuration.git_checkout(reverse=True)
++
++    return_vars = (
++        tb, res, runtime, profiling_info, python_benchmarks, standalone_benchmarks
++    )
 +    if return_lrcf:
-+        return tb, res, runtime, profiling_info, lrcf
-     return tb, res, runtime, profiling_info
-     
++        return_vars = (*return_vars, lrcf)
++    return return_vars
++
  
-@@ -325,7 +388,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
+ def check_or_compare(feature, res, baseline, maxrelerr):
+     feature = feature()
+@@ -325,7 +419,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
              txt = 'OK'
              sym = '.'
              exc = None
 -            tb, res, runtime, prof_info = results(configuration, ft, maximum_run_time=maximum_run_time)
-+            tb, res, runtime, prof_info, lrcf = results(configuration, ft, maximum_run_time=maximum_run_time)
++            tb, res, runtime, prof_info, *_ = results(configuration, ft, maximum_run_time=maximum_run_time)
              if isinstance(res, Exception):
                  if isinstance(res, NotImplementedError):
                      sym = 'N'
-@@ -469,7 +532,8 @@ def __str__(self):
+@@ -469,7 +563,8 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
@@ -374,7 +404,7 @@ index 03a81bfe..3886ec49 100644
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -485,17 +549,30 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -485,17 +580,41 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
          print('Configurations:', ', '.join(c.name for c in configurations))
  
      full_results = {}
@@ -382,8 +412,9 @@ index 03a81bfe..3886ec49 100644
 +    traceback = {}
 +    brian_stdouts = {}
 +    brian_stderrs = {}
++    feature_results = {}
++    benchmark_times = {}
      for ft in speed_tests:
-+        result = {}
          if verbose:
              print(ft.fullname()+': ', end=' ')
 +            sys.stdout.flush()
@@ -398,16 +429,26 @@ index 03a81bfe..3886ec49 100644
                  for _ in range(1+int(run_twice)):
 -                    tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time)
 +                    if mark_not_completed:
-+                        tb, res, runtime, prof_info, lrcf = results(configuration, ft, n, maximum_run_time=maximum_run_time,
-+                                                                    profile_only_active=profile_only_active,
-+                                                                    return_lrcf=mark_not_completed)
++                        tb, res, runtime, prof_info, python_bench, standalone_bench, lrcf = results(
++                            configuration,
++                            ft,
++                            n,
++                            maximum_run_time=maximum_run_time,
++                            profile_only_active=profile_only_active,
++                            return_lrcf=mark_not_completed
++                        )
 +                    else:
-+                        tb, res, runtime, prof_info = results(configuration, ft, n, maximum_run_time=maximum_run_time,
-+                                                              profile_only_active=profile_only_active)
++                        tb, res, runtime, prof_info, python_bench, standalone_bench = results(
++                            configuration,
++                            ft,
++                            n,
++                            maximum_run_time=maximum_run_time,
++                            profile_only_active=profile_only_active
++                        )
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -504,8 +581,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -504,8 +623,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -435,12 +476,101 @@ index 03a81bfe..3886ec49 100644
 +                traceback[configuration.name, ft.fullname(), n] = tb
 +                brian_stdouts[configuration.name, ft.fullname(), n] = brian_stdout
 +                brian_stderrs[configuration.name, ft.fullname(), n] = brian_stderr
-+                result[configuration.name, n] = res
++                feature_results[configuration.name, ft.fullname(), n] = res
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -520,18 +620,32 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -518,20 +660,125 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+                 for suffix, proftime in list(suffixtime.items()):
+                     full_results[configuration.name, ft.fullname(), n, suffix] = proftime
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
++                # Add additional benchmark timings
++                all_measures = list(standalone_bench.keys())
++                # Complicated hackmack to extract difference (after - before) for all
++                # measured times that have a before_ and after_ measurment. And leaving
++                # all other measurements as is.
++                before_after_measures = []
++                before_measures = []
++                after_measures = []
++                other_measuers = list(standalone_bench.keys())
++                for key in standalone_bench.keys():
++                    if key.startswith("before_"):
++                        truncated_key = key[len("before_"):]
++                        if truncated_key in after_measures:
++                            key_idx = before_measures.index(truncated_key)
++                            del after_measures[key_idx]
++                            before_after_measures.append(truncated_key)
++                        else:
++                            before_measures.append(truncated_key)
++                    elif key.startswith("after_"):
++                        truncated_key = key[len("after_"):]
++                        if truncated_key in before_measures:
++                            key_idx = before_measures.index(truncated_key)
++                            del before_measures[key_idx]
++                            before_after_measures.append(truncated_key)
++                        else:
++                            after_measures.append(truncated_key)
++                for measure in before_after_measures:
++                    before_key_idx = other_measuers.index(f"before_{measure}")
++                    del other_measuers[before_key_idx]
++                    after_key_idx = other_measuers.index(f"after_{measure}")
++                    del other_measuers[after_key_idx]
++                for measure in after_measures:
++                    assert f"after_{measure}" in other_measuers
++                for measure in before_measures:
++                    assert f"before_{measure}" in other_measuers
++                del before_measures
++                del after_measures
++                # Store (after - before) for all that have it
++                for measure in before_after_measures:
++                    before = standalone_bench[f"before_{measure}"]
++                    after = standalone_bench[f"after_{measure}"]
++                    if after is None and before is None:
++                        #print(
++                        #    f"WARNING: Can't get standalone benchmark point "
++                        #    f"'{measure}' timepoint is None for {configuration.name}"
++                        #)
++                        pass
++                    else:
++                        time = after - before
++                        full_results[configuration.name, ft.fullname(), n, f"standalone_{measure}"] = time
++                # Store time points for all tha don't have after and before
++                for measure in other_measuers:
++                    if measure is None:
++                        #print(
++                        #    f"WARNING: Can't get benchmark point '{measure}', "
++                        #    f"timepoint is None for {configuration.name}"
++                        #)
++                        pass
++                    else:
++                        time = standalone_bench[measure]
++                        full_results[configuration.name, ft.fullname(), n, f"{measure}"] = time
++                # Store some additional differences
++                diffs = [
++                    ("before_start", "after_end"),
++                    ("before_start", "before_run"),
++                    ("after_run", "after_end")
++                ]
++                for (before_key, after_key) in diffs:
++                    if before_key in all_measures and after_key in all_measures:
++                        measure = f"standalone_{before_key}_to_{after_key}"
++                        before = standalone_bench[before_key]
++                        after = standalone_bench[after_key]
++                        time = after - before
++                        full_results[configuration.name, ft.fullname(), n, measure] = time
++                    else:
++                        #print(f"WARNING: {before_key} or {after_key} not found.")
++                        pass
++                # Store timings taken from Python
++                for measure, time in python_bench.items():
++                    if time is None:
++                        print(
++                            f"WARNING: Can't get Python benchmark point '{measure}', "
++                            f"timepoint is None for {configuration.name}"
++                        )
++                    else:
++                        full_results[configuration.name, ft.fullname(), n, f"python_{measure}"] = time
++
              if verbose:
                  print(']', end=' ')
 +                sys.stdout.flush()
@@ -450,7 +580,7 @@ index 03a81bfe..3886ec49 100644
 -    return SpeedTestResults(full_results, configurations, speed_tests)
 +            for n in ft.n_range[n_slice]:
 +                for conf in configurations:
-+                    if isinstance(result[conf.name, n], Exception):
++                    if isinstance(feature_results[conf.name, ft.fullname(), n], Exception):
 +                        print(f"\nTRACEBACK {conf.name} N={n}"
 +                              f"\n{traceback[conf.name, ft.fullname(), n]}"
 +                              f"\nSTDOUT"
@@ -459,13 +589,17 @@ index 03a81bfe..3886ec49 100644
 +                              f"\n{brian_stderrs[conf.name, ft.fullname(), n]}"
 +                              f"\n\n")
 +
-+    return SpeedTestResults(full_results, configurations, speed_tests, brian_stdouts, brian_stderrs, traceback)
++    return SpeedTestResults(full_results, feature_results, configurations, speed_tests,
++                            brian_stdouts, brian_stderrs, traceback)
  
  
  class SpeedTestResults(object):
 -    def __init__(self, full_results, configurations, speed_tests):
-+    def __init__(self, full_results, configurations, speed_tests, brian_stdouts, brian_stderrs, tracebacks):
++    def __init__(self, full_results, feature_results, configurations, speed_tests,
++                 brian_stdouts, brian_stderrs, tracebacks):
          self.full_results = full_results
++        # Either the exception of the run or the run's `n`
++        self.feature_results = feature_results
          self.configurations = configurations
          self.speed_tests = speed_tests
 -        
@@ -476,25 +610,83 @@ index 03a81bfe..3886ec49 100644
      def get_ns(self, fullname):
          L = [(cn, fn, n, s)
               for cn, fn, n, s in self.full_results
-@@ -546,7 +660,7 @@ def get_codeobjsuffixes(self, fullname):
+@@ -539,14 +786,51 @@ def get_ns(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
-         return set(codeobjsuffixes)
+         return numpy.array(sorted(list(set(n))))
  
+-    def get_codeobjsuffixes(self, fullname):
++    def get_codeobjsuffixes(self, fullname, exclude=("python_", "standalone_"),
++                            only=""):
++        """
++        Exclude suffixes starting with anything in `exclude` (list of strings) or only
++        choose those starting with `only` (single string)
++        """
+         L = [(cn, fn, n, s)
+              for cn, fn, n, s in self.full_results
+              if fn == fullname]
+         confignames, fullnames, n, codeobjsuffixes  = zip(*L)
+-        return set(codeobjsuffixes)
+-
 -    def plot_all_tests(self, relative=False, profiling_minimum=1.0):
-+    def plot_all_tests(self, relative=False, profiling_minimum=1.0, print_relative=False):
++        if exclude and only:
++            for ex in exclude:
++                if not ex.startswith(only):
++                    raise ValueError(
++                        f"Can't exclude ({exclude}) suffixes with only ({only}) suffix"
++                    )
++        if not isinstance(only, str):
++            raise TypeError(f"`only` has to be string, got {type(only)}")
++        if not isinstance(exclude, tuple):
++            raise TypeError(f"`exclude` has to be tuple, got {type(exclude)}")
++        filtered_codeobjectsuffixes = []
++        # Add these always to the filtered suffixes
++        for suffix in ["All", "Overheads", "lrcf"]:
++            if suffix in codeobjsuffixes:
++                filtered_codeobjectsuffixes.append(suffix)
++        for suffix in codeobjsuffixes:
++            # Only add this suffix if it doesn't start with any exclude string
++            exclude_append = True
++            if exclude:
++                exclude_append = False
++                if not suffix.startswith(exclude):
++                    exclude_append = True
++            # Only add this suffix if it starts with only (if given)
++            only_append = True
++            if only:
++                only_append = False
++                if suffix.startswith(only):
++                    only_append = True
++            if exclude_append and only_append:
++                filtered_codeobjectsuffixes.append(suffix)
++        return set(filtered_codeobjectsuffixes)
++
++    def plot_all_tests(self, relative=False, profiling_minimum=1.0,
++                       print_relative=False, exclude=("python_", "standalone_"),
++                       only=""):
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -557,6 +671,8 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
-             codeobjsuffixes = self.get_codeobjsuffixes(fullname)
+@@ -554,10 +838,17 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+             fullname = st.fullname()
+             pylab.figure()
+             ns = self.get_ns(fullname)
+-            codeobjsuffixes = self.get_codeobjsuffixes(fullname)
++            codeobjsuffixes = self.get_codeobjsuffixes(
++                fullname, exclude=exclude, only=only
++            )
              codeobjsuffixes.remove('All')
              codeobjsuffixes.remove('Overheads')
+-            codeobjsuffixes = ['All', 'Overheads']+sorted(codeobjsuffixes)
 +            if 'lrcf' in codeobjsuffixes:
 +                codeobjsuffixes.remove('lrcf')
-             codeobjsuffixes = ['All', 'Overheads']+sorted(codeobjsuffixes)
++            if only:
++                codeobjsuffixes = sorted(codeobjsuffixes)
++            else:
++                codeobjsuffixes = ['All', 'Overheads'] + sorted(codeobjsuffixes)
              if relative or profiling_minimum==1:
                  codeobjsuffixes = ['All']
-@@ -566,31 +682,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+             baseline = None
+@@ -566,31 +857,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              dashes = {}
              markerstyles = {}
              for isuffix, suffix in enumerate(codeobjsuffixes):
@@ -545,7 +737,7 @@ index 03a81bfe..3886ec49 100644
                      if plottable:
                          if label in havelabel:
                              label = None
-@@ -612,8 +743,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -612,8 +918,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                                          dash = dash+(4, 2)
                                  dashes[suffix] = dash
                                  markerstyles[suffix] = msty = next(markerstyles_cycle)
@@ -559,7 +751,7 @@ index 03a81bfe..3886ec49 100644
                          if dash is not None:
                              line.set_dashes(dash)
              pylab.title(fullname)
-@@ -623,6 +758,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -623,6 +933,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')

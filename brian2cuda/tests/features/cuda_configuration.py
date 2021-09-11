@@ -61,12 +61,15 @@ class BenchmarkConfiguration(Configuration):
     device_kwargs = {}
     commit = None
 
+    # Want to access these without having to initialize the class
+    benchmark_file = os.path.join("results", "benchmark.time")
+    python_benchmark_file = os.path.join("results", "python_benchmark.time")
+
     def __init__(self, feature_test):
         self.feature_test = feature_test
         self.feature_test_name = self.feature_test.__class__.__name__
         self.n = self.feature_test.n
-        self.project_dir = None
-        self.benchmark_file = None
+        self.project_dir = self.get_project_dir(self.feature_test_name, self.n)
         if self.name is None:
             raise NotImplementedError("You need to set the name attribute.")
         if self.devicename is None:
@@ -84,6 +87,18 @@ class BenchmarkConfiguration(Configuration):
         return directory
 
     @classmethod
+    def get_benchmark_file(cls, *args, **kwargs):
+        project_dir = cls.get_project_dir(*args, **kwargs)
+        benchmark_file = os.path.join(project_dir, cls.benchmark_file)
+        return benchmark_file
+
+    @classmethod
+    def get_python_benchmark_file(cls, *args, **kwargs):
+        project_dir = cls.get_project_dir(*args, **kwargs)
+        python_benchmark_file = os.path.join(project_dir, cls.python_benchmark_file)
+        return python_benchmark_file
+
+    @classmethod
     def delete_project_dir(cls, feature_name, n, config_name=None):
         project_dir = cls.get_project_dir(feature_name, n, config_name=config_name)
         if os.path.exists(project_dir):
@@ -97,8 +112,6 @@ class BenchmarkConfiguration(Configuration):
             self.device_kwargs["profile"] = self.profile
 
     def before_run(self):
-        self.project_dir = self.get_project_dir(self.feature_test_name, self.n)
-
         # Remove project directory if it already exists
         self.delete_project_dir(self.feature_test_name, self.n)
 
@@ -125,8 +138,8 @@ class BenchmarkConfiguration(Configuration):
         prefs._backup()
 
         # Insert benchmarking code
-        self.benchmark_file = os.path.join(self.project_dir, "results", "benchmark.time")
         device.insert_code("before_start", SETUP_TIMER.format(fname=self.benchmark_file))
+        device.insert_code("before_start", TIME_DIFF.format(name="before_start"))
         device.insert_code("after_start", TIME_DIFF.format(name="after_start"))
         device.insert_code("before_run", TIME_DIFF.format(name="before_run"))
         device.insert_code("after_run", TIME_DIFF.format(name="after_run"))
@@ -135,10 +148,25 @@ class BenchmarkConfiguration(Configuration):
         device.insert_code("after_end", CLOSE_TIMER)
 
     def after_run(self):
-        # Add Python-side compile + run time measurment (taken in
-        # `TimedSpeedTest.timed_run()`) to benchmarking file
-        with open(self.benchmark_file, "a") as file:
-            file.write(f"total {self.feature_test.runtime}")
+        # Write Python-side benchmarking to extra benchmark file
+        # Could also use self.get_python_benchmark_file() here
+        python_benchmark_path = os.path.join(
+            self.project_dir, self.python_benchmark_file
+        )
+        with open(python_benchmark_path, "w") as file:
+            # Timer for `brian.run()` call recorded in `TimedSpeedTest.timed_run()`
+            file.write(f"run_brian {self.feature_test.runtime}\n")
+            # Timers for compilcation and binary execution recorded in
+            # `device.compile_source()` and `device.run()`
+            for key, value in device.timers.items():
+                if isinstance(value, float):
+                    file.write(f"{key} {value}\n")
+                else:
+                    for key2, value2 in value.items():
+                        file.write(f"{key}_{key2} {value2}\n")
+
+
+
 
 
 class CUDAStandaloneConfigurationBase(BenchmarkConfiguration):
@@ -209,6 +237,16 @@ class DynamicConfigCreator(object):
 
     def delete_project_dir(self, feature_name, n):
         return CUDAStandaloneConfigurationBase.delete_project_dir(
+            feature_name, n, config_name=self.name
+        )
+
+    def get_benchmark_file(self, feature_name, n):
+        return CUDAStandaloneConfigurationBase.get_benchmark_file(
+            feature_name, n, config_name=self.name
+        )
+
+    def get_python_benchmark_file(self, feature_name, n):
+        return CUDAStandaloneConfigurationBase.get_python_benchmark_file(
             feature_name, n, config_name=self.name
         )
 
