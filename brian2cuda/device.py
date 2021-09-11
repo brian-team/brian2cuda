@@ -1535,12 +1535,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # who runs `nvprof` on their generated code, since it will not
         # report any profiling info about kernels, that initialise
         # things only once in the beginning? Maybe get rid of it in a
-        # release version? (TODO)
+        # release version? (TODO: add via insert_code mechanism)
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
+
+        run_lines.extend(self.code_lines['before_run'])
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
+        run_lines.extend(self.code_lines['after_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff
