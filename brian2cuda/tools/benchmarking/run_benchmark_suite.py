@@ -80,6 +80,8 @@ from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfigur
 from create_readme import create_readme
 from helpers import pickle_results, translate_pkl_to_csv
 
+delete_project_dirs = True
+
 #suppress_brian2_logs()
 # Uncomment this to get brian2cuda logs
 # (Set log_level_diagnostic() for DynamicConfigCreator diagnostic messages)
