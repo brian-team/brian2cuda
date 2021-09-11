@@ -64,6 +64,7 @@ if [ ! "$parallel" -eq 0 ]; then
     # to (needed for parallel compilation / execution)
     export TMPDIR="$b2c_dir/tmp"
     mkdir $TMPDIR
+    echo "Set TMPDIR=$TMPDIR"
 fi
 
 script_path="$b2c_dir/$bash_script"
