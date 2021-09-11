@@ -104,6 +104,12 @@ class COBAHHBase(TimedSpeedTest):
                         method='exponential_euler')
 
         if not self.uncoupled:
+            logger.info(
+                f"Connecting synapses with\n"
+                f"\tprobability p(N={self.n}) = {self.p(self.n)}\n"
+                f"\twe={self.we}\n"
+                f"\twi={self.wi}"
+            )
             num_exc = int(0.8 * self.n)
             Pe = P[:num_exc]
             Pi = P[num_exc:]
@@ -116,6 +122,8 @@ class COBAHHBase(TimedSpeedTest):
             insert_benchmark_point("after_synapses_connect")
             Ce.we = self.we  # excitatory synaptic weight
             Ci.wi = self.wi  # inhibitory synaptic weight
+        else:
+            logger.info("Simulating in uncoupled mode. No synapses.")
 
         # Initialization
         P.v = 'El + (randn() * 5 - 5)*mV'
@@ -219,16 +227,16 @@ class BrunelHakimBase(TimedSpeedTest):
     sigmaext = None  # vold
     muext = None  # volt
     # homogeneous delays
-    homog_delays = None  # second
+    homog_delay = None  # second
     # heterogeneous delays
-    heterog_delays = None  # string syntax
+    heterog_delay = None  # string syntax
 
     def run(self):
         # preference for memory saving
         prefs['devices.cuda_standalone.no_pre_references'] = True
-        assert not (self.heterog_delays is not None and
-                    self.homog_delays is not None), \
-                "Can't set homog_delays and heterog_delays"
+        assert not (self.heterog_delay is not None and
+                    self.homog_delay is not None), \
+                "Can't set homog_delay and heterog_delay"
         Vr = 10*mV
         theta = 20*mV
         tau = 20*ms
@@ -240,6 +248,7 @@ class BrunelHakimBase(TimedSpeedTest):
         muext = self.muext
         sigmaext = self.sigmaext
 
+        logger.info(f"Simulating Brunel Hakim with muext={muext}, sigmaext={sigmaext}")
         eqs = """
         dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
         """
@@ -249,15 +258,18 @@ class BrunelHakimBase(TimedSpeedTest):
         group.V = Vr
 
         conn = Synapses(group, group, on_pre='V += -J',
-                        delay=self.homog_delays)
+                        delay=self.homog_delay)
 
         insert_benchmark_point("before_synapses_connect")
         conn.connect(p=sparseness)
         insert_benchmark_point("after_synapses_connect")
 
-        if self.heterog_delays is not None:
-            assert self.homog_delays is None
-            conn.delay = self.heterog_delays
+        if self.heterog_delay is not None:
+            assert self.homog_delay is None
+            logger.info(f'Setting heterogeneous delays: "{self.heterog_delay}"')
+            conn.delay = self.heterog_delay
+        else:
+            logger.info(f'Setting homogeneous delays: "{self.homog_delay}"')
 
         self.timed_run(self.duration)
 
@@ -273,7 +285,7 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     n_range = [int(10**p) for p in n_power]
 
     # all delays 2 ms
-    homog_delays = 2*ms
+    homog_delay = 2*ms
 
     sigmaext = 1*mV
     muext = 25*mV
@@ -291,7 +303,7 @@ class BrunelHakimHeterogDelays(BrunelHakimBase):
     n_range = [int(10**p) for p in n_power]
 
     # delays [0, 4] ms
-    heterog_delays = "4*ms * rand()"
+    heterog_delay = "4*ms * rand()"
 
     # to have a similar network activity regime as for homogenous delays
     # or narrow delay distribution
@@ -312,7 +324,7 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
     n_range = [int(10**p) for p in n_power]
 
     # delays 2 ms +- dt
-    heterog_delays = "2*ms + 2 * dt * rand() - dt"
+    heterog_delay = "2*ms + 2 * dt * rand() - dt"
 
     sigmaext = 1*mV
     muext = 25*mV
@@ -464,10 +476,12 @@ class STDPCUDA(TimedSpeedTest):
 
         on_pre = ''
         if self.post_effects:
+            logger.info("Simulating standard STDP with postsynaptic effects")
             # normal mode => poissongroup spikes make effect on postneurons
             eqs_neurons = eqs_neurons.format('')
             on_pre += 'ge += w\n'
         else:
+            logger.info("Simulating STDP without postsynaptic effects")
             # second mode => poissongroup spikes are inffective for postneurons
             # here: white noise process is added with similar mean and variance as
             # poissongroup input that is disabled in this case
@@ -496,7 +510,10 @@ class STDPCUDA(TimedSpeedTest):
 
         if self.heterog_delay is not None:
             assert self.homog_delay is None
+            logger.info(f'Setting heterogeneous delays: "{self.heterog_delay}"')
             S.delay = self.heterog_delay
+        else:
+            logger.info(f'Setting homogeneous delays: "{self.homog_delay}"')
 
         self.timed_run(self.duration)
 
