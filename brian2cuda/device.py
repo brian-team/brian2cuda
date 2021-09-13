@@ -926,13 +926,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 sub = 't - lastupdate'
                 if sub in code:
                     code = code.replace(sub, f'float({sub})')
-                    logger.debug(f"Replaced {sub} with float({sub}) in {codeobj}")
+                    logger.debug(f"Replaced {sub} with float({sub}) in {codeobj.name}")
                 # replace double-precision floating-point literals with their
                 # single-precision version (e.g. `1.0` -> `1.0f`)
                 code = replace_floating_point_literals(code)
                 logger.debug(
                     f"Replaced floating point literals by single precision version "
-                    f"(appending `f`) in {codeobj}."
+                    f"(appending `f`) in {codeobj.name}."
                 )
 
             writer.write('code_objects/'+codeobj.name+'.cu', code)
