@@ -727,7 +727,14 @@ class CUDACodeGenerator(CodeGenerator):
                 # turn off restricted pointers for scalars for safety
                 if var.scalar:
                     restrict = ' '
-                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                # Need to use correct dt type in pointers_lines for single precision,
+                # see #148
+                if varname == "dt" and prefs.core.default_float_dtype == np.float32:
+                    # c_data_type(variable.dtype) is float, but we need double
+                    dtype = "double"
+                else:
+                    dtype = self.c_data_type(var.dtype)
+                line = '{0}* {1} {2} = {3};'.format(dtype,
                                                     restrict,
                                                     pointer_name,
                                                     array_name)
