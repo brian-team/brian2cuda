@@ -63,8 +63,8 @@ namespace {
        (e.g. _host_rand used in _poisson), but we can't put support_code_lines lines
        after block random_functions since random_functions can use functions defined in
        support_code_lines (e.g. _rand) #}
-    double _host_rand(const int _vectorisation_idx);
-    double _host_randn(const int _vectorisation_idx);
+    randomNumber_t _host_rand(const int _vectorisation_idx);
+    randomNumber_t _host_randn(const int _vectorisation_idx);
     int32_t _host_poisson(double _lambda, const int _vectorisation_idx);
 
     ///// block extra_device_helper /////
@@ -77,13 +77,13 @@ namespace {
     {% block random_functions %}
     // Implement dummy functions such that the host compiled code of binomial
     // functions works. Hacky, hacky ...
-    double _host_rand(const int _vectorisation_idx)
+    randomNumber_t _host_rand(const int _vectorisation_idx)
     {
         printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
-    double _host_randn(const int _vectorisation_idx)
+    randomNumber_t _host_randn(const int _vectorisation_idx)
     {
         printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
