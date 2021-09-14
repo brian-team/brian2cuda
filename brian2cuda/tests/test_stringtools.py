@@ -29,6 +29,14 @@ def test_replace_floating_point_literals():
                 f_replaced = replace_floating_point_literals(f_string)
                 eq_(f_replaced, f_string)
 
+    not_delimiters = ['_', 'a']
+
+    for l in float_literals:
+        for d in not_delimiters:
+            for string in [d + l, d + l + d, l + d]:
+                replaced = replace_floating_point_literals(string)
+                eq_(replaced, string)
+
     not_float_literals = ['1', '100', '002', 'a1.b', '-.-']
 
     for l in not_float_literals:
