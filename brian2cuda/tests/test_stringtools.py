@@ -2,6 +2,8 @@ import pytest
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
+def eq_(a, b):
+    assert a == b, f"{a} != {b}"
 
 @pytest.mark.codegen_independent
 def test_replace_floating_point_literals():
