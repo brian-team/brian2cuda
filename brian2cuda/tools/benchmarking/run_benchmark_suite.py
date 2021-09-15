@@ -423,8 +423,7 @@ try:
                     try:
                         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
                     except subprocess.CalledProcessError as err:
-                        print_flushed(f"ERROR: nvprof failed with:{err} output: {err.output}")
-                        raise
+                        print_flushed(f"ERROR: nvprof failed with: {err} output: {err.output}")
                     prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
                     prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
                     print_flushed(f"Profiling took {prof_diff} for runtime of {runtime}")
