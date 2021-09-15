@@ -1,5 +1,5 @@
 diff --git a/brian2genn/device.py b/brian2genn/device.py
-index fd387d2..d7ad21a 100644
+index fd387d2..cf8f7b3 100644
 --- a/brian2genn/device.py
 +++ b/brian2genn/device.py
 @@ -7,6 +7,7 @@ import platform
@@ -59,7 +59,7 @@ index fd387d2..d7ad21a 100644
                  call(["make", "clean"], cwd=directory, env=env)
 -                check_call(["make"], cwd=directory, env=env)
 +                _t2 = time.time()
-+                check_call(["make -j"], cwd=directory, env=env)
++                check_call(["make", "-j"], cwd=directory, env=env)
 +                _t3 = time.time()
 +                self.timers['compile']['buildmodel'] = _t1 - _t0
 +                self.timers['compile']['clean'] = _t2 - _t1
