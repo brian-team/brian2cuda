@@ -42,6 +42,7 @@ matplotlib.use('Agg')
 
 import time
 import datetime
+import socket
 
 from brian2 import *
 from brian2.tests.features import *
@@ -81,6 +82,42 @@ from create_readme import create_readme
 from helpers import pickle_results, translate_pkl_to_csv
 
 delete_project_dirs = True
+
+
+def print_flushed(string, slack=True, new_reply=False, format_code=True):
+    print(string, flush=True)
+    to_return = None
+    if slack and bot is not None:
+        assert slack_thread is not None
+        if format_code:
+            string = f"```{os.linesep}{string}{os.linesep}```"
+        try:
+            if new_reply:
+                new_append_message = bot.reply(slack_thread, string)
+                to_return = new_append_message
+            else:
+                assert append_message is not None
+                bot.append(append_message, string)
+        except:
+            print("ERROR: Failed to send message to slack.", flush=True)
+    return to_return
+
+bot = None
+try:
+    from clusterbot import ClusterBot
+except ImportError:
+    print("WARNING: clusterbot not installed. Can't notify slack.")
+else:
+    print_flushed("Starting ClusterBot...", slack=False)
+    try:
+        bot = ClusterBot()
+    except Exception as exc:
+        print(
+            f"ERROR: ClusterBot failed to initialize correctly. Can't notify "
+            f"slack. Here is the error:\n{exc}"
+        )
+        bot = None
+
 
 #suppress_brian2_logs()
 # Uncomment this to get brian2cuda logs
@@ -210,6 +247,23 @@ speed_tests = [# feature_test                           n_slice
                #(COBAHHFixedConnectivity, slice(None, -1)),
 ]
 
+slack_thread = None
+append_message = None
+
+script = os.path.basename(__file__)
+host = socket.gethostname()
+
+start_msg = f"Running `{script}` on `{host}`"
+if bot is not None:
+    try:
+        bot.init_pbar(max_value=len(speed_tests), title=start_msg)
+        slack_thread = bot.pbar_id
+    except Exception as exc:
+        print_flushed(f"Failed to init slack notifications, no slack messages will be sent\n{exc}")
+        bot = None
+
+print_flushed(start_msg, slack=False)
+
 #sns.set_palette(sns.color_palette("hls", len(configurations)))
 #sns.set_palette(sns.color_palette("cubehelix", len(configurations)))
 
@@ -227,7 +281,7 @@ os.makedirs(data_dir)
 os.makedirs(plot_dir)
 os.makedirs(log_dir)
 os.makedirs(prof_dir)
-print(f"Saving results in {plot_dir}.")
+print_flushed(f"Saving results in {plot_dir}.")
 
 shutil.copy(os.path.realpath(__file__), os.path.join(directory, 'run_benchmark_suite.py'))
 
@@ -241,7 +295,7 @@ try:
     for i, (speed_test, n_slice) in enumerate(speed_tests):
         test_name = speed_test.__name__
         start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
-        print(f"Starting {test_name} on {start}.")
+        append_message = print_flushed(f"Starting {test_name} on {start}.", new_reply=True)
         maximum_run_time = 1000*second
         res = run_speed_tests(configurations=configurations,
                               speed_tests=[speed_test],
@@ -257,7 +311,7 @@ try:
                              )
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)
-        print(f"Running {test_name} took {diff}.")
+        print_flushed(f"Running {test_name} took {diff}.")
         res.plot_all_tests()
         ## this needs modification of brian2 code
         #res.plot_all_tests(print_relative=True)
@@ -275,7 +329,7 @@ try:
                            profiling_minimum=0)
         savefig(os.path.join(plot_dir, f'speed_test_{test_name}_standalone_timers_without_extra_diffs.png'))
         if 6 != len(get_fignums()):
-            print(f"WARNING: There were {len(get_fignums())} plots created, but only {6 * (i + 1)} saved.")
+            print_flushed(f"WARNING: There were {len(get_fignums())} plots created, but only {6 * (i + 1)} saved.", slack=False)
         for f in get_fignums():
             close(f)
 
@@ -285,7 +339,7 @@ try:
         try:
             translate_pkl_to_csv(pkl_file)
         except KeyError as e:
-            print("ERROR tranlating {} to csv:\n\tKeyError: {}", pkl_file, e)
+            print_flushed("ERROR tranlating {} to csv:\n\tKeyError: {}", pkl_file, e)
 
         try:
             for key in res.brian_stdouts.keys():
@@ -294,19 +348,19 @@ try:
                 stdout_file = os.path.join(log_dir, f'stdout_{suffix}')
                 with open(stdout_file, 'w+') as sfile:
                     sfile.write(res.brian_stdouts[key])
-                print(f"Written {stdout_file}")
+                print_flushed(f"Written {stdout_file}", slack=False)
                 stderr_file = os.path.join(log_dir, f'stderr_{suffix}')
                 with open(stderr_file, 'w+') as sfile:
                     sfile.write(res.brian_stderrs[key])
-                print(f"Written {stderr_file}")
+                print_flushed(f"Written {stderr_file}", slack=False)
                 tb_file = os.path.join(log_dir, f'tb_{suffix}')
                 with open(tb_file, 'w+') as tfile:
                     tfile.write(res.tracebacks[key])
-                print(f"Written {tb_file}")
+                print_flushed(f"Written {tb_file}", slack=False)
         except Exception as err:
-            print(f"ERROR writing stdout files: {err}")
+            print_flushed(f"ERROR writing stdout files: {err}", slack=False)
         except:
-            print("ERROR writing stdout files and couldn't catch Exception...")
+            print_flushed("ERROR writing stdout files and couldn't catch Exception...", slack=False)
 
         # collect stdout logs
         for conf in configurations:
@@ -324,7 +378,7 @@ try:
                             )
                         )
                     else:
-                        print(f"WARNING Couldn't save {file}, file not found.")
+                        print_flushed(f"WARNING Couldn't save {file}, file not found.", slack=False)
 
         # run nvprof on n_range[2] for all configurations
         if not args.no_nvprof:
@@ -344,7 +398,7 @@ try:
                     conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-').replace(',', '-')
                 else:
                     conf_name = conf.__name__
-                print(f"Rerunning {conf_name} with n = {nvprof_n} for nvprof profiling")
+                print_flushed(f"Rerunning {conf_name} with n = {nvprof_n} for nvprof profiling")
                 #tb, res, runtime, prof_info = results(conf, speed_test, speed_test.n_range[idx], maximum_run_time=maximum_run_time)
                 runtime = res.full_results[conf.name, speed_test.fullname(), n, 'All']
                 this_res = res.feature_results[conf.name, speed_test.fullname(), n]
@@ -365,19 +419,19 @@ try:
                     )
                     prof_start = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
                     cmd = cmd.replace('(', '\(').replace(')', '\)')
-                    print(f"Running nvprof: {cmd}")
+                    print_flushed(f"Running nvprof: {cmd}", slack=False)
                     try:
                         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
                     except subprocess.CalledProcessError as err:
-                        print(f"ERROR: nvprof failed with:{err} output: {err.output}")
+                        print_flushed(f"ERROR: nvprof failed with:{err} output: {err.output}")
                         raise
                     prof_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
                     prof_diff = datetime.datetime.strptime(prof_end, time_format) - datetime.datetime.strptime(prof_start, time_format)
-                    print(f"Profiling took {prof_diff} for runtime of {runtime}")
+                    print_flushed(f"Profiling took {prof_diff} for runtime of {runtime}")
                 elif isinstance(res, Exception):
-                    print("Didn't run nvprof, got an Exception", res)
+                    print_flushed("Didn't run nvprof, got an Exception", res)
                 else:  # runtime >= max_runtime
-                    print(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
+                    print_flushed(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
 
         # Delete project directories when done
         if delete_project_dirs:
@@ -385,13 +439,37 @@ try:
                 for n in speed_test.n_range[n_slice]:
                     conf.delete_project_dir(feature_name=test_name, n=n)
 
+        if bot is not None:
+            try:
+                bot.update_pbar()
+            except:
+                print_flushed("ERROR: Failed to update slack progress bar.", flush=True, slack=False)
+
+except KeyboardInterrupt:
+    print_flushed(f"\nCaught KeyboardInterrupt: Exiting...")
+    final_msg = "❌ INTERRUPTED"
+except Exception as exc:
+    print_flushed(f"\nCaught an exception: {exc}\nExiting...")
+    final_msg = "❌ FAILED"
+else:
+    final_msg = "✅ FINISHED"
 finally:
     create_readme(directory)
-    print(f"\nSummarized speed test results in {os.path.join(directory, 'README.md')}")
+    append_message = print_flushed(
+        f"\nSummarized speed test results in {os.path.join(directory, 'README.md')}",
+        new_reply=True
+    )
     script_end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
     script_diff = datetime.datetime.strptime(script_end, time_format) - datetime.datetime.strptime(script_start, time_format)
-    print("Finished speed test on {}. Total time = {}.".format(
+    print_flushed("Finished speed test on {}. Total time = {}.".format(
         datetime.datetime.fromtimestamp(time.time()).strftime(time_format), script_diff))
+    final_msg += f" `{script}` on `{host}` after {script_diff}"
+    if bot is not None:
+        try:
+            bot.update(slack_thread, final_msg)
+        except:
+            print("ERROR: Failed to update final slack message.", flush=True)
+    print_flushed(final_msg, slack=False)
 
 
 ##res.plot_all_tests(relative=True)
