@@ -331,17 +331,17 @@ try:
             for conf in configurations:
                 #for n in speed_test.n_range[n_slice]:
                 ns = speed_test.n_range[n_slice]
-                idx = 4
+                idx = 4 if len(ns) > 4 else len(ns) - 1
                 nvprof_n = speed_test.n_range[idx]
                 max_runtime = 20
-                proj_dir = conf.get_project_dir(feature_name=test_name, n=n)
+                proj_dir = conf.get_project_dir(feature_name=test_name, n=nvprof_n)
                 main_args = ''
                 if 'cpp_standalone_runs' in proj_dir:
                     break
                 elif 'genn_runs' in proj_dir:
                     main_args = f'test {speed_test.duration / second}'
                 if isinstance(conf, DynamicConfigCreator):
-                    conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-')
+                    conf_name = conf.name.replace(' ', '-').replace('(', '-').replace(')', '-').replace(',', '-')
                 else:
                     conf_name = conf.__name__
                 print(f"Rerunning {conf_name} with n = {nvprof_n} for nvprof profiling")
@@ -349,11 +349,12 @@ try:
                 runtime = res.full_results[conf.name, speed_test.fullname(), n, 'All']
                 this_res = res.feature_results[conf.name, speed_test.fullname(), n]
                 tb = res.tracebacks[conf.name, speed_test.fullname(), n]
+                fullname = conf.get_fullname(test_name, nvprof_n)
                 if not isinstance(this_res, Exception) and runtime < max_runtime:
                     nvprof_args = '--profile-from-start-off' if proj_dir.startswith("cuda_standalone") else ''
                     log_file=os.path.join(
                         os.path.abspath(prof_dir),
-                        f'nvprof_{test_name}_{conf_name}_{nvprof_n}.log'
+                        f'nvprof_{fullname}.log'
                     )
                     cmd = (
                         f'cd {proj_dir}'

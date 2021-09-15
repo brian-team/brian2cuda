@@ -78,13 +78,18 @@ class BenchmarkConfiguration(Configuration):
 
     @classmethod
     def get_project_dir(cls, feature_name, n, config_name=None):
+        fullname = cls.get_fullname(feature_name, n, config_name)
+        directory = os.path.join(f"{cls.devicename}_runs", fullname)
+        return directory
+
+    @classmethod
+    def get_fullname(cls, feature_name, n, config_name=None):
         if config_name is None:
             config_name = cls.name
-        directory = os.path.join(f"{cls.devicename}_runs",
-                                 f"{feature_name}_{n}_{config_name}")
+        fullname = f"{feature_name}_{n}_{config_name}"
         for symbol in [" ", ",", "(", ")"]:
-            directory = directory.replace(symbol, "-")
-        return directory
+            fullname = fullname.replace(symbol, "-")
+        return fullname
 
     @classmethod
     def get_benchmark_file(cls, *args, **kwargs):
@@ -232,6 +237,11 @@ class DynamicConfigCreator(object):
         configuration class.
         """
         return CUDAStandaloneConfigurationBase.get_project_dir(
+            feature_name, n, config_name=self.name
+        )
+
+    def get_fullname(self, feature_name, n):
+        return CUDAStandaloneConfigurationBase.get_fullname(
             feature_name, n, config_name=self.name
         )
 
