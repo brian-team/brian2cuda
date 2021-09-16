@@ -1360,6 +1360,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # `code_object` method
         self.enable_profiling = profile
 
+        # Allow setting `profile` in the `set_device` call (used e.g. in brian2cuda
+        # SpeedTest configurations)
+        if 'profile' in self.build_options:
+            build_profile = self.build_options.pop('profile')
+            if build_profile:
+                self.enable_profiling = True
+
         all_objects = net.sorted_objects
         net._clocks = {obj.clock for obj in all_objects}
         t_end = net.t+duration
