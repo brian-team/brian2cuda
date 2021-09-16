@@ -12,6 +12,9 @@ parser.add_argument('--dry-run', action='store_true',
 parser.add_argument('--no-nvprof', action='store_true',
                     help=("Don't run nvprof profiling"))
 
+parser.add_argument('--profile', action='store_true',
+                    help=("Run with codeobject / kernel profiling"))
+
 args = parser.parse_args()
 
 if args.dry_run:
@@ -32,6 +35,7 @@ import os
 import shutil
 import subprocess
 import sys
+import traceback
 
 # run tests without X-server
 import matplotlib
@@ -98,8 +102,8 @@ def print_flushed(string, slack=True, new_reply=False, format_code=True):
             else:
                 assert append_message is not None
                 bot.append(append_message, string)
-        except:
-            print("ERROR: Failed to send message to slack.", flush=True)
+        except Exception as exc:
+            print(f"ERROR: Failed to send message to slack ({exc})", flush=True)
     return to_return
 
 bot = None
@@ -264,6 +268,35 @@ if bot is not None:
 
 print_flushed(start_msg, slack=False)
 
+msg = "ENVIRONMENT:"
+for key, value in os.environ.items():
+    msg += f"\n\t{key} = {value}"
+print_flushed(msg, slack=False)
+
+try:
+    cpuinfo = subprocess.check_output(["lscpu"], encoding='UTF-8')
+except subprocess.CalledProcessError as err:
+    cpuinfo = err
+print_flushed(f"\nCPU information\n{cpuinfo}", slack=False)
+
+try:
+    gpuinfo = subprocess.check_output(["deviceQuery"], encoding='UTF-8')
+except subprocess.CalledProcessError as err:
+    gpuinfo = err
+print_flushed(f"\nGPU information\n{gpuinfo}", slack=False)
+
+try:
+    gxxinfo = subprocess.check_output([os.getenv("CXX"), "--version"], encoding='UTF-8')
+except subprocess.CalledProcessError as err:
+    gxxinfo = err
+print_flushed(f"\nCXX version\n{gxxinfo}", slack=False)
+
+try:
+    nvccinfo = subprocess.check_output(["nvcc", "--version"], encoding='UTF-8')
+except subprocess.CalledProcessError as err:
+    nvccinfo = err
+print_flushed(f"\nNVCC version\n{nvccinfo}", slack=False)
+
 #sns.set_palette(sns.color_palette("hls", len(configurations)))
 #sns.set_palette(sns.color_palette("cubehelix", len(configurations)))
 
@@ -387,7 +420,7 @@ try:
                 ns = speed_test.n_range[n_slice]
                 idx = 4 if len(ns) > 4 else len(ns) - 1
                 nvprof_n = speed_test.n_range[idx]
-                max_runtime = 20
+                max_runtime = 1000
                 proj_dir = conf.get_project_dir(feature_name=test_name, n=nvprof_n)
                 main_args = ''
                 if 'cpp_standalone_runs' in proj_dir:
@@ -448,6 +481,7 @@ except KeyboardInterrupt:
     print_flushed(f"\nCaught KeyboardInterrupt: Exiting...")
     final_msg = "❌ INTERRUPTED"
 except Exception as exc:
+    traceback.print_exc()
     print_flushed(f"\nCaught an exception: {exc}\nExiting...")
     final_msg = "❌ FAILED"
 else:
