@@ -195,6 +195,25 @@ index f3a9ca0f..671fd787 100644
  %.o : %.cpp makefile
 -	$(CC) $(CFLAGS) $< -o $@
 +	$(CXX) $(CXXFLAGS) $< -o $@
+diff --git a/brian2/devices/cpp_standalone/templates/synapses_push_spikes.cpp b/brian2/devices/cpp_standalone/templates/synapses_push_spikes.cpp
+index 99504814..928ab4bf 100644
+--- a/brian2/devices/cpp_standalone/templates/synapses_push_spikes.cpp
++++ b/brian2/devices/cpp_standalone/templates/synapses_push_spikes.cpp
+@@ -26,14 +26,4 @@
+         {{owner.name}}.advance();
+         {{owner.name}}.push({{_eventspace}}, {{_eventspace}}[_num{{eventspace_variable.name}}-1]);
+     }
+-
+-    {% if profiled %}
+-    // Profiling
+-    {% if openmp_pragma('with_openmp') %}
+-    const double _run_time = omp_get_wtime() -_start_time;
+-    {% else %}
+-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+-    {% endif %}
+-    {{codeobj_name}}_profiling_info += _run_time;
+-    {% endif %}
+ {% endblock %}
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
 index 03a81bfe..b8c97174 100644
 --- a/brian2/tests/features/base.py
