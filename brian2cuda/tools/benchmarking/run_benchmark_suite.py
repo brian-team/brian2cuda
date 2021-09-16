@@ -215,6 +215,12 @@ configurations = [
     #GeNNConfigurationSinglePrecisionSpanTypePre,
 ]
 
+if args.profile:
+    # Activate profiling for all configs
+    print_flushed("Enabling profiling.")
+    for config in configurations:
+        config.profile = True
+
 speed_tests = [# feature_test                           n_slice
 
                # paper benchmarks
