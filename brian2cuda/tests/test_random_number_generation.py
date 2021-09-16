@@ -1,13 +1,13 @@
 from collections import OrderedDict, defaultdict
 
 import pytest
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal
 
 from brian2 import *
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.core.clocks import defaultclock
-from brian2.utils.logger import catch_logs
 from brian2.devices.device import device, reinit_and_delete
+from brian2.tests.utils import assert_allclose
 
 import brian2cuda
 from brian2cuda.device import prepare_codeobj_code_for_rng
