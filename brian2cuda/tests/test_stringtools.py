@@ -82,5 +82,16 @@ def test_replace_floating_point_literals():
     code_replaced = replace_floating_point_literals(code_with_include)
     eq_(code_replaced, solution)
 
+
+@pytest.mark.standalone_only
+@pytest.mark.cuda_standalone
+def test_regex_bug():
+    strings = ["var12.method()", "file_10.h"]
+    for string in strings:
+        replaced = replace_floating_point_literals(string)
+        eq_(replaced, string)
+
+
 if __name__ == '__main__':
     test_replace_floating_point_literals()
+    test_regex_bug()
