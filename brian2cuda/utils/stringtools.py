@@ -2,6 +2,7 @@
 Brian2CUDA regex functions.
 '''
 import re
+import os
 
 
 def append_f(match):
@@ -58,6 +59,18 @@ def replace_floating_point_literals(code):
     # the end of the string. If ``code`` is a valid c++ file, this can't happen
     # though.
 
+    # NOTE: this regex replaces variables that end with two digits, e.g.
+    # `var12.method()` or `file_10.h`. I didn't have time to dig into regex woodoo and
+    # just ended up ignoring line starting with #include, which is where the error
+    # popped up. But this should be fixed eventually. In principle this should be
+    # possible with possesive matching in the literal match (meaning not giving away the
+    # first digit in the examples above). But that is not supported in python's re
+    # module. One could use the `regex` module instead, where the following might fix
+    # this problem (double + is possesive match)
+    #   postDot = '(\.\d++)'
+    # I also tried this workaround I found on the web, but didn't work for me
+    #   postDot = '(\.(?=(\d+))\1)'
+
     # numbers are not part of variable (e.g. `a1.method()`)
     # use negative lookbehind (?<!) in order to not consume the letter before
     # the match, s.t. consecutive literals don't overlap (otherwise only one
@@ -71,8 +84,35 @@ def replace_floating_point_literals(code):
     Exp = '([Ee][+-]?\d+)'
     # not digit (match the first not digit to check if it is `f` already)
     notDigit = '([\D$])'
-    regex = '{notVar}((({preDot}|{postDot}){Exp}?)|(\d+{Exp})){notDigit}'.format(
-        notVar=notVar, preDot=preDot, postDot=postDot, Exp=Exp, notDigit=notDigit)
+    regex = f'{notVar}((({preDot}|{postDot}){Exp}?)|(\d+{Exp})){notDigit}'
+    # Remove lines starting with #include before regexing
+    code, excluded_lines = _remove_lines(code, "#include")
     code = re.sub(regex, append_f, code)
+    code = _reinsert_lines(code, excluded_lines)
     return code
 
+
+def _remove_lines(code, *line_beginnings):
+    """ Remove lines from `code` that start with `*line_beginnings` """
+    excluded = []
+    lines = code.split("\n")
+    for i, line in enumerate(lines):
+        if line.lstrip(' ').startswith(line_beginnings):
+            excluded.append((i, line))
+
+    # Delete lines in reversed order to not mess up deletion index
+    for i, _ in reversed(excluded):
+        del lines[i]
+
+    new_code = "\n".join(lines)
+    return new_code, excluded
+
+
+def _reinsert_lines(code, insert_lines):
+    """ Reinsert previously removed lines into `code` """
+    lines = code.split("\n")
+    # Insert in forward order for indices to fit
+    for i, line in insert_lines:
+        lines.insert(i, line)
+    new_code = "\n".join(lines)
+    return new_code
