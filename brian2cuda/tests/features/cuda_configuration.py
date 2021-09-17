@@ -225,7 +225,8 @@ class DynamicConfigCreator(object):
         if git_commit is not None:
             d = "'"
         clsname = (f"DynamicConfigCreator('{config_name}',"
-                   f"{d}{git_commit}{d},{print_prefs},{set_device_kwargs})")
+                   f"{d}{git_commit}{d},{profile},{single_precision},{print_prefs},"
+                   f"{set_device_kwargs})")
         # little hack: this way in brian2.tests.features.base.result() the
         # DynamicCUDAStandaloneConfiguration class will be correctly recreated
         self.__name__ = clsname
