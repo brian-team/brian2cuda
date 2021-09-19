@@ -12,14 +12,18 @@ plt.switch_backend('agg')
 np.random.seed(123)
 py_random.seed(123)
 
-device_name = sys.argv[1]
-print("Running in device:")
-print(device_name)
+# device_name = sys.argv[1]
+# print("Running in device:")
+# print(device_name)
+device_name = "cuda_standalone"
 
 codefolder = get_directory(device_name, delete_dir=False)
 
 # preference for memory saving
 set_device(device = device_name, directory=codefolder, debug=True)
+prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 
 category = "Full examples"

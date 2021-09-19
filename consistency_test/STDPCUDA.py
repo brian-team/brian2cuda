@@ -10,6 +10,7 @@ plt.switch_backend('agg')
 device_name = sys.argv[1]
 print("Running in device:")
 print(device_name)
+# device_name="cpp_standalone"
 codefolder = get_directory(device_name)
 
 np.random.seed(123)
@@ -83,11 +84,11 @@ max_num_synapses = int(N / K_poisson)*N_poisson
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
-                dApost/dt = -Apost / taupost : 1 (event-driven)''',
-             on_pre=on_pre,
-             on_post='''Apost += dApost
-                 w = clip(w + Apre, 0, gmax)''',
-             delay=homog_delay
+                dApost/dt = -Apost / taupost : 1 (event-driven)'''
+             #on_pre=on_pre,
+             # on_post='''Apost += dApost
+             #     w = clip(w + Apre, 0, gmax)''',
+             #delay=homog_delay
              )
 # S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
 rand_array = TimedArray(np.random.rand(1, max_num_synapses), dt=duration)

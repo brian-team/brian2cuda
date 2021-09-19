@@ -25,7 +25,7 @@ name = "STDPhomogeneousdelays"
 duration = 10*second
 post_effects = True
 # homog delay is used in Synapses constructor (for GeNN compatibility)
-homog_delay = 2*ms
+homog_delay = 0*ms
 # heterog delay is used to set Synapses delay attribute
 heterog_delay = None
 
