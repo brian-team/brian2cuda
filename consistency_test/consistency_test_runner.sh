@@ -1,9 +1,8 @@
 #!/bin/bash
 
 script_names=(COBAHH.py COBAHHUncoupled.py COBAHHPseudocoupled80.py COBAHHPseudocoupled1000.py MushroomBody.py STDPCUDA.py STDPCUDAHeterogeneousDelays.py STDPCUDAHomogeneousDelays.py BrunelHakimHeterogDelays.py BrunelHakimHeterogDelaysNarrowDistr.py BrunelHakimHomogDelays.py )
-#script_names=(STDPCUDA.py STDPCUDAHomogeneousDelays.py)
 
-modes=(cpp_standalone)
+modes=(cpp_standalone cuda_standalone)
 output_file=results_$(date '+%Y_%m_%d__%H_%M_%S').txt
 echo "The output is stored in $output_file"
 
