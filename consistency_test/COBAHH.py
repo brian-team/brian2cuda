@@ -8,10 +8,10 @@ plt.switch_backend('agg')
 
 np.random.seed(123)
 
-# device_name = sys.argv[1]
-# print("Running in device:")
-# print(device_name)
-device_name="cpp_standalone"
+device_name = sys.argv[1]
+print("Running in device:")
+print(device_name)
+
 codefolder = get_directory(device_name)
 
 # preference for memory saving

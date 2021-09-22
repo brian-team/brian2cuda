@@ -12,10 +12,9 @@ plt.switch_backend('agg')
 np.random.seed(123)
 py_random.seed(123)
 
-# device_name = sys.argv[1]
-# print("Running in device:")
-# print(device_name)
-device_name = "cuda_standalone"
+device_name = sys.argv[1]
+print("Running in device:")
+print(device_name)
 
 codefolder = get_directory(device_name, delete_dir=False)
 
@@ -150,11 +149,11 @@ iKC_eKC = Synapses(iKC, eKC,
                       ''',
                    on_pre='''g_iKC_eKC += g_raw
                              Apre += dApre
-                             g_raw = clip(g_raw + Apost, 0, g_max)
+                             g_raw = clip(g_raw + Apost, 0*siemens, g_max)
                              ''',
                    on_post='''
                               Apost += dApost
-                              g_raw = clip(g_raw + Apre, 0, g_max)''',
+                              g_raw = clip(g_raw + Apre, 0*siemens, g_max)''',
                    delay=0*ms)
 eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC', delay=0*ms)
 # bu.insert_benchmark_point()
