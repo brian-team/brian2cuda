@@ -1,6 +1,0 @@
-#ifndef _INCLUDED_synapses_1_post_initialise_queue
-#define _INCLUDED_synapses_1_post_initialise_queue
-
-void _run_synapses_1_post_initialise_queue();
-
-#endif
