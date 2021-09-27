@@ -22,7 +22,7 @@ parser.add_argument('--grid-engine', '-g', action='store_true',
                     help=("Use grid engine to schedule compile and execute jobs."))
 
 parser.add_argument('--grid-engine-gpu', '-G', default="RTX2080",
-                    choices=[None, "RTX2080", "40"],
+                    choices=[None, "RTX2080", "GTX1080"],
                     help=("GPU to use for tests. If None, request any GPU."))
 
 parser.add_argument('--notify-slack', action='store_true',
@@ -42,6 +42,9 @@ parser.add_argument('-q', '--quiet', action='store_true',
 
 parser.add_argument('-d', '--debug', action='store_true',
                     help=("Debug mode, set pytest to not capture outputs."))
+
+parser.add_argument('-R', '--cuda-runtime', default=11.2, type=float,
+                    help=("Set preference for cuda runtime. Only used for remote targets"))
 
 args, unknown_args = utils.parse_arguments(parser, parse_unknown=True)
 
@@ -91,21 +94,22 @@ if args.grid_engine:
         make_args = shlex.split(f" -pe cognition.pe {jobs} -now n -cwd -V --")
     prefs.devices.cpp_standalone.make_cmd_unix = make_cmd
     prefs.devices.cpp_standalone.extra_make_args_unix = make_args
-    gpu = "1"
+    gputype = ""
     if args.grid_engine_gpu is not None:
-        gpu = f'1"({args.grid_engine_gpu})"'
+        gputype = f',gputype={args.grid_engine_gpu}'
     prefs.devices.cpp_standalone.run_cmd_unix = shlex.split(
-        f'qrsh -cwd -V -now n -b y -l cuda={gpu} ./main'
+        f'qrsh -cwd -V -now n -b y -l cuda=1{gputype} ./main'
     )
-    prefs.devices.cuda_standalone.cuda_backend.cuda_path = "/usr/local/cuda-11.2"
+    runtime = args.cuda_runtime
+    prefs.devices.cuda_standalone.cuda_backend.cuda_path = f"/usr/local/cuda-{runtime}"
     prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
-    prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = 11.2
+    prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = runtime
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     if args.grid_engine_gpu == "RTX2080":
         prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
-    elif args.grid_engine_gpu == "K40":
-        prefs.devices.cuda_standalone.cuda_backend.compute_capability = 3.5
+    elif args.grid_engine_gpu == "GTX1080":
+        prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
     else:
         raise RuntimeError(
             "Can't run parallel without specifying GPU, need to set compute "

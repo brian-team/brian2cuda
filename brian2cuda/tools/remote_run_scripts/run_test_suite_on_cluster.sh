@@ -4,32 +4,32 @@ usage=$(cat << END
 usage: $0 <options> -- <run_test_suite.py arguments>
 
 with <options>:
-    -h|--help                 Show usage message
-    -n|--name <string>        Name for test suite run (default: 'noname'). This
-                              name will also be used for the pytest cache
-                              directory. That means when running the test suite
-                              multiple times with the same --name, pytest
-                              options --last-failed or --failed-first can be
-                              used.
-    -s|--suffix <string>      Name suffix for the logfile
-                              (<name>_<suffix>_<timestemp>)
-    -g|--gpu <K40|RTX2080>    Which GPU to run on
-    -p|--parallel <n_tasks>   Submit all tests in parallel using '2*<n_cores>'
-                              pytest-xdist workers, which each compile in
-                              parallel with <n_tasks> qmake jobs.
-    -H|--host                 Which compute node to run on (e.g. cognition13)
-    -c|--cores <n_cores>      Number of CPU cores to request. If '<n_tasks> == 0'
-                              (default), this will request 2*<n_cores> via
-                              '-binding linear:<n_cores>'. If '<n_tasks> > 0',
-                              this will request 2*<n_cores> threads via
-                              '-pe cognition.pe 2*<n_cores>'.
-    -r|--remote <head-node>   Remote machine url or name (if configured in
-                              ~/.ssh/config)
-    -l|--log-dir              Remote path to directory where logfiles will be stored.
-    -S|--remote-conda-sh      Remote path to conda.sh
-    -E|--remote-conda-env     Conda environment name with brian2cuda on remote
-    -k|--keep-remote-repo     Don't delete remote repository after run
-    -a|--after <job-id>       Hold this job until 'job-id' is finished
+    -h|--help                   Show usage message
+    -n|--name <string>          Name for test suite run (default: 'noname'). This
+                                name will also be used for the pytest cache
+                                directory. That means when running the test suite
+                                multiple times with the same --name, pytest
+                                options --last-failed or --failed-first can be
+                                used.
+    -s|--suffix <string>        Name suffix for the logfile
+                                (<name>_<suffix>_<timestemp>)
+    -g|--gpu <GTX1080|RTX2080>  Which GPU to run on
+    -p|--parallel <n_tasks>     Submit all tests in parallel using '2*<n_cores>'
+                                pytest-xdist workers, which each compile in
+                                parallel with <n_tasks> qmake jobs.
+    -H|--host                   Which compute node to run on (e.g. cognition13)
+    -c|--cores <n_cores>        Number of CPU cores to request. If '<n_tasks> == 0'
+                                (default), this will request 2*<n_cores> via
+                                '-binding linear:<n_cores>'. If '<n_tasks> > 0',
+                                this will request 2*<n_cores> threads via
+                                '-pe cognition.pe 2*<n_cores>'.
+    -r|--remote <head-node>     Remote machine url or name (if configured in
+                                ~/.ssh/config)
+    -l|--log-dir                Remote path to directory where logfiles will be stored.
+    -S|--remote-conda-sh        Remote path to conda.sh
+    -E|--remote-conda-env       Conda environment name with brian2cuda on remote
+    -k|--keep-remote-repo       Don't delete remote repository after run
+    -a|--after <job-id>         Hold this job until 'job-id' is finished
 END
 )
 
@@ -42,9 +42,8 @@ echo_usage() {
 remote="cluster"
 # default task name
 test_suite_task_name=noname
-# -l cuda=$gpu_ressource
-gpu="None"
-gpu_ressource=1
+# -l cuda=1,gputype=$gputype
+gputype="RTX2080"
 # number of cores, with 2 threads per core
 test_suite_cores=2
 # path to conda.sh on remote
@@ -94,13 +93,12 @@ while true; do
             shift 2
             ;;
         -g | --gpu )
-            gpu="$2"
-            if [ "$gpu" != "RTX2080" ] && [ "$gpu" != "K40" ]; then
+            gputype="$2"
+            if [ "$gputype" != "RTX2080" ] && [ "$gputype" != "GTX1080" ]; then
                 echo_usage
-                echo -e "\n$0: error: invalid argument $gpu for $1"
+                echo -e "\n$0: error: invalid argument $gputype for $1"
                 exit 1
             fi
-            gpu_ressource="\"1($gpu)\""
             shift 2
             ;;
         -p | --parallel )
@@ -157,21 +155,22 @@ if [ ! "$parallel" -eq 0 ]; then
     # parallel run -> the ./main binaries request the GPU in run_test_suite.py
     test_suite_args+=" --grid-engine \
         --test-parallel \
-        --grid-engine-gpu $gpu \
+        --grid-engine-gpu $gputype \
         --jobs $parallel"
-    # cognition08 is not a submit host
-    grid_engine_ressources="h=!cognition08"
+    # cognition06 is not a submit host
+    grid_engine_ressources="h=!cognition06"
     # Submit the _on_headnode.sh script with 2*<n_cores> threads in a parallel
     # environment, these are the pytest-xdist workers
     parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
     if [ "$parallel" -eq 1 ]; then
+        # TODO: delete this if nvcc is available on all nodes without cuda=0
         # Not using qmake but make on the node itself, needs nvcc
-        #grid_engine_ressources+=",cuda=0"
+        grid_engine_ressources+=",cuda=0"
         echo
     fi
 else
     # not running in parallel -> submit entire test suite script to GPU node
-    grid_engine_ressources="cuda=$gpu_ressource"
+    grid_engine_ressources="cuda=1,gputype=$gputype"
     #parallel_ressources="-binding linear:$test_suite_cores"
     parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
 fi
