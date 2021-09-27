@@ -15,6 +15,9 @@ parser.add_argument('--no-nvprof', action='store_true',
 parser.add_argument('--no-slack', action='store_true',
                     help=("Don't send notifications to Slack"))
 
+parser.add_argument('--keep-project-dir', action='store_true',
+                    help=("Don't delete project directory"))
+
 parser.add_argument('--profile', action='store_true',
                     help=("Run with codeobject / kernel profiling"))
 
@@ -87,8 +90,6 @@ from brian2cuda.tests.features.cuda_configuration import (CUDAStandaloneConfigur
 
 from create_readme import create_readme
 from helpers import pickle_results, translate_pkl_to_csv
-
-delete_project_dirs = True
 
 
 def print_flushed(string, slack=True, new_reply=False, format_code=True):
@@ -280,7 +281,8 @@ print_flushed(start_msg, slack=False)
 
 msg = "ENVIRONMENT:"
 for key, value in os.environ.items():
-    msg += f"\n\t{key} = {value}"
+    if not key.startswith("LESS"):
+        msg += f"\n\t{key} = {value}"
 print_flushed(msg, slack=False)
 
 try:
@@ -476,7 +478,7 @@ try:
                     print_flushed(f"Didn't run nvprof, runtime ({runtime}) >= max_runtime ({max_runtime})")
 
         # Delete project directories when done
-        if delete_project_dirs:
+        if not args.keep_project_dir:
             for conf in configurations:
                 for n in speed_test.n_range[n_slice]:
                     conf.delete_project_dir(feature_name=test_name, n=n)
