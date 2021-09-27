@@ -14,15 +14,15 @@ with <options>:
     -s|--suffix <string>        Name suffix for the logfile
                                 (<name>_<suffix>_<timestemp>)
     -g|--gpu <GTX1080|RTX2080>  Which GPU to run on
-    -p|--parallel <n_tasks>     Submit all tests in parallel using '2*<n_cores>'
+    -p|--parallel <n_tasks>     Submit all tests in parallel using '<n_threads>'
                                 pytest-xdist workers, which each compile in
                                 parallel with <n_tasks> qmake jobs.
     -H|--host                   Which compute node to run on (e.g. cognition13)
-    -c|--cores <n_cores>        Number of CPU cores to request. If '<n_tasks> == 0'
-                                (default), this will request 2*<n_cores> via
-                                '-binding linear:<n_cores>'. If '<n_tasks> > 0',
-                                this will request 2*<n_cores> threads via
-                                '-pe cognition.pe 2*<n_cores>'.
+    -t|--threads <n_threads>    Number of CPU threads to request. If '<n_tasks> == 0'
+                                (default), this will request <n_threads> threads via
+                                '-binding linear:<n_threads>/2'. If '<n_tasks> > 0',
+                                this will request <n_threads> threads via
+                                '-pe cognition.pe <n_threads>'.
     -r|--remote <head-node>     Remote machine url or name (if configured in
                                 ~/.ssh/config)
     -l|--log-dir                Remote path to directory where logfiles will be stored.
@@ -44,8 +44,8 @@ remote="cluster"
 test_suite_task_name=noname
 # -l cuda=1,gputype=$gputype
 gputype="RTX2080"
-# number of cores, with 2 threads per core
-test_suite_cores=2
+# number of threads
+test_suite_threads=4
 # path to conda.sh on remote
 path_conda_sh_remote="~/anaconda3/etc/profile.d/conda.sh"
 # conda environment for brian2cuda on the remote
@@ -67,8 +67,8 @@ source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:s:g:p:H:c:r:l:S:E:ka:
-long_args=help,name:,suffix:,gpu:,parallel:,host:,cores:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo,after:
+short_args=hn:s:g:p:H:t:r:l:S:E:ka:
+long_args=help,name:,suffix:,gpu:,parallel:,host:,threads:,remote:,log-dir:,remote-conda-sh:,remote-conda-env:,keep-remote-repo,after:
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -109,8 +109,8 @@ while true; do
             remote_host="$2"
             shift 2
             ;;
-        -c | --cores )
-            test_suite_cores="$2"
+        -t | --threads )
+            test_suite_threads="$2"
             shift 2
             ;;
         -r | --remote )
@@ -159,9 +159,9 @@ if [ ! "$parallel" -eq 0 ]; then
         --jobs $parallel"
     # cognition06 is not a submit host
     grid_engine_ressources="h=!cognition06"
-    # Submit the _on_headnode.sh script with 2*<n_cores> threads in a parallel
+    # Submit the _on_headnode.sh script with <n_threads> threads in parallel
     # environment, these are the pytest-xdist workers
-    parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
+    parallel_ressources="-pe cognition.pe $test_suite_threads"
     if [ "$parallel" -eq 1 ]; then
         # TODO: delete this if nvcc is available on all nodes without cuda=0
         # Not using qmake but make on the node itself, needs nvcc
@@ -171,8 +171,10 @@ if [ ! "$parallel" -eq 0 ]; then
 else
     # not running in parallel -> submit entire test suite script to GPU node
     grid_engine_ressources="cuda=1,gputype=$gputype"
-    #parallel_ressources="-binding linear:$test_suite_cores"
-    parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
+    if [ ! "$parallel" -eq 1 ]; then
+        #parallel_ressources="-binding linear:$(($test_suite_threads / 2))"
+        parallel_ressources="-pe cognition.pe $test_suite_threads"
+    fi
 fi
 if [ -n "$remote_host" ]; then
     # add host ressource
@@ -290,29 +292,31 @@ rsync -avzz \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 bash_script=brian2cuda/tools/test_suite/_run_test_suite.sh
+
+qsub_command="qsub \
+    -wd $remote_ge_log_dir \
+    -q cognition-all.q \
+    $grid_engine_ressources \
+    -N $qsub_name \
+    $parallel_ressources \
+    $hold_job_id \
+    $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
+        $bash_script \
+        $remote_b2c_dir \
+        $remote_logfile \
+        $path_conda_sh_remote \
+        $conda_env_remote \
+        $keep_remote_repo \
+        $parallel \
+        $test_suite_args"
+        # $1: bash_script $2: b2c_dir, $3: logfile, $4: remote conda.sh
+        # $5: remote conda env $6: bool for keeping tmp remote b2c dir
+        # $7: bool for running in parallel
+        # $@ (the rest): arguments passed to benchmark script
+        # (_on_headnode.sh)
+echo Submitting job via $qsub_command
 # submit test suite script through qsub on cluster headnote
-ssh $remote "source /opt/ge/default/common/settings.sh && \
-    qsub \
-        -wd $remote_ge_log_dir \
-        -q cognition-all.q \
-        $grid_engine_ressources \
-        -N $qsub_name \
-        $parallel_ressources \
-        $hold_job_id \
-        $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
-            $bash_script \
-            $remote_b2c_dir \
-            $remote_logfile \
-            $path_conda_sh_remote \
-            $conda_env_remote \
-            $keep_remote_repo \
-            $parallel \
-            $test_suite_args"
-            # $1: bash_script $2: b2c_dir, $3: logfile, $4: remote conda.sh
-            # $5: remote conda env $6: bool for keeping tmp remote b2c dir
-            # $7: bool for running in parallel
-            # $@ (the rest): arguments passed to benchmark script
-            # (_on_headnode.sh)
+ssh $remote "source /opt/ge/default/common/settings.sh && $qsub_command"
 
 
 if [ $keep_remote_repo -eq 0 ]; then
