@@ -8,6 +8,9 @@ with <options>:
     -h|--help                 Show usage message
     -n|--name <string>        Name for test suite run (default: 'noname')
     -l|--log-dir              Directory for test suite logs (default: 'test_suite_logs')
+
+and <run_test_suite.py arguments>:
+    $(python run_test_suite.py --help)
 END
 )
 

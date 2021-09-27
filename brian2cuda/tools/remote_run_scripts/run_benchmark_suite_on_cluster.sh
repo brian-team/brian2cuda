@@ -224,7 +224,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
             $path_conda_sh_remote \
             $conda_env_remote \
             $keep_remote_repo \
-            1 \
+            0 \
             $benchmark_suite_args"
             # $1: bash_script $2: b2c_dir, $3: logfile, $4: remote conda.sh
             # $5: remote conda env $6: bool for keeping tmp remote b2c dir

@@ -14,6 +14,8 @@ echo_usage() {
     echo "$usage"
 }
 
+echo "Running _run_benchmark_suite.sh on $HOSTNAME"
+
 # DEFAULTS
 benchmark_suite_task_name=noname
 benchmark_result_dir="results"

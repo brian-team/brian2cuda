@@ -86,7 +86,9 @@ if args.grid_engine:
         make_args = ['-j', '1']
     else:
         make_cmd = "/opt/ge/bin/lx-amd64/qmake"
-        make_args = shlex.split(f"-l cuda=0 -now n -cwd -V -- -j {jobs}")
+        #make_args = shlex.split(f"-l cuda=0 -now n -cwd -V -- -j {jobs}")
+        #make_args = shlex.split(f" -now n -cwd -V -- -j {jobs}")
+        make_args = shlex.split(f" -pe cognition.pe {jobs} -now n -cwd -V --")
     prefs.devices.cpp_standalone.make_cmd_unix = make_cmd
     prefs.devices.cpp_standalone.extra_make_args_unix = make_args
     gpu = "1"
@@ -95,9 +97,9 @@ if args.grid_engine:
     prefs.devices.cpp_standalone.run_cmd_unix = shlex.split(
         f'qrsh -cwd -V -now n -b y -l cuda={gpu} ./main'
     )
-    prefs.devices.cuda_standalone.cuda_backend.cuda_path = "/usr/local/cuda-11.1"
+    prefs.devices.cuda_standalone.cuda_backend.cuda_path = "/usr/local/cuda-11.2"
     prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
-    prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = 11.1
+    prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = 11.2
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     if args.grid_engine_gpu == "RTX2080":

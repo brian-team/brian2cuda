@@ -18,7 +18,11 @@ with <options>:
                               pytest-xdist workers, which each compile in
                               parallel with <n_tasks> qmake jobs.
     -H|--host                 Which compute node to run on (e.g. cognition13)
-    -c|--cores <n_cores>      Number of CPU cores to request (-binding linear:<>).
+    -c|--cores <n_cores>      Number of CPU cores to request. If '<n_tasks> == 0'
+                              (default), this will request 2*<n_cores> via
+                              '-binding linear:<n_cores>'. If '<n_tasks> > 0',
+                              this will request 2*<n_cores> threads via
+                              '-pe cognition.pe 2*<n_cores>'.
     -r|--remote <head-node>   Remote machine url or name (if configured in
                               ~/.ssh/config)
     -l|--log-dir              Remote path to directory where logfiles will be stored.
@@ -52,7 +56,7 @@ test_suite_remote_dir="~/projects/brian2cuda/test-suite"
 # keep remote (false by default)
 keep_remote_repo=1
 # By default, don't use parallel jobs (0)
-$parallel=0
+parallel=0
 # If given, hold this job until $hold_job_id is finished
 hold_job_id=""
 # $suffix unset by default
@@ -157,13 +161,19 @@ if [ ! "$parallel" -eq 0 ]; then
         --jobs $parallel"
     # cognition08 is not a submit host
     grid_engine_ressources="h=!cognition08"
+    # Submit the _on_headnode.sh script with 2*<n_cores> threads in a parallel
+    # environment, these are the pytest-xdist workers
+    parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
     if [ "$parallel" -eq 1 ]; then
         # Not using qmake but make on the node itself, needs nvcc
-        grid_engine_ressources+=",cuda=0"
+        #grid_engine_ressources+=",cuda=0"
+        echo
     fi
 else
     # not running in parallel -> submit entire test suite script to GPU node
     grid_engine_ressources="cuda=$gpu_ressource"
+    #parallel_ressources="-binding linear:$test_suite_cores"
+    parallel_ressources="-pe cognition.pe $((2*$test_suite_cores))"
 fi
 if [ -n "$remote_host" ]; then
     # add host ressource
@@ -271,6 +281,13 @@ rsync -avzz \
     --exclude '.eggs'\
     --exclude '.git' \
     --exclude 'worktrees' \
+    --exclude 'cpp_standalone_runs' \
+    --exclude 'cuda_standalone_runs' \
+    --exclude 'genn_runs' \
+    --exclude 'GeNNworkspace' \
+    --exclude 'output' \
+    --exclude 'results' \
+    --exclude 'benchmark_results' \
     "$local_b2c_dir"/ "$remote:$remote_b2c_dir"
 
 bash_script=brian2cuda/tools/test_suite/_run_test_suite.sh
@@ -281,7 +298,7 @@ ssh $remote "source /opt/ge/default/common/settings.sh && \
         -q cognition-all.q \
         $grid_engine_ressources \
         -N $qsub_name \
-        -binding linear:$test_suite_cores \
+        $parallel_ressources \
         $hold_job_id \
         $remote_b2c_dir/brian2cuda/tools/remote_run_scripts/_on_headnode.sh \
             $bash_script \
