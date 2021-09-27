@@ -6,6 +6,7 @@ with <options>:
     -h|--help                 Show usage message
     -n|--name <string>        Name for test suite run (default: 'noname')
     -l|--log-dir              Directory for test suite logs (default: 'test_suite_logs')
+    -t|--testing              Make a test run without nvprof / slack notifications.
 END
 )
 
@@ -19,8 +20,8 @@ benchmark_result_dir="results"
 
 # long args seperated by comma, short args not
 # colon after arg indicates that an option is expected (kwarg)
-short_args=hn:l:
-long_args=help,name:,log-dir:
+short_args=hn:l:t
+long_args=help,name:,log-dir:,testing
 opts=$(getopt --options $short_args --long $long_args --name "$0" -- "$@")
 if [ "$?" -ne 0 ]; then
     echo_usage
@@ -44,6 +45,10 @@ while true; do
             benchmark_result_dir="$2"
             shift 2
             ;;
+        -t | --testing )
+            testing=0
+            shift 1
+            ;;
         -- )
             # $@ has all arguments after --
             shift
@@ -58,6 +63,11 @@ done
 
 # all args after --
 test_suite_args=$@
+
+if [ -n "$testing" ]; then
+    test_suite_args+=" --no-nvprof --no-slack"
+    benchmark_suite_task_name+="-testing"
+fi
 
 # add timestemp to name
 benchmark_suite_task_name="$benchmark_suite_task_name"_"$(date +%y-%m-%d_%H-%M-%S)"

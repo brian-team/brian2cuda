@@ -12,6 +12,9 @@ parser.add_argument('--dry-run', action='store_true',
 parser.add_argument('--no-nvprof', action='store_true',
                     help=("Don't run nvprof profiling"))
 
+parser.add_argument('--no-slack', action='store_true',
+                    help=("Don't send notifications to Slack"))
+
 parser.add_argument('--profile', action='store_true',
                     help=("Run with codeobject / kernel profiling"))
 
@@ -107,20 +110,21 @@ def print_flushed(string, slack=True, new_reply=False, format_code=True):
     return to_return
 
 bot = None
-try:
-    from clusterbot import ClusterBot
-except ImportError:
-    print("WARNING: clusterbot not installed. Can't notify slack.")
-else:
-    print_flushed("Starting ClusterBot...", slack=False)
+if not args.no_slack:
     try:
-        bot = ClusterBot()
-    except Exception as exc:
-        print(
-            f"ERROR: ClusterBot failed to initialize correctly. Can't notify "
-            f"slack. Here is the error:\n{exc}"
-        )
-        bot = None
+        from clusterbot import ClusterBot
+    except ImportError:
+        print("WARNING: clusterbot not installed. Can't notify slack.")
+    else:
+        print_flushed("Starting ClusterBot...", slack=False)
+        try:
+            bot = ClusterBot()
+        except Exception as exc:
+            print(
+                f"ERROR: ClusterBot failed to initialize correctly. Can't notify "
+                f"slack. Here is the error:\n{exc}"
+            )
+            bot = None
 
 
 #suppress_brian2_logs()
@@ -287,7 +291,7 @@ print_flushed(f"\nCPU information\n{cpuinfo}", slack=False)
 
 try:
     gpuinfo = subprocess.check_output(["deviceQuery"], encoding='UTF-8')
-except subprocess.CalledProcessError as err:
+except (subprocess.CalledProcessError, FileNotFoundError) as err:
     gpuinfo = err
 print_flushed(f"\nGPU information\n{gpuinfo}", slack=False)
 
