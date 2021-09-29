@@ -16,9 +16,7 @@ set_device("cuda_standalone")
 
 ### Installation
 #### Requirements
-- Python2: The current version only supports Python2. For the first release, we will support (only) Python3 (see issue [#161](https://github.com/brian-team/brian2cuda/issues/161))
 - Brian2: The correct version with which this implementation is working is stored in a submodule in `frozen_repos/brian2` 
-- Matplotlib, Seaborn (these dependencies will be removed for the release).
 
 After cloning brian2cuda, you can initialise the submodule from inside this repository:
 
@@ -40,6 +38,8 @@ Now you can install the correct brian2 and brian2cuda versions using pip (Be car
 pip install .
 pip install ./frozen_repos/brian2
 ```
+
+If you want to install in developer mode, add the `-e` flag to the `pip` commands.
 
 Or just add them to your `PYTHONPATH` (in which case you need to install their dependencies manually).
 
