@@ -31,6 +31,10 @@ function cleanup {
 # Register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
 
+# Load configuration file
+script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "$script_path/_load_remote_config.sh" ~/.brian2cuda-remote-dev.conf
+
 # Start sshserver on compute node
 ssh -t cluster "/cognition/home/local/sshd/start-sshserver.sh -p $LOCALPORT -- $@"
 if [ "$?" -ne 0 ]; then
