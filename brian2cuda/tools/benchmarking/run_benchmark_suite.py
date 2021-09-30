@@ -15,7 +15,7 @@ parser.add_argument('--no-nvprof', action='store_true',
 parser.add_argument('--no-slack', action='store_true',
                     help=("Don't send notifications to Slack"))
 
-parser.add_argument('--keep-project-dir', action='store_true',
+parser.add_argument('-k', '--keep-project-dir', action='store_true',
                     help=("Don't delete project directory"))
 
 parser.add_argument('--profile', action='store_true',
@@ -220,12 +220,6 @@ configurations = [
     #GeNNConfigurationSinglePrecisionSpanTypePre,
 ]
 
-if args.profile:
-    # Activate profiling for all configs
-    print_flushed("Enabling profiling.")
-    for config in configurations:
-        config.profile = True
-
 speed_tests = [# feature_test                           n_slice
 
                # paper benchmarks
@@ -278,6 +272,9 @@ if bot is not None:
         bot = None
 
 print_flushed(start_msg, slack=False)
+
+if args.profile:
+    print_flushed("Profiling ON")
 
 msg = "ENVIRONMENT:"
 for key, value in os.environ.items():
@@ -350,9 +347,7 @@ try:
                               verbose=True,
                               maximum_run_time=maximum_run_time,
                               mark_not_completed=True,
-                              ## this needs modification of brian2 code
-                              profile_only_active=True
-                              #profile_only_active=False
+                              profile=args.profile,
                              )
         end = datetime.datetime.fromtimestamp(time.time()).strftime(time_format)
         diff = datetime.datetime.strptime(end, time_format) - datetime.datetime.strptime(start, time_format)

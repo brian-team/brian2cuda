@@ -56,7 +56,6 @@ class BenchmarkConfiguration(Configuration):
     name = None
     devicename = None
     single_precision = False
-    profile = False
     extra_prefs = {}
     device_kwargs = {}
     commit = None
@@ -65,9 +64,10 @@ class BenchmarkConfiguration(Configuration):
     benchmark_file = os.path.join("results", "benchmark.time")
     python_benchmark_file = os.path.join("results", "python_benchmark.time")
 
-    def __init__(self, feature_test):
+    def __init__(self, feature_test, profile):
         self.feature_test = feature_test
         self.feature_test_name = self.feature_test.__class__.__name__
+        self.profile = profile
         self.n = self.feature_test.n
         self.project_dir = self.get_project_dir(self.feature_test_name, self.n)
         if self.name is None:
@@ -114,7 +114,10 @@ class BenchmarkConfiguration(Configuration):
 
     def set_profiling(self):
         if self.profile:
+            logger.debug("PROFILE: on")
             self.device_kwargs["profile"] = self.profile
+        else:
+            logger.debug("PROFILE: off")
 
     def before_run(self):
         # Remove project directory if it already exists
@@ -261,7 +264,7 @@ class DynamicConfigCreator(object):
             feature_name, n, config_name=self.name
         )
 
-    def __call__(self, feature_test):
+    def __call__(self, feature_test, profile):
         # we can't acces the self from DynamicConfigCreator inside the nested
         # DynamicCUDAStandaloneConfiguration class -> make a copy
         DynamicConfigCreator_self = self
@@ -269,12 +272,11 @@ class DynamicConfigCreator(object):
             name = DynamicConfigCreator_self.name
             devicename = CUDAStandaloneConfigurationBase.devicename
             single_precision = DynamicConfigCreator_self.single_precision
-            profile = DynamicConfigCreator_self.profile
             extra_prefs = DynamicConfigCreator_self.prefs
             device_kwargs = DynamicConfigCreator_self.set_device_kwargs
             commit = DynamicConfigCreator_self.git_commit
 
-        return DynamicCUDAStandaloneConfiguration(feature_test)
+        return DynamicCUDAStandaloneConfiguration(feature_test, profile)
 
     def _subprocess(self, cmd, fails_ok=False, **kwargs):
         try:
@@ -365,11 +367,6 @@ class CUDAStandaloneConfigurationNoCudaOccupancyAPI(CUDAStandaloneConfigurationB
     name = 'CUDA standalone (not using cuda occupancy API)'
     extra_prefs = {'devices.cuda_standalone.calc_occupancy': False}
 
-class CUDAStandaloneConfigurationNoCudaOccupancyAPIProfileCPU(CUDAStandaloneConfigurationBase):
-    name = "CUDA standalone (not cuda occupancy API and profile='blocking')"
-    extra_prefs = {'devices.cuda_standalone.calc_occupancy': False}
-    profile = 'blocking'
-
 class CUDAStandaloneConfiguration2BlocksPerSM(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone with 2 blocks per SM'
     extra_prefs = {'devices.cuda_standalone.SM_multiplier': 2}
@@ -388,22 +385,9 @@ class CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds(CUDAStandaloneConfi
     extra_prefs = {'devices.cuda_standalone.SM_multiplier':  2,
                    'devices.cuda_standalone.syn_launch_bounds': True}
 
-class CUDAStandaloneConfigurationProfileGPU(CUDAStandaloneConfigurationBase):
-    name = 'CUDA standalone (profile=True)'
-    profile = True
-
-class CUDAStandaloneConfigurationProfileCPU(CUDAStandaloneConfigurationBase):
-    name = "CUDA standalone (profile='blocking')"
-    profile = 'blocking'
-
 class CUDAStandaloneConfigurationBundles(CUDAStandaloneConfigurationBase):
     name = 'CUDA standalone bundles'
     commit = 'nemo_bundles'
-
-class CUDAStandaloneConfigurationBundlesProfileCPU(CUDAStandaloneConfigurationBase):
-    name = "CUDA standalone bundles (profile='blocking')"
-    commit = 'nemo_bundles'
-    profile = 'blocking'
 
 
 ######################################
@@ -415,21 +399,10 @@ class CPPStandaloneConfigurationBase(BenchmarkConfiguration):
 
 class CPPStandaloneConfiguration(CPPStandaloneConfigurationBase):
     single_precision = False
-    profile = False
-
-class CPPStandaloneConfigurationProfile(CPPStandaloneConfigurationBase):
-    single_precision = False
-    profile = True
 
 class CPPStandaloneConfigurationSinglePrecision(CPPStandaloneConfigurationBase):
     name = 'C++ standalone (single precision)'
     single_precision = True
-    profile = False
-
-class CPPStandaloneConfigurationSinglePrecisionProfile(CPPStandaloneConfigurationBase):
-    name = 'C++ standalone (single precision)'
-    single_precision = True
-    profile = True
 
 ##################################
 ###  CPP OPENMP CONFIGURATIONS ###
@@ -447,26 +420,12 @@ class CPPStandaloneConfigurationOpenMPBase(CPPStandaloneConfigurationBase):
 
 class CPPStandaloneConfigurationOpenMPMaxThreads(CPPStandaloneConfigurationOpenMPBase):
     single_precision = False
-    profile = False
-
-class CPPStandaloneConfigurationOpenMPMaxThreadsProfile(CPPStandaloneConfigurationOpenMPBase):
-    single_precision = False
-    profile = True
 
 class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision(CPPStandaloneConfigurationOpenMPBase):
     name = (
         f'C++ standalone (OpenMP, single_precision, {_num_available_threads} threads)'
     )
     single_precision = True
-    profile = False
-
-class CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecisionProfile(CPPStandaloneConfigurationOpenMPBase):
-    name = (
-        f'C++ standalone (OpenMP, single_precision, {_num_available_threads} threads)'
-    )
-    single_precision = True
-    profile = True
-
 
 #############################
 ###  GENN CONFIGURATIONS  ###
@@ -494,48 +453,25 @@ class GeNNConfigurationBase(BenchmarkConfiguration):
     # Overwrite how GeNN sets profiling
     def set_profiling(self):
         if self.profile:
+            logger.debug("PROFILE: kernel timing on")
             self.extra_prefs['devices.genn.kernel_timing'] = True
+        else:
+            logger.debug("NO PROFILE: kernel timing off")
 
 class GeNNConfiguration(GeNNConfigurationBase):
     name = 'GeNN'
     single_precision = False
-    profile = False
-
-class GeNNConfigurationProfile(GeNNConfigurationBase):
-    name = 'GeNN'
-    single_precision = False
-    profile = True
 
 class GeNNConfigurationSinglePrecision(GeNNConfigurationBase):
     name = 'GeNN (single precision)'
     single_precision = True
-    profile = False
-
-class GeNNConfigurationSinglePrecisionProfile(GeNNConfigurationBase):
-    name = 'GeNN (single precision)'
-    single_precision = True
-    profile = True
 
 class GeNNConfigurationSpanTypePre(GeNNConfigurationBase):
     name = 'GeNN (span type PRE)'
     single_precision = False
-    profile = False
-    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
-
-class GeNNConfigurationSpanTypePreProfile(GeNNConfigurationBase):
-    name = 'GeNN (span type PRE)'
-    single_precision = False
-    profile = True
     extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
 
 class GeNNConfigurationSinglePrecisionSpanTypePre(GeNNConfigurationBase):
     name = 'GeNN (single precision, span type PRE)'
     single_precision = True
-    profile = False
-    extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}
-
-class GeNNConfigurationSinglePrecisionSpanTypePreProfile(GeNNConfigurationBase):
-    name = 'GeNN (single precision, span type PRE)'
-    single_precision = True
-    profile = True
     extra_prefs = {'devices.genn.synapse_span_type': 'PRESYNAPTIC'}

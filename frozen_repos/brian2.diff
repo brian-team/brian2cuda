@@ -215,7 +215,7 @@ index 99504814..928ab4bf 100644
 -    {% endif %}
  {% endblock %}
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 03a81bfe..b8c97174 100644
+index 03a81bfe..d39594c5 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
 @@ -10,6 +10,8 @@
@@ -227,14 +227,18 @@ index 03a81bfe..b8c97174 100644
  
  from collections import defaultdict
  
-@@ -218,8 +220,19 @@ def after_run(self):
+@@ -218,19 +220,26 @@ def after_run(self):
                              with_output=False)
      
      
 -def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
 -    tempfilename = tempfile.mktemp('exception')
+-    if n is None:
+-        init_args = ''
+-    else:
+-        init_args = str(n)
 +def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second,
-+           profile_only_active=False, return_lrcf=False):
++            profile=False, return_lrcf=False):
 +    exception_file = tempfile.NamedTemporaryFile(
 +        prefix='brian_test_exception',
 +        delete=False
@@ -246,10 +250,6 @@ index 03a81bfe..b8c97174 100644
 +    )
 +    net_objects_file.close()
 +    tempfilename_net_obj = net_objects_file.name
-     if n is None:
-         init_args = ''
-     else:
-@@ -227,10 +240,10 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
      code_string = '''
  __file__ = '{fname}'
  import brian2
@@ -257,25 +257,13 @@ index 03a81bfe..b8c97174 100644
 +import {config_module}
  from {feature_module} import {feature_name}
 -configuration = {config_name}()
- feature = {feature_name}({init_args})
-+configuration = {config_module}.{config_name}(feature_test=feature)
+-feature = {feature_name}({init_args})
++feature = {feature_name}({n})
++configuration = {config_module}.{config_name}(feature_test=feature, profile={profile})
  import warnings, traceback, pickle, sys, os, time
  warnings.simplefilter('ignore')
  try:
-@@ -238,6 +251,12 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
-     configuration.before_run()
-     brian2.device._set_maximum_run_time({maximum_run_time})
-     feature.run()
-+    if {prof_active}:
-+        code_objects = []
-+        for obj in brian2.magic_network.objects:
-+            if obj.active:
-+                for codeobj in obj._code_objects:
-+                    code_objects.append(codeobj.name)
-     configuration.after_run()
-     results = feature.results()
-     run_time = time.time()-start_time
-@@ -248,41 +267,123 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -248,41 +257,108 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
              pass
      lrcf = configuration.get_last_run_completed_fraction()
      run_time = run_time/lrcf
@@ -294,10 +282,6 @@ index 03a81bfe..b8c97174 100644
 +    pickle.dump((None, results, run_time, new_prof_info, lrcf), f, -1)
      f.close()
 -except Exception, ex:
-+    if {prof_active}:
-+        f2 = open(r'{tempfname_net_obj}', 'wb')
-+        pickle.dump(code_objects, f2, -1)
-+        f2.close()
 +except Exception as ex:
      #traceback.print_exc(file=sys.stdout)
      tb = traceback.format_exc()
@@ -309,10 +293,6 @@ index 03a81bfe..b8c97174 100644
 +        print(tb)
 +        raise
      f.close()
-+    if {prof_active}:
-+        f2 = open(r'{tempfname_net_obj}', 'wb')
-+        pickle.dump([], f2, -1)
-+        f2.close()
      '''.format(config_module=configuration.__module__,
                 config_name=configuration.__name__,
                 feature_module=feature.__module__,
@@ -320,9 +300,10 @@ index 03a81bfe..b8c97174 100644
                 tempfname=tempfilename,
 +               tempfname_net_obj=tempfilename_net_obj,
                 fname=__file__,
-                init_args=init_args,
+-               init_args=init_args,
++               n=n if n is not None else "",
                 maximum_run_time=float(maximum_run_time),
-+               prof_active=str(profile_only_active)
++               profile=profile,
                 )
      args = [sys.executable, '-c',
              code_string]
@@ -354,13 +335,6 @@ index 03a81bfe..b8c97174 100644
 +        tb = stdout + '\n' + stderr + '\n' + tb
 +    else:
 +        tb = stdout + '\n' + stderr
-+    if profile_only_active:
-+        with open(tempfilename_net_obj, 'rb') as f:
-+            network_codeobjects = pickle.load(f)
-+        os.remove(tempfilename_net_obj)
-+        profiling_info = [(codeobj, time)
-+                              for (codeobj, time) in profiling_info
-+                              if codeobj in network_codeobjects]
 +    # Load additional benchmarking times
 +    standalone_benchmarks = {}
 +    benchmark_file = configuration.get_benchmark_file(
@@ -411,7 +385,7 @@ index 03a81bfe..b8c97174 100644
  
  def check_or_compare(feature, res, baseline, maxrelerr):
      feature = feature()
-@@ -325,7 +426,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
+@@ -325,7 +401,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
              txt = 'OK'
              sym = '.'
              exc = None
@@ -420,17 +394,17 @@ index 03a81bfe..b8c97174 100644
              if isinstance(res, Exception):
                  if isinstance(res, NotImplementedError):
                      sym = 'N'
-@@ -469,7 +570,8 @@ def __str__(self):
+@@ -469,7 +545,8 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
 -                    n_slice=slice(None), maximum_run_time=1e7*brian2.second):
 +                    n_slice=slice(None), maximum_run_time=1e7*brian2.second,
-+                    profile_only_active=True, mark_not_completed=False):
++                    profile=False, mark_not_completed=False):
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -485,17 +587,41 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -485,17 +562,41 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
          print('Configurations:', ', '.join(c.name for c in configurations))
  
      full_results = {}
@@ -460,7 +434,7 @@ index 03a81bfe..b8c97174 100644
 +                            ft,
 +                            n,
 +                            maximum_run_time=maximum_run_time,
-+                            profile_only_active=profile_only_active,
++                            profile=profile,
 +                            return_lrcf=mark_not_completed
 +                        )
 +                    else:
@@ -469,12 +443,12 @@ index 03a81bfe..b8c97174 100644
 +                            ft,
 +                            n,
 +                            maximum_run_time=maximum_run_time,
-+                            profile_only_active=profile_only_active
++                            profile=profile,
 +                        )
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -504,8 +630,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -504,8 +605,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -506,7 +480,7 @@ index 03a81bfe..b8c97174 100644
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -518,20 +667,126 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -518,20 +642,126 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                  for suffix, proftime in list(suffixtime.items()):
                      full_results[configuration.name, ft.fullname(), n, suffix] = proftime
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
@@ -637,7 +611,7 @@ index 03a81bfe..b8c97174 100644
      def get_ns(self, fullname):
          L = [(cn, fn, n, s)
               for cn, fn, n, s in self.full_results
-@@ -539,14 +794,51 @@ def get_ns(self, fullname):
+@@ -539,14 +769,51 @@ def get_ns(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
          return numpy.array(sorted(list(set(n))))
  
@@ -693,7 +667,7 @@ index 03a81bfe..b8c97174 100644
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -554,10 +846,17 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -554,10 +821,17 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              fullname = st.fullname()
              pylab.figure()
              ns = self.get_ns(fullname)
@@ -713,7 +687,7 @@ index 03a81bfe..b8c97174 100644
              if relative or profiling_minimum==1:
                  codeobjsuffixes = ['All']
              baseline = None
-@@ -566,31 +865,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -566,31 +840,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              dashes = {}
              markerstyles = {}
              for isuffix, suffix in enumerate(codeobjsuffixes):
@@ -764,7 +738,7 @@ index 03a81bfe..b8c97174 100644
                      if plottable:
                          if label in havelabel:
                              label = None
-@@ -612,8 +926,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -612,8 +901,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                                          dash = dash+(4, 2)
                                  dashes[suffix] = dash
                                  markerstyles[suffix] = msty = next(markerstyles_cycle)
@@ -778,7 +752,7 @@ index 03a81bfe..b8c97174 100644
                          if dash is not None:
                              line.set_dashes(dash)
              pylab.title(fullname)
-@@ -623,6 +941,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -623,6 +916,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')
