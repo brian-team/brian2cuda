@@ -373,7 +373,7 @@ try:
         try:
             translate_pkl_to_csv(pkl_file)
         except KeyError as e:
-            print_flushed("ERROR tranlating {} to csv:\n\tKeyError: {}", pkl_file, e)
+            print_flushed(f"ERROR tranlating {pkl_file} to csv:\n\tKeyError: {e}")
 
         try:
             for key in res.brian_stdouts.keys():
