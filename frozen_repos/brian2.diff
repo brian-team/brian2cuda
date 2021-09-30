@@ -44,7 +44,7 @@ index 3663c276..40cc65a6 100644
      def register_preferences(self, prefbasename, prefbasedoc, **prefs):
          '''
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 5791bb61..e7911f7e 100644
+index 5791bb61..d983b6ed 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
 @@ -13,6 +13,8 @@
@@ -78,7 +78,7 @@ index 5791bb61..e7911f7e 100644
      extra_make_args_unix=BrianPreference(
          default=['-j'],
          docs='''
-@@ -182,7 +199,13 @@ def __init__(self):
+@@ -182,7 +199,14 @@ def __init__(self):
          self.code_lines = {'before_start': [],
                             'after_start': [],
                             'before_end': [],
@@ -89,11 +89,12 @@ index 5791bb61..e7911f7e 100644
 +
 +        self.timers = {'run_binary': None,
 +                       'compile': {'clean':None,
-+                                   'make': None}}
++                                   'make': None,
++                                   'all': None}}
  
          self.clocks = set([])
  
-@@ -977,9 +1000,14 @@ def compile_source(self, directory, compiler, debug, clean):
+@@ -977,9 +1001,17 @@ def compile_source(self, directory, compiler, debug, clean):
              else:
                  with std_silent(debug):
                      if clean:
@@ -106,10 +107,13 @@ index 5791bb61..e7911f7e 100644
 +                    _start_timer = time.time()
 +                    x = os.system('%s %s' % (make_cmd, make_args, ))
 +                    self.timers['compile']['make'] = time.time() - _start_timer
++                    self.timers['compile']['all'] = sum(
++                        t for t in self.timers['compile'].values() if t is not None
++                    )
                      if x != 0:
                          error_message = ('Project compilation failed (error '
                                           'code: %u).') % x
-@@ -1019,7 +1047,12 @@ def run(self, directory, with_output, run_args):
+@@ -1019,7 +1051,12 @@ def run(self, directory, with_output, run_args):
              if os.name == 'nt':
                  x = subprocess.call(['main'] + run_args, stdout=stdout)
              else:
@@ -123,7 +127,7 @@ index 5791bb61..e7911f7e 100644
              if stdout is not None:
                  stdout.close()
              if x:
-@@ -1035,6 +1068,7 @@ def run(self, directory, with_output, run_args):
+@@ -1035,6 +1072,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -131,7 +135,7 @@ index 5791bb61..e7911f7e 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1362,6 +1396,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1362,6 +1400,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
          # We store this as an instance variable for later access by the
          # `code_object` method
          self.enable_profiling = profile
@@ -146,7 +150,7 @@ index 5791bb61..e7911f7e 100644
          all_objects = net.sorted_objects
          net._clocks = {obj.clock for obj in all_objects}
          t_end = net.t+duration
-@@ -1487,10 +1529,12 @@ def network_run(self, net, duration, report=None, report_period=10*second,
+@@ -1487,10 +1533,12 @@ def network_run(self, net, duration, report=None, report_period=10*second,
              if clock not in all_clocks:
                  run_lines.append('{net.name}.add(&{clock.name}, NULL);'.format(clock=clock, net=net))
  
