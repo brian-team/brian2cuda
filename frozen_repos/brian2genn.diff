@@ -1,5 +1,5 @@
 diff --git a/brian2genn/device.py b/brian2genn/device.py
-index fd387d2..cf8f7b3 100644
+index fd387d2..ac9a6d4 100644
 --- a/brian2genn/device.py
 +++ b/brian2genn/device.py
 @@ -7,6 +7,7 @@ import platform
@@ -22,23 +22,7 @@ index fd387d2..cf8f7b3 100644
      def insert_code(self, slot, code):
          '''
          Insert custom C++ code directly into ``main.cpp``. The available slots
-@@ -888,6 +894,7 @@ class GeNNDevice(CPPStandaloneDevice):
-                                                        returncode=ex.returncode)
-                                    )
-         if run:
-+            _start_timer = time.time()
-             try:
-                 self.run(directory, use_GPU, with_output)
-             except CalledProcessError as ex:
-@@ -902,6 +909,7 @@ class GeNNDevice(CPPStandaloneDevice):
-                                         'details.').format(cmd=ex.cmd,
-                                                            returncode=ex.returncode)
-                                        )
-+            self.timers['run'] = time.time() - _start_timer
- 
-     def generate_code_objects(self, writer):
-         # Generate data for non-constant values
-@@ -1019,8 +1027,10 @@ class GeNNDevice(CPPStandaloneDevice):
+@@ -1019,8 +1025,10 @@ class GeNNDevice(CPPStandaloneDevice):
                  check_call(cmd, cwd=directory)
              else:
                  # print ["./main", "test", str(self.run_duration), gpu_arg]
@@ -49,7 +33,7 @@ index fd387d2..cf8f7b3 100644
          self.has_been_run = True
          last_run_info = open(
              os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
-@@ -1166,9 +1176,16 @@ class GeNNDevice(CPPStandaloneDevice):
+@@ -1166,9 +1174,16 @@ class GeNNDevice(CPPStandaloneDevice):
                  args += ['-i', inc_path]
                  args += ['magicnetwork_model.cpp']
                  print(args)
@@ -67,7 +51,7 @@ index fd387d2..cf8f7b3 100644
  
      def add_parameter(self, model, varname, variable):
          model.parameters.append(varname)
-@@ -1827,6 +1844,35 @@ class GeNNDevice(CPPStandaloneDevice):
+@@ -1827,6 +1842,35 @@ class GeNNDevice(CPPStandaloneDevice):
          self.run_statement_used = True
  
  
