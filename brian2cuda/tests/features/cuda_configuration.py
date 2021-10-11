@@ -436,18 +436,19 @@ class GeNNConfigurationBase(BenchmarkConfiguration):
     devicename = 'genn'
 
     def before_run(self):
-        # Makae sure nvcc uses CXX as host compiler
-        pref_key = "devices.genn.cuda_backend.extra_compile_args_nvcc"
+        # Make sure nvcc uses CXX as host compiler if it is set (e.g. in conda
+        # environments using `gxx_linux-64`)
         cxx_compiler = os.getenv("CXX")
-        assert cxx_compiler is not None
-        pref_value = ["-ccbin", cxx_compiler]
-        if pref_key in self.extra_prefs:
-            args_list = self.extra_prefs[pref_key]
-            for item in args_list:
-                assert "ccbin" not in item
-            self.extra_prefs[pref_key] += pref_value
-        else:
-            self.extra_prefs[pref_key] = pref_value
+        if cxx_compiler is not None:
+            pref_key = "devices.genn.cuda_backend.extra_compile_args_nvcc"
+            pref_value = ["-ccbin", cxx_compiler]
+            if pref_key in self.extra_prefs:
+                args_list = self.extra_prefs[pref_key]
+                for item in args_list:
+                    assert "ccbin" not in item
+                self.extra_prefs[pref_key] += pref_value
+            else:
+                self.extra_prefs[pref_key] = pref_value
         super().before_run()
 
     # Overwrite how GeNN sets profiling

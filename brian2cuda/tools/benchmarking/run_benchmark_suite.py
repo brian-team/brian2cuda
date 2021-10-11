@@ -288,8 +288,12 @@ except (subprocess.CalledProcessError, FileNotFoundError) as err:
     gpuinfo = err
 print_flushed(f"\nGPU information\n{gpuinfo}", slack=False)
 
+
+gxx_binary = os.getenv("CXX", None)
+if gxx_binary is None:
+    gxx_binary = 'gcc'
 try:
-    gxxinfo = subprocess.check_output([os.getenv("CXX"), "--version"], encoding='UTF-8')
+    gxxinfo = subprocess.check_output([gxx_binary, "--version"], encoding='UTF-8')
 except subprocess.CalledProcessError as err:
     gxxinfo = err
 print_flushed(f"\nCXX version\n{gxxinfo}", slack=False)
