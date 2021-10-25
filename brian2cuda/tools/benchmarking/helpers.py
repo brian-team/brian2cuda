@@ -1,6 +1,7 @@
 import os
 import pickle as pickle
 import pandas as pd
+import numpy as np
 import brian2
 from brian2.tests.features.base import SpeedTestResults
 from collections import defaultdict
@@ -126,10 +127,14 @@ def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
         if genn is None or config_name.lower().startswith('genn') == genn:
             config_names.append(config.name)
             for n in ns:
-                res = full_results_dict[config_name,
-                                        speed_test_name,
-                                        n,
-                                        suffix]
+                try:
+                    res = full_results_dict[config_name,
+                                            speed_test_name,
+                                            n,
+                                            suffix]
+                except KeyError as err:
+                    print(f"WARNING: Results missing, adding NaN. KeyError: {err}")
+                    res = np.nan
                 res = brian2.asarray(res)
                 if not brian2.any(res):
                     # don't save codeobjects that were not profiled
