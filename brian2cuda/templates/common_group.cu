@@ -268,9 +268,11 @@ void _run_{{codeobj_name}}()
         else
         {
             printf("INFO _run_kernel_{{codeobj_name}}\n"
+                   {% block kernel_info_num_blocks_str %}
                    "\t%u blocks\n"
+                   {% endblock %}
                    "\t%u threads\n"
-                   "\t%i registers per block\n"
+                   "\t%i registers per thread\n"
                    "\t%i bytes statically-allocated shared memory per block\n"
                    "\t%i bytes local memory per thread\n"
                    "\t%i bytes user-allocated constant memory\n"
@@ -279,7 +281,10 @@ void _run_{{codeobj_name}}()
                    {% else %}
                    "",
                    {% endif %}
-                   num_blocks, num_threads, funcAttrib.numRegs,
+                   {% block kernel_info_num_blocks_var %}
+                   num_blocks,
+                   {% endblock %}
+                   num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
         }

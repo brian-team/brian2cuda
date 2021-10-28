@@ -851,7 +851,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         printf("INFO _before_run_kernel_{{codeobj_name}}\n"
                "\t%u blocks\n"
                "\t%u threads\n"
-               "\t%i registers per block\n"
+               "\t%i registers per thread\n"
                "\t%i bytes statically-allocated shared memory per block\n"
                "\t%i bytes local memory per thread\n"
                "\t%i bytes user-allocated constant memory\n"
@@ -1037,6 +1037,11 @@ void _run_{{codeobj_name}}()
        block prepare_kernel and block kernel_call are executed in this else clause #}
 {% endblock host_maincode %}
 
+{% block kernel_info_num_blocks_str %}
+"\tvariable number of blocks (depends on number of spiking neurons)\n"
+{% endblock %}
+{% block kernel_info_num_blocks_var %}
+{% endblock %}
 
 {% block prepare_kernel_inner %}
     {% if not bundle_mode %}
