@@ -489,13 +489,26 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                 int synapses_start_idx = h_vec_unique_delay_start_idcs_by_pre[i][bundle_idx];
                 // find the number of synapses for this delay (bundle)
                 int num_synapses;
-                if (bundle_idx == num_unique_elements - 1)
+                if (bundle_idx == num_unique_elements - 1){
                     num_synapses = num_elements - synapses_start_idx;
-                else
+                }
+                else {
                     num_synapses = h_vec_unique_delay_start_idcs_by_pre[i][bundle_idx + 1] - synapses_start_idx;
+                }
                 h_num_synapses_by_bundle.push_back(num_synapses);
-                if (num_synapses > {{owner.name}}_max_bundle_size)
-                    {{owner.name}}_max_bundle_size = num_synapses;
+
+                if (bundle_idx == 0){
+                    {{owner.name}}_bundle_size_min = num_synapses;
+                    {{owner.name}}_bundle_size_max = num_synapses;
+                }
+                else {
+                    if (num_synapses > {{owner.name}}_bundle_size_max){
+                        {{owner.name}}_bundle_size_max = num_synapses;
+                    }
+                    if (num_synapses < {{owner.name}}_bundle_size_min){
+                        {{owner.name}}_bundle_size_min = num_synapses;
+                    }
+                }
 
                 // copy this bundle to device and store the device pointer
                 int32_t* d_this_bundle = d_ptr_synapse_ids + sum_bundle_sizes;
@@ -658,8 +671,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         // add num_bundle_ids as last entry
         h_global_bundle_id_start_by_pre[num_pre_post_blocks] = num_bundle_ids;
 
-        // floor(mean(h_num_synapses_by_bundle))
-        {{owner.name}}_mean_bundle_size = sum_bundle_sizes / num_bundle_ids;
+        // floor(mean(h_num_synapses_by_bundle)) = sum_bundle_sizes / num_bundle_ids;
+        assert(std::floor(mean_bundle_sizes) == sum_bundle_sizes / num_bundle_ids);
+        {{owner.name}}_bundle_size_mean = mean_bundle_sizes;
+        {{owner.name}}_bundle_size_std = getStd(count_bundle_sizes, M2_bundle_sizes);
 
         // pointer to start of synapse IDs array
         CUDA_SAFE_CALL(
@@ -836,7 +851,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         printf("INFO _before_run_kernel_{{codeobj_name}}\n"
                "\t%u blocks\n"
                "\t%u threads\n"
-               "\t%i registers per block\n"
+               "\t%i registers per thread\n"
                "\t%i bytes statically-allocated shared memory per block\n"
                "\t%i bytes local memory per thread\n"
                "\t%i bytes user-allocated constant memory\n"
@@ -1022,6 +1037,11 @@ void _run_{{codeobj_name}}()
        block prepare_kernel and block kernel_call are executed in this else clause #}
 {% endblock host_maincode %}
 
+{% block kernel_info_num_blocks_str %}
+"\tvariable number of blocks (depends on number of spiking neurons)\n"
+{% endblock %}
+{% block kernel_info_num_blocks_var %}
+{% endblock %}
 
 {% block prepare_kernel_inner %}
     {% if not bundle_mode %}

@@ -346,6 +346,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Using atomics in synaptic effect application of Synapses object "
                     f"{name}"
                 )
+            threads_expr = prefs.devices.cuda_standalone.threads_per_synapse_bundle
+            pathway_name = template_kwds['pathway'].name
+            replace_expr = {
+                '{mean}': f'{pathway_name}_bundle_size_mean',
+                '{std}': f'{pathway_name}_bundle_size_std',
+                '{min}': f'{pathway_name}_bundle_size_min',
+                '{max}': f'{pathway_name}_bundle_size_max',
+            }
+            for old, new in replace_expr.items():
+                threads_expr = threads_expr.replace(old, new)
+            template_kwds["threads_per_synapse_bundle"] = threads_expr
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]

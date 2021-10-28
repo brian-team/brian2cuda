@@ -522,7 +522,7 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             printf("INFO _currents\n_kernel_{{codeobj_name}}"
                        "\t%u blocks\n"
                        "\t%u threads\n"
-                       "\t%i registers per block\n"
+                       "\t%i registers per thread\n"
                        "\t%i bytes statically-allocated shared memory per block\n"
                        "\t%i bytes local memory per thread\n"
                        "\t%i bytes user-allocated constant memory\n"
