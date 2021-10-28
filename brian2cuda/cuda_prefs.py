@@ -128,6 +128,11 @@ prefs.register_preferences(
         default="{max}",
         validator=validate_bundle_size_expression),
 
+    bundle_threads_warp_multiple=BrianPreference(
+        docs='''Whether to round threads_per_synapse_bundle to next multiple of warp
+        size''',
+        default=True),
+
     no_pre_references=BrianPreference(
         docs='''Set this preference if you don't need access to ``i`` in any
         synaptic code string and no Synapses object applies effects to
