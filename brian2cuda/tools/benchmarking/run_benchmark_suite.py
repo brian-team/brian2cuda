@@ -47,9 +47,6 @@ import traceback
 import matplotlib
 matplotlib.use('Agg')
 
-# pretty plots
-#import seaborn as sns
-
 import time
 import datetime
 import socket
@@ -304,8 +301,15 @@ except subprocess.CalledProcessError as err:
     nvccinfo = err
 print_flushed(f"\nNVCC version\n{nvccinfo}", slack=False)
 
-#sns.set_palette(sns.color_palette("hls", len(configurations)))
-#sns.set_palette(sns.color_palette("cubehelix", len(configurations)))
+# pretty plots
+try:
+    import seaborn as sns
+    sns.set_palette(sns.color_palette("hls", len(configurations)))
+    #sns.set_palette(sns.color_palette("cubehelix", len(configurations)))
+except Exception:
+    pass
+
+
 
 time_stemp = time.time()
 date_str = datetime.datetime.fromtimestamp(time_stemp).strftime('%Y-%m-%d_%T')
