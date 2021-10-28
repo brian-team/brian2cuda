@@ -179,6 +179,16 @@ int getThreadsPerBundle(){
     using namespace std;
     using namespace brian;
     int threads_per_bundle = static_cast<int>({{threads_per_synapse_bundle}});
+    {% if bundle_threads_warp_multiple %}
+    int multiple = threads_per_bundle / num_threads_per_warp;
+    int remainder = threads_per_bundle % num_threads_per_warp;
+    if (remainder != 0){
+        // if remainder is 0, just use thread_per_bundle as is
+        // round up to next multiple of warp size
+        threads_per_bundle = (multiple + 1) * num_threads_per_warp;
+    }
+    {% endif %}
+
     if (threads_per_bundle < 1){
         threads_per_bundle = 1;
     }

@@ -357,6 +357,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             for old, new in replace_expr.items():
                 threads_expr = threads_expr.replace(old, new)
             template_kwds["threads_per_synapse_bundle"] = threads_expr
+            template_kwds["bundle_threads_warp_multiple"] = prefs.devices.cuda_standalone.bundle_threads_warp_multiple
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
