@@ -181,12 +181,17 @@ int getThreadsPerBundle(){
     int threads_per_bundle = static_cast<int>({{threads_per_synapse_bundle}});
     {% if bundle_threads_warp_multiple %}
     int multiple = threads_per_bundle / num_threads_per_warp;
+    {% if bundle_threads_warp_multiple == 'up' %}
     int remainder = threads_per_bundle % num_threads_per_warp;
     if (remainder != 0){
         // if remainder is 0, just use thread_per_bundle as is
         // round up to next multiple of warp size
         threads_per_bundle = (multiple + 1) * num_threads_per_warp;
     }
+    {% elif bundle_threads_warp_multiple == 'down' %}
+    // ignore remainder, round down to next muptiple of warp size
+    threads_per_bundle = multiple * num_threads_per_warp;
+    {% endif %}
     {% endif %}
 
     if (threads_per_bundle < 1){
