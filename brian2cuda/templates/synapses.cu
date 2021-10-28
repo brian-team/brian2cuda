@@ -200,10 +200,11 @@ num_threads = max_threads_per_block;
 {% if bundle_mode %}
 //num_threads_per_bundle = {{pathway.name}}_bundle_size_max;
 num_threads_per_bundle = getThreadsPerBundle();
+printf("INFO _run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_threads_per_bundle);
 {% endif %}
 num_loops = 1;
 
-{% elif synaptic_effects == "target" %}
+{% elif synaptic_effects == "target" %}{# not uses_atomics #}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
 num_loops = 1;
@@ -213,7 +214,8 @@ if (!{{owner.name}}_multiple_pre_post){
         num_threads = max_threads_per_block;
     {% if bundle_mode %}
     else  // heterogeneous delays
-        // TODO: Do we need here getThreadsPerBundle as well? Or always max?
+        // Since we can only parallelize within each bundle, we use as many threads as
+        // the maximum bundle size
         num_threads = {{pathway.name}}_bundle_size_max;
     {% endif %}
 }

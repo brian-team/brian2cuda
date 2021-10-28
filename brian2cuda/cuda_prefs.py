@@ -27,7 +27,7 @@ def validate_bundle_size_expression(string):
     try:
         eval(replaced)
     except Exception:
-        logger.error("Can't evaluate expression '{string}'")
+        logger.error(f"Can't evaluate expression '{string}'")
         return False
 
     return True
