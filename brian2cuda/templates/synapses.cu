@@ -172,6 +172,21 @@ static int num_threads_per_bundle;
 static int num_loops;
 {% endblock %}
 
+{% block extra_device_helper %}
+int getThreadsPerBundle(){
+    {# Allow using std functions (ceil, floor...) in
+       prefs.device.cuda_standalone.threads_per_synapse_bundle #}
+    using namespace std;
+    using namespace brian;
+    int threads_per_bundle = static_cast<int>({{threads_per_synapse_bundle}});
+    if (threads_per_bundle < 1){
+        threads_per_bundle = 1;
+    }
+    return threads_per_bundle;
+}
+{% endblock extra_device_helper %}
+
+
 {% block prepare_kernel_inner %}
 {#######################################################################}
 {% if uses_atomics or synaptic_effects == "synapse" %}
@@ -182,9 +197,9 @@ static int num_loops;
 {% endif %}
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
-// TODO: effect of mean instead of max?
 {% if bundle_mode %}
-num_threads_per_bundle = {{pathway.name}}_max_bundle_size;
+//num_threads_per_bundle = {{pathway.name}}_bundle_size_max;
+num_threads_per_bundle = getThreadsPerBundle();
 {% endif %}
 num_loops = 1;
 
@@ -198,7 +213,8 @@ if (!{{owner.name}}_multiple_pre_post){
         num_threads = max_threads_per_block;
     {% if bundle_mode %}
     else  // heterogeneous delays
-        num_threads = {{pathway.name}}_max_bundle_size;
+        // TODO: Do we need here getThreadsPerBundle as well? Or always max?
+        num_threads = {{pathway.name}}_bundle_size_max;
     {% endif %}
 }
 else {
