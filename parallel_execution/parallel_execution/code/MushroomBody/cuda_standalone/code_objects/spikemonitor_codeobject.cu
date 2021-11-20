@@ -304,7 +304,7 @@ void _run_spikemonitor_codeobject()
     static bool first_run = true;
     if (first_run)
     {
-_init_kernel_spikemonitor_codeobject<<<1,1>>>();
+_init_kernel_spikemonitor_codeobject<<<1,1,0,spikemonitor_stream>>>();
 
 CUDA_CHECK_ERROR("_init_kernel_spikemonitor_codeobject");
 num_blocks = 1;
@@ -374,7 +374,7 @@ num_threads = 1;
     }
 
 
-_run_kernel_spikemonitor_codeobject<<<num_blocks, num_threads>>>(
+_run_kernel_spikemonitor_codeobject<<<num_blocks, num_threads,0, spikemonitor_stream>>>(
         _num_spikespace-1,
         dev_array_spikemonitor_count,
         // HOST_PARAMETERS
@@ -519,7 +519,7 @@ void _copyToHost_spikemonitor_codeobject()
 		double* const dev_array_spikemonitor_t = thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_t[0]);
 		const int _numt = dev_dynamic_array_spikemonitor_t.size();
 
-    _count_kernel_spikemonitor_codeobject<<<1,1>>>(
+    _count_kernel_spikemonitor_codeobject<<<1,1,0,spikemonitor_stream>>>(
         dev_num_events,
         // HOST_PARAMETERS
         dev_array_spikemonitor_N,
@@ -537,7 +537,7 @@ void _copyToHost_spikemonitor_codeobject()
     CUDA_CHECK_ERROR("_count_kernel_spikemonitor_codeobject");
 
     CUDA_SAFE_CALL(
-            cudaMemcpy(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost)
+            cudaMemcpyAsync(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost,spikemonitor_stream)
             );
 
     // resize monitor device vectors
@@ -548,7 +548,7 @@ void _copyToHost_spikemonitor_codeobject()
             dev_dynamic_array_spikemonitor_i.resize(host_num_events)
             );
 
-    _copy_kernel_spikemonitor_codeobject<<<1,1>>>(
+    _copy_kernel_spikemonitor_codeobject<<<1,1,0,spikemonitor_stream>>>(
         thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_t[0]),
         thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_i[0]),
         0          );
@@ -574,7 +574,7 @@ void _debugmsg_spikemonitor_codeobject()
     // TODO: can't we acces the correct _array_eventmonitor_N[0]
     //   value here without any kernel call?
     //   Yes: use _array_spikemonitor_N
-    _debugmsg_kernel_spikemonitor_codeobject<<<1,1>>>(
+    _debugmsg_kernel_spikemonitor_codeobject<<<1,1,0,spikemonitor_stream>>>(
             // HOST_PARAMETERS
             dev_array_spikemonitor_N,
 			dev_array_spikegeneratorgroup_i,

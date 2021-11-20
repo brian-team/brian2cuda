@@ -448,9 +448,9 @@ if (synapses_pre_max_size > 0)
     {
         if (defaultclock.timestep[0] >= synapses_pre_delay)
         {
-            cudaMemcpy(&num_spiking_neurons,
+            cudaMemcpyAsync(&num_spiking_neurons,
                     &dev_array_spikegeneratorgroup__spikespace[synapses_pre_eventspace_idx][_num__array_spikegeneratorgroup__spikespace - 1],
-                    sizeof(int32_t), cudaMemcpyDeviceToHost);
+                    sizeof(int32_t), cudaMemcpyDeviceToHost,stream);
             num_blocks = num_parallel_blocks * num_spiking_neurons;
             //TODO collect info abt mean, std of num spiking neurons per time
             //step and print INFO at end of simulation

@@ -265,13 +265,13 @@ void _run_synapses_pre_push_spikes()
         // get the number of spiking neurons
         int32_t num_spiking_neurons;
         CUDA_SAFE_CALL(
-                cudaMemcpy(&num_spiking_neurons,
+                cudaMemcpyAsync(&num_spiking_neurons,
                     dev_array_spikegeneratorgroup__spikespace[current_idx_array_spikegeneratorgroup__spikespace] + _num_spikespace - 1,
-                    sizeof(int32_t), cudaMemcpyDeviceToHost)
+                    sizeof(int32_t), cudaMemcpyDeviceToHost,stream)
                 );
 
         // advance spike queues
-        _advance_kernel_synapses_pre_push_spikes<<<1, num_parallel_blocks>>>();
+        _advance_kernel_synapses_pre_push_spikes<<<1, num_parallel_blocks,0,stream>>>();
 
         CUDA_CHECK_ERROR("_advance_kernel_synapses_pre_push_spikes");
 

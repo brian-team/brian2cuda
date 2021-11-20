@@ -494,6 +494,13 @@ curandState* brian::dev_curand_states;
 cudaStream_t brian::stream;
 cudaStream_t brian::stream1;
 cudaStream_t brian::stream2;
+cudaStream_t brian::neurongroup_stream1;
+cudaStream_t brian::neurongroup_stream;
+cudaStream_t brian::spikegenerator_stream;
+cudaStream_t brian::spikemonitor_stream1;
+cudaStream_t brian::spikegenerator_stream2;
+cudaStream_t brian::spikegenerator_stream;
+
 __device__ curandState* brian::d_curand_states;
 RandomNumberBuffer brian::random_number_buffer;
 
@@ -538,6 +545,19 @@ void _init_arrays()
 
     // this sets seed for host and device api RNG
     random_number_buffer.set_seed(seed);
+    // initialise neurongroups
+    CUDA_SAFE_CALL(cudaStreamCreate(&neurongroup_stream1));
+    CUDA_SAFE_CALL(cudaStreamCreate(&neurongroup_stream));
+    
+    //spike generator
+    CUDA_SAFE_CALL(cudaStreamCreate(&spikegenerator_stream));
+
+    //spike monitor
+    CUDA_SAFE_CALL(cudaStreamCreate(&spikemonitor_stream1));
+    CUDA_SAFE_CALL(cudaStreamCreate(&spikemonitor_stream));
+    CUDA_SAFE_CALL(cudaStreamCreate(&spikemonitor_stream2));
+    
+
     CUDA_SAFE_CALL(cudaStreamCreate(&stream));
 
     synapses_pre_init<<<1,1>>>(

@@ -439,7 +439,7 @@ void _run_spikegeneratorgroup_codeobject()
 
     // Note: If we have no delays, there is only one spikespace and
     //       current_idx equals previous_idx.
-    _reset_spikegeneratorgroup_codeobject<<<num_blocks, num_threads>>>(
+    _reset_spikegeneratorgroup_codeobject<<<num_blocks, num_threads, 0, spikegenerator_stream>>>(
             dev_array_spikegeneratorgroup__spikespace[previous_idx_array_spikegeneratorgroup__spikespace],
             ///// HOST_PARAMETERS /////
             dev_array_spikegeneratorgroup__lastindex,
@@ -456,7 +456,7 @@ void _run_spikegeneratorgroup_codeobject()
 
     CUDA_CHECK_ERROR("_reset_spikegeneratorgroup_codeobject");
 
-    _run_kernel_spikegeneratorgroup_codeobject<<<num_blocks, num_threads>>>(
+    _run_kernel_spikegeneratorgroup_codeobject<<<num_blocks, num_threads,0, spikegenerator_stream>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////
@@ -473,6 +473,7 @@ void _run_spikegeneratorgroup_codeobject()
         );
 
     CUDA_CHECK_ERROR("_run_kernel_spikegeneratorgroup_codeobject");
+    CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
 
 }

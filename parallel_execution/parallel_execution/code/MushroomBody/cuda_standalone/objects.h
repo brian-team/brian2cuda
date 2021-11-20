@@ -355,6 +355,18 @@ extern int synapses_2_pre_eventspace_idx;
 extern int synapses_2_pre_delay;
 extern bool synapses_2_pre_scalar_delay;
 
+// neurongroup
+extern cudaStream_t neurongroup_stream1;
+extern cudaStream_t neurongroup_stream;
+
+//spike generator
+extern cudaStream_t spikegenerator_stream;
+
+// spike monitor
+extern cudaStream_t spikemonitor_stream1;
+extern cudaStream_t spikemonitor_stream;
+extern cudaStream_t spikemonitor_stream2;
+
 // Profiling information for each code object
 
 //////////////// random numbers /////////////////

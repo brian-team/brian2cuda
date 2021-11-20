@@ -509,7 +509,7 @@ if (synapses_1_post_max_size > 0)
 {
         for(int bid_offset = 0; bid_offset < num_loops; bid_offset++)
         {
-            _run_kernel_synapses_1_post_codeobject<<<num_blocks, num_threads>>>(
+            _run_kernel_synapses_1_post_codeobject<<<num_blocks, num_threads,0,stream1>>>(
                 _N,
                 bid_offset,
                 defaultclock.timestep[0],
@@ -534,6 +534,7 @@ if (synapses_1_post_max_size > 0)
         }
 
     CUDA_CHECK_ERROR("_run_kernel_synapses_1_post_codeobject");
+    CUDA_SAFE_CALL(cudaDeviceSynchronize());
 }
 
 

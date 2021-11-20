@@ -428,7 +428,7 @@ void _run_neurongroup_stateupdater_codeobject()
     }
 
 
-    _run_kernel_neurongroup_stateupdater_codeobject<<<num_blocks, num_threads>>>(
+    _run_kernel_neurongroup_stateupdater_codeobject<<<num_blocks, num_threads,0,neurongroup_stream>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////

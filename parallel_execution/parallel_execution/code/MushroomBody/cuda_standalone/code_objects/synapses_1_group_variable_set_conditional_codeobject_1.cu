@@ -401,7 +401,7 @@ void _run_synapses_1_group_variable_set_conditional_codeobject_1()
     }
 
 
-    _run_kernel_synapses_1_group_variable_set_conditional_codeobject_1<<<num_blocks, num_threads>>>(
+    _run_kernel_synapses_1_group_variable_set_conditional_codeobject_1<<<num_blocks, num_threads,0,stream1>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////

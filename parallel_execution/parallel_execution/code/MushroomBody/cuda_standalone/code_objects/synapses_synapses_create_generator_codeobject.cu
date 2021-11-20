@@ -488,10 +488,10 @@ size_t used_device_memory_start = used_device_memory;
     dev_dynamic_array_synapses__synaptic_pre = _dynamic_array_synapses__synaptic_pre;
     dev_dynamic_array_synapses__synaptic_post = _dynamic_array_synapses__synaptic_post;
     CUDA_SAFE_CALL(
-            cudaMemcpy(dev_array_synapses_N,
+            cudaMemcpyAsync(dev_array_synapses_N,
                 _array_synapses_N,
                 sizeof(int32_t),
-                cudaMemcpyHostToDevice)
+                cudaMemcpyHostToDevice,stream)
             );
 
 

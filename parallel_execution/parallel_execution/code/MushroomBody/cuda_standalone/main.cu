@@ -488,7 +488,7 @@ int main(int argc, char **argv)
         magicnetwork.add(&defaultclock, _run_synapses_1_post_push_spikes);
         magicnetwork.add(&defaultclock, _run_synapses_1_post_codeobject);
         CUDA_SAFE_CALL(cudaProfilerStart());
-        magicnetwork.run(10.0, NULL, 10.0);
+        magicnetwork.run(0.01, NULL, 10.0);
         random_number_buffer.run_finished();
         CUDA_SAFE_CALL(cudaDeviceSynchronize());
         CUDA_SAFE_CALL(cudaProfilerStop());

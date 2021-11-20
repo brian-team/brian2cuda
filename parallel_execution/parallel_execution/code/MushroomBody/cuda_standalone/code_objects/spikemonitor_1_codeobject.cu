@@ -304,7 +304,7 @@ void _run_spikemonitor_1_codeobject()
     static bool first_run = true;
     if (first_run)
     {
-_init_kernel_spikemonitor_1_codeobject<<<1,1>>>();
+_init_kernel_spikemonitor_1_codeobject<<<1,1,0,spikemonitor_stream1>>>();
 
 CUDA_CHECK_ERROR("_init_kernel_spikemonitor_1_codeobject");
 num_blocks = 1;
@@ -374,7 +374,7 @@ num_threads = 1;
     }
 
 
-_run_kernel_spikemonitor_1_codeobject<<<num_blocks, num_threads>>>(
+_run_kernel_spikemonitor_1_codeobject<<<num_blocks, num_threads,0,spikemonitor_stream1>>>(
         _num_spikespace-1,
         dev_array_spikemonitor_1_count,
         // HOST_PARAMETERS
@@ -519,7 +519,7 @@ void _copyToHost_spikemonitor_1_codeobject()
 		double* const dev_array_spikemonitor_1_t = thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_1_t[0]);
 		const int _numt = dev_dynamic_array_spikemonitor_1_t.size();
 
-    _count_kernel_spikemonitor_1_codeobject<<<1,1>>>(
+    _count_kernel_spikemonitor_1_codeobject<<<1,1,0,spikemonitor_stream1>>>(
         dev_num_events,
         // HOST_PARAMETERS
         dev_array_spikemonitor_1_N,
@@ -537,7 +537,7 @@ void _copyToHost_spikemonitor_1_codeobject()
     CUDA_CHECK_ERROR("_count_kernel_spikemonitor_1_codeobject");
 
     CUDA_SAFE_CALL(
-            cudaMemcpy(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost)
+            cudaMemcpyAsync(&host_num_events, dev_num_events, sizeof(int), cudaMemcpyDeviceToHost,spikemonitor_stream1)
             );
 
     // resize monitor device vectors
@@ -548,7 +548,7 @@ void _copyToHost_spikemonitor_1_codeobject()
             dev_dynamic_array_spikemonitor_1_i.resize(host_num_events)
             );
 
-    _copy_kernel_spikemonitor_1_codeobject<<<1,1>>>(
+    _copy_kernel_spikemonitor_1_codeobject<<<1,1,0,spikemonitor_stream1>>>(
         thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_1_t[0]),
         thrust::raw_pointer_cast(&dev_dynamic_array_spikemonitor_1_i[0]),
         0          );
@@ -574,7 +574,7 @@ void _debugmsg_spikemonitor_1_codeobject()
     // TODO: can't we acces the correct _array_eventmonitor_N[0]
     //   value here without any kernel call?
     //   Yes: use _array_spikemonitor_1_N
-    _debugmsg_kernel_spikemonitor_1_codeobject<<<1,1>>>(
+    _debugmsg_kernel_spikemonitor_1_codeobject<<<1,1,0,spikemonitor_stream1>>>(
             // HOST_PARAMETERS
             dev_array_spikemonitor_1_N,
 			dev_array_neurongroup_i,

@@ -384,13 +384,13 @@ void _run_neurongroup_1_thresholder_codeobject()
         first_run = false;
     }
 
-        _reset_neurongroup_1_thresholder_codeobject<<<num_blocks, num_threads>>>(
+        _reset_neurongroup_1_thresholder_codeobject<<<num_blocks, num_threads,0, neurongroup_stream1>>>(
                 dev_array_neurongroup_1__spikespace[current_idx_array_neurongroup_1__spikespace]
             );
 
         CUDA_CHECK_ERROR("_reset_neurongroup_1_thresholder_codeobject");
 
-    _run_kernel_neurongroup_1_thresholder_codeobject<<<num_blocks, num_threads>>>(
+    _run_kernel_neurongroup_1_thresholder_codeobject<<<num_blocks, num_threads, 0, neurongroup_stream1>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////
@@ -402,7 +402,6 @@ void _run_neurongroup_1_thresholder_codeobject()
         );
 
     CUDA_CHECK_ERROR("_run_kernel_neurongroup_1_thresholder_codeobject");
-
 
 }
 
