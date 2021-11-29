@@ -62,7 +62,9 @@ for mod_name in MOCK_MODULES:
         shutil.rmtree(target_dir)
     os.makedirs(target_dir)
     abs_root = os.path.abspath('../brian2cuda')
-    generate_reference.main(abs_root, ['tests', 'sphinxext'], target_dir)
+    generate_reference.main(abs_root, exclude_dirs=['tests', 'sphinxext'],
+                            exclude_files=['conftest.py'],
+                            destdir=target_dir)
     
 # -- Automatically generate the examples documentation -------------------------
 #    import brian2.sphinxext.generate_examples as generate_examples
