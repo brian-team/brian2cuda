@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
     Automatically generate Brian's reference documentation.
-
+    
     Based on sphinx-apidoc, published under a BSD license: http://sphinx-doc.org/
 """
+
+
 import inspect
 import sys
 import os
@@ -22,7 +24,7 @@ def makename(package, module):
     if package:
         name = package
         if module:
-            name += '.' + module
+            name += f".{module}"
     else:
         name = module
     return name
@@ -41,7 +43,7 @@ def write_file(name, text, destdir, suffix):
 
 def format_heading(level, text):
     """Create a heading of <level> [1, 2 or 3 supported]."""
-    underlining = ['=', '-', '~', ][level - 1] * len(text)
+    underlining = ['=', '-', '~'][level - 1] * len(text)
     return f'{text}\n{underlining}\n\n'
 
 
@@ -52,12 +54,8 @@ def format_directive(module, destdir, package=None, basename='brian2cuda'):
         directive += f'    :{option}:\n'
     directive += '\n'
     # document all the classes in the modules
-    full_name = basename + '.' + module
-    print('processing ' + full_name)
-    try:
-        __import__(full_name)
-    except:
-        return directive
+    full_name = f"{basename}.{module}"
+    __import__(full_name)
     mod = sys.modules[full_name]
     dir_members = dir(mod)
     classes = []
@@ -102,23 +100,25 @@ def find_shortest_import(module_name, obj_name):
     parts = module_name.split('.')
     for idx in range(1, len(parts) + 1):
         try:
-            result = __import__('.'.join(parts[:idx]), globals(), {},
-                                fromlist=[str(obj_name)], level=0)
+            result = __import__(
+                '.'.join(parts[:idx]), globals(), {}, fromlist=[str(obj_name)], level=0
+            )
             result_obj = getattr(result, obj_name, None)
-            if result_obj is not None and getattr(result_obj,
-                                                  '__module__',
-                                                  None) == module_name:
+            if (
+                result_obj is not None
+                and getattr(result_obj, '__module__', None) == module_name
+            ):
                 # import seems to have worked
                 return '.'.join(parts[:idx])
         except ImportError:
             pass
-    raise AssertionError("Couldn't import " + module_name + '.' + obj_name)
+    raise AssertionError(f"Couldn't import {module_name}.{obj_name}")
 
 
 def create_member_file(module_name, member, member_obj, destdir, suffix='rst'):
     """Build the text of the file and write the file."""
 
-    text = '.. currentmodule:: ' + module_name + '\n\n'
+    text = f".. currentmodule:: {module_name}\n\n"
 
     shortest_import = find_shortest_import(module_name, member)
     import_text = f'(*Shortest import*: ``from {shortest_import} import {member})``\n\n'
@@ -139,8 +139,9 @@ def create_member_file(module_name, member, member_obj, destdir, suffix='rst'):
     write_file(makename(module_name, member), text, destdir, suffix)
 
 
-def create_package_file(root, master_package, subroot, py_files, subs,
-                        destdir, excludes, suffix='rst'):
+def create_package_file(
+    root, master_package, subroot, py_files, subs, destdir, excludes, suffix='rst'
+):
     """Build the text of the file and write the file."""
     package = path.split(root)[-1]
     text = format_heading(1, f'{package} package')
@@ -155,8 +156,9 @@ def create_package_file(root, master_package, subroot, py_files, subs,
         if not is_package:
             heading = f':mod:`{py_file}` module'
             text += format_heading(2, heading)
-        text += format_directive(is_package and subroot or py_path, destdir,
-                                 master_package)
+        text += format_directive(
+            is_package and subroot or py_path, destdir, master_package
+        )
         text += '\n'
 
     # build a list of directories that are packages (contain an INITPY file)
@@ -180,7 +182,7 @@ def shall_skip(module):
     return path.getsize(module) <= 2
 
 
-def recurse_tree(rootpath, excludes, destdir):
+def recurse_tree(rootpath, exclude_dirs, exclude_files, destdir):
     """
     Look for every file in the directory tree and create the corresponding
     ReST files.
@@ -197,11 +199,17 @@ def recurse_tree(rootpath, excludes, destdir):
 
     toplevels = []
     for root, subs, files in os.walk(rootpath):
-        if is_excluded(root, excludes):
+        if is_excluded(root, exclude_dirs):
             del subs[:]
             continue
         # document only Python module files
-        py_files = sorted([f for f in files if path.splitext(f)[1] == '.py'])
+        py_files = sorted(
+            [
+                f
+                for f in files
+                if (path.splitext(f)[1] == '.py' and not f in exclude_files)
+            ]
+        )
         is_pkg = INITPY in py_files
         if is_pkg:
             py_files.remove(INITPY)
@@ -215,15 +223,22 @@ def recurse_tree(rootpath, excludes, destdir):
 
         if is_pkg:
             # we are in a package with something to document
-            if subs or len(py_files) > 1 or not \
-                    shall_skip(path.join(root, INITPY)):
-                subpackage = root[len(rootpath):].lstrip(path.sep). \
-                    replace(path.sep, '.')
-                create_package_file(root, root_package, subpackage,
-                                    py_files, subs, destdir, excludes)
+            if subs or len(py_files) > 1 or not shall_skip(path.join(root, INITPY)):
+                subpackage = (
+                    root[len(rootpath) :].lstrip(path.sep).replace(path.sep, '.')
+                )
+                create_package_file(
+                    root,
+                    root_package,
+                    subpackage,
+                    py_files,
+                    subs,
+                    destdir,
+                    exclude_dirs,
+                )
                 toplevels.append(makename(root_package, subpackage))
         else:
-            raise AssertionError('Expected it to be a package')
+            raise AssertionError("Expected it to be a package")
 
     return toplevels
 
@@ -259,9 +274,9 @@ def is_excluded(root, excludes):
     return False
 
 
-def main(rootpath, excludes, destdir):
+def main(rootpath, exclude_dirs, exclude_files, destdir):
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
-    excludes = normalize_excludes(rootpath, excludes)
-    modules = recurse_tree(rootpath, excludes, destdir)
+    exclude_dirs = normalize_excludes(rootpath, exclude_dirs)
+    modules = recurse_tree(rootpath, exclude_dirs, exclude_files, destdir)
