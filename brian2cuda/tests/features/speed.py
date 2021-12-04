@@ -528,6 +528,14 @@ class STDPCUDAHeterogeneousDelays(STDPCUDA):
     n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
+class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
+    homog_delay = None
+    # delays 2 ms +- dt
+    heterog_delay = "2*ms + 2 * dt * rand() - dt"
+    name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays narrow)"
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
+
 class STDPCUDANoPostEffects(STDPCUDA):
     """
     STDP benchmark without postsynaptic effects. On average 1000 out of N
