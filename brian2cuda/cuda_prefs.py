@@ -131,7 +131,7 @@ prefs.register_preferences(
     bundle_threads_warp_multiple=BrianPreference(
         docs='''Whether to round threads_per_synapse_bundle to next multiple of warp
         size''',
-        default='up',
+        default=False,
         validator=lambda v: v in ['up', 'down', False]),
 
     no_pre_references=BrianPreference(
