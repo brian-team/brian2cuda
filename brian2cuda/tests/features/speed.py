@@ -22,6 +22,7 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDA',
                 'STDPCUDAHomogeneousDelays',
                 'STDPCUDAHeterogeneousDelays',
+                'STDPCUDAHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
                 'MushroomBody'
