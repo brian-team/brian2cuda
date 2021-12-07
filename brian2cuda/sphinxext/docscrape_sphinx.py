@@ -1,7 +1,7 @@
 import re, inspect, textwrap, pydoc
 import sphinx
 from sphinx.pycode import ModuleAnalyzer
-from six import iteritems
+
 from .docscrape import NumpyDocString, FunctionDoc, ClassDoc
 
 
@@ -12,11 +12,11 @@ class SphinxDocString(NumpyDocString):
     # string conversion routines
     @staticmethod
     def _str_header(name, symbol='`'):
-        return ['.. rubric:: ' + name, '']
+        return [f".. rubric:: {name}", '']
 
     @staticmethod
     def _str_field_list(name):
-        return [':' + name + ':']
+        return [f":{name}:"]
 
     @staticmethod
     def _str_indent(doc, indent=4):
@@ -75,18 +75,25 @@ class SphinxDocString(NumpyDocString):
                 if self._obj:
                     # Fake the attribute as a class property, but do not touch
                     # methods
-                    if (hasattr(self._obj, '__module__') and not
-                    (hasattr(self._obj, param) and callable(getattr(self._obj, param)))):
+                    if hasattr(self._obj, '__module__') and not (
+                        hasattr(self._obj, param)
+                        and callable(getattr(self._obj, param))
+                    ):
 
                         # Do not override directly provided docstrings
                         if not len(''.join(desc).strip()):
                             analyzer = ModuleAnalyzer.for_module(self._obj.__module__)
-                            desc = analyzer.find_attr_docs().get((self._obj.__name__, param), '')
+                            desc = analyzer.find_attr_docs().get(
+                                (self._obj.__name__, param), ''
+                            )
 
                         # Only fake a property if we got a docstring
                         if len(''.join(desc).strip()):
-                            setattr(self._obj, param, property(lambda self: None,
-                                                               doc='\n'.join(desc)))
+                            setattr(
+                                self._obj,
+                                param,
+                                property(lambda self: None, doc='\n'.join(desc)),
+                            )
 
                 if len(prefix):
                     autosum += [f"   ~{prefix}{param}"]
@@ -166,7 +173,7 @@ class SphinxDocString(NumpyDocString):
             return out
 
         out += [f".. index:: {idx.get('default', '')}"]
-        for section, references in iteritems(idx):
+        for section, references in idx.items():
             if section == 'default':
                 continue
             elif section == 'refguide':
@@ -185,16 +192,13 @@ class SphinxDocString(NumpyDocString):
             out += ['']
             # Latex collects all references to a separate bibliography,
             # so we need to insert links to it
-            if sphinx.__version__ >= "0.6":
-                out += ['.. only:: latex', '']
-            else:
-                out += ['.. latexonly::', '']
+            out += ['.. only:: latex', '']
             items = []
             for line in self['References']:
                 m = re.match(r'.. \[([a-z0-9._-]+)\]', line, re.I)
                 if m:
                     items.append(m.group(1))
-            out += ['   ' + ", ".join([f"[{item}]_" for item in items]), '']
+            out += [f"   {', '.join([f'[{item}]_' for item in items])}", '']
         return out
 
     def _str_examples(self):
@@ -251,8 +255,9 @@ def get_doc_object(obj, what=None, doc=None, name=None, config={}):
         else:
             what = 'object'
     if what == 'class':
-        return SphinxClassDoc(obj, func_doc=SphinxFunctionDoc, doc=doc,
-                              name=name, config=config)
+        return SphinxClassDoc(
+            obj, func_doc=SphinxFunctionDoc, doc=doc, name=name, config=config
+        )
     elif what in ('function', 'method'):
         return SphinxFunctionDoc(obj, doc=doc, config=config)
     else:
