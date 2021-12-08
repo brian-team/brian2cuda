@@ -23,6 +23,9 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDAHomogeneousDelays',
                 'STDPCUDAHeterogeneousDelays',
                 'STDPCUDAHeterogeneousDelaysNarrowDistr',
+                'STDPCUDARandomConnectivityHomogeneousDelays',
+                'STDPCUDARandomConnectivityHeterogeneousDelays',
+                'STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
                 'MushroomBody'
@@ -443,6 +446,10 @@ class STDPCUDA(TimedSpeedTest):
     # heterog delay is used to set Synapses delay attribute
     heterog_delay = None
 
+    # connectivity style (if not random, each pre neuron is connected to a different set
+    # of K_poisson (1000) contiguous post neurons
+    connectivity_random = False
+
     def run(self):
         # preference for memory saving
         prefs['devices.cuda_standalone.no_pre_references'] = True
@@ -504,8 +511,12 @@ class STDPCUDA(TimedSpeedTest):
                      delay=self.homog_delay
                     )
         insert_benchmark_point("before_synapses_connect")
-        #S.connect(p=float(K_poisson)/N_poisson) # random poisson neurons connect to a post neuron (K_poisson many on avg)
-        S.connect('i < (j+1)*K_poisson and i >= j*K_poisson') # contiguous K_poisson many poisson neurons connect to a post neuron
+        if self.connectivity_random:
+            # random poisson neurons connect to a post neuron (K_poisson many on avg)
+            S.connect(p=float(K_poisson)/N_poisson)
+        else:
+            # contiguous K_poisson many poisson neurons connect to a post neuron
+            S.connect('i < (j+1)*K_poisson and i >= j*K_poisson')
         insert_benchmark_point("after_synapses_connect")
         S.w = 'rand() * gmax'
 
@@ -536,6 +547,15 @@ class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays narrow)"
     n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
+
+class STDPCUDARandomConnectivityHomogeneousDelays(STDPCUDAHomogeneousDelays):
+    connectivity_random = True
+
+class STDPCUDARandomConnectivityHeterogeneousDelays(STDPCUDAHeterogeneousDelays):
+    connectivity_random = True
+
+class STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr(STDPCUDAHeterogeneousDelaysNarrowDistr):
+    connectivity_random = True
 
 class STDPCUDANoPostEffects(STDPCUDA):
     """
