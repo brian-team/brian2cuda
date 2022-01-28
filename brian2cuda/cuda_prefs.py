@@ -131,8 +131,12 @@ prefs.register_preferences(
         validator=validate_bundle_size_expression),
 
     bundle_threads_warp_multiple=BrianPreference(
-        docs='''Whether to round threads_per_synapse_bundle to next multiple of warp
-        size''',
+        docs='''Whether to round the number of threads used per synapse bundle during
+        effect application (see
+        ``prefs.devices.cuda_standalone.threads_per_synapse_bundle``) to a multiple of
+        the warp size. Round to next multiple if preference is ``'up'``, round to
+        previous multiple if ``'low'`` and don't round at all if ``False`` (default). If
+        rounding down results in ``0`` threads, ``1`` thread is used instead.''',
         default=False,
         validator=lambda v: v in ['up', 'down', False]),
 
