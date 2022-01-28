@@ -22,7 +22,9 @@ def validate_bundle_size_expression(string):
         )
         return False
 
+    # Replase names from C++ std with numpy version for eval test below
     replaced = formatted.replace("ceil", "np.ceil")
+    replaced = formatted.replace("floor", "np.floor")
 
     try:
         eval(replaced)
