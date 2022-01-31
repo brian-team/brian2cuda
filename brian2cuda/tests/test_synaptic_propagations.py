@@ -3,7 +3,7 @@ from numpy.testing import assert_equal, assert_array_equal
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.utils.logger import catch_logs
+from brian2.devices.device import reinit_devices, set_device
 
 import brian2cuda
 
@@ -284,3 +284,39 @@ def test_synaptic_effect_modes():
 
     # each timestep there are the same number of + and - to neuron.v
     assert_allclose(mon.v[:], 0)
+
+
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_threads_per_synapse_bundle_prefs():
+
+    expressions = [
+        'ceil({mean} + 2*{std})',
+        '{max}',
+        '{min}',
+        '5',
+    ]
+    for expression in expressions:
+
+        set_device('cuda_standalone', build_on_run=False, with_output=False)
+        Synapses.__instances__().clear()
+        reinit_devices()
+
+        prefs.devices.cuda_standalone.threads_per_synapse_bundle = expression
+
+        default_dt = defaultclock.dt
+
+        inp = SpikeGeneratorGroup(1, [0], [0]*ms)
+        G = NeuronGroup(5, 'v:1', threshold='v>1', reset='v=0')
+        # synapse with heterogeneous delays
+        S = Synapses(inp, G, on_pre='v+=1.1')
+        S.connect(i=0, j=[3, 4])
+        S.delay = 'j*default_dt'
+        mon = SpikeMonitor(G)
+
+        run(6*default_dt)
+        device.build(directory=None, with_output=False)
+
+        # neurons should spike in the timestep after effect application
+        assert_allclose(mon.t[mon.i[:] == 3], 4*default_dt)
+        assert_allclose(mon.t[mon.i[:] == 4], 5*default_dt)

@@ -172,6 +172,36 @@ static int num_threads_per_bundle;
 static int num_loops;
 {% endblock %}
 
+{% block extra_device_helper %}
+int getThreadsPerBundle(){
+    {# Allow using std functions (ceil, floor...) in
+       prefs.device.cuda_standalone.threads_per_synapse_bundle #}
+    using namespace std;
+    using namespace brian;
+    int threads_per_bundle = static_cast<int>({{threads_per_synapse_bundle}});
+    {% if bundle_threads_warp_multiple %}
+    int multiple = threads_per_bundle / num_threads_per_warp;
+    {% if bundle_threads_warp_multiple == 'up' %}
+    int remainder = threads_per_bundle % num_threads_per_warp;
+    if (remainder != 0){
+        // if remainder is 0, just use thread_per_bundle as is
+        // round up to next multiple of warp size
+        threads_per_bundle = (multiple + 1) * num_threads_per_warp;
+    }
+    {% elif bundle_threads_warp_multiple == 'down' %}
+    // ignore remainder, round down to next muptiple of warp size
+    threads_per_bundle = multiple * num_threads_per_warp;
+    {% endif %}
+    {% endif %}
+
+    if (threads_per_bundle < 1){
+        threads_per_bundle = 1;
+    }
+    return threads_per_bundle;
+}
+{% endblock extra_device_helper %}
+
+
 {% block prepare_kernel_inner %}
 {#######################################################################}
 {% if uses_atomics or synaptic_effects == "synapse" %}
@@ -182,13 +212,14 @@ static int num_loops;
 {% endif %}
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
-// TODO: effect of mean instead of max?
 {% if bundle_mode %}
-num_threads_per_bundle = {{pathway.name}}_max_bundle_size;
+//num_threads_per_bundle = {{pathway.name}}_bundle_size_max;
+num_threads_per_bundle = getThreadsPerBundle();
+printf("INFO _run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_threads_per_bundle);
 {% endif %}
 num_loops = 1;
 
-{% elif synaptic_effects == "target" %}
+{% elif synaptic_effects == "target" %}{# not uses_atomics #}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
 num_loops = 1;
@@ -198,7 +229,9 @@ if (!{{owner.name}}_multiple_pre_post){
         num_threads = max_threads_per_block;
     {% if bundle_mode %}
     else  // heterogeneous delays
-        num_threads = {{pathway.name}}_max_bundle_size;
+        // Since we can only parallelize within each bundle, we use as many threads as
+        // the maximum bundle size
+        num_threads = {{pathway.name}}_bundle_size_max;
     {% endif %}
 }
 else {

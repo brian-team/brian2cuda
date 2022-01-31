@@ -1,10 +1,38 @@
 '''
 Preferences that relate to the brian2cuda interface.
 '''
+import numpy as np
 
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.core_preferences import default_float_dtype_validator, dtype_repr
-import numpy as np
+from brian2.utils.logger import get_logger
+
+
+logger = get_logger('brian2.devices.cuda_standalone.cuda_prefs')
+
+def validate_bundle_size_expression(string):
+    known_vars = ['mean', 'std', 'max', 'min']
+    try:
+        # Try formatting all known_vars with 0
+        formatted = string.format(**dict(zip(known_vars, [0] * len(known_vars))))
+    except KeyError as error:
+        logger.error(
+            f"Unknown formatting variable {error}. Known variables are:"
+            f" {known_vars}"
+        )
+        return False
+
+    # Replase names from C++ std with numpy version for eval test below
+    replaced = formatted.replace("ceil", "np.ceil")
+    replaced = formatted.replace("floor", "np.floor")
+
+    try:
+        eval(replaced)
+    except Exception:
+        logger.error(f"Can't evaluate expression '{string}'")
+        return False
+
+    return True
 
 
 # Preferences
@@ -88,6 +116,29 @@ prefs.register_preferences(
         can be faster. This option only has effect for `Synapses` objects ith
         heterogenous delays.''',
         default=True),
+
+    threads_per_synapse_bundle=BrianPreference(
+        docs='''The number of threads used per synapses bundle during effect
+        application. This has to be a string, which can be passed to Python's `eval`
+        function. The string can can use `{mean}`, `{std}`, `{max}` and `{min}`
+        expressions, which refer to the statistics across all bundles, and the function
+        'ceil'. The result of this expression will be converted to the next
+        lower `int` (e.g. `1.9` will be cast to `1.0`). Examples: ``'{mean} + 2 *
+        {std}'`` will use the mean bunde size + 2 times the standard deviation over
+        bundle sizes and round it to the next lower integer. If you want to round up
+        instead, use ``'ceil({mean} + 2 * {std}'``.''',
+        default="{max}",
+        validator=validate_bundle_size_expression),
+
+    bundle_threads_warp_multiple=BrianPreference(
+        docs='''Whether to round the number of threads used per synapse bundle during
+        effect application (see
+        ``prefs.devices.cuda_standalone.threads_per_synapse_bundle``) to a multiple of
+        the warp size. Round to next multiple if preference is ``'up'``, round to
+        previous multiple if ``'low'`` and don't round at all if ``False`` (default). If
+        rounding down results in ``0`` threads, ``1`` thread is used instead.''',
+        default=False,
+        validator=lambda v: v in ['up', 'down', False]),
 
     no_pre_references=BrianPreference(
         docs='''Set this preference if you don't need access to ``i`` in any
