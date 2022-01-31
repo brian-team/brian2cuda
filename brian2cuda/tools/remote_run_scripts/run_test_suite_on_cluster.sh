@@ -172,8 +172,9 @@ else
     # not running in parallel -> submit entire test suite script to GPU node
     grid_engine_ressources="cuda=1,gputype=$gputype"
     if [ ! "$parallel" -eq 1 ]; then
-        #parallel_ressources="-binding linear:$(($test_suite_threads / 2))"
-        parallel_ressources="-pe cognition.pe $test_suite_threads"
+        parallel_ressources="-binding linear:$(($test_suite_threads / 2))"
+        # Try this again once #6 on cluster gitlab is fixed
+        #parallel_ressources="-pe cognition.pe $test_suite_threads"
     fi
 fi
 if [ -n "$remote_host" ]; then
