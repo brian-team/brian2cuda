@@ -226,6 +226,11 @@ def test_random_number_generation_with_multiple_runs():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_random_values_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     mon = StateMonitor(G, 'v', record=True)
 
@@ -258,6 +263,12 @@ def test_random_values_fixed_and_random_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_poisson_scalar_values_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
+
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)/ms : 1')
     mon = StateMonitor(G, 'v', record=True)
 
@@ -290,6 +301,11 @@ def test_poisson_scalar_values_fixed_and_random_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_poisson_vectorized_values_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(10,
                     '''l: 1
                        dv/dt = -v/(10*ms) + 0.1*poisson(l)/ms : 1''')
@@ -351,6 +367,11 @@ def test_random_values_codeobject_every_tick():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_binomial_values():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
 
     # On Denis' local computer this test blows up all available RAM + SWAP when
     # compiling with all threads in parallel. Use half the threads instead.
@@ -493,6 +514,12 @@ def test_random_values_set_synapses_fixed_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_random_values_synapse_dynamics_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
+
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     S.connect()
@@ -610,6 +637,11 @@ def test_binomial_values_fixed_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_binomial_values_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
 
@@ -838,6 +870,11 @@ def test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed(
 ### 1. poisson in neurongroup set_conditional templates
 @pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
     seed()
@@ -944,6 +981,11 @@ def test_poisson_scalar_lambda_values_fixed_and_random_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_poisson_variable_lambda_values_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
 
     G = NeuronGroup(10,
                     '''l : 1
