@@ -727,6 +727,11 @@ def test_binomial_values_set_synapses_fixed_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_binomial_values_synapse_dynamics_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     my_f = BinomialFunction(100, 0.1, approximate=False)
     my_f_approximated = BinomialFunction(100, 0.1, approximate=True)
 
@@ -936,6 +941,10 @@ def test_poisson_variable_lambda_values_fixed_seed():
 @pytest.mark.multiple_runs
 def test_poisson_scalar_lambda_values_fixed_and_random_seed():
 
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*poisson(5)*xi/sqrt(ms) : 1')
 
     mon = StateMonitor(G, 'v', record=True)
@@ -1101,6 +1110,11 @@ def test_poisson_variable_lambda_values_set_synapses_fixed_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G,
                  '''dv/dt = -v/(10*ms) + 0.1*poisson(5)*xi/sqrt(ms) : 1''')
@@ -1144,6 +1158,11 @@ def test_poisson_scalar_lambda_values_synapse_dynamics_fixed_and_random_seed():
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_poisson_variable_lambda_values_synapse_dynamics_fixed_and_random_seed():
+
+    if prefs.core.default_float_dtype is np.float32:
+        # TODO: Make test single-precision compatible, see #262
+        pytest.skip('Need double precision for this test')
+
     G = NeuronGroup(10, 'z : 1')
     S = Synapses(G, G,
                  '''l : 1
