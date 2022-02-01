@@ -871,10 +871,6 @@ def test_random_binomial_poisson_variable_lambda_values_set_synapses_fixed_seed(
 @pytest.mark.standalone_compatible
 def test_poisson_scalar_lambda_values_random_seed():
 
-    if prefs.core.default_float_dtype is np.float32:
-        # TODO: Make test single-precision compatible, see #262
-        pytest.skip('Need double precision for this test')
-
     G = NeuronGroup(100, '''v1 : 1
                             v2 : 1''')
     seed()
