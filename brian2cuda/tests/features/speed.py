@@ -141,7 +141,10 @@ class COBAHHUncoupled(COBAHHBase):
     """COBAHH from brian2 examples but without synapses and without monitors"""
 
     name = "COBAHH uncoupled (no synapses, no monitors)"
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]  #fail: 131250000
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]  #fail: 131250000
+    # A100 40GB
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5]#, np.log10(475000000)]  #fail: 475000000 (~10**8.68)
     n_range = [int(10**p) for p in n_power]
     uncoupled = True
 
@@ -166,7 +169,10 @@ class COBAHHPseudocoupled1000(COBAHHBase):
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
     #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 384962, fail: 390235
-    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
+    # TITAN X
+    #n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
+    # A100 40GB
+    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, 5.66, 6]  #pass: 1154883 (~10**6.06), fail: ?
     n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
@@ -196,7 +202,10 @@ class COBAHHPseudocoupled80(COBAHHBase):
 
     name = "COBAHH (80 syn/neuron, weights zero, no monitors)"
     #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000, 900000, 3500000]
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5]  #pass: 3625000, fail: 3632813
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5]  #pass: 3625000, fail: 3632813
+    # A100 40GB
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass: 9486831 (~10**6.98), fail: ?
     n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 80 neurons per synapse
     p = lambda self, n: 80. / n
@@ -285,7 +294,10 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     name = "Brunel Hakim with homogeneous delays (2 ms)"
     tags = ["Neurons", "Synapses", "Delays"]
     #n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000, 500000, 900000]
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(912500)]  #pass: 912500, fail: 925000
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(912500)]  #pass: 912500, fail: 925000
+    # A100
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, np.log10(2100000)]  #pass: 2100000 (~10**6.32), fail: 2200000
     n_range = [int(10**p) for p in n_power]
 
     # all delays 2 ms
@@ -303,7 +315,10 @@ class BrunelHakimHeterogDelays(BrunelHakimBase):
     name = "Brunel Hakim with heterogeneous delays (uniform [0, 4] ms)"
     tags = ["Neurons", "Synapses", "Delays"]
     #n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]  #pass: 389649, fail: 396484
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 389649, fail: 396484
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 389649, fail: 396484
+    # A100
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 450000, fail: 500000 XXX: same as TITAN X?
     n_range = [int(10**p) for p in n_power]
 
     # delays [0, 4] ms
@@ -324,7 +339,10 @@ class BrunelHakimHeterogDelaysNarrowDistr(BrunelHakimBase):
     name = "Brunel Hakim with heterogeneous delays (uniform 2 ms += dt)"
     tags = ["Neurons", "Synapses", "Delays"]
     #n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 423826, fail: 430661
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 423826, fail: 430661
+    # A100
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6]  #pass: 1350000 (~10**6.13), fail: 1500000
     n_range = [int(10**p) for p in n_power]
 
     # delays 2 ms +- dt
@@ -435,7 +453,10 @@ class STDPCUDA(TimedSpeedTest):
     tags = ["Neurons", "Synapses"]
     n_label = 'Num neurons'
     name = "STDP (event-driven, ~N neurons, N synapses)"
-    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11325000, fail:11520000
+    # TITAN X
+    #n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11325000, fail:11520000
+    # A100
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, np.log10(19375000)]  #pass 19375000 (~10**7.28), fail:20000000
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
     # configuration options
@@ -537,7 +558,10 @@ class STDPCUDAHeterogeneousDelays(STDPCUDA):
     homog_delay = None
     heterog_delay = "2 * 2*ms * rand()"
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays)"
-    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    # TITAN X
+    #n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    # A100
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, np.log10(19375000)]  #pass 19375000 (~10**7.28), fail:20000000
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
 class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
@@ -545,7 +569,10 @@ class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
     # delays 2 ms +- dt
     heterog_delay = "2*ms + 2 * dt * rand() - dt"
     name = "STDP (event-driven, ~N neurons, N synapses, heterogeneous delays narrow)"
-    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    # TITAN X
+    #n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]  #pass 11397000, fail:11422000
+    # A100
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, np.log10(19375000)]  #pass 19375000 (~10**7.28), fail:20000000
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
 class STDPCUDARandomConnectivityHomogeneousDelays(STDPCUDAHomogeneousDelays):
@@ -630,7 +657,10 @@ class MushroomBody(TimedSpeedTest):
     name = "Mushroom Body example from brian2GeNN benchmarks"
     tags = ["Neurons", "Synapses"]
 
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, log10(7600000)]  # pass:7600000, fail: 7640000
+    # TITAN X
+    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, log10(7600000)]  # pass:7600000, fail: 7640000
+    # A100
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, log10(15200000)]  # pass:15200000 (~10**7.18), fail: 30400000
     n_range = [int(10**p) for p in n_power]
     n_label = 'Num neurons'
 
