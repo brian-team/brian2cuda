@@ -727,7 +727,14 @@ class CUDACodeGenerator(CodeGenerator):
                 # turn off restricted pointers for scalars for safety
                 if var.scalar:
                     restrict = ' '
-                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                # Need to use correct dt type in pointers_lines for single precision,
+                # see #148
+                if varname == "dt" and prefs.core.default_float_dtype == np.float32:
+                    # c_data_type(variable.dtype) is float, but we need double
+                    dtype = "double"
+                else:
+                    dtype = self.c_data_type(var.dtype)
+                line = '{0}* {1} {2} = {3};'.format(dtype,
                                                     restrict,
                                                     pointer_name,
                                                     array_name)
@@ -770,8 +777,14 @@ class CUDACodeGenerator(CodeGenerator):
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
                 arrayname = self.get_array_name(variable, prefix='')
-                line = "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
-                line = line.format(dtype=c_data_type(variable.dtype), arrayname=arrayname)
+                # kernel_lines appear before dt is cast to float (in scalar_code), hence
+                # we need to still use double (used in kernel parameters), see #148
+                if varname == "dt" and prefs.core.default_float_dtype == np.float32:
+                    # c_data_type(variable.dtype) is float, but we need double
+                    dtype = "double"
+                else:
+                    dtype = dtype=c_data_type(variable.dtype)
+                line = f"const {dtype}* _ptr{arrayname} = &_value{arrayname};"
                 if line not in kernel_lines:
                     kernel_lines.append(line)
 

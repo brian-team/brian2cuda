@@ -4,7 +4,8 @@ from brian2 import *
 from brian2.devices.device import reinit_and_delete
 from brian2.utils.logger import catch_logs
 from brian2.stateupdaters.base import UnsupportedEquationsException
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal
+from brian2.tests.utils import assert_allclose
 
 
 # Tests below are standalone-compatible versions of all tests from
