@@ -127,6 +127,9 @@ if not args.no_slack:
 # (Set log_level_diagnostic() for DynamicConfigCreator diagnostic messages)
 BrianLogger.log_level_debug()
 
+
+# The configuration classes are defined in
+# `brian2cuda/tests/features/cuda_configuration.py`
 configurations = [
     # configuration
     #NumpyConfiguration,
@@ -211,21 +214,28 @@ configurations = [
     #GeNNConfigurationSinglePrecisionSpanTypePre,
 ]
 
-speed_tests = [# feature_test                           n_slice
+# The `benchmark` classes are defined in brian2cuda/tests/features/speed.py. The
+# `n_slice` parameter indexes the `n_range` class attribute of the respective benchmark
+# class to determine the network sizes for which this benchmark should be run.
+speed_tests = [# benchmark                                                  n_slice
 
                # paper benchmarks
-               (BrunelHakimHomogDelays,                 slice(None)),
-               (BrunelHakimHeterogDelays,               slice(None)),
-               (BrunelHakimHeterogDelaysNarrowDistr,    slice(None)),
-               (STDPCUDAHeterogeneousDelays,            slice(None)),
-               (STDPCUDAHomogeneousDelays,              slice(None)),
-               (STDPCUDA,                               slice(None)),
-               (COBAHHPseudocoupled1000,                slice(None)),
-               (COBAHHPseudocoupled80,                  slice(None)),
-               (MushroomBody,                           slice(None)),
-               (COBAHHUncoupled,                        slice(None)),
+               (COBAHHUncoupled,                                            slice(None)),
+               (COBAHHPseudocoupled1000,                                    slice(None)),
+               (BrunelHakimHomogDelays,                                     slice(None)),
+               (BrunelHakimHeterogDelays,                                   slice(None)),
+               (STDPCUDARandomConnectivityHomogeneousDelays,                slice(None)),
+               (STDPCUDARandomConnectivityHeterogeneousDelays,              slice(None)),
+               (MushroomBody,                                               slice(None)),
 
                ## other benchmarks
+               #(COBAHHPseudocoupled80,                                      slice(None)),
+               #(BrunelHakimHeterogDelaysNarrowDistr,                        slice(None)),
+               #(STDPCUDA,                                                   slice(None)),
+               #(STDPCUDAHomogeneousDelays,                                  slice(None)),
+               #(STDPCUDAHeterogeneousDelays,                                slice(None)),
+               #(STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr    slice(None),
+
                #(CUBAFixedConnectivityNoMonitor, slice(None)),
                #(COBAHHCoupled, slice(None)),
                #(STDPEventDriven, slice(None)),

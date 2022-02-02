@@ -5,7 +5,7 @@ usage: $0 <options> -- <run_test_suite.py arguments>
 with <options>:
     -h|--help                 Show usage message
     -n|--name <string>        Name for test suite run (default: 'noname')
-    -l|--log-dir              Directory for test suite logs (default: 'test_suite_logs')
+    -l|--log-dir              Directory for benchmark results (default: './results')
     -t|--testing              Make a test run without nvprof / slack notifications.
 END
 )
