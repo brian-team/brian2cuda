@@ -1,10 +1,18 @@
 ## Benchmarking
 
-To run benchmarks on your local computer, use the `run_benchmark_suite.sh` script. Run
+To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
+```
+cd /path/to/brian2cuda/frozen_repos
+bash update_brian2.sh
+```
+This will check out the correct brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
+
+
+Run
 ```
 bash run_benchmark_suite.sh --help
 ```
-to see the options.
+to see the benchark options.
 
 This script will execute the `run_benchmark_suite.py` file. In this file you
 can modify the benchmarks and the configurations for which the benchmarks
@@ -17,6 +25,7 @@ should run:
   network sizes. The benchmark classes are defined in
   `brian2cuda/tests/features/speed.py`.
 
+If you don't want to use the brian2cuda and brian2 from this repository but some other versions you have installed, you can also execute the Python file `run_benchmark_suite.py` file directly (see the `--help` options for the parameters).
   
 ### Examples
 
