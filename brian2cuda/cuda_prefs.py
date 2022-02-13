@@ -173,7 +173,15 @@ prefs.register_preferences(
         application. Since this avoids race conditions, effect application can
         be parallelised.''',
         validator=lambda v: isinstance(v, bool),
-        default=True)
+        default=True),
+
+    default_threads_per_block=BrianPreference(
+        docs='''If set, this overwrites the threads per block chosen by
+        `cudaOccupancyMaxPotentialBlockSize`, which appears to not always choose the
+        optimal threads per block. This needs fixing, see #266.''',
+        validator=lambda v: isinstance(v, int) or v is None,
+        default=None
+    )
 )
 
 prefs.register_preferences(

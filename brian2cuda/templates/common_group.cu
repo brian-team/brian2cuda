@@ -187,14 +187,18 @@ void _run_{{codeobj_name}}()
         {% block prepare_kernel_inner %}
         // get number of blocks and threads
         {% if calc_occupancy %}
+
+        {% if default_threads_per_block %}
+        num_threads = {{default_threads_per_block}};
+        {% else %}
         int min_num_blocks; // The minimum grid size needed to achieve the
-                             // maximum occupancy for a full device launch
+                            // maximum occupancy for a full device launch
 
         CUDA_SAFE_CALL(
                 cudaOccupancyMaxPotentialBlockSize(&min_num_blocks, &num_threads,
                     _run_kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
                 );
-
+        {% endif %}
 
 
         // Round up according to array size

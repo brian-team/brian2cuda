@@ -254,6 +254,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             template_kwds = dict(template_kwds)
         template_kwds['profiled'] = self.enable_profiling
         template_kwds['bundle_mode'] = prefs["devices.cuda_standalone.push_synapse_bundles"]
+        template_kwds['default_threads_per_block'] = prefs["devices.cuda_standalone.default_threads_per_block"]
         no_or_const_delay_mode = False
         if isinstance(owner, (SynapticPathway, Synapses)) and "delay" in owner.variables and owner.variables["delay"].scalar:
             # catches Synapses(..., delay=...) syntax, does not catch the case when no delay is specified at all

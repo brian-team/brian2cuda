@@ -492,13 +492,17 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             // calculate number of threads that maximize occupancy
             // and also the corresponding number of blocks
             // the code below is adapted from common_group.cu
+            {% if default_threads_per_block %}
+            num_threads_currents = {{default_threads_per_block}};
+            {% else %}
             int min_num_blocks_currents; // The minimum grid size needed to achieve the
-                                 // maximum occupancy for a full device launch
+                                         // maximum occupancy for a full device launch
 
             CUDA_SAFE_CALL(
                     cudaOccupancyMaxPotentialBlockSize(&min_num_blocks_currents, &num_threads_currents,
                         _currents_kernel_{{codeobj_name}}, 0, 0)  // last args: dynamicSMemSize, blockSizeLimit
                     );
+            {% endif %}
 
             // Round up according to array size
             num_blocks_currents = (_N + num_threads_currents - 1) / num_threads_currents;
