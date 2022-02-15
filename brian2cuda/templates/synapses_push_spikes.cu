@@ -1054,12 +1054,16 @@ void _run_{{codeobj_name}}()
      */
     needed_shared_memory = (2 * {{owner.name}}_max_num_unique_delays + 1) * sizeof(int);
     assert (needed_shared_memory <= max_shared_mem_size);
-    {% else %}{# bundle_mode #}
-    needed_shared_memory = 0;
-    {% endif %}{# not bundle_mode #}
-
     // We don't need more then max(num_synapses) threads per block.
     num_threads = {{owner.name}}_max_size;
+    {% else %}{# bundle_mode #}
+    needed_shared_memory = 0;
+    // We don't need more then max(num_delays) threads per block.
+    num_threads = {{owner.name}}_bundle_size_max;
+    {% endif %}{# not bundle_mode #}
+
+    // TODO: warp size multiple for num_threads?
+
     if (num_threads > max_threads_per_block)
     {
         num_threads = max_threads_per_block;
