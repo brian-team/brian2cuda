@@ -51,6 +51,19 @@ public:
         return m_data;
     };
 
+    __device__ set_size_address(volatile size_type* size)
+    {
+        // TODO:
+        //  1. Mofigy m_size to be a pointer
+        //  2. Change it's address in here (not sure if method call needs 'volatile'?
+        //  3. In spikequeue.h, after initializing the queues, declare a
+        //     volatile array of size of queues and change each queues m_size
+        //     parameter with this function here.
+        //  4. In synapses.cu, get the queue size by indexing this new array
+        //     with current_offset and Memcpy it to host to set the correct kernel
+        //     dimensions.
+    };
+
     __device__ scalar& at(size_type index)
     {
         if (index < 0 || index >= m_size)
