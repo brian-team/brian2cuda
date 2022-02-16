@@ -8,6 +8,7 @@ bash update_brian2.sh
 ```
 This will check out the correct brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
 
+In addition to Brian's dependencies, running the benchmark suite requires the `matplotlib` and `pandas` packages.
 
 Run
 ```
