@@ -1,8 +1,9 @@
 ## Benchmarking
 
-To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
+To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't initalized and checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
 ```
 cd /path/to/brian2cuda/frozen_repos
+git submodule update --init
 bash update_brian2.sh
 ```
 This will check out the correct brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
@@ -12,7 +13,7 @@ Run
 ```
 bash run_benchmark_suite.sh --help
 ```
-to see the benchark options.
+to see the benchmark options.
 
 This script will execute the `run_benchmark_suite.py` file. In this file you
 can modify the benchmarks and the configurations for which the benchmarks
