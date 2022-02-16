@@ -44,8 +44,54 @@ bash run_benchmark_suite.sh --name my-benchmark-run-profiled -- --profile
 This will store the results in
 `results/my-benchmark-run-profiled_<date_time>`.
 
+### Running individual examples
+To run single instances of an example model with a specific size and configuration, you can use the Python files in the `examples` directory of the
+repository. Each of these scripts has a number of optional command line arguments to specify the configuration. To get a list of all supported arguments, run the script with `--help`. Some of the scripts can be used to run different variants of a model (e.g. with and without synaptic connections). See below for a list of all benchmarked models and their corresponding script calls:
 
-### Running benchmarks on a remote computer
+<dl>
+  <dt>HH benchmark I: Hodgkin-Huxley type neurons without synapses</dt>
+  <dd>
+
+  `python cobahh.py --scenario uncoupled`
+  </dd>
+  <dt>HH benchmark II: Hodgkin-Huxley type neurons with static synapses</dt>
+  <dd>
+
+  `python cobahh.py --scenario pseudocoupled-1000`
+  </dd>
+  <dt>LIF benchmark I: Noisy integrate-and-fire neurons with homogeneous synaptic delays</dt>
+  <dd>
+
+  `python brunelhakim.py --no-heterog-delays`
+  </dd>
+  <dt>LIF benchmark I: Noisy integrate-and-fire neurons with heterogeneous synaptic delays</dt>
+  <dd>
+
+  `python brunelhakim.py --heterog-delays`
+  </dd>
+  <dt>STDP benchmark I: Dynamic synapses with spike-timing dependent plasticity and homogeneous synaptic delays 
+  </dt>
+  <dd>
+
+  `python stdp.py --delays homogeneous`
+  </dd>
+  <dt>STDP benchmark II: Dynamic synapses with spike-timing dependent plasticity and heterogeneous synaptic delays 
+  </dt>
+  <dd>
+  
+  `python stdp.py --delays heterogeneous`
+  </dd>
+  <dt>
+  Mushroom body benchmark: Complex model with multiple neuronal populations, spike-timing dependent plasticity and noise
+  </dt>
+  <dd>
+  
+  `python mushroombody.py`
+  </dd>
+</dl>
+
+
+## Running benchmarks on a remote computer
 
 If you have a GPU on a remote computer but the repository checked out on your
 local computer, there are multiple helper scripts to help you execute
