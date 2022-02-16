@@ -88,7 +88,8 @@ params = {'devicename': devicename,
 from utils import set_prefs, update_from_command_line
 
 # update params from command line
-update_from_command_line(params)
+choices={'devicename': ['cuda_standalone', 'cpp_standalone', 'genn']}
+update_from_command_line(params, choices=choices)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os
