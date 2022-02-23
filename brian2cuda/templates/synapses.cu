@@ -25,7 +25,7 @@ _run_kernel_{{codeobj_name}}(
     int threads_per_bundle,
     {% endif %}
     int32_t* eventspace,
-    {% if uses_atomics %}
+    {% if uses_atomics or synaptic_effects == "synapse" %}
     int num_spiking_neurons,
     {% else %}
     int neurongroup_size,
@@ -72,7 +72,7 @@ _run_kernel_{{codeobj_name}}(
             {
                 // `spiking_neuron_idx` runs through the eventspace
                 // `post_block_idx` runs through the post neuron blocks of the connectivity matrix
-                {% if uses_atomics %}
+                {% if uses_atomics or synaptic_effects == "synapse" %}
                 int spiking_neuron_idx = bid / num_parallel_blocks;
                 int post_block_idx = bid % num_parallel_blocks;
                 {% else %}
@@ -87,7 +87,7 @@ _run_kernel_{{codeobj_name}}(
                     // spiking_neuron is index in NeuronGroup
                     int32_t spiking_neuron = eventspace[spiking_neuron_idx];
 
-                    {% if uses_atomics %}
+                    {% if uses_atomics or synaptic_effects == "synapse" %}
                     assert(spiking_neuron != -1);
                     {% else %}
                     if(spiking_neuron == -1) // end of spiking neurons
