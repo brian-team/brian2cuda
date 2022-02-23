@@ -25,7 +25,7 @@ _run_kernel_{{codeobj_name}}(
     int threads_per_bundle,
     {% endif %}
     int32_t* eventspace,
-    {% if uses_atomics %}
+    {% if uses_atomics or synaptic_effects == "synapse" %}
     int num_spiking_neurons,
     {% else %}
     int neurongroup_size,
@@ -72,7 +72,7 @@ _run_kernel_{{codeobj_name}}(
             {
                 // `spiking_neuron_idx` runs through the eventspace
                 // `post_block_idx` runs through the post neuron blocks of the connectivity matrix
-                {% if uses_atomics %}
+                {% if uses_atomics or synaptic_effects == "synapse" %}
                 int spiking_neuron_idx = bid / num_parallel_blocks;
                 int post_block_idx = bid % num_parallel_blocks;
                 {% else %}
@@ -87,7 +87,7 @@ _run_kernel_{{codeobj_name}}(
                     // spiking_neuron is index in NeuronGroup
                     int32_t spiking_neuron = eventspace[spiking_neuron_idx];
 
-                    {% if uses_atomics %}
+                    {% if uses_atomics or synaptic_effects == "synapse" %}
                     assert(spiking_neuron != -1);
                     {% else %}
                     if(spiking_neuron == -1) // end of spiking neurons
@@ -279,7 +279,7 @@ else if ({{pathway.name}}_max_size <= 0)
 // only call kernel if we have synapses (otherwise we skipped the push kernel)
 if ({{pathway.name}}_max_size > 0)
 {
-    {% if uses_atomics %}
+    {% if uses_atomics or synaptic_effects == "synapse" %}
     int32_t num_spiking_neurons;
     // we only need the number of spiking neurons if we parallelise effect
     // application over spiking neurons in homogeneous delay mode
@@ -309,7 +309,7 @@ if ({{pathway.name}}_max_size > 0)
                 num_threads_per_bundle,
                 {% endif %}
                 dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
-                {% if uses_atomics %}
+                {% if uses_atomics or synaptic_effects == "synapse" %}
                 num_spiking_neurons,
                 {% else %}
                 _num_{{_eventspace}}-1,
@@ -318,7 +318,7 @@ if ({{pathway.name}}_max_size > 0)
                 %HOST_PARAMETERS%
             );
         }
-    {% if uses_atomics %}
+    {% if uses_atomics or synaptic_effects == "synapse" %}
     }
     {% endif %}
 
