@@ -1,12 +1,12 @@
 ## Benchmarking
 
-To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't initalized and checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
+To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't initialized and checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
 ```
 cd /path/to/brian2cuda/frozen_repos
 git submodule update --init
 bash update_brian2.sh
 ```
-This will check out the correct brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
+This will check out the correct Brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
 
 In addition to Brian's dependencies, running the benchmark suite requires the `matplotlib` and `pandas` packages.
 
@@ -22,12 +22,12 @@ should run:
 - Modify the `configurations` list to set the configurations, which are
   defined in `brian2cuda/tests/features/cuda_configuration.py`. All
   configuration classes have the `BenchmarkConfiguration` class as parent.
-  This class takes care of all time measurements during the benchmarks. The 
+  This class takes care of all time measurements during the benchmarks.
 - Modify the `speed_tests` list to set what benchmarks to run and for which
   network sizes. The benchmark classes are defined in
   `brian2cuda/tests/features/speed.py`.
 
-If you don't want to use the brian2cuda and brian2 from this repository but some other versions you have installed, you can also execute the Python file `run_benchmark_suite.py` file directly (see the `--help` options for the parameters).
+If you don't want to use the Brian2CUDA and Brian2 from this repository but some other versions you have installed, you can also execute the Python file `run_benchmark_suite.py` file directly (see the `--help` options for the parameters).
   
 ### Examples
 

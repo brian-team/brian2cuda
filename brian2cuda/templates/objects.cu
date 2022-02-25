@@ -549,6 +549,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include "rand.h"
 
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
