@@ -78,6 +78,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.include_dirs.remove('brianlib/randomkit')
         self.library_dirs.remove('brianlib/randomkit')
 
+        # Add code line slots used in our benchmarks
+        # TODO: Add to brian2 and remove here
+        self.code_lines.update({'before_run': [],
+                                'after_run': []})
+
         ### Attributes specific to CUDAStandaloneDevice:
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
