@@ -44,7 +44,7 @@ index 3663c276..40cc65a6 100644
      def register_preferences(self, prefbasename, prefbasedoc, **prefs):
          '''
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 5791bb61..d983b6ed 100644
+index 5791bb61..1b60d133 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
 @@ -13,6 +13,8 @@
@@ -78,22 +78,23 @@ index 5791bb61..d983b6ed 100644
      extra_make_args_unix=BrianPreference(
          default=['-j'],
          docs='''
-@@ -182,7 +199,14 @@ def __init__(self):
+@@ -181,9 +198,16 @@ def __init__(self):
+         #: Note that the main slot is handled separately as part of `main_queue`
          self.code_lines = {'before_start': [],
                             'after_start': [],
++                           'before_network_run': [],
++                           'after_network_run': [],
                             'before_end': [],
--                           'after_end': []}
-+                           'after_end': [],
-+                           'before_run': [],
-+                           'after_run': []}
-+
+                            'after_end': []}
+ 
 +        self.timers = {'run_binary': None,
 +                       'compile': {'clean':None,
 +                                   'make': None,
 +                                   'all': None}}
- 
++
          self.clocks = set([])
  
+         self.extra_compile_args = []
 @@ -977,9 +1001,17 @@ def compile_source(self, directory, compiler, debug, clean):
              else:
                  with std_silent(debug):
@@ -154,12 +155,12 @@ index 5791bb61..d983b6ed 100644
              if clock not in all_clocks:
                  run_lines.append('{net.name}.add(&{clock.name}, NULL);'.format(clock=clock, net=net))
  
-+        run_lines.extend(self.code_lines['before_run'])
++        run_lines.extend(self.code_lines['before_network_run'])
          run_lines.append('{net.name}.run({duration!r}, {report_call}, {report_period!r});'.format(net=net,
                                                                                                duration=float(duration),
                                                                                                report_call=report_call,
                                                                                                report_period=float(report_period)))
-+        run_lines.extend(self.code_lines['after_run'])
++        run_lines.extend(self.code_lines['after_network_run'])
          self.main_queue.append(('run_network', (net, run_lines)))
  
          # Manually set the cache for the clocks, simulation scripts might

@@ -80,8 +80,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # Add code line slots used in our benchmarks
         # TODO: Add to brian2 and remove here
-        self.code_lines.update({'before_run': [],
-                                'after_run': []})
+        self.code_lines.update({'before_network_run': [],
+                                'after_network_run': []})
 
         ### Attributes specific to CUDAStandaloneDevice:
         # only true during first run call (relevant for synaptic pre/post ID deletion)
@@ -1562,12 +1562,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # release version? (TODO: add via insert_code mechanism)
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
 
-        run_lines.extend(self.code_lines['before_run'])
+        run_lines.extend(self.code_lines['before_network_run'])
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
-        run_lines.extend(self.code_lines['after_run'])
+        run_lines.extend(self.code_lines['after_network_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff
