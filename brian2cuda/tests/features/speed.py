@@ -24,6 +24,9 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDAHeterogeneousDelays',
                 'STDPCUDAHeterogeneousDelaysNarrowDistr',
                 'STDPCUDARandomConnectivityHomogeneousDelays',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration50',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration100',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration200',
                 'STDPCUDARandomConnectivityHeterogeneousDelays',
                 'STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
@@ -577,6 +580,16 @@ class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
 
 class STDPCUDARandomConnectivityHomogeneousDelays(STDPCUDAHomogeneousDelays):
     connectivity_random = True
+
+# TODO: Allow changing simulation duration in `run_benchmark_suite.py`
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration50(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 50*second
+
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration100(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 100*second
+
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration200(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 200*second
 
 class STDPCUDARandomConnectivityHeterogeneousDelays(STDPCUDAHeterogeneousDelays):
     connectivity_random = True
