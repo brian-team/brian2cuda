@@ -212,15 +212,19 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 if params['monitors']:
-    subplot(311)
-    plot(spikemon.t/ms, spikemon.i, ',k')
-    subplot(312)
-    plot(trace.t/ms, trace.v[:].T[:, :5])
-    subplot(313)
-    plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
-    #show()
+    style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+    plt.style.use(['seaborn-paper', style_file])
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(7.08, 5))
+    axes[0].plot(trace.t/ms, trace.v[0]/mV, color='black')
+    axes[0].set_ylabel('$V_i$ [mV]')
+    axes[1].plot(spikemon.t/ms, spikemon.i, ',k')
+    axes[1].set_ylabel('Neuron ID')
+    axes[2].plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms), color='#c53929')
+    axes[2].set(xlabel='Time [ms]', ylabel='Population\nrate [s$^{-1}$]')
+    for ax in axes:
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
 
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-    savefig(plotpath)
+    plt.savefig(plotpath)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

@@ -10,8 +10,8 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
-# number of _synapses_ (must be multiple of 1000
-N = 1000
+# number of Poisson generators
+N = 10000
 
 # select weather spikes effect postsynaptic neurons
 post_effects = True
@@ -143,7 +143,8 @@ on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
 input = PoissonGroup(N_poisson, rates=F)
-neurons = NeuronGroup(N_lif, eqs_neurons, threshold='v>vt', reset='v = vr')
+neurons = NeuronGroup(N_lif, eqs_neurons, threshold='v>vt', reset='v = vr',
+                      method='exact')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
@@ -160,13 +161,13 @@ if params['delays'] == 'homogeneous':
 elif params['delays'] == 'heterogeneous':
     S.delay = "2 * 2*ms * rand()"
 
-n = 2
 if params['monitors']:
-    n = 3
-    mon = StateMonitor(S, 'w', record=[0, 1])
-    s_mon = SpikeMonitor(input)
+    weight_mon = StateMonitor(S, 'w', record=np.arange(5))
+    inp_mon = SpikeMonitor(input[:100])
+    neuron_mon = SpikeMonitor(neurons)
 
-run(100*second, report='text', profile=params['profiling'])
+runtime = 20*second
+run(runtime, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
@@ -177,19 +178,53 @@ if params['profiling']:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-subplot(n,1,1)
-plot(S.w / gmax, '.k')
-ylabel('Weight / gmax')
-xlabel('Synapse index')
-subplot(n,1,2)
-hist(S.w / gmax, 20)
-xlabel('Weight / gmax')
+style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+plt.style.use(['seaborn-paper', style_file])
+
 if params['monitors']:
-    subplot(n,1,3)
-    plot(mon.t/second, mon.w.T/gmax)
-xlabel('Time (s)')
-ylabel('Weight / gmax')
-tight_layout()
+    fig = plt.figure(constrained_layout=True, figsize=(7.08, 5))
+    axs = fig.subplot_mosaic(
+    """
+    AA
+    BB
+    CC
+    DE
+    """)
+    axs["A"].plot(inp_mon.t/second, inp_mon.i, ',k')
+    axs["A"].set(title="Input spikes (Poisson generator)", xticklabels=[], ylabel="Neuron ID")
+    axs["B"].plot(neuron_mon.t/second, neuron_mon.i, ',', color='#c53929')
+    axs["B"].set(title="Leaky integrate-and-fire neurons", xticklabels=[], ylabel="Neuron ID")
+    axs["C"].plot(weight_mon.t/second, weight_mon.w.T/gmax, color='dimgray')
+    axs["C"].set(title="Weight evolution examples", ylabel="$w/g_\mathrm{max}$",
+                 xlabel="Time [s]")
+    # We cannot easily record the initial weight distribution, since it is
+    # generated in the standalone code and the number of synapses is not known
+    # until the synapses have been generated in the standalone code as well.
+    # For illustration, we draw a new sample of initial weights here (the
+    # distribution is flat and not very interesting in the first place)
+    initial_weights = np.random.uniform(0, 1, size=len(S))  # relative to gmax
+
+    # we plot the final values first, to be able to use the same y limits in the
+    # first plot
+    values, _, _ = axs["E"].hist(S.w/gmax, bins=np.linspace(0, 1, 50, endpoint=True),
+                                 color='dimgray')
+    axs["E"].set(xlabel=r'$w/g_\mathrm{max}$', yticklabels=[])
+    max_value = np.max(values)
+    axs["E"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({runtime:.0f}s)')
+    axs["D"].hist(initial_weights, bins=np.linspace(0, 1, 50, endpoint=True),
+                  color='dimgray')
+    axs["D"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
+                 title=f'synaptic weights (0s)')
+else:  # we can still plot the final weight distribution
+    pass
+    subplot(2, 1, 1)
+    plot(S.w / gmax, '.k')
+    ylabel('Weight / gmax')
+    xlabel('Synapse index')
+    subplot(2, 1, 2)
+    hist(S.w / gmax, 20)
+    xlabel('Weight / gmax')
+    tight_layout()
 #show()
 
 plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
