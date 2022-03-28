@@ -61,7 +61,8 @@ single_precision = False
 ## the preferences below only apply for cuda_standalone
 
 # number of connectivity matrix partitions
-partitions = 1
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
