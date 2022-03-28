@@ -23,7 +23,10 @@ def update_from_command_line(params, choices={}):
     parser = argparse.ArgumentParser(description='Run brian2cuda example')
 
     for key, value in params.items():
-        dtype = type(value)
+        if key == 'runtime':
+            dtype = float
+        else:
+            dtype = type(value)
         if value is None:
             dtype = int
         choice = choices_copy.pop(key, None)
