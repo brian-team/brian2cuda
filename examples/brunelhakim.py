@@ -112,7 +112,7 @@ print('compiling model in {}'.format(codefolder))
 
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
-
+seed(12098479)
 Vr = 10*mV
 theta = 20*mV
 tau = 20*ms
@@ -137,7 +137,7 @@ dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
 """
 
 group = NeuronGroup(params['N'], eqs, threshold='V>theta',
-                    reset='V=Vr', refractory=taurefr)
+                    reset='V=Vr', refractory=taurefr, method='euler')
 group.V = Vr
 
 # delayed synapses
@@ -153,6 +153,7 @@ else:
     conn.connect(p=sparseness)
 
 if params['monitors']:
+    S = StateMonitor(group, 'V', record=1)
     M = SpikeMonitor(group)
     LFP = PopulationRateMonitor(group)
 
@@ -171,15 +172,26 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 if params['monitors']:
-    subplot(211)
-    plot(M.t/ms, M.i, '.')
-    xlim(0, duration/ms)
+    style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+    plt.style.use(['seaborn-paper', style_file])
+    fig, axs = plt.subplots(3, 1, figsize=(7.08, 7.08/1.5), sharex=True,
+                            constrained_layout=True)
 
-    subplot(212)
-    plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
-    xlim(0, duration/ms)
-    #show()
+    axs[0].plot(S.t/ms, S.V[0].T/mV, 'k')
+    axs[0].axhline(theta/mV, ls='--', c='C3', label=r"$\Theta$")
+    axs[0].axhline(Vr/mV, ls='--', c='C2', label=r"$V_r$")
+    axs[0].legend(framealpha=1, loc='center right')
+    axs[0].set(ylim=(Vr/mV -2, theta/mV + 2), ylabel="$V$ [mV]")
 
+    axs[1].plot(M.t/ms, M.i, 'k.')
+    axs[1].set(ylabel="Neuron ID", xlim=(0, duration/ms))
+
+    axs[2].plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz,
+                color='#c53929')
+    axs[2].set(xlim=(0, duration/ms), xlabel="Time [ms]",
+               ylabel=r"Population rate [$\mathrm{s}^{-1}$]", ylim=(0, 20.2))
+
+    fig.align_labels()
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
     savefig(plotpath)
     print('plot saved in {}'.format(plotpath))
