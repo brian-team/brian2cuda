@@ -99,41 +99,6 @@ def set_prefs(params, prefs):
     name += '_' + hostname
 
     if params['devicename'] == 'cuda_standalone':
-        dev_no_to_cc = None
-        if hostname == 'merope':
-            dev_no_to_cc = {0: '35'}
-        if hostname in ['elnath', 'adhara']:
-            dev_no_to_cc = {0: '20'}
-        elif hostname == 'sabik':
-            dev_no_to_cc = {0: '61', 1: '52'}
-        elif hostname == 'eltanin':
-            dev_no_to_cc = {0: '52', 1: '61', 2: '61', 3: '61'}
-        elif hostname == 'risha':
-            dev_no_to_cc = {0: '70'}
-        else:
-            print(
-                f"WARNING: can't recognize hostname. Compiling with "
-                f"{prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc']}"
-            )
-
-        # TODO make this a preference
-        #prefs['devices.cuda_standalone.default_device'] = gpu_device
-        if dev_no_to_cc is not None:
-            try:
-                gpu_device = int(os.environ['CUDA_VISIBLE_DEVICES'])
-            except KeyError:
-                # default
-                gpu_device = 0
-
-            try:
-                cc = dev_no_to_cc[gpu_device]
-            except KeyError as err:
-                raise AttributeError("unknown device number: {}".format(err))
-
-            print("Compiling device code for compute capability "\
-                    "{}.{}".format(cc[0], cc[1]))
-            prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].remove('-arch=sm_35')
-            prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].extend(['-arch=sm_{}'.format(cc)])
 
         if params['num_blocks'] is not None:
             prefs['devices.cuda_standalone.parallel_blocks'] = params['num_blocks']
