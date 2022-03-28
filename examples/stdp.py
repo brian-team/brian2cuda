@@ -51,23 +51,22 @@ bundle_mode = True
 runtime = 100
 ###############################################################################
 ## CONFIGURATION
-from collections import OrderedDict
 from utils import set_prefs, update_from_command_line
 
 # create paramter dictionary that can be modified from command line
-params = OrderedDict([('devicename', devicename),
-                      ('delays', delays),
-                      ('post_effects', post_effects),
-                      ('resultsfolder', resultsfolder),
-                      ('codefolder', codefolder),
-                      ('N', N),
-                      ('runtime', runtime),
-                      ('profiling', profiling),
-                      ('monitors', monitors),
-                      ('single_precision', single_precision),
-                      ('partitions', partitions),
-                      ('atomics', atomics),
-                      ('bundle_mode', bundle_mode)])
+params = {'devicename': devicename,
+          'delays': delays,
+          'post_effects': post_effects,
+          'resultsfolder': resultsfolder,
+          'codefolder': codefolder,
+          'N': N,
+          'runtime': runtime,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'partitions': partitions,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode}
 
 # add parameter restrictions
 choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
