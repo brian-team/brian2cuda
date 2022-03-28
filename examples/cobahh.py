@@ -224,6 +224,7 @@ if params['monitors']:
     for ax in axes:
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
 
+    fig.align_labels()
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
     plt.savefig(plotpath)
     print('plot saved in {}'.format(plotpath))

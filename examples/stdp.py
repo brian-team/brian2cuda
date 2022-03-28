@@ -218,6 +218,7 @@ if params['monitors']:
                   color='dimgray')
     axs["D"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
                  title=f'synaptic weights (0s)')
+    fig.align_labels()
 else:  # we can still plot the final weight distribution
     pass
     subplot(2, 1, 1)

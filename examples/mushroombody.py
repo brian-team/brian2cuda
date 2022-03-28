@@ -283,6 +283,8 @@ if params['monitors']:
     axs["E"].plot(eKC_spikes.t/second, eKC_spikes.i, '.k')
     axs["E"].set(ylabel='Neuron ID', xlabel='Time [s]')
 
+    fig.align_labels()
+
     if N_MB >= 10000:
         values, _, _ = axs["F"].hist(iKC_eKC_weights.g_raw[:, 0]/g_max, bins=np.linspace(0, 1, 50, endpoint=True),
                                      color='dimgray')
