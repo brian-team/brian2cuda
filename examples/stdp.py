@@ -11,6 +11,7 @@ devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
 # number of Poisson generators
+# (and also expectation value of the number of randomly connected synapses)
 N = 10000
 
 # select weather spikes effect postsynaptic neurons
@@ -46,7 +47,7 @@ atomics = True
 bundle_mode = True
 
 # Runtime in seconds
-runtime = 10.
+runtime = 10
 ###############################################################################
 ## CONFIGURATION
 from collections import OrderedDict
@@ -103,11 +104,11 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
-# we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
-N_poisson = N
+# On average `K_poisson` Poisson neurons are connected to each LIF neuron
+N_poisson = params['N']
 K_poisson = 1000
 connection_probability = float(K_poisson) / N_poisson # 10% connection probability if K_poisson=1000, N_poisson=10000
-N_lif = N/K_poisson
+N_lif = params['N'] / K_poisson
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -123,8 +124,8 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
-assert K_poisson == 1000
-assert N % K_poisson == 0
+assert params['N'] % K_poisson == 0, \
+    f"N (={N}) has to be a multiple of {K_poisson}"
 
 eqs_neurons = '''
 dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
@@ -142,7 +143,6 @@ else:
     # poissongroup input that is disabled in this case
     gsyn = K_poisson * F * gmax / 2. # assuming avg weight gmax/2 which holds approx. true for the bimodal distrib.
     eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
-    # eqs_neurons = eqs_neurons.format('')
 on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
