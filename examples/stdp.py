@@ -68,7 +68,7 @@ params = OrderedDict([('devicename', devicename),
                       ('bundle_mode', bundle_mode)])
 
 # Add parameter restrictions
-choices = {'devicename': ['cuda_standalone', 'cpp_standalone'],
+choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
            'delays': ['none', 'homogeneous', 'heterogeneous']}
 
 from utils import set_prefs, update_from_command_line
@@ -90,6 +90,11 @@ matplotlib.use('Agg')
 from brian2 import *
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
+elif params['devicename'] == 'genn':
+    import brian2genn
+    if params['profiling']:
+        prefs['devices.genn.kernel_timing'] = True
+        params['profiling'] = False
 
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)
