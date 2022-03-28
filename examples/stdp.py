@@ -101,10 +101,10 @@ set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
 # we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
-N_poisson = 10000
+N_poisson = N
 K_poisson = 1000
 connection_probability = float(K_poisson) / N_poisson # 10% connection probability if K_poisson=1000, N_poisson=10000
-N_lif = int(params['N'] / K_poisson) # => N specifies the number of synapses or equivalently the number of neurons*1000
+N_lif = N/K_poisson
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -120,7 +120,8 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
-assert N_lif * K_poisson == params['N'] # ensure we specify the no of synapses N as a multiple of 1000
+assert K_poisson == 1000
+assert N % K_poisson == 0
 
 eqs_neurons = '''
 dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
