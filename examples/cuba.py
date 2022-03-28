@@ -40,8 +40,9 @@ monitors = True
 # single precision
 single_precision = False
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
@@ -49,19 +50,25 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 1
 ###############################################################################
 ## CONFIGURATION
+from collections import OrderedDict
+from utils import set_prefs, update_from_command_line
 
-params = {'devicename': devicename,
-          'N': N,
-          'resultsfolder': resultsfolder,
-          'codefolder': codefolder,
-          'profiling': profiling,
-          'monitors': monitors,
-          'single_precision': single_precision,
-          'num_blocks': num_blocks,
-          'atomics': atomics,
-          'bundle_mode': bundle_mode}
+# create paramter dictionary that can be modified from command line
+params = OrderedDict([('devicename', devicename),
+                      ('resultsfolder', resultsfolder),
+                      ('codefolder', codefolder),
+                      ('N', N),
+                      ('runtime', runtime),
+                      ('profiling', profiling),
+                      ('monitors', monitors),
+                      ('single_precision', single_precision),
+                      ('partitions', partitions),
+                      ('atomics', atomics),
+                      ('bundle_mode', bundle_mode)])
 
 from utils import set_prefs, update_from_command_line
 
@@ -125,7 +132,7 @@ Ci.connect('i>=Ne', p=0.02)
 if params['monitors']:
     s_mon = SpikeMonitor(P)
 
-run(1 * second, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
