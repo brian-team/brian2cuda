@@ -36,11 +36,14 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 1
 ###############################################################################
 ## CONFIGURATION
 
 params = {'devicename': devicename,
           'N': N,
+          'runtime': runtime,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'profiling': profiling,
@@ -87,7 +90,6 @@ set_device(params['devicename'], directory=codefolder, compile=True, run=True,
 
 seed(123321)
 
-runtime = 10*second
 # Number of neurons
 N_MB = params['N']
 N_AL = 100
@@ -147,7 +149,7 @@ beta_n = .5*exp((10*mV-V+VT)/(40.*mV))/ms : Hz
 
 # Principal neurons (Antennal Lobe)
 n_patterns = 10
-n_repeats = int(runtime/second*10)
+n_repeats = int(params['runtime']*10)
 p_perturb = 0.1
 patterns = np.repeat(np.array([np.random.choice(N_AL, int(0.2*N_AL), replace=False) for _ in range(n_patterns)]), n_repeats, axis=0)
 # Make variants of the patterns
@@ -240,9 +242,9 @@ if params['monitors']:
         # Record the weights at the beginning and end
         iKC_eKC_weights = StateMonitor(iKC_eKC, 'g_raw',
                                        record=np.arange(10000),
-                                       dt=runtime)
+                                       dt=params['runtime']*second)
 
-run(runtime, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 if params['monitors'] and N_MB >= 10000:
     iKC_eKC_weights.record_single_timestep()
 device.build()
@@ -294,7 +296,7 @@ if params['monitors']:
         axs["G"].hist(iKC_eKC_weights.g_raw[:, 1]/g_max, bins=np.linspace(0, 1, 50, endpoint=True),
                       color='dimgray')
         axs["G"].set(yscale='log', xlabel=r'$g_\mathrm{raw}/g_\mathrm{max}$')
-        axs["G"].set(ylim=(1, 1.25*max_value), yticklabels=[], title=f'iKC→eKC weights ({runtime:.0f}s)')
+        axs["G"].set(ylim=(1, 1.25*max_value), yticklabels=[], title=f'iKC→eKC weights ({params["runtime"]:.0f}s)')
 
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
     savefig(plotpath)

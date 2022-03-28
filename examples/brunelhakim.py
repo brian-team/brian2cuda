@@ -69,6 +69,8 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 0.1
 ###############################################################################
 ## CONFIGURATION
 
@@ -78,6 +80,7 @@ params = {'devicename': devicename,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
+          'runtime': runtime,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
@@ -118,7 +121,6 @@ theta = 20*mV
 tau = 20*ms
 delta = 2*ms
 taurefr = 2*ms
-duration = .1*second
 C = 1000
 sparseness = float(C)/params['N']
 J = .1*mV
@@ -157,7 +159,7 @@ if params['monitors']:
     M = SpikeMonitor(group)
     LFP = PopulationRateMonitor(group)
 
-run(duration, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 ###############################################################################
 ## RESULTS COLLECTION
@@ -184,11 +186,11 @@ if params['monitors']:
     axs[0].set(ylim=(Vr/mV -2, theta/mV + 2), ylabel="$V$ [mV]")
 
     axs[1].plot(M.t/ms, M.i, 'k.')
-    axs[1].set(ylabel="Neuron ID", xlim=(0, duration/ms))
+    axs[1].set(ylabel="Neuron ID", xlim=(0, params['runtime']/1000))
 
     axs[2].plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz,
                 color='#c53929')
-    axs[2].set(xlim=(0, duration/ms), xlabel="Time [ms]",
+    axs[2].set(xlim=(0, params['runtime']/1000), xlabel="Time [ms]",
                ylabel=r"Population rate [$\mathrm{s}^{-1}$]", ylim=(0, 20.2))
 
     fig.align_labels()

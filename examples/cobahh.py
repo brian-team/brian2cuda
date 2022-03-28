@@ -66,6 +66,8 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 1
 ###############################################################################
 ## CONFIGURATION
 
@@ -74,6 +76,7 @@ params = {'devicename': devicename,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
+          'runtime': runtime,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
@@ -200,7 +203,7 @@ if params['monitors']:
     spikemon = SpikeMonitor(P)
     popratemon = PopulationRateMonitor(P)
 
-run(1 * second, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file

@@ -46,8 +46,8 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
-# Runtime in seconds
-runtime = 10
+# runtime in seconds
+runtime = 100
 ###############################################################################
 ## CONFIGURATION
 from collections import OrderedDict
