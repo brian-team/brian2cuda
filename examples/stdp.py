@@ -51,8 +51,9 @@ runtime = 100
 ###############################################################################
 ## CONFIGURATION
 from collections import OrderedDict
+from utils import set_prefs, update_from_command_line
 
-# Create paramter dictionary that can be modified from command line
+# create paramter dictionary that can be modified from command line
 params = OrderedDict([('devicename', devicename),
                       ('delays', delays),
                       ('post_effects', post_effects),
@@ -67,20 +68,12 @@ params = OrderedDict([('devicename', devicename),
                       ('atomics', atomics),
                       ('bundle_mode', bundle_mode)])
 
-# Add parameter restrictions
+# add parameter restrictions
 choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
            'delays': ['none', 'homogeneous', 'heterogeneous']}
 
-from utils import set_prefs, update_from_command_line
-
 # update params from command line
 update_from_command_line(params, choices=choices)
-
-for key, options in choices.items():
-    param = params[key]
-    assert param in options, \
-            "Invalid option for {}: {} (choose from {}).".format(key, param,
-                                                                 options)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os

@@ -40,23 +40,26 @@ bundle_mode = True
 runtime = 1
 ###############################################################################
 ## CONFIGURATION
-
-params = {'devicename': devicename,
-          'N': N,
-          'runtime': runtime,
-          'resultsfolder': resultsfolder,
-          'codefolder': codefolder,
-          'profiling': profiling,
-          'monitors': monitors,
-          'single_precision': single_precision,
-          'num_blocks': num_blocks,
-          'atomics': atomics,
-          'bundle_mode': bundle_mode}
-
+from collections import OrderedDict
 from utils import set_prefs, update_from_command_line
 
-# update params from command line
+# create paramter dictionary that can be modified from command line
+params = OrderedDict([('devicename', devicename),
+                      ('resultsfolder', resultsfolder),
+                      ('codefolder', codefolder),
+                      ('N', N),
+                      ('runtime', runtime),
+                      ('profiling', profiling),
+                      ('monitors', monitors),
+                      ('single_precision', single_precision),
+                      ('num_blocks', num_blocks),
+                      ('atomics', atomics),
+                      ('bundle_mode', bundle_mode)])
+
+# add parameter restrictions
 choices={'devicename': ['cuda_standalone', 'cpp_standalone', 'genn']}
+
+# update params from command line
 update_from_command_line(params, choices=choices)
 
 # do the imports after parsing command line arguments (quicker --help)
@@ -66,7 +69,6 @@ import matplotlib
 matplotlib.use('Agg')
 
 from brian2 import *
-
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
 elif params['devicename'] == 'genn':

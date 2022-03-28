@@ -70,26 +70,27 @@ bundle_mode = True
 runtime = 1
 ###############################################################################
 ## CONFIGURATION
+from collections import OrderedDict
+from utils import set_prefs, update_from_command_line
 
-params = {'devicename': devicename,
-          'scenario': scenario,
-          'resultsfolder': resultsfolder,
-          'codefolder': codefolder,
-          'N': N,
-          'runtime': runtime,
-          'profiling': profiling,
-          'monitors': monitors,
-          'single_precision': single_precision,
-          'num_blocks': num_blocks,
-          'atomics': atomics,
-          'bundle_mode': bundle_mode}
+# create paramter dictionary that can be modified from command line
+params = OrderedDict([('devicename', devicename),
+                      ('scenario', scenario),
+                      ('resultsfolder', resultsfolder),
+                      ('codefolder', codefolder),
+                      ('N', N),
+                      ('runtime', runtime),
+                      ('profiling', profiling),
+                      ('monitors', monitors),
+                      ('single_precision', single_precision),
+                      ('num_blocks', num_blocks),
+                      ('atomics', atomics),
+                      ('bundle_mode', bundle_mode)])
 
-# Add parameter restrictions
+# add parameter restrictions
 choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
            'scenario': ['brian2-example', 'uncoupled', 'pseudocoupled-80',
                         'pseudocoupled-1000']}
-
-from utils import set_prefs, update_from_command_line
 
 # update params from command line
 update_from_command_line(params, choices=choices)
