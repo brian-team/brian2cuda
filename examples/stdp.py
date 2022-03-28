@@ -45,6 +45,8 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# Runtime in seconds
+runtime = 10.
 ###############################################################################
 ## CONFIGURATION
 from collections import OrderedDict
@@ -56,6 +58,7 @@ params = OrderedDict([('devicename', devicename),
                       ('resultsfolder', resultsfolder),
                       ('codefolder', codefolder),
                       ('N', N),
+                      ('runtime', runtime),
                       ('profiling', profiling),
                       ('monitors', monitors),
                       ('single_precision', single_precision),
@@ -167,8 +170,7 @@ if params['monitors']:
     inp_mon = SpikeMonitor(input[:100])
     neuron_mon = SpikeMonitor(neurons)
 
-runtime = 20*second
-run(runtime, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
@@ -211,7 +213,7 @@ if params['monitors']:
                                  color='dimgray')
     axs["E"].set(xlabel=r'$w/g_\mathrm{max}$', yticklabels=[])
     max_value = np.max(values)
-    axs["E"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({runtime:.0f}s)')
+    axs["E"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({params["runtime"]:.0f}s)')
     axs["D"].hist(initial_weights, bins=np.linspace(0, 1, 50, endpoint=True),
                   color='dimgray')
     axs["D"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
