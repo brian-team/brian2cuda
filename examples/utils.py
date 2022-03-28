@@ -77,6 +77,7 @@ def set_prefs(params, prefs):
     '''
     import os
     import socket
+    from numpy import float32, float64
 
     name = os.path.basename(__main__.__file__).replace('.py', '')
     name += '_' + params['devicename'].replace('_standalone', '')
@@ -99,18 +100,13 @@ def set_prefs(params, prefs):
     name += '_' + hostname
 
     if params['devicename'] == 'cuda_standalone':
-
-        if params['num_blocks'] is not None:
-            prefs['devices.cuda_standalone.parallel_blocks'] = params['num_blocks']
-
-        if not params['bundle_mode']:
-            prefs['devices.cuda_standalone.push_synapse_bundles'] = False
-
-        if not params['atomics']:
-            prefs['devices.cuda_standalone.use_atomics'] = False
+        prefs['devices.cuda_standalone.parallel_blocks'] = params['partitions']
+        prefs['devices.cuda_standalone.push_synapse_bundles'] = params['bundle_mode']
+        prefs['devices.cuda_standalone.use_atomics'] = params['atomics']
 
     if params['single_precision']:
-        from numpy import float32
         prefs['core.default_float_dtype'] = float32
+    else:
+        prefs['core.default_float_dtype'] = float64
 
     return name

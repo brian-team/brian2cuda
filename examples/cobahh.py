@@ -57,8 +57,8 @@ monitors = True
 # single precision
 single_precision = False
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+partitions = 1
 
 # atomic operations
 atomics = True
@@ -83,7 +83,7 @@ params = OrderedDict([('devicename', devicename),
                       ('profiling', profiling),
                       ('monitors', monitors),
                       ('single_precision', single_precision),
-                      ('num_blocks', num_blocks),
+                      ('partitions', partitions),
                       ('atomics', atomics),
                       ('bundle_mode', bundle_mode)])
 
