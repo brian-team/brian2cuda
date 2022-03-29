@@ -14,7 +14,12 @@ set_device("cuda_standalone")
 
 ### Installation
 #### Requirements
-Brian2: The correct version with which this implementation is working is stored in a submodule in `frozen_repos/brian2` 
+
+##### Operating system
+Only Linux environments are supported. For progress on Windows support, see #225.
+
+##### Brian2
+The correct Brian2 version with which this implementation is working is stored in a submodule in `frozen_repos/brian2` 
 
 After cloning Brian2CUDA, you can initialize the submodule from inside this repository:
 
