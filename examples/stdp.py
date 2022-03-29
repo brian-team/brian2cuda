@@ -183,20 +183,22 @@ style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
 plt.style.use(['seaborn-paper', style_file])
 
 if params['monitors']:
-    fig = plt.figure(constrained_layout=True, figsize=(7.08, 5))
-    axs = fig.subplot_mosaic(
-    """
+    # We show only the first second of activity, but show the weight development
+    # for the full runtime
+    figA, axs = plt.subplots(2, 1, sharex=True, constrained_layout=True, figsize=(7.08, 7.08/2))
+    axs[0].plot(inp_mon.t/ms, inp_mon.i, '.k')
+    axs[0].set(title="Input spikes (Poisson generator)", ylabel="Neuron ID",
+               xlim=(0, min(params['runtime'], 1)*1000))
+    axs[1].plot(neuron_mon.t/ms, neuron_mon.i, '.', color='#c53929')
+    axs[1].set(title="Leaky integrate-and-fire neurons", xlabel="Time [ms]", ylabel="Neuron ID")
+    figA.align_labels()
+
+    figB, axs = plt.subplot_mosaic("""
     AA
-    BB
-    CC
-    DE
-    """)
-    axs["A"].plot(inp_mon.t/second, inp_mon.i, ',k')
-    axs["A"].set(title="Input spikes (Poisson generator)", xticklabels=[], ylabel="Neuron ID")
-    axs["B"].plot(neuron_mon.t/second, neuron_mon.i, ',', color='#c53929')
-    axs["B"].set(title="Leaky integrate-and-fire neurons", xticklabels=[], ylabel="Neuron ID")
-    axs["C"].plot(weight_mon.t/second, weight_mon.w.T/gmax, color='dimgray')
-    axs["C"].set(title="Weight evolution examples", ylabel="$w/g_\mathrm{max}$",
+    BC
+    """, constrained_layout=True, figsize=(7.08, 7.08/2))
+    axs["A"].plot(weight_mon.t/second, weight_mon.w.T/gmax, color='dimgray')
+    axs["A"].set(title="Weight evolution examples", ylabel="$w/g_\mathrm{max}$",
                  xlabel="Time [s]")
     # We cannot easily record the initial weight distribution, since it is
     # generated in the standalone code and the number of synapses is not known
@@ -207,16 +209,16 @@ if params['monitors']:
 
     # we plot the final values first, to be able to use the same y limits in the
     # first plot
-    values, _, _ = axs["E"].hist(S.w/gmax, bins=np.linspace(0, 1, 50, endpoint=True),
+    values, _, _ = axs["C"].hist(S.w/gmax, bins=np.linspace(0, 1, 50, endpoint=True),
                                  color='dimgray')
-    axs["E"].set(xlabel=r'$w/g_\mathrm{max}$', yticklabels=[])
+    axs["C"].set(xlabel=r'$w/g_\mathrm{max}$', yticklabels=[])
     max_value = np.max(values)
-    axs["E"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({params["runtime"]:.0f}s)')
-    axs["D"].hist(initial_weights, bins=np.linspace(0, 1, 50, endpoint=True),
+    axs["C"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({params["runtime"]:.0f}s)')
+    axs["B"].hist(initial_weights, bins=np.linspace(0, 1, 50, endpoint=True),
                   color='dimgray')
-    axs["D"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
+    axs["B"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
                  title=f'synaptic weights (0s)')
-    fig.align_labels()
+    figB.align_labels()
 else:  # we can still plot the final weight distribution
     pass
     subplot(2, 1, 1)
@@ -229,7 +231,12 @@ else:  # we can still plot the final weight distribution
     tight_layout()
 #show()
 
-plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-savefig(plotpath)
+plotpath = os.path.join(params['resultsfolder'], '{}_A.png'.format(name))
+figA.savefig(plotpath, dpi=300)
 print('plot saved in {}'.format(plotpath))
+
+plotpath = os.path.join(params['resultsfolder'], '{}_B.png'.format(name))
+figB.savefig(plotpath, dpi=300)
+print('plot saved in {}'.format(plotpath))
+
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
