@@ -10,6 +10,9 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = 47138862
+
 # number of Poisson generators
 # (and also expectation value of the number of randomly connected synapses)
 N = 10000
@@ -53,8 +56,9 @@ runtime = 100
 ## CONFIGURATION
 from utils import set_prefs, update_from_command_line
 
-# create paramter dictionary that can be modified from command line
+# create parameter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'delays': delays,
           'post_effects': post_effects,
           'resultsfolder': resultsfolder,
@@ -101,6 +105,8 @@ print('compiling model in {}'.format(codefolder))
 
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
+
+seed(params['seed'])
 
 # On average `K_poisson` Poisson neurons are connected to each LIF neuron
 N_poisson = params['N']
@@ -205,6 +211,7 @@ if params['monitors']:
     # until the synapses have been generated in the standalone code as well.
     # For illustration, we draw a new sample of initial weights here (the
     # distribution is flat and not very interesting in the first place)
+    np.random.seed(params['seed'])
     initial_weights = np.random.uniform(0, 1, size=len(S))  # relative to gmax
 
     # we plot the final values first, to be able to use the same y limits in the

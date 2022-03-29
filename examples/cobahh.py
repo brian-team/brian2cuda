@@ -23,6 +23,9 @@ R. Brette - Dec 2007
 devicename = 'cuda_standalone'
 #devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = 875550052
+
 #------------------------------------------------------------------------------
 # choose mode
 
@@ -75,6 +78,7 @@ from utils import set_prefs, update_from_command_line
 
 # create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'scenario': scenario,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
@@ -121,6 +125,8 @@ print('compiling model in {}'.format(codefolder))
 
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
+
+seed(params['seed'])
 
 # Parameters
 area = 20000*umetre**2

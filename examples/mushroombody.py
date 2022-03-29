@@ -9,6 +9,9 @@ this model example is taken from https://github.com/brian-team/brian2genn_benchm
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = 123321
+
 # number of mushroom body neurons (N_MB)
 N = 2500
 
@@ -45,6 +48,7 @@ from utils import set_prefs, update_from_command_line
 
 # create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
@@ -90,7 +94,7 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False, build_on_run=False)
 
-seed(123321)
+seed(params['seed'])
 
 # Number of neurons
 N_MB = params['N']
