@@ -230,6 +230,6 @@ if params['monitors']:
 
     fig.align_labels()
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-    plt.savefig(plotpath)
+    plt.savefig(plotpath, dpi=300)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

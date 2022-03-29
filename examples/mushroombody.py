@@ -301,6 +301,6 @@ if params['monitors']:
         axs["G"].set(ylim=(1, 1.25*max_value), yticklabels=[], title=f'iKC→eKC weights ({params["runtime"]:.0f}s)')
 
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-    savefig(plotpath)
+    savefig(plotpath, dpi=300)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
