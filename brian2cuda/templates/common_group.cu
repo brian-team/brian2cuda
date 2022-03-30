@@ -131,12 +131,10 @@ _run_kernel_{{codeobj_name}}(
     {% block additional_variables %}
     {% endblock %}
 
-    {% block num_thread_check %}
-    if(_idx >= _N)
+    if(_vectorisation_idx >= _N)
     {
         return;
     }
-    {% endblock %}
 
     {% block kernel_maincode %}
 
