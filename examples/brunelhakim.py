@@ -23,6 +23,9 @@ Modification to original brian2 example: changed delay from constant to
 devicename = 'cuda_standalone'
 #devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = 12098479
+
 # select homogeneous (constant/identical) or heterogeneous (distributed) delays
 heterog_delays = False
 #heterog_delays = True
@@ -60,8 +63,9 @@ single_precision = False
 
 ## the preferences below only apply for cuda_standalone
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
@@ -69,26 +73,31 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 0.1
 ###############################################################################
 ## CONFIGURATION
+from utils import set_prefs, update_from_command_line
 
+# create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'heterog_delays': heterog_delays,
-          'narrow_delaydistr': narrow_delaydistr,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
+          'runtime': runtime,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
-          'num_blocks': num_blocks,
+          'partitions': partitions,
           'atomics': atomics,
           'bundle_mode': bundle_mode}
 
-from utils import set_prefs, update_from_command_line
+# add parameter restrictions
+choices={'devicename': ['cuda_standalone', 'cpp_standalone', 'genn']}
 
 # update params from command line
-choices={'devicename': ['cuda_standalone', 'cpp_standalone', 'genn']}
 update_from_command_line(params, choices=choices)
 
 # do the imports after parsing command line arguments (quicker --help)
@@ -99,6 +108,11 @@ matplotlib.use('Agg')
 from brian2 import *
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
+elif params['devicename'] == 'genn':
+    import brian2genn
+    if params['profiling']:
+        prefs['devices.genn.kernel_timing'] = True
+        params['profiling'] = False
 
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)
@@ -113,12 +127,13 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
+seed(params['seed'])
+
 Vr = 10*mV
 theta = 20*mV
 tau = 20*ms
 delta = 2*ms
 taurefr = 2*ms
-duration = .1*second
 C = 1000
 sparseness = float(C)/params['N']
 J = .1*mV
@@ -137,7 +152,7 @@ dV/dt = (-V+muext + sigmaext * sqrt(tau) * xi)/tau : volt
 """
 
 group = NeuronGroup(params['N'], eqs, threshold='V>theta',
-                    reset='V=Vr', refractory=taurefr)
+                    reset='V=Vr', refractory=taurefr, method='euler')
 group.V = Vr
 
 # delayed synapses
@@ -153,10 +168,11 @@ else:
     conn.connect(p=sparseness)
 
 if params['monitors']:
+    S = StateMonitor(group, 'V', record=1)
     M = SpikeMonitor(group)
     LFP = PopulationRateMonitor(group)
 
-run(duration, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 ###############################################################################
 ## RESULTS COLLECTION
@@ -171,16 +187,27 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 if params['monitors']:
-    subplot(211)
-    plot(M.t/ms, M.i, '.')
-    xlim(0, duration/ms)
+    style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+    plt.style.use(['seaborn-paper', style_file])
+    fig, axs = plt.subplots(3, 1, figsize=(7.08, 7.08/1.5), sharex=True,
+                            constrained_layout=True)
 
-    subplot(212)
-    plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz)
-    xlim(0, duration/ms)
-    #show()
+    axs[0].plot(S.t/ms, S.V[0].T/mV, 'k')
+    axs[0].axhline(theta/mV, ls='--', c='C3', label=r"$\Theta$")
+    axs[0].axhline(Vr/mV, ls='--', c='C2', label=r"$V_r$")
+    axs[0].legend(framealpha=1, loc='center right')
+    axs[0].set(ylim=(Vr/mV -2, theta/mV + 2), ylabel="$V$ [mV]")
 
+    axs[1].plot(M.t/ms, M.i, 'k.')
+    axs[1].set(ylabel="Neuron ID", xlim=(0, params['runtime']/1000))
+
+    axs[2].plot(LFP.t/ms, LFP.smooth_rate(window='flat', width=0.5*ms)/Hz,
+                color='#c53929')
+    axs[2].set(xlim=(0, params['runtime']/1000), xlabel="Time [ms]",
+               ylabel=r"Population rate [$\mathrm{s}^{-1}$]", ylim=(0, 20.2))
+
+    fig.align_labels()
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-    savefig(plotpath)
+    savefig(plotpath, dpi=300)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))
