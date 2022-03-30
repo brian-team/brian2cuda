@@ -31,7 +31,8 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
-                'MushroomBody'
+                'MushroomBody',
+                'StateMonitorBenchmark',
                ])
 
 
@@ -831,9 +832,22 @@ class MushroomBody(TimedSpeedTest):
 
         self.timed_run(self.duration)
 
+class StateMonitorBenchmark(TimedSpeedTest):
 
+    category = "Monitor only"
+    tags = ["Monitors", "Neurons"]
+    n_label = "Num neurons"
+    name = "StateMonitor benchmark"
+    n_power = [3, 4, 5, 6, 7, 8, 9, 10]
+    n_range = [int(10**p) for p in n_power]
 
+    # configuration options
+    duration = 1*second
 
+    def run(self):
+        G = NeuronGroup(self.n, 'v:1')
+        mon = StateMonitor(G, 'v', record=True)
+        self.timed_run(self.duration)
 
 
 if __name__=='__main__':
