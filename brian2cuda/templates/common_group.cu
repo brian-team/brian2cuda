@@ -109,6 +109,8 @@ __launch_bounds__(1024, {{sm_multiplier}})
 _run_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
+    {% block extra_kernel_parameters %}
+    {% endblock %}
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -117,8 +119,11 @@ _run_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
+
+    {% block indices %}
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
+    {% endblock %}
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
@@ -298,6 +303,8 @@ void _run_{{codeobj_name}}()
     _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
             num_threads,
+            {% block extra_host_parameters %}
+            {% endblock %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
