@@ -865,12 +865,12 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
         self.timed_run(self.duration)
 
 
-class StateMonitorBenchmarkCoalescedReads(SpikeMonitorBenchmarkBase):
+class StateMonitorBenchmarkCoalescedReads(StateMonitorBenchmarkBase):
     name = "StateMonitor benchmark (coalesced reads)"
     coalesced_state_reading = True
 
 
-class StateMonitorBenchmarkUncoalescedReads(SpikeMonitorBenchmarkBase):
+class StateMonitorBenchmarkUncoalescedReads(StateMonitorBenchmarkBase):
     name = "StateMonitor benchmark (uncoalesced reads)"
     coalesced_state_reading = False
 
