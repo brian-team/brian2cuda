@@ -840,7 +840,7 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
     tags = ["Monitors", "Neurons"]
     n_label = "Num recorded neurons"
     name = "StateMonitor benchmark"
-    n_power = [3, 4, 5, 6, 7, 8, 9, 10]
+    n_power = [1, 2, 3, 4, 5, 6]
     n_range = [int(10**p) for p in n_power]
 
     # configuration options
@@ -849,16 +849,17 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
 
     def run(self):
         warp_size = 32
-        num_neurons = self.n * warp_size
+        num_recorded_neurons = self.n
+        num_neurons = int(32 * 10**6)
         G = NeuronGroup(num_neurons, 'v:1')
         G.v = 'i'
         assert self.coalesced_state_reading is not None, "Don't use base benchmark class"
         if self.coalesced_state_reading:
             # record first n neurons in neurongroup (coalesced reads on state variables)
-            record = arange(self.n)
+            record = arange(num_recorded_neurons)
         else:
             # record n neurons in steps of 32 (warp size -> non-coalesced reads)
-            record = arange(0, self.n, warp_size)
+            record = arange(0, num_recorded_neurons * warp_size, warp_size)
 
         mon = StateMonitor(G, 'v', record=record)
 
@@ -866,11 +867,20 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
 
 
 class StateMonitorBenchmarkCoalescedReads(StateMonitorBenchmarkBase):
+    """
+    Record a state variable from N out of 32 x 10^6 neurons with
+    consecutive neuron indices.
+    """
     name = "StateMonitor benchmark (coalesced reads)"
     coalesced_state_reading = True
 
 
 class StateMonitorBenchmarkUncoalescedReads(StateMonitorBenchmarkBase):
+    """
+    Record a state variable from N out of 32 x 10^6 neurons with
+    non-consecutive neuron indices (record every 32nd neuron with 32 being the
+    number of CUDA threads in a warp).
+    """
     name = "StateMonitor benchmark (uncoalesced reads)"
     coalesced_state_reading = False
 
