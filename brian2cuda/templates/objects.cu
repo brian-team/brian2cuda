@@ -353,10 +353,16 @@ void _write_arrays()
     using namespace brian;
 
     {% for var, varname in array_specs | dictsort(by='value') %}
-    {% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs or var in static_array_specs) %}
+    {% if not (var in dynamic_array_specs
+                or var in dynamic_array_2d_specs
+                or var in static_array_specs
+              ) %}
+    {# Don't copy StateMonitor's N variables, which are modified on host only #}
+    {% if not (var.owner.__class__.__name__ == 'StateMonitor' and var.name == 'N') %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
+    {% endif %}
     ofstream outfile_{{varname}};
     outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
     if(outfile_{{varname}}.is_open())
@@ -371,7 +377,11 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {% if not var in multisynaptic_idx_vars and not var.name in ['delay', '_synaptic_pre', '_synaptic_post'] %}
+    {# TODO: pass isinstance to Jinja template to make it available here #}
+    {% if not (var in multisynaptic_idx_vars
+                or var.name in ['delay', '_synaptic_pre', '_synaptic_post']
+                or (var.owner.__class__.__name__ == 'StateMonitor' and var.name == 't')
+              ) %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};
