@@ -32,7 +32,8 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
                 'MushroomBody',
-                'StateMonitorBenchmark',
+                'StateMonitorBenchmarkCoalescedReads',
+                'StateMonitorBenchmarkUncoalescedReads',
                ])
 
 
