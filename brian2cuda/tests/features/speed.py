@@ -833,6 +833,7 @@ class MushroomBody(TimedSpeedTest):
 
         self.timed_run(self.duration)
 
+
 class StateMonitorBenchmarkBase(TimedSpeedTest):
 
     category = "Monitor only"
@@ -864,13 +865,13 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
         self.timed_run(self.duration)
 
 
-class StateMonitorBenchmarkCoalescedReads(TimedSpeedTest):
-    name = "StateMonitor recording from consecutive neuron indices (coalesced read)"
+class StateMonitorBenchmarkCoalescedReads(SpikeMonitorBenchmarkBase):
+    name = "StateMonitor benchmark (coalesced reads)"
     coalesced_state_reading = True
 
 
-class StateMonitorBenchmarkUncoalescedReads(TimedSpeedTest):
-    name = "StateMonitor recording from non-consecutive neuron indices (uncoalesced read)"
+class StateMonitorBenchmarkUncoalescedReads(SpikeMonitorBenchmarkBase):
+    name = "StateMonitor benchmark (uncoalesced reads)"
     coalesced_state_reading = False
 
 
