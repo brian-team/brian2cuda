@@ -31,7 +31,9 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
-                'MushroomBody'
+                'MushroomBody',
+                'StateMonitorBenchmarkCoalescedReads',
+                'StateMonitorBenchmarkUncoalescedReads',
                ])
 
 
@@ -831,9 +833,45 @@ class MushroomBody(TimedSpeedTest):
 
         self.timed_run(self.duration)
 
+class StateMonitorBenchmarkBase(TimedSpeedTest):
+
+    category = "Monitor only"
+    tags = ["Monitors", "Neurons"]
+    n_label = "Num recorded neurons"
+    name = "StateMonitor benchmark"
+    n_power = [3, 4, 5, 6, 7, 8, 9, 10]
+    n_range = [int(10**p) for p in n_power]
+
+    # configuration options
+    duration = 1*second
+    coalesced_state_reading = None
+
+    def run(self):
+        warp_size = 32
+        num_neurons = self.n * warp_size
+        G = NeuronGroup(num_neurons, 'v:1')
+        G.v = 'i'
+        assert self.coalesced_state_reading is not None, "Don't use base benchmark class"
+        if self.coalesced_state_reading:
+            # record first n neurons in neurongroup (coalesced reads on state variables)
+            record = arange(self.n)
+        else:
+            # record n neurons in steps of 32 (warp size -> non-coalesced reads)
+            record = arange(0, self.n, warp_size)
+
+        mon = StateMonitor(G, 'v', record=record)
+
+        self.timed_run(self.duration)
 
 
+class StateMonitorBenchmarkCoalescedReads(TimedSpeedTest):
+    name = "StateMonitor recording from consecutive neuron indices (coalesced read)"
+    coalesced_state_reading = True
 
+
+class StateMonitorBenchmarkUncoalescedReads(TimedSpeedTest):
+    name = "StateMonitor recording from non-consecutive neuron indices (uncoalesced read)"
+    coalesced_state_reading = False
 
 
 if __name__=='__main__':
