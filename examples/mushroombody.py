@@ -10,7 +10,7 @@ devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
 # random seed for reproducible simulations
-seed = 123321
+seed = None
 
 # number of mushroom body neurons (N_MB)
 N = 2500
@@ -94,7 +94,8 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False, build_on_run=False)
 
-seed(params['seed'])
+if params['seed'] is not None:
+    seed(params['seed'])
 
 # Number of neurons
 N_MB = params['N']

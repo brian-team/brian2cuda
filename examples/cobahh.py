@@ -24,7 +24,7 @@ devicename = 'cuda_standalone'
 #devicename = 'cpp_standalone'
 
 # random seed for reproducible simulations
-seed = 875550052
+seed = None
 
 #------------------------------------------------------------------------------
 # choose mode
@@ -126,7 +126,8 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
-seed(params['seed'])
+if params['seed'] is not None:
+    seed(params['seed'])
 
 # Parameters
 area = 20000*umetre**2

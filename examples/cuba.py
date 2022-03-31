@@ -22,6 +22,9 @@ Clock-driven implementation with exact subthreshold integration
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = None
+
 # number of neurons
 N = 4000
 
@@ -58,6 +61,7 @@ from utils import set_prefs, update_from_command_line
 
 # create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
@@ -98,6 +102,9 @@ print('compiling model in {}'.format(codefolder))
 
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
+
+if params['seed'] is not None:
+    seed(params['seed'])
 
 taum = 20 * ms
 taue = 5 * ms

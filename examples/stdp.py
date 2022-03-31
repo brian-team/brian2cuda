@@ -11,7 +11,7 @@ devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
 # random seed for reproducible simulations
-seed = 47138862
+seed = None
 
 # number of Poisson generators
 # (and also expectation value of the number of randomly connected synapses)
@@ -106,7 +106,8 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
-seed(params['seed'])
+if params['seed'] is not None:
+    seed(params['seed'])
 
 # On average `K_poisson` Poisson neurons are connected to each LIF neuron
 N_poisson = params['N']
