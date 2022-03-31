@@ -173,7 +173,15 @@ prefs.register_preferences(
         application. Since this avoids race conditions, effect application can
         be parallelised.''',
         validator=lambda v: isinstance(v, bool),
-        default=True)
+        default=True),
+
+    profile_statemonitor_copy_to_host=BrianPreference(
+        docs='''Profile the final device to host copy of StateMonitor data. This
+        preference is used for benchmarking and assumes that there is only one active
+        StateMonitor in the network. The parameter of this preference is the recorded
+        variable for which the device to host copy is recorded (e.g. 'v').''',
+        validator=lambda v: v is None or isinstance(v, str),
+        default=None),
 )
 
 prefs.register_preferences(

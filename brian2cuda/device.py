@@ -427,7 +427,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         eventspace_arrays=self.eventspace_arrays,
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
-                        profiled_codeobjects=self.profiled_codeobjects)
+                        profiled_codeobjects=self.profiled_codeobjects,
+                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)

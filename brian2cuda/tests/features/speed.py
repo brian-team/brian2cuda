@@ -845,16 +845,18 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
 
     # configuration options
     duration = 1*second
-    coalesced_state_reading = None
+    coalesced_reads = None
 
     def run(self):
+        prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host = 'v'
+
         warp_size = 32
         num_recorded_neurons = self.n
         num_neurons = int(32 * 10**6)
         G = NeuronGroup(num_neurons, 'v:1')
         G.v = 'i'
-        assert self.coalesced_state_reading is not None, "Don't use base benchmark class"
-        if self.coalesced_state_reading:
+        assert self.coalesced_reads is not None, "Don't use base benchmark class"
+        if self.coalesced_reads:
             # record first n neurons in neurongroup (coalesced reads on state variables)
             record = arange(num_recorded_neurons)
         else:
@@ -865,6 +867,8 @@ class StateMonitorBenchmarkBase(TimedSpeedTest):
 
         self.timed_run(self.duration)
 
+        prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host = None
+
 
 class StateMonitorBenchmarkCoalescedReads(StateMonitorBenchmarkBase):
     """
@@ -872,7 +876,7 @@ class StateMonitorBenchmarkCoalescedReads(StateMonitorBenchmarkBase):
     consecutive neuron indices.
     """
     name = "StateMonitor benchmark (coalesced reads)"
-    coalesced_state_reading = True
+    coalesced_reads = True
 
 
 class StateMonitorBenchmarkUncoalescedReads(StateMonitorBenchmarkBase):
@@ -882,7 +886,7 @@ class StateMonitorBenchmarkUncoalescedReads(StateMonitorBenchmarkBase):
     number of CUDA threads in a warp).
     """
     name = "StateMonitor benchmark (uncoalesced reads)"
-    coalesced_state_reading = False
+    coalesced_reads = False
 
 
 if __name__=='__main__':

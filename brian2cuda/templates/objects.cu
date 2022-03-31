@@ -397,15 +397,28 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+        {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+        {# Record copying statemonitor variable from device to host for benchmarking #}
+        std::clock_t before_copy_statemon;
+        string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
+        double copy_time_statemon;
+        {% endif %}
         ofstream outfile_{{varname}};
         outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
         if(outfile_{{varname}}.is_open())
         {
+            {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+            before_copy_statemon = std::clock();
+            {% endif %}
             thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
             for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
             {
                 temp_array{{varname}}[n] = {{varname}}[n];
             }
+            {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+            string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
+            copy_time_statemon += (double)(std::clock() - before_copy_statemon) / CLOCKS_PER_SEC;
+            {% endif %}
             for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
             {
                 for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
@@ -437,6 +450,9 @@ void _write_arrays()
     {% endif %}
     #}
     outfile_profiling_info << "{{codeobj}}\t" << {{codeobj}}_profiling_info << std::endl;
+    {% if profile_statemonitor_copy_to_host %}
+    outfile_profiling_info << profile_statemonitor_copy_to_host_varname << "\t" << copy_time_statemon << std::endl;
+    {% endif %}
     {% endfor %}
     outfile_profiling_info.close();
     } else
