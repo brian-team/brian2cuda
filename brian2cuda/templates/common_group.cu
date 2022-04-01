@@ -182,7 +182,9 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block prepare_kernel %}
+    {% block static_kernel_dimensions %}
     static int num_threads, num_blocks;
+    {% endblock %}
     static size_t needed_shared_memory = 0;
     static bool first_run = true;
     if (first_run)
