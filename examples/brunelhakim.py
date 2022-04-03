@@ -83,6 +83,7 @@ from utils import set_prefs, update_from_command_line
 params = {'devicename': devicename,
           'seed': seed,
           'heterog_delays': heterog_delays,
+          'narrow_delaydistr': narrow_delaydistr,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
