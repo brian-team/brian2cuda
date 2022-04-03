@@ -1,17 +1,36 @@
 ## Benchmarking
 
-To run benchmarks, use the `run_benchmark_suite.sh` script by executing it from this directory. This script will make sure that the `brian2cuda` in this repository and the `brian2` in the `brian2cuda/frozen_repos/brian2` repository are used by modifying `PYTHONPATH` accordingly. If you haven't initialized and checked out the submodule in `brian2cuda/frozen_repos/brian2` yet, please do so via this command:
-```
+You can either run multiple benchmarks at once via the `run_benchmark_suite.sh` script or
+run individual simulations by executing the scripts in the `brian2cuda/examples` (see
+below for instructions).
+
+### Running multiple benchmarks at once
+
+The `run_benchmark_suite.sh` script will make sure that the `brian2cuda` in this
+repository and the `brian2` and `brian2genn` in the `brian2cuda/frozen_repos` folder are
+used by modifying `PYTHONPATH` accordingly.
+
+If you haven't initialized and checked out the submodules in `brian2cuda/frozen_repos`
+yet, please do so via this command:
+```bash
 cd /path/to/brian2cuda/frozen_repos
 git submodule update --init
 bash update_brian2.sh
+# If you want run also Brian2GeNN benchmarks
+bash update_brian2genn.sh
+source init_genn.sh
 ```
-This will check out the correct Brian2 version and apply the patch stored in `brian2cuda/frozen_repos/brian2.diff`.
+This will check out the correct Brian2 / Brian2GeNN version and apply the
+patches stored in `brian2cuda/frozen_repos/brian2.diff` and
+`brian2cuda/frozen_repos/brian2genn.diff`. And the `init_genn.sh` script sets the
+environment variable needed for GeNN to work (needs to be set again when starting a new
+environment).
 
 In addition to Brian's dependencies, running the benchmark suite requires the `matplotlib` and `pandas` packages.
 
+
 Run
-```
+```bash
 bash run_benchmark_suite.sh --help
 ```
 to see the benchmark options.
@@ -39,15 +58,24 @@ This will store the benchmark results in
 `results/my-benchmark-run_<date_time>`.
 To run the same configuration but with profiling of different parts of the
 simulation (which has an effect on overall performance), run:
-```
+```bash
 bash run_benchmark_suite.sh --name my-benchmark-run-profiled -- --profile
 ```
 This will store the results in
 `results/my-benchmark-run-profiled_<date_time>`.
 
 ### Running individual examples
-To run single instances of an example model with a specific size and configuration, you can use the Python files in the `examples` directory of the
-repository. Each of these scripts has a number of optional command line arguments to specify the configuration. To get a list of all supported arguments, run the script with `--help`. Some of the scripts can be used to run different variants of a model (e.g. with and without synaptic connections). See below for a list of all benchmarked models and their corresponding script calls:
+To run single instances of an example model with a specific size and configuration, you
+can use the Python files in the `brian2cuda/examples` directory of this repository.
+If you haven't done so yet, please first follow the installation instructions on the main
+respositories README page (the example scripts don't automatically set the correct
+PYTHONPATH for you).
+
+Each of the scripts has a number of optional command line arguments to specify the
+configuration. To get a list of all supported arguments, run the script with `--help`.
+Some of the scripts can be used to run different variants of a model (e.g. with and
+without synaptic connections). See below for a list of all benchmarked models and their
+corresponding script calls:
 
 <dl>
   <dt>HH benchmark I: Hodgkin-Huxley type neurons without synapses</dt>

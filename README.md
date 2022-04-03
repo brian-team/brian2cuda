@@ -23,13 +23,16 @@ The correct Brian2 version with which this implementation is working is stored i
 
 After cloning Brian2CUDA, you can initialize the submodule from inside this repository:
 
-```
+```bash
 cd brian2cuda
 git submodule update --init frozen_repos/brian2
 ```
 
-Next, you need to incorporate a few changes into the Brian2 repository. These changes are already included in the newest Brian2 version, but need to be added manually to the Brian2 version that is used in `frozen_repos`. To add these changes, apply the `brian2.diff` file to the repository:
-```
+Next, you need to incorporate a few changes into the Brian2 repository. These
+changes are already included in the newest Brian2 version, but need to be
+added manually to the Brian2 version that is used in `frozen_repos`. To add
+these changes, apply the `brian2.diff` file to the repository:
+```bash
 cd frozen_repos
 bash update_brian2.sh
 # return to the brian2cuda root directory for the following installation
@@ -37,7 +40,7 @@ cd ..
 ```
 
 Now you can install the correct Brian2 and Brian2CUDA versions using pip (Be careful if you already have a Brian2 version installed in your current Python environment!):
-```
+```bash
 pip install .
 pip install ./frozen_repos/brian2
 ```
@@ -48,19 +51,31 @@ Or just add them to your `PYTHONPATH` (in which case you need to install their d
 
 #### Comparison with Brian2GeNN
 
-The [Brian2GeNN](https://github.com/brian-team/brian2genn) and [GeNN](https://github.com/genn-team/genn) versions that can be used with the same Brian2 version as Brian2CUDA are stored in submodules in `frozen_repos/brian2genn` and `frozen_repos/genn`. You can initialize them with:
-```
+The [Brian2GeNN](https://github.com/brian-team/brian2genn) and
+[GeNN](https://github.com/genn-team/genn) versions that can be used with the
+same Brian2 version as Brian2CUDA are stored in submodules in
+`frozen_repos/brian2genn` and `frozen_repos/genn`. You can initialize them
+with:
+```bash
 git submodule update --init frozen_repos/brian2genn
 git submodule update --init frozen_repos/genn
 ```
-If you are using LINUX and your CUDA is installed in `/usr/local/cuda/`, you can now just source `init_genn` to set the enironmental variables needed for GeNN to work:
-```
-source frozen_repos/init_genn
-```
-Otherwise modify the `CUDA_PATH` in `init_genn` accordingly or follow the instructions from the [GeNN repository](https://github.com/genn-team/genn)
-
 Now you can install Brian2GeNN either with pip:
-```
+```bash
 pip install ./frozen_repos/brian2genn
 ```
 or just add it to your `PYTHONPATH`.
+
+For GeNN to work correctly, you need to set the environment variable `GENN_PATH`. You can use the following command:
+```bash
+source frozen_repos/init_genn.sh
+```
+
+If you are using a conda environment, make sure that you don't have any
+compiler packages installed in your environment or unset the corresponding
+environment variables. Otherwise you can get mismatches of compiler and linker
+versions in GeNN. During the first GeNN run, a set of libraries are compiled
+once. If you change you compiler or environment later on, you might have to
+reinstall GeNN (remove the compiled filed).
+
+Otherwise follow the instructions from the [GeNN repository](https://github.com/genn-team/genn).
