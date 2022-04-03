@@ -131,12 +131,87 @@ BrianLogger.log_level_debug()
 # The configuration classes are defined in
 # `brian2cuda/tests/features/cuda_configuration.py`
 configurations = [
-    # Brian2CUDA with 1 partition
+    # configuration
+    #NumpyConfiguration,
+    #WeaveConfiguration,
+    #LocalConfiguration,
+#    CPPStandaloneConfiguration,
+#    #CPPStandaloneConfigurationSinglePrecision,
+#    CPPStandaloneConfigurationOpenMPMaxThreads,
+#    #CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision,
+#
+#    # max blocks
+#    DynamicConfigCreator('CUDA standalone (max blocks, atomics)'),
+#
+#    #DynamicConfigCreator('CUDA standalone (single precision, max blocks, atomics)',
+#    #                     prefs={'core.default_float_dtype': float32}),
+#
+#
+    # 1 block
     DynamicConfigCreator('CUDA standalone (1 block, atomics)',
                          prefs={'devices.cuda_standalone.parallel_blocks': 1}),
-    DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
-                         prefs={'core.default_float_dtype': float32,
-                                'devices.cuda_standalone.parallel_blocks': 1}),
+
+    #DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
+    #                     prefs={'core.default_float_dtype': float32,
+    #                            'devices.cuda_standalone.parallel_blocks': 1}),
+
+
+    ## 20 blocks
+    #DynamicConfigCreator('CUDA standalone (20 blocks, atomics)',
+    #                     prefs={'devices.cuda_standalone.parallel_blocks': 20}),
+
+    #DynamicConfigCreator('CUDA standalone (single precision, 20 blocks, atomics)',
+    #                     prefs={'core.default_float_dtype': float32,
+    #                            'devices.cuda_standalone.parallel_blocks': 20}),
+
+
+    ## 40 blocks
+    #DynamicConfigCreator('CUDA standalone (40 blocks, atomics)',
+    #                     prefs={'devices.cuda_standalone.parallel_blocks': 40}),
+
+    #DynamicConfigCreator('CUDA standalone (single precision, 40 blocks, atomics)',
+    #                     prefs={'core.default_float_dtype': float32,
+    #                            'devices.cuda_standalone.parallel_blocks': 40}),
+
+
+    ## 60 blocks
+    #DynamicConfigCreator('CUDA standalone (60 blocks, atomics)',
+    #                     prefs={'devices.cuda_standalone.parallel_blocks': 60}),
+
+    #DynamicConfigCreator('CUDA standalone (single precision, 60 blocks, atomics)',
+    #                     prefs={'core.default_float_dtype': float32,
+    #                            'devices.cuda_standalone.parallel_blocks': 60}),
+
+
+    #DynamicConfigCreator('CUDA standalone (max blocks, no atomics)',
+    #                     prefs={'devices.cuda_standalone.use_atomics': False}),
+
+    #DynamicConfigCreator('CUDA standalone (1 block, no atomics)',
+    #                     prefs={'devices.cuda_standalone.use_atomics': False,
+    #                            'devices.cuda_standalone.parallel_blocks': 1}),
+
+    #DynamicConfigCreator('CUDA standalone (no bundles, 15 blocks, atomics)',
+    #                     prefs={'devices.cuda_standalone.push_synapse_bundles': False}),
+
+
+    #DynamicConfigCreator('CUDA standalone (master)',
+    #                     git_commit='master'),
+
+    #DynamicConfigCreator("CUDA standalone (only compilation)",
+    #                     set_device_kwargs={'compile': True, 'run': False}),
+
+    #CUDAStandaloneConfigurationExtraThresholdKernel,
+    #CUDAStandaloneConfigurationNoAssert,
+    #CUDAStandaloneConfigurationNoCudaOccupancyAPI,
+    #CUDAStandaloneConfiguration2BlocksPerSM,
+    #CUDAStandaloneConfiguration2BlocksPerSMLaunchBounds,
+    #CUDAStandaloneConfigurationSynLaunchBounds,
+    #CUDAStandaloneConfiguration2BlocksPerSMSynLaunchBounds,
+#    #GeNNConfigurationCPU,
+#    GeNNConfiguration,
+#    #GeNNConfigurationSinglePrecision,
+#    GeNNConfigurationSpanTypePre,
+    #GeNNConfigurationSinglePrecisionSpanTypePre,
 ]
 
 # The `benchmark` classes are defined in brian2cuda/tests/features/speed.py. The
@@ -144,16 +219,44 @@ configurations = [
 # class to determine the network sizes for which this benchmark should be run.
 speed_tests = [# benchmark                                                  n_slice
 
-               # HH benchmark without synapses
-               (COBAHHUncoupled,                                            slice(None)),
-               # HH benchmark with synapses
-               (COBAHHPseudocoupled1000,                                    slice(None)),
-               # LIF benchmark with homogeneous delays
-               (BrunelHakimHomogDelays,                                     slice(None)),
-               # STDP benchmark
-               (STDPCUDARandomConnectivityHomogeneousDelays,                slice(None)),
-               # Mushroom body benchmark
-               (MushroomBody,                                               slice(None)),
+               # paper benchmarks
+               #(COBAHHUncoupled,                                            slice(None)),
+               #(COBAHHPseudocoupled1000,                                    slice(None)),
+               #(BrunelHakimHomogDelays,                                     slice(None)),
+               #(BrunelHakimHeterogDelays,                                   slice(None)),
+               (STDPCUDARandomConnectivityHomogeneousDelaysDuration50,       slice(4, None, 2)),
+               (STDPCUDARandomConnectivityHomogeneousDelaysDuration100,      slice(4, None, 2)),
+               (STDPCUDARandomConnectivityHomogeneousDelaysDuration200,      slice(4, None, 2)),
+               #(STDPCUDARandomConnectivityHeterogeneousDelays,              slice(None)),
+               #(MushroomBody,                                               slice(None)),
+
+               ## other benchmarks
+               #(COBAHHPseudocoupled80,                                      slice(None)),
+               #(BrunelHakimHeterogDelaysNarrowDistr,                        slice(None)),
+               #(STDPCUDA,                                                   slice(None)),
+               #(STDPCUDAHomogeneousDelays,                                  slice(None)),
+               #(STDPCUDAHeterogeneousDelays,                                slice(None)),
+               #(STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr    slice(None),
+
+               #(CUBAFixedConnectivityNoMonitor, slice(None)),
+               #(COBAHHCoupled, slice(None)),
+               #(STDPEventDriven, slice(None)),
+
+               #(VerySparseMediumRateSynapsesOnly, slice(None)),
+               #(SparseMediumRateSynapsesOnly, slice(None)),
+               #(DenseMediumRateSynapsesOnly, slice(None)),
+               #(SparseLowRateSynapsesOnly, slice(None)),
+               #(SparseHighRateSynapsesOnly, slice(None)),
+
+               #(DenseMediumRateSynapsesOnlyHeterogeneousDelays, slice(None)),
+               #(SparseLowRateSynapsesOnlyHeterogeneousDelays, slice(None)),
+
+               #(LinearNeuronsOnly, slice(None)),
+               #(HHNeuronsOnly, slice(None)),
+
+               ### below uses monitors
+               #(CUBAFixedConnectivity, slice(None)),
+               #(COBAHHFixedConnectivity, slice(None, -1)),
 ]
 
 slack_thread = None
