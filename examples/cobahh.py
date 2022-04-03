@@ -58,7 +58,7 @@ codefolder = 'code'
 monitors = True
 
 # single precision
-single_precision = True
+single_precision = False
 
 # number of connectivity matrix partitions
 # (None uses as many as there are SMs on the GPU)
