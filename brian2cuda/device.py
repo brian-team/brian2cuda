@@ -1348,11 +1348,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         logger.info("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
-                logger.info(f"\t{pref_name} = {prefs[pref_name]}")
-
-        logger.debug("Using the following brian preferences:")
-        for pref_name in prefs:
-            if pref_name not in prefs:
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
