@@ -199,7 +199,6 @@ void _init_arrays()
     {% else %}
     num_parallel_blocks = props.multiProcessorCount * {{sm_multiplier}};
     {% endif %}
-    printf("objects cu num par blocks %d\n", num_parallel_blocks);
     max_threads_per_block = props.maxThreadsPerBlock;
     max_threads_per_sm = props.maxThreadsPerMultiProcessor;
     max_shared_mem_size = props.sharedMemPerBlock;
