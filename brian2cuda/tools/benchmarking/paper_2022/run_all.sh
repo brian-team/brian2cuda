@@ -1,19 +1,19 @@
 # Run all simulations for all figure in Alevi et al. 2022
-# Command line arguments are passed to `bash run_benchmark_suite.sh`
+# Any command line arguments are passed to `bash run_benchmark_suite.sh`
 
 SCRIPTS_NO_PROFILING="\
-    run_benchmarks_fig4_figS1.py \
-    run_benchmarks_fig5AB.py \
-    run_benchmarks_fig5C.py \
-    run_benchmarks_fig7.py"
+    run_benchmarks_fig5_figS1.py \
+    run_benchmarks_fig6AB.py \
+    run_benchmarks_fig6C.py \
+    run_benchmarks_fig8.py"
 
-# XXX: fig8 simulations have to be run on different node with RTX2080
-#run_benchmarks_fig8.py"
+# XXX: fig9 simulations were executed on a different GPU (RTX2080)
+#run_benchmarks_fig9.py"
 
 SCRIPTS_WITH_PROFILING="\
-    run_benchmarks_fig6A.py \
-    run_benchmarks_fig6B.py \
-    run_benchmarks_fig6CD.py"
+    run_benchmarks_fig7A.py \
+    run_benchmarks_fig7B.py \
+    run_benchmarks_fig7CD.py"
 
 cp ../run_benchmark_suite.py run_benchmark_suite.bak.py
 
