@@ -75,6 +75,13 @@ bundle_mode = True
 
 # runtime in seconds
 runtime = 0.1
+
+# number of C++ threads (default 0: single thread without OpenMP)
+# (only for devicename == 'cpp_standalone')
+cpp_threads = 0
+
+# pre or post parallelization mode in Brian2GeNN (only for devicename == 'genn')
+genn_mode = 'post'
 ###############################################################################
 ## CONFIGURATION
 from utils import set_prefs, update_from_command_line
@@ -93,13 +100,12 @@ params = {'devicename': devicename,
           'single_precision': single_precision,
           'partitions': partitions,
           'atomics': atomics,
-          'bundle_mode': bundle_mode}
-
-# add parameter restrictions
-choices={'devicename': ['cuda_standalone', 'cpp_standalone', 'genn']}
+          'bundle_mode': bundle_mode,
+          'cpp_threads': cpp_threads,
+          'genn_mode': genn_mode}
 
 # update params from command line
-update_from_command_line(params, choices=choices)
+update_from_command_line(params)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os
