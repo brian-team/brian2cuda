@@ -133,28 +133,28 @@ BrianLogger.log_level_debug()
 configurations = [
     # C++
     CPPStandaloneConfiguration,
-    CPPStandaloneConfigurationSinglePrecision,
-    CPPStandaloneConfigurationOpenMPMaxThreads,
-    CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision,
+    #CPPStandaloneConfigurationSinglePrecision,
+    #CPPStandaloneConfigurationOpenMPMaxThreads,
+    #CPPStandaloneConfigurationOpenMPMaxThreadsSinglePrecision,
 
-    # Brian2CUDA
-    ## number of partitions equal number of SMs on GPU (108 on A100 GPU)
-    DynamicConfigCreator('CUDA standalone (max blocks, atomics)'),
-    DynamicConfigCreator('CUDA standalone (single precision, max blocks, atomics)',
-                         prefs={'core.default_float_dtype': float32}),
+    ## Brian2CUDA
+    ### number of partitions equal number of SMs on GPU (108 on A100 GPU)
+    #DynamicConfigCreator('CUDA standalone (max blocks, atomics)'),
+    #DynamicConfigCreator('CUDA standalone (single precision, max blocks, atomics)',
+    #                     prefs={'core.default_float_dtype': float32}),
 
     ## 1 partition
     DynamicConfigCreator('CUDA standalone (1 block, atomics)',
                          prefs={'devices.cuda_standalone.parallel_blocks': 1}),
-    DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
-                         prefs={'core.default_float_dtype': float32,
-                                'devices.cuda_standalone.parallel_blocks': 1}),
+    #DynamicConfigCreator('CUDA standalone (single precision, 1 block, atomics)',
+    #                     prefs={'core.default_float_dtype': float32,
+    #                            'devices.cuda_standalone.parallel_blocks': 1}),
 
     # Brian2GeNN
     GeNNConfiguration,
-    GeNNConfigurationSinglePrecision,
-    GeNNConfigurationSpanTypePre,
-    GeNNConfigurationSinglePrecisionSpanTypePre,
+    #GeNNConfigurationSinglePrecision,
+    #GeNNConfigurationSpanTypePre,
+    #GeNNConfigurationSinglePrecisionSpanTypePre,
 ]
 
 # The `benchmark` classes are defined in brian2cuda/tests/features/speed.py. The
@@ -163,15 +163,15 @@ configurations = [
 speed_tests = [# benchmark                                                  n_slice
 
                # HH benchmark without synapses
-               (COBAHHUncoupled,                                            slice(None)),
+               (COBAHHUncoupled,                                            slice(0, 1)),
                # HH benchmark with synapses
-               (COBAHHPseudocoupled1000,                                    slice(None)),
-               # LIF benchmark with homogeneous delays
-               (BrunelHakimHomogDelays,                                     slice(None)),
-               # STDP benchmark
-               (STDPCUDARandomConnectivityHomogeneousDelays,                slice(None)),
-               # Mushroom body benchmark
-               (MushroomBody,                                               slice(None)),
+               #(COBAHHPseudocoupled1000,                                    slice(None)),
+               ## LIF benchmark with homogeneous delays
+               #(BrunelHakimHomogDelays,                                     slice(None)),
+               ## STDP benchmark
+               #(STDPCUDARandomConnectivityHomogeneousDelays,                slice(None)),
+               ## Mushroom body benchmark
+               #(MushroomBody,                                               slice(None)),
 ]
 
 slack_thread = None
