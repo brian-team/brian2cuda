@@ -101,9 +101,10 @@ void Network::run(const double duration, void (*report_func)(const double, const
         // get maximum in objects.cu array
 
         // go through each list of func group - 2 loops
-        for(int i=0; i<func_groups[j].size(); i++) {
+        for(int i=0; i<func_groups.size(); i++) {
             codeobj_func func = func_groups[i].second;
-            func(cuda_streams[i]);
+            //func(cuda_streams[i]);
+            func();
         }
 
         for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)

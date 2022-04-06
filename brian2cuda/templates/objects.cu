@@ -43,7 +43,7 @@ const int brian::_num_{{varname}} = {{var.size}};
 
 ///////////////// array of streams for parallelization //////////////////////////
 {% if parallelize %}
-cudaStream_t brian::custom_stream[{{num_stream}}];
+cudaStream_t brian::custom_stream[{{stream_size}}];
 {% endif %}
 
 //////////////// eventspaces ///////////////
@@ -233,7 +233,7 @@ void _init_arrays()
     {% endif %}
 
     {% if parallelize %}
-    for(int i=0;i<num_stream;i++){
+    for(int i=0;i<{{stream_size}};i++){
         CUDA_SAFE_CALL(cudaStreamCreate(&(custom_stream[i])));
     }
     {% endif %}
@@ -613,7 +613,7 @@ extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
 
 //////////////// stream ////////////
 {% if parallelize %}
-extern cudaStream_t custom_stream[{{num_stream}}];
+extern cudaStream_t custom_stream[{{stream_size}}];
 {% endif %}
 
 
