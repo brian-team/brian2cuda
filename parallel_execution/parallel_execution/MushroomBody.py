@@ -16,6 +16,9 @@ py_random.seed(123)
 device_name = "cuda_standalone"
 print("Running in device:")
 print(device_name)
+prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
 
 codefolder = get_directory(device_name, delete_dir=False)
 

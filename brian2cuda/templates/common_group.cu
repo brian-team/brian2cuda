@@ -155,7 +155,7 @@ _run_kernel_{{codeobj_name}}(
 {% endblock kernel %}
 
 
-void _run_{{codeobj_name}}()
+void _run_{{codeobj_name}}(cudaStream_t stream)
 {
     using namespace brian;
 
@@ -292,7 +292,7 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block kernel_call %}
-    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads,0,stream>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////
@@ -326,7 +326,7 @@ void _run_{{codeobj_name}}()
 #ifndef _INCLUDED_{{codeobj_name}}
 #define _INCLUDED_{{codeobj_name}}
 
-void _run_{{codeobj_name}}();
+void _run_{{codeobj_name}}(cudaStream_t);
 
 {% block extra_functions_h %}
 {% endblock %}
@@ -362,7 +362,7 @@ void _after_run_{{codeobj_name}}()
 }
 {% endmacro %}
 
-
+// {{codeobj_name}}
 {% macro after_run_h_file() %}
 #ifndef _INCLUDED_{{codeobj_name}}_after
 #define _INCLUDED_{{codeobj_name}}_affer
