@@ -198,7 +198,7 @@ Clock* Network::next_clocks()
 #include <ctime>
 #include "brianlib/clocks.h"
 
-typedef void (*codeobj_func)();
+typedef void (*codeobj_func)(cudaStream_t);
 
 class Network
 {
