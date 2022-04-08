@@ -1,0 +1,207 @@
+INFO: setting cudaDevice stuff took 0.866146 seconds
+objects cu num par blocks 20
+INFO: _init_arrays() took 0.212342s
+INFO: synapses creation took 0.015249s
+INFO: synapses_1 creation took 0.123005s
+INFO: synapses_2 creation took 0.004719s
+INFO _run_kernel_synapses_group_variable_set_conditional_codeobject
+	37 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_kernel_synapses_1_group_variable_set_conditional_codeobject
+	245 blocks
+	1024 threads
+	28 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_kernel_synapses_1_group_variable_set_conditional_codeobject_1
+	245 blocks
+	1024 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	0 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO connectivity matrix has size 250000, number of (pre neuron ID, post neuron block) pairs is 50000
+INFO: synapse statistics and memory usage for synapses_1_pre:
+	number of synapses: 250000
+	number of pre/post blocks: 50000
+	number of synapses over all pre/post blocks:
+		mean: 5.0	std: 0.0
+
+	memory usage: TOTAL: 1.5 MB (~6.4 byte per synapse)
+		62.5%	0.954 MB	synapse IDs [250000]
+		25.0%	0.381 MB	pointers to synapse IDs [50000]
+		12.5%	0.191 MB	number of synapses per pre/post block [50000]
+INFO _before_run_kernel_synapses_1_pre_push_spikes
+	1 blocks
+	1 threads
+	94 registers per block
+	0 bytes statically-allocated shared memory per block
+	336 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+INFO: synapses_1_pre initialisation took 0.214s
+INFO connectivity matrix has size 10000, number of (pre neuron ID, post neuron block) pairs is 2000
+INFO: synapse statistics and memory usage for synapses_2_pre:
+	number of synapses: 10000
+	number of pre/post blocks: 2000
+	number of synapses over all pre/post blocks:
+		mean: 5.0	std: 0.0
+
+	memory usage: TOTAL: 0.1 MB (~6.4 byte per synapse)
+		62.5%	0.038 MB	synapse IDs [10000]
+		25.0%	0.015 MB	pointers to synapse IDs [2000]
+		12.5%	0.008 MB	number of synapses per pre/post block [2000]
+INFO _before_run_kernel_synapses_2_pre_push_spikes
+	1 blocks
+	1 threads
+	94 registers per block
+	0 bytes statically-allocated shared memory per block
+	336 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+INFO: synapses_2_pre initialisation took 0.009s
+INFO connectivity matrix has size 37454, number of (pre neuron ID, post neuron block) pairs is 2000
+INFO: synapse statistics and memory usage for synapses_pre:
+	number of synapses: 37454
+	number of bundles: 0
+	number of pre/post blocks: 2000
+	number of synapses over all pre/post blocks:
+		mean: 18.7	std: 3.9
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 0.2 MB (~4.6 byte per synapse)
+		86.2%	0.143 MB	synapse IDs [37454]
+		9.2%	0.015 MB	pointers to synapse IDs [2000]
+		4.6%	0.008 MB	number of synapses per pre/post block [2000]
+INFO _before_run_kernel_synapses_pre_push_spikes
+	1 blocks
+	1 threads
+	94 registers per block
+	0 bytes statically-allocated shared memory per block
+	336 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+INFO: synapses_pre initialisation took 0.010s
+INFO connectivity matrix has size 250000, number of (pre neuron ID, post neuron block) pairs is 2000
+INFO: synapse statistics and memory usage for synapses_1_post:
+	number of synapses: 250000
+	number of bundles: 0
+	number of pre/post blocks: 2000
+	number of synapses over all pre/post blocks:
+		mean: 125.0	std: 0.0
+	number of unique delays over all pre/post blocks:
+		mean: 0.0	std: nan
+	bundle size over all bundles:
+		mean: 0.0	std: nan
+
+	memory usage: TOTAL: 1.0 MB (~4.1 byte per synapse)
+		97.7%	0.954 MB	synapse IDs [250000]
+		1.6%	0.015 MB	pointers to synapse IDs [2000]
+		0.8%	0.008 MB	number of synapses per pre/post block [2000]
+INFO _before_run_kernel_synapses_1_post_push_spikes
+	1 blocks
+	1 threads
+	94 registers per block
+	0 bytes statically-allocated shared memory per block
+	336 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+INFO: synapses_1_post initialisation took 0.017s
+INFO _run_kernel_neurongroup_1_stateupdater_codeobject
+	1 blocks
+	256 threads
+	174 registers per block
+	0 bytes statically-allocated shared memory per block
+	40 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.125 theoretical occupancy
+INFO _run_kernel_neurongroup_stateupdater_codeobject
+	7 blocks
+	384 threads
+	160 registers per block
+	0 bytes statically-allocated shared memory per block
+	40 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.188 theoretical occupancy
+INFO _run_kernel_neurongroup_1_thresholder_codeobject
+	1 blocks
+	1024 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	24 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_kernel_neurongroup_thresholder_codeobject
+	3 blocks
+	1024 threads
+	30 registers per block
+	0 bytes statically-allocated shared memory per block
+	24 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	1.000 theoretical occupancy
+INFO _run_kernel_spikegeneratorgroup_codeobject
+	1 blocks
+	576 threads
+	54 registers per block
+	0 bytes statically-allocated shared memory per block
+	24 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.562 theoretical occupancy
+INFO _run_kernel_spikemonitor_codeobject
+	1 blocks
+	1 threads
+	54 registers per block
+	0 bytes statically-allocated shared memory per block
+	64 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO _run_kernel_spikemonitor_1_codeobject
+	1 blocks
+	1 threads
+	54 registers per block
+	0 bytes statically-allocated shared memory per block
+	64 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+INFO _run_kernel_spikemonitor_2_codeobject
+	1 blocks
+	1 threads
+	54 registers per block
+	0 bytes statically-allocated shared memory per block
+	64 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.016 theoretical occupancy
+WARNING Not enough ressources available to call _run_kernel_synapses_1_pre_codeobject with maximum possible threads per block (1024). Reducing num_threads to 512. (Kernel needs 112 registers per block, 0 bytes of statically-allocated shared memory per block, 48 bytes of local memory per thread and a total of 2232 bytes of user-allocated constant memory)
+INFO _run_kernel_synapses_2_pre_codeobject
+	20 blocks
+	1024 threads
+	54 registers per block
+	0 bytes statically-allocated shared memory per block
+	40 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.500 theoretical occupancy
+INFO _run_kernel_synapses_pre_codeobject
+	20 blocks
+	1024 threads
+	64 registers per block
+	0 bytes statically-allocated shared memory per block
+	40 bytes local memory per thread
+	2232 bytes user-allocated constant memory
+	0.500 theoretical occupancy
+WARNING Not enough ressources available to call _run_kernel_synapses_1_post_codeobject with maximum possible threads per block (1024). Reducing num_threads to 512. (Kernel needs 112 registers per block, 0 bytes of statically-allocated shared memory per block, 40 bytes of local memory per thread and a total of 2232 bytes of user-allocated constant memory)
+Number of spikes: 3936
+Number of spikes: 143462
+Number of synapses: 250000
+Number of synapses: 10000
+Number of synapses: 37454
+Number of synapses: 250000
+INFO: main_lines took 46.566814 seconds
+Number of spikes: 10791
+INFO: main function took 47.753639 seconds

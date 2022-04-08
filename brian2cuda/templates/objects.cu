@@ -40,6 +40,12 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% endif %}
 {% endfor %}
 
+
+///////////////// array of streams for parallelization //////////////////////////
+{% if parallelize %}
+cudaStream_t brian::custom_stream[{{stream_size}}];
+{% endif %}
+
 //////////////// eventspaces ///////////////
 // we dynamically create multiple eventspaces in no_or_const_delay_mode
 // for initiating the first spikespace, we need a host pointer
@@ -227,6 +233,14 @@ void _init_arrays()
         curandSetGeneratorOrdering(curand_generator, {{curand_generator_ordering}})
             );
     {% endif %}
+
+    {% if parallelize %}
+    for(int i=0;i<{{stream_size}};i++){
+        CUDA_SAFE_CALL(cudaStreamCreate(&(custom_stream[i])));
+    }
+    {% endif %}
+
+
 
     // this sets seed for host and device api RNG
     random_number_buffer.set_seed(seed);
@@ -548,6 +562,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include "network.h"
 #include "rand.h"
 
+#include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <curand.h>
@@ -599,6 +614,12 @@ extern int previous_idx{{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
 {% endfor %}
+
+//////////////// stream ////////////
+{% if parallelize %}
+extern cudaStream_t custom_stream[{{stream_size}}];
+{% endif %}
+
 
 /////////////// static arrays /////////////
 {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}

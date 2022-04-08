@@ -25,12 +25,14 @@ void Network::clear()
     objects.clear();
 }
 
-void Network::add(Clock *clock, codeobj_func func)
+// TODO have to makr change in objects - make it a tuple
+// make decision which bject has which stream
+void Network::add(Clock *clock, codeobj_func func, int group_num)
 {
 #if defined(_MSC_VER) && (_MSC_VER>=1700)
-    objects.push_back(std::make_pair(std::move(clock), std::move(func)));
+    objects.push_back(std::make_tuple(std::move(clock), std::move(func), std::move(group_num)));
 #else
-    objects.push_back(std::make_pair(clock, func));
+    objects.push_back(std::make_tuple(clock, func, group_num));
 #endif
 }
 
@@ -56,7 +58,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
     Clock* clock = next_clocks();
     double elapsed_realtime;
     bool did_break_early = false;
-
+    //TODO here
     while(clock && clock->running())
     {
         t = clock->t[0];
@@ -73,17 +75,38 @@ void Network::run(const double duration, void (*report_func)(const double, const
                     next_report_time += report_period;
                 }
             }
-            Clock *obj_clock = objects[i].first;
+            // TODO tuple of clock and function
+            //Clock *obj_clock = objects[i].first;
+            Clock *obj_clock = std::get<0>(objects[i]);
+            int group_int = std::get<2>(objects[i]);
             // Only execute the object if it uses the right clock for this step
             if (curclocks.find(obj_clock) != curclocks.end())
             {
-                codeobj_func func = objects[i].second;
+               // function -> whixh is in templates like common_group.cu
+               // sort the code object - waiting mechanism between groups
+               // cudaEvent or cudaSynchronise
+                //codeobj_func func = objects[i].second;
+                codeobj_func func = std::get<1>(objects[i]);
+                int func_group_int = std::get<2>(objects[i]);
                 if (func)  // code objects can be NULL in cases where we store just the clock
                 {
-                    func();
+                      //func_groups[func_group_int].push_back(func);
+                      func_groups.push_back(std::make_pair(func_group_int,func));
+                    //func();
+                    // [[func1,func2,func3],[func4...]]
                 }
             }
         }
+
+        // get maximum in objects.cu array
+
+        // go through each list of func group - 2 loops
+        for(int i=0; i<func_groups.size(); i++) {
+            codeobj_func func = func_groups[i].second;
+            //func(cuda_streams[i]);
+            func();
+        }
+
         for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)
             (*i)->tick();
         clock = next_clocks();
@@ -129,7 +152,8 @@ void Network::compute_clocks()
     clocks.clear();
     for(int i=0; i<objects.size(); i++)
     {
-        Clock *clock = objects[i].first;
+        Clock *clock = std::get<0>(objects[i]);
+        // Clock *clock = std::get<0>()objects[i].first;
         clocks.insert(clock);
     }
 }
@@ -174,7 +198,7 @@ Clock* Network::next_clocks()
 #include <ctime>
 #include "brianlib/clocks.h"
 
-typedef void (*codeobj_func)();
+typedef void (*codeobj_func)(cudaStream_t);
 
 class Network
 {
@@ -182,14 +206,18 @@ class Network
     void compute_clocks();
     Clock* next_clocks();
 public:
-    std::vector< std::pair< Clock*, codeobj_func > > objects;
+// TODO vectory of tuples having clock , codeobj_func and stread integer
+    std::vector< std::tuple< Clock*, codeobj_func, int > > objects;
+    //std::vector< std::pair< Clock*, codeobj_func > > objects;
+    std::vector<std::pair< int, codeobj_func >> func_groups;
     double t;
     static double _last_run_time;
     static double _last_run_completed_fraction;
+    int num_streams;
 
     Network();
     void clear();
-    void add(Clock *clock, codeobj_func func);
+    void add(Clock *clock, codeobj_func func, int num_streams);
     void run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period);
 };
 
