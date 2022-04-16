@@ -432,7 +432,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         eventspace_arrays=self.eventspace_arrays,
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
-                        profiled_codeobjects=self.profiled_codeobjects)
+                        profiled_codeobjects=self.profiled_codeobjects,
+                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -1353,11 +1354,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
                 logger.info(f"\t{pref_name} = {prefs[pref_name]}")
-
-        logger.debug("Using the following brian preferences:")
-        for pref_name in prefs:
-            if pref_name not in prefs:
-                logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)

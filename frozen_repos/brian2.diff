@@ -220,7 +220,7 @@ index 99504814..928ab4bf 100644
 -    {% endif %}
  {% endblock %}
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index 03a81bfe..900c46b6 100644
+index 03a81bfe..aae1437d 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
 @@ -10,6 +10,8 @@
@@ -268,7 +268,7 @@ index 03a81bfe..900c46b6 100644
  import warnings, traceback, pickle, sys, os, time
  warnings.simplefilter('ignore')
  try:
-@@ -248,41 +257,108 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
+@@ -248,41 +257,111 @@ def results(configuration, feature, n=None, maximum_run_time=1e7*brian2.second):
              pass
      lrcf = configuration.get_last_run_completed_fraction()
      run_time = run_time/lrcf
@@ -353,6 +353,9 @@ index 03a81bfe..900c46b6 100644
 +                    time = None
 +                else:
 +                    # We record in microseconds, convert to seconds
++                    # TODO: This is a bug, should be 1e6, leaving this here since the
++                    # generated data used this conversion and plot scripts fix it. Fix
++                    # it here after publication and modify plot script accordingly.
 +                    time = float(time) / 10e6
 +                standalone_benchmarks[name] = time
 +    else:
@@ -390,7 +393,7 @@ index 03a81bfe..900c46b6 100644
  
  def check_or_compare(feature, res, baseline, maxrelerr):
      feature = feature()
-@@ -325,7 +401,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
+@@ -325,7 +404,7 @@ def run_feature_tests(configurations=None, feature_tests=None,
              txt = 'OK'
              sym = '.'
              exc = None
@@ -399,7 +402,7 @@ index 03a81bfe..900c46b6 100644
              if isinstance(res, Exception):
                  if isinstance(res, NotImplementedError):
                      sym = 'N'
-@@ -469,7 +545,8 @@ def __str__(self):
+@@ -469,7 +548,8 @@ def __str__(self):
  
  
  def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbose=True,
@@ -409,7 +412,7 @@ index 03a81bfe..900c46b6 100644
      if configurations is None:
          # some configurations to attempt to import
          try:
-@@ -485,17 +562,41 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -485,17 +565,41 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
          print('Configurations:', ', '.join(c.name for c in configurations))
  
      full_results = {}
@@ -453,7 +456,7 @@ index 03a81bfe..900c46b6 100644
                  if isinstance(res, Exception):
                      if isinstance(res, NotImplementedError):
                          sym = 'N'
-@@ -504,8 +605,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -504,8 +608,31 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                      if configuration is DefaultConfiguration:
                          raise res
                      runtime = numpy.NAN
@@ -485,7 +488,7 @@ index 03a81bfe..900c46b6 100644
                  suffixtime = defaultdict(float)
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
-@@ -518,20 +642,130 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
+@@ -518,20 +645,130 @@ def run_speed_tests(configurations=None, speed_tests=None, run_twice=True, verbo
                  for suffix, proftime in list(suffixtime.items()):
                      full_results[configuration.name, ft.fullname(), n, suffix] = proftime
                  full_results[configuration.name, ft.fullname(), n, 'Overheads'] = overheadstime
@@ -620,7 +623,7 @@ index 03a81bfe..900c46b6 100644
      def get_ns(self, fullname):
          L = [(cn, fn, n, s)
               for cn, fn, n, s in self.full_results
-@@ -539,14 +773,51 @@ def get_ns(self, fullname):
+@@ -539,14 +776,51 @@ def get_ns(self, fullname):
          confignames, fullnames, n, codeobjsuffixes  = zip(*L)
          return numpy.array(sorted(list(set(n))))
  
@@ -676,7 +679,7 @@ index 03a81bfe..900c46b6 100644
          if relative and profiling_minimum<1:
              raise ValueError("Cannot use relative plots with profiling")
          import pylab
-@@ -554,10 +825,17 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -554,10 +828,17 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              fullname = st.fullname()
              pylab.figure()
              ns = self.get_ns(fullname)
@@ -696,7 +699,7 @@ index 03a81bfe..900c46b6 100644
              if relative or profiling_minimum==1:
                  codeobjsuffixes = ['All']
              baseline = None
-@@ -566,31 +844,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -566,31 +847,46 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
              dashes = {}
              markerstyles = {}
              for isuffix, suffix in enumerate(codeobjsuffixes):
@@ -747,7 +750,7 @@ index 03a81bfe..900c46b6 100644
                      if plottable:
                          if label in havelabel:
                              label = None
-@@ -612,8 +905,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -612,8 +908,12 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                                          dash = dash+(4, 2)
                                  dashes[suffix] = dash
                                  markerstyles[suffix] = msty = next(markerstyles_cycle)
@@ -761,7 +764,7 @@ index 03a81bfe..900c46b6 100644
                          if dash is not None:
                              line.set_dashes(dash)
              pylab.title(fullname)
-@@ -623,6 +920,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
+@@ -623,6 +923,7 @@ def plot_all_tests(self, relative=False, profiling_minimum=1.0):
                  pylab.gca().set_xscale('log')
              if st.time_axis_log:
                  pylab.gca().set_yscale('log')

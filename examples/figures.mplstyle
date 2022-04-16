@@ -1,0 +1,9 @@
+font.family: sans-serif
+font.sans-serif: arial
+font.size: 8.72727
+legend.fontsize: 8.0
+xtick.labelsize: 8.0
+ytick.labelsize: 8.0
+hatch.linewidth: 2.2
+axes.spines.top: false
+axes.spines.right: false

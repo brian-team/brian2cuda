@@ -49,11 +49,11 @@ prefs.register_preferences(
 
     parallel_blocks = BrianPreference(
         docs='''
-        The total number of parallel blocks to use. The default is the number
-        of streaming multiprocessors.
+        The total number of parallel blocks to use. If `None`, the number of parallel
+        blocks equals the number streaming multiprocessors on the GPU.
         ''',
         validator=lambda v: v is None or (isinstance(v, int) and v > 0),
-        default=None),
+        default=1),
 
     launch_bounds=BrianPreference(
         docs='''
@@ -173,7 +173,15 @@ prefs.register_preferences(
         application. Since this avoids race conditions, effect application can
         be parallelised.''',
         validator=lambda v: isinstance(v, bool),
-        default=True)
+        default=True),
+
+    profile_statemonitor_copy_to_host=BrianPreference(
+        docs='''Profile the final device to host copy of StateMonitor data. This
+        preference is used for benchmarking and assumes that there is only one active
+        StateMonitor in the network. The parameter of this preference is the recorded
+        variable for which the device to host copy is recorded (e.g. 'v').''',
+        validator=lambda v: v is None or isinstance(v, str),
+        default=None),
 )
 
 prefs.register_preferences(

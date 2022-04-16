@@ -24,11 +24,16 @@ __all__.extend(['DenseMediumRateSynapsesOnlyHeterogeneousDelays',
                 'STDPCUDAHeterogeneousDelays',
                 'STDPCUDAHeterogeneousDelaysNarrowDistr',
                 'STDPCUDARandomConnectivityHomogeneousDelays',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration50',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration100',
+                'STDPCUDARandomConnectivityHomogeneousDelaysDuration200',
                 'STDPCUDARandomConnectivityHeterogeneousDelays',
                 'STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr',
                 'STDPCUDANoPostEffects',
                 'STDPEventDriven',
-                'MushroomBody'
+                'MushroomBody',
+                'StateMonitorBenchmarkCoalescedReads',
+                'StateMonitorBenchmarkUncoalescedReads',
                ])
 
 
@@ -141,10 +146,8 @@ class COBAHHUncoupled(COBAHHBase):
     """COBAHH from brian2 examples but without synapses and without monitors"""
 
     name = "COBAHH uncoupled (no synapses, no monitors)"
-    # TITAN X
-    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]  #fail: 131250000
-    # A100 40GB
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5]#, np.log10(475000000)]  #fail: 475000000 (~10**8.68)
+    # A100 with 40GB fails at 10**9, RTX2080 with 12GB fails at 10**(8.5)
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5]
     n_range = [int(10**p) for p in n_power]
     uncoupled = True
 
@@ -168,11 +171,8 @@ class COBAHHPseudocoupled1000(COBAHHBase):
     """
 
     name = "COBAHH (1000 syn/neuron, weights zero, no monitors)"
-    #n_range = [100, 500, 1000, 5000, 10000, 20000, 40000, 80000, 150000, 300000]  #pass: 384962, fail: 390235
-    # TITAN X
-    #n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, log10(384962)]  #pass: 384962, fail: 390235
-    # A100 40GB
-    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, 5.66, 6]  #pass: 1154883 (~10**6.06), fail: ?
+    # A100 with 40GB fails at 10**(6.33), RTX2080 with 12GB fails at 10**6
+    n_power = [2, 2.33, 2.66, 3, 3.33, 3.66, 4, 4.33, 4.66, 5, 5.33, 5.66, 6]
     n_range = [int(10**p) for p in n_power]
     # fixed connectivity: 1000 neurons per synapse
     p = lambda self, n: 1000. / n
@@ -293,11 +293,10 @@ class BrunelHakimHomogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with homogeneous delays (2 ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    #n_range = [100, 1000, 10000, 20000, 40000, 70000, 100000, 130000, 200000, 500000, 900000]
-    # TITAN X
-    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, log10(912500)]  #pass: 912500, fail: 925000
-    # A100
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, np.log10(2100000)]  #pass: 2100000 (~10**6.32), fail: 2200000
+    # A100 with 40GB fails at 10**(6.33), RTX2080 with 12GB fails at 10**6
+    # A100 passes with 2100000, fails with 2200000
+    # TITAN X (also 12GB) passes with 912500, failes with 925000 (old results)
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, np.log10(2100000)]
     n_range = [int(10**p) for p in n_power]
 
     # all delays 2 ms
@@ -314,11 +313,8 @@ class BrunelHakimHeterogDelays(BrunelHakimBase):
     """
     name = "Brunel Hakim with heterogeneous delays (uniform [0, 4] ms)"
     tags = ["Neurons", "Synapses", "Delays"]
-    #n_range = [100, 1000, 10000, 20000, 50000, 100000, 380000]  #pass: 389649, fail: 396484
-    # TITAN X
-    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 389649, fail: 396484
-    # A100
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]  #pass: 450000, fail: 500000 XXX: same as TITAN X?
+    # A100 with 40GB fails at 10**(6.5), RTX2080 with 12GB fails at 10**6
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6]
     n_range = [int(10**p) for p in n_power]
 
     # delays [0, 4] ms
@@ -576,9 +572,27 @@ class STDPCUDAHeterogeneousDelaysNarrowDistr(STDPCUDA):
     n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
 
 class STDPCUDARandomConnectivityHomogeneousDelays(STDPCUDAHomogeneousDelays):
+    # A100 with 40GB fails at 10**(8.5), RTX2080 with 12GB fails at 10**8
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]
+    n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
+
     connectivity_random = True
 
+# TODO: Allow changing simulation duration in `run_benchmark_suite.py`
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration50(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 50*second
+
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration100(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 100*second
+
+class STDPCUDARandomConnectivityHomogeneousDelaysDuration200(STDPCUDARandomConnectivityHomogeneousDelays):
+    duration = 200*second
+
 class STDPCUDARandomConnectivityHeterogeneousDelays(STDPCUDAHeterogeneousDelays):
+    # A100 with 40GB fails at 10**9, RTX2080 with 12GB fails at 10**(8.5)
+    n_power = [3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5]
+    n_range = [(int(10**p)//1000)*1000 for p in n_power]  # needs to be multiple of 1000
+
     connectivity_random = True
 
 class STDPCUDARandomConnectivityHeterogeneousDelaysNarrowDistr(STDPCUDAHeterogeneousDelaysNarrowDistr):
@@ -657,10 +671,8 @@ class MushroomBody(TimedSpeedTest):
     name = "Mushroom Body example from brian2GeNN benchmarks"
     tags = ["Neurons", "Synapses"]
 
-    # TITAN X
-    #n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, log10(7600000)]  # pass:7600000, fail: 7640000
-    # A100
-    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, log10(15200000)]  # pass:15200000 (~10**7.18), fail: 30400000
+    # A100 with 40GB fails at 10**8, RTX2080 with 12GB fails at 10**(7.5)
+    n_power = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5]
     n_range = [int(10**p) for p in n_power]
     n_label = 'Num neurons'
 
@@ -822,8 +834,59 @@ class MushroomBody(TimedSpeedTest):
         self.timed_run(self.duration)
 
 
+class StateMonitorBenchmarkBase(TimedSpeedTest):
+
+    category = "Monitor only"
+    tags = ["Monitors", "Neurons"]
+    n_label = "Num recorded neurons"
+    name = "StateMonitor benchmark"
+    n_power = [1, 2, 3, 4, 5, 6]
+    n_range = [int(10**p) for p in n_power]
+
+    # configuration options
+    duration = 1*second
+    coalesced_reads = None
+
+    def run(self):
+        prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host = 'v'
+
+        warp_size = 32
+        num_recorded_neurons = self.n
+        num_neurons = int(32 * 10**6)
+        G = NeuronGroup(num_neurons, 'v:1')
+        G.v = 'i'
+        assert self.coalesced_reads is not None, "Don't use base benchmark class"
+        if self.coalesced_reads:
+            # record first n neurons in neurongroup (coalesced reads on state variables)
+            record = arange(num_recorded_neurons)
+        else:
+            # record n neurons in steps of 32 (warp size -> non-coalesced reads)
+            record = arange(0, num_recorded_neurons * warp_size, warp_size)
+
+        mon = StateMonitor(G, 'v', record=record)
+
+        self.timed_run(self.duration)
+
+        prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host = None
 
 
+class StateMonitorBenchmarkCoalescedReads(StateMonitorBenchmarkBase):
+    """
+    Record a state variable from N out of 32 x 10^6 neurons with
+    consecutive neuron indices.
+    """
+    name = "StateMonitor benchmark (coalesced reads)"
+    coalesced_reads = True
+
+
+class StateMonitorBenchmarkUncoalescedReads(StateMonitorBenchmarkBase):
+    """
+    Record a state variable from N out of 32 x 10^6 neurons with
+    non-consecutive neuron indices (record every 32nd neuron with 32 being the
+    number of CUDA threads in a warp).
+    """
+    name = "StateMonitor benchmark (uncoalesced reads)"
+    coalesced_reads = False
 
 
 if __name__=='__main__':

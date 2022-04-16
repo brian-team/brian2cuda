@@ -22,6 +22,9 @@ Clock-driven implementation with exact subthreshold integration
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = None
+
 # number of neurons
 N = 4000
 
@@ -40,8 +43,9 @@ monitors = True
 # single precision
 single_precision = False
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
@@ -49,21 +53,34 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 1
+
+# number of C++ threads (default 0: single thread without OpenMP)
+# (only for devicename == 'cpp_standalone')
+cpp_threads = 0
+
+# pre or post parallelization mode in Brian2GeNN (only for devicename == 'genn')
+genn_mode = 'post'
 ###############################################################################
 ## CONFIGURATION
+from utils import set_prefs, update_from_command_line
 
+# create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
-          'N': N,
+          'seed': seed,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
+          'N': N,
+          'runtime': runtime,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
-          'num_blocks': num_blocks,
+          'partitions': partitions,
           'atomics': atomics,
-          'bundle_mode': bundle_mode}
-
-from utils import set_prefs, update_from_command_line
+          'bundle_mode': bundle_mode,
+          'cpp_threads': cpp_threads,
+          'genn_mode': genn_mode}
 
 # update params from command line
 update_from_command_line(params)
@@ -95,6 +112,9 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
+if params['seed'] is not None:
+    seed(params['seed'])
+
 taum = 20 * ms
 taue = 5 * ms
 taui = 10 * ms
@@ -125,7 +145,7 @@ Ci.connect('i>=Ne', p=0.02)
 if params['monitors']:
     s_mon = SpikeMonitor(P)
 
-run(1 * second, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file

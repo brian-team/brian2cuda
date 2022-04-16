@@ -10,8 +10,12 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 devicename = 'cuda_standalone'
 # devicename = 'cpp_standalone'
 
-# number of _synapses_ (must be multiple of 1000
-N = 1000
+# random seed for reproducible simulations
+seed = None
+
+# number of Poisson generators
+# (and also expectation value of the number of randomly connected synapses)
+N = 10000
 
 # select weather spikes effect postsynaptic neurons
 post_effects = True
@@ -34,10 +38,11 @@ codefolder = 'code'
 monitors = True
 
 # single precision
-single_precision = True
+single_precision = False
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
@@ -45,38 +50,42 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 100
+
+# number of C++ threads (default 0: single thread without OpenMP)
+# (only for devicename == 'cpp_standalone')
+cpp_threads = 0
+
+# pre or post parallelization mode in Brian2GeNN (only for devicename == 'genn')
+genn_mode = 'post'
 ###############################################################################
 ## CONFIGURATION
-from collections import OrderedDict
-
-# Create paramter dictionary that can be modified from command line
-params = OrderedDict([('devicename', devicename),
-                      ('delays', delays),
-                      ('post_effects', post_effects),
-                      ('resultsfolder', resultsfolder),
-                      ('codefolder', codefolder),
-                      ('N', N),
-                      ('profiling', profiling),
-                      ('monitors', monitors),
-                      ('single_precision', single_precision),
-                      ('num_blocks', num_blocks),
-                      ('atomics', atomics),
-                      ('bundle_mode', bundle_mode)])
-
-# Add parameter restrictions
-choices = {'devicename': ['cuda_standalone', 'cpp_standalone'],
-           'delays': ['none', 'homogeneous', 'heterogeneous']}
-
 from utils import set_prefs, update_from_command_line
+
+# create parameter dictionary that can be modified from command line
+params = {'devicename': devicename,
+          'seed': seed,
+          'delays': delays,
+          'post_effects': post_effects,
+          'resultsfolder': resultsfolder,
+          'codefolder': codefolder,
+          'N': N,
+          'runtime': runtime,
+          'profiling': profiling,
+          'monitors': monitors,
+          'single_precision': single_precision,
+          'partitions': partitions,
+          'atomics': atomics,
+          'bundle_mode': bundle_mode,
+          'cpp_threads': cpp_threads,
+          'genn_mode': genn_mode}
+
+# add parameter restrictions
+choices = {'delays': ['none', 'homogeneous', 'heterogeneous']}
 
 # update params from command line
 update_from_command_line(params, choices=choices)
-
-for key, options in choices.items():
-    param = params[key]
-    assert param in options, \
-            "Invalid option for {}: {} (choose from {}).".format(key, param,
-                                                                 options)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os
@@ -86,6 +95,11 @@ matplotlib.use('Agg')
 from brian2 import *
 if params['devicename'] == 'cuda_standalone':
     import brian2cuda
+elif params['devicename'] == 'genn':
+    import brian2genn
+    if params['profiling']:
+        prefs['devices.genn.kernel_timing'] = True
+        params['profiling'] = False
 
 # set brian2 prefs from params dict
 name = set_prefs(params, prefs)
@@ -100,11 +114,14 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
-# we draw by random K_poisson out of N_poisson (on avg.) and connect them to each post neuron
-N_poisson = 10000
+if params['seed'] is not None:
+    seed(params['seed'])
+
+# On average `K_poisson` Poisson neurons are connected to each LIF neuron
+N_poisson = params['N']
 K_poisson = 1000
 connection_probability = float(K_poisson) / N_poisson # 10% connection probability if K_poisson=1000, N_poisson=10000
-N_lif = int(params['N'] / K_poisson) # => N specifies the number of synapses or equivalently the number of neurons*1000
+N_lif = params['N'] / K_poisson
 taum = 10*ms
 taupre = 20*ms
 taupost = taupre
@@ -120,7 +137,8 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
-assert N_lif * K_poisson == params['N'] # ensure we specify the no of synapses N as a multiple of 1000
+assert params['N'] % K_poisson == 0, \
+    f"N (={N}) has to be a multiple of {K_poisson}"
 
 eqs_neurons = '''
 dv/dt = (ge * (Ee-vr) + El - v) / taum : volt
@@ -138,12 +156,12 @@ else:
     # poissongroup input that is disabled in this case
     gsyn = K_poisson * F * gmax / 2. # assuming avg weight gmax/2 which holds approx. true for the bimodal distrib.
     eqs_neurons = eqs_neurons.format('+ gsyn + sqrt(gsyn) * xi')
-    # eqs_neurons = eqs_neurons.format('')
 on_pre += '''Apre += dApre
              w = clip(w + Apost, 0, gmax)'''
 
 input = PoissonGroup(N_poisson, rates=F)
-neurons = NeuronGroup(N_lif, eqs_neurons, threshold='v>vt', reset='v = vr')
+neurons = NeuronGroup(N_lif, eqs_neurons, threshold='v>vt', reset='v = vr',
+                      method='exact')
 S = Synapses(input, neurons,
              '''w : 1
                 dApre/dt = -Apre / taupre : 1 (event-driven)
@@ -160,13 +178,12 @@ if params['delays'] == 'homogeneous':
 elif params['delays'] == 'heterogeneous':
     S.delay = "2 * 2*ms * rand()"
 
-n = 2
 if params['monitors']:
-    n = 3
-    mon = StateMonitor(S, 'w', record=[0, 1])
-    s_mon = SpikeMonitor(input)
+    weight_mon = StateMonitor(S, 'w', record=np.arange(5))
+    inp_mon = SpikeMonitor(input[:100])
+    neuron_mon = SpikeMonitor(neurons)
 
-run(100*second, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
@@ -177,22 +194,65 @@ if params['profiling']:
         profiling_file.write(str(profiling_summary()))
         print('profiling information saved in {}'.format(profilingpath))
 
-subplot(n,1,1)
-plot(S.w / gmax, '.k')
-ylabel('Weight / gmax')
-xlabel('Synapse index')
-subplot(n,1,2)
-hist(S.w / gmax, 20)
-xlabel('Weight / gmax')
+style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+plt.style.use(['seaborn-paper', style_file])
+
 if params['monitors']:
-    subplot(n,1,3)
-    plot(mon.t/second, mon.w.T/gmax)
-xlabel('Time (s)')
-ylabel('Weight / gmax')
-tight_layout()
+    # We show only the first second of activity, but show the weight development
+    # for the full runtime
+    figA, axs = plt.subplots(2, 1, sharex=True, constrained_layout=True, figsize=(7.08, 7.08/2))
+    axs[0].plot(inp_mon.t/ms, inp_mon.i, '.k')
+    axs[0].set(title="Input spikes (Poisson generator)", ylabel="Neuron ID",
+               xlim=(0, min(params['runtime'], 1)*1000))
+    axs[1].plot(neuron_mon.t/ms, neuron_mon.i, '.', color='#c53929')
+    axs[1].set(title="Leaky integrate-and-fire neurons", xlabel="Time [ms]", ylabel="Neuron ID")
+    figA.align_labels()
+
+    figB, axs = plt.subplot_mosaic("""
+    AA
+    BC
+    """, constrained_layout=True, figsize=(7.08, 7.08/2))
+    axs["A"].plot(weight_mon.t/second, weight_mon.w.T/gmax, color='dimgray')
+    axs["A"].set(title="Weight evolution examples", ylabel="$w/g_\mathrm{max}$",
+                 xlabel="Time [s]")
+    # We cannot easily record the initial weight distribution, since it is
+    # generated in the standalone code and the number of synapses is not known
+    # until the synapses have been generated in the standalone code as well.
+    # For illustration, we draw a new sample of initial weights here (the
+    # distribution is flat and not very interesting in the first place)
+    np.random.seed(params['seed'])
+    initial_weights = np.random.uniform(0, 1, size=len(S))  # relative to gmax
+
+    # we plot the final values first, to be able to use the same y limits in the
+    # first plot
+    values, _, _ = axs["C"].hist(S.w/gmax, bins=np.linspace(0, 1, 50, endpoint=True),
+                                 color='dimgray')
+    axs["C"].set(xlabel=r'$w/g_\mathrm{max}$', yticklabels=[])
+    max_value = np.max(values)
+    axs["C"].set(ylim=(1, 1.1*max_value), title=f'synaptic weights ({params["runtime"]:.0f}s)')
+    axs["B"].hist(initial_weights, bins=np.linspace(0, 1, 50, endpoint=True),
+                  color='dimgray')
+    axs["B"].set(ylim=(1, 1.1*max_value), xlabel=r'$w/g_\mathrm{max}$',
+                 title=f'synaptic weights (0s)')
+    figB.align_labels()
+else:  # we can still plot the final weight distribution
+    pass
+    subplot(2, 1, 1)
+    plot(S.w / gmax, '.k')
+    ylabel('Weight / gmax')
+    xlabel('Synapse index')
+    subplot(2, 1, 2)
+    hist(S.w / gmax, 20)
+    xlabel('Weight / gmax')
+    tight_layout()
 #show()
 
-plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-savefig(plotpath)
+plotpath = os.path.join(params['resultsfolder'], '{}_A.png'.format(name))
+figA.savefig(plotpath, dpi=300)
 print('plot saved in {}'.format(plotpath))
+
+plotpath = os.path.join(params['resultsfolder'], '{}_B.png'.format(name))
+figB.savefig(plotpath, dpi=300)
+print('plot saved in {}'.format(plotpath))
+
 print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

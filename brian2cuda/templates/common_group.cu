@@ -109,6 +109,8 @@ __launch_bounds__(1024, {{sm_multiplier}})
 _run_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
+    {% block extra_kernel_parameters %}
+    {% endblock %}
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -117,8 +119,11 @@ _run_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
+
+    {% block indices %}
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
+    {% endblock %}
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
@@ -131,12 +136,10 @@ _run_kernel_{{codeobj_name}}(
     {% block additional_variables %}
     {% endblock %}
 
-    {% block num_thread_check %}
-    if(_idx >= _N)
+    if(_vectorisation_idx >= _N)
     {
         return;
     }
-    {% endblock %}
 
     {% block kernel_maincode %}
 
@@ -179,7 +182,9 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block prepare_kernel %}
+    {% block static_kernel_dimensions %}
     static int num_threads, num_blocks;
+    {% endblock %}
     static size_t needed_shared_memory = 0;
     static bool first_run = true;
     if (first_run)
@@ -300,6 +305,8 @@ void _run_{{codeobj_name}}()
     _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
             num_threads,
+            {% block extra_host_parameters %}
+            {% endblock %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );

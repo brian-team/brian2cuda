@@ -8,14 +8,16 @@ from brian2 import *
 @pytest.mark.standalone_only
 def test_state_monitor_more_threads_than_single_block():
     set_device("cuda_standalone", directory=None)
-    # Currently, statemonitor only works for <=1024 recorded variables (#201).
-    # This is a test is to remind us of the issue.
-    G = NeuronGroup(1025, 'v:1')
+    n = 2000
+    G = NeuronGroup(n, 'v:1')
     mon = StateMonitor(G, 'v', record=True)
+    v_init = arange(n)
+    G.v = v_init
 
-    run(defaultclock.dt)
+    run(3 * defaultclock.dt)
 
-    assert_equal(mon.v, 0)
+    for t in range(3):
+        assert_equal(mon.v[:, t], v_init)
 
 
 if __name__ == '__main__':

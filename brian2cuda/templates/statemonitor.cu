@@ -1,60 +1,50 @@
-{# USES_VARIABLES { t, N } #}
+{# USES_VARIABLES { t, _indices, N } #}
 {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
 {% extends 'common_group.cu' %}
 
 {% block define_N %}
 {% endblock %}
 
-{# remove this once we have properly defined num_threads, num_blocks here... #}
-{% block occupancy %}
-{% endblock %}
-{% block update_occupancy %}
-{% endblock %}
-{% block kernel_info %}
-{% endblock %}
-
-{% block prepare_kernel_inner %}
+{# We are using block modify_kernel_dimensions for additional kernel preparation #}
+{% block modify_kernel_dimensions %}
 {% for varname, var in _recorded_variables | dictsort %}
-{% set _recorded =  get_array_name(var, access_data=False) %}
+{% set _recorded = get_array_name(var, access_data=False) %}
 addresses_monitor_{{_recorded}}.clear();
 {% endfor %}
 for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 {
     {% for varname, var in _recorded_variables | dictsort %}
-    {% set _recorded =  get_array_name(var, access_data=False) %}
-    {{_recorded}}[i].resize(_numt + num_iterations - current_iteration);
+    {% set _recorded = get_array_name(var, access_data=False) %}
+    {{_recorded}}[i].resize(_numt_host + num_iterations - current_iteration);
     addresses_monitor_{{_recorded}}.push_back(thrust::raw_pointer_cast(&{{_recorded}}[i][0]));
     {% endfor %}
 }
-// Print a warning when the monitor is not going to work (#50)
-if (_num__array_{{owner.name}}__indices > 1024)
-{
-    printf("ERROR in {{owner.name}}: Too many neurons recorded. Due to a bug (brian-team/brian2cuda#50), "
-            "currently only as many neurons can be recorded as threads can be called from a single block!\n");
-}
-{% endblock prepare_kernel_inner %}
+{% endblock modify_kernel_dimensions %}
 
 {% block host_maincode %}
-// TODO: this pushes a new value to the device each time step? Looks
-// inefficient, can we keep the t values on the host instead? Do we need them
-// on the device?
-dev_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
+// NOTE: We are using _N as the number of recorded indices here (the relevant size for
+// parallelization). This is different from `StateMonitor.N` in Python, which refers to
+// the number of recorded time steps (while `StateMonitor.n_indices` gives the number of
+// recorded indices).
+const int _N = _num_indices;
+
+// We are using an extra variable because HOST_CONSTANTS uses the device vector, which
+// is not used (TODO: Fix this in HOST_CONSTANTS instead of this hack here...)
+const int _numt_host = _dynamic_array_{{owner.name}}_t.size();
+
+// We push t only on host and don't make a device->host copy in write_arrays()
+_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
+
 // Update size variables for Python side indexing to work
-// (Note: Need to update device variable which will be copied to host in write_arrays())
-// TODO: This is one cudaMemcpy per time step, this should be done only once in the last
-// time step, fix when fixing the statemonitor (currently only works for <=1024 threads)
 _array_{{owner.name}}_N[0] += 1;
-CUDA_SAFE_CALL(
-        cudaMemcpy(dev_array_{{owner.name}}_N, _array_{{owner.name}}_N, sizeof(int32_t),
-                   cudaMemcpyHostToDevice)
-        );
 
 int num_iterations = {{owner.clock.name}}.i_end;
 int current_iteration = {{owner.clock.name}}.timestep[0];
-static int start_offset = current_iteration - _numt;
+static int start_offset = current_iteration - _numt_host;
 {% endblock host_maincode %}
 
-{% block kernel_call %}
+
+{% block extra_kernel_call %}
 // If the StateMonitor is run outside the MagicNetwork, we need to resize it.
 // Happens e.g. when StateMonitor.record_single_timestep() is called.
 if(current_iteration >= num_iterations)
@@ -63,75 +53,49 @@ if(current_iteration >= num_iterations)
     {
         {% for varname, var in _recorded_variables | dictsort %}
         {% set _recorded =  get_array_name(var, access_data=False) %}
-        {{_recorded}}[i].resize(_numt + 1);
+        {{_recorded}}[i].resize(_numt_host + 1);
         addresses_monitor_{{_recorded}}[i] = thrust::raw_pointer_cast(&{{_recorded}}[i][0]);
         {% endfor %}
     }
 }
 
-if (_num__array_{{owner.name}}__indices > 0)
 // TODO we get invalid launch configuration if this is 0, which happens e.g. for StateMonitor(..., variables=[])
+if (_num__array_{{owner.name}}__indices > 0)
 {
-    _run_kernel_{{codeobj_name}}<<<1, _num__array_{{owner.name}}__indices>>>(
-        _num__array_{{owner.name}}__indices,
-        dev_array_{{owner.name}}__indices,
-        current_iteration - start_offset,
-        {% for varname, var in _recorded_variables | dictsort %}
-        {% set _recorded =  get_array_name(var, access_data=False) %}
-        thrust::raw_pointer_cast(&addresses_monitor_{{_recorded}}[0]),
-        {% endfor %}
-        ///// HOST_PARAMETERS /////
-        %HOST_PARAMETERS%
-        );
+{% endblock extra_kernel_call %}
 
-    CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
+
+{% block extra_kernel_call_post %}
+{# Close conditional from block extra_kernel_call #}
 }
-{% endblock kernel_call %}
+{% endblock %}
 
-{% block kernel %}
-__global__ void
-{% if launch_bounds %}
-__launch_bounds__(1024, {{sm_multiplier}})
-{% endif %}
-_run_kernel_{{codeobj_name}}(
-    int _num_indices,
-    int32_t* indices,
+
+{% block indices %}
+    int _vectorisation_idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = {{_indices}}[_vectorisation_idx];
+{% endblock %}
+
+
+{% block extra_vector_code %}
+    {% for varname, var in _recorded_variables | dictsort %}
+    monitor_{{varname}}[_vectorisation_idx][current_iteration] = _to_record_{{varname}};
+    {% endfor %}
+{% endblock extra_vector_code %}
+
+
+{% block extra_kernel_parameters %}
     int current_iteration,
     {% for varname, var in _recorded_variables | dictsort %}
     {{c_data_type(var.dtype)}}** monitor_{{varname}},
     {% endfor %}
-    ///// KERNEL_PARAMETERS /////
-    %KERNEL_PARAMETERS%
-    )
-{
-    using namespace brian;
+{% endblock %}
 
-    int tid = threadIdx.x;
-    if(tid > _num_indices)
-    {
-        return;
-    }
-    int32_t _idx = indices[tid];
 
-    ///// KERNEL_CONSTANTS /////
-    %KERNEL_CONSTANTS%
-
-    ///// kernel_lines /////
-    {{kernel_lines|autoindent}}
-
-    ///// scalar_code /////
-    {{scalar_code|autoindent}}
-
-    // need different scope here since scalar_code and vector_code can
-    // declare the same variables
-    {
-        ///// vector_code /////
-        {{vector_code|autoindent}}
-
-        {% for varname, var in _recorded_variables | dictsort %}
-        {% set _recorded =  get_array_name(var, access_data=False) %}
-        monitor_{{varname}}[tid][current_iteration] = _to_record_{{varname}};
-        {% endfor %}
-    }
-}
+{% block extra_host_parameters %}
+    current_iteration - start_offset,
+    {% for varname, var in _recorded_variables | dictsort %}
+    {% set _recorded =  get_array_name(var, access_data=False) %}
+    thrust::raw_pointer_cast(&addresses_monitor_{{_recorded}}[0]),
+    {% endfor %}
 {% endblock %}
