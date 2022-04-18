@@ -995,11 +995,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
+        num_stream = max(Counter(self.stream_info).values())
         network_tmp = self.code_object_class().templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
                                                                  eventspace_arrays=self.eventspace_arrays,
                                                                  spikegenerator_eventspaces=self.spikegenerator_eventspaces,
-                                                                 stream_info=self.stream_info)
+                                                                 parallelize = True,
+                                                                 stream_info = self.stream_info,
+                                                                 num_stream= num_stream)
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):

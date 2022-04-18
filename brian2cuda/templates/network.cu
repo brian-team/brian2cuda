@@ -14,10 +14,18 @@
 
 double Network::_last_run_time = 0.0;
 double Network::_last_run_completed_fraction = 0.0;
+{% if parallelize %}
+cudaStream_t custom_stream[{{num_stream}}];
+{% endif %}
 
 Network::Network()
 {
     t = 0.0;
+    {% if parallelize %}
+    for(int i=0;i<{{num_stream}};i++){
+        CUDA_SAFE_CALL(cudaStreamCreate(&(custom_stream[i])));
+    }
+    {% endif %}
 }
 
 void Network::clear()
@@ -90,8 +98,8 @@ void Network::run(const double duration, void (*report_func)(const double, const
                 int func_group_int = std::get<2>(objects[i]);
                 if (func)  // code objects can be NULL in cases where we store just the clock
                 {
-                      //func_groups[func_group_int].push_back(func);
-                      func_groups.push_back(std::make_pair(func_group_int,func));
+                      func_groups[func_group_int].push_back(func);
+                      //func_groups.push_back(std::make_pair(func_group_int,func));
                     //func();
                     // [[func1,func2,func3],[func4...]]
                 }
@@ -101,10 +109,13 @@ void Network::run(const double duration, void (*report_func)(const double, const
         // get maximum in objects.cu array
 
         // go through each list of func group - 2 loops
-        for(int i=0; i<func_groups.size(); i++) {
-            codeobj_func func = func_groups[i].second;
-            //func(cuda_streams[i]);
-            func();
+        for(int i=0; i<func_groups.size(); i++){
+            for(int j=0; j<func_groups.size(); j++){
+                codeobj_func func = func_groups[i][j];
+                func(custom_stream[j]);
+            }
+            // reset the func group for that sub stream
+            func_groups.resize(0);
         }
 
         for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)
@@ -209,11 +220,15 @@ public:
 // TODO vectory of tuples having clock , codeobj_func and stread integer
     std::vector< std::tuple< Clock*, codeobj_func, int > > objects;
     //std::vector< std::pair< Clock*, codeobj_func > > objects;
-    std::vector<std::pair< int, codeobj_func >> func_groups;
+    std::vector<std::vector<codeobj_func >> func_groups = std::vector<std::vector<codeobj_func >>({{num_stream}});
+    //std::vector<std::pair< int, codeobj_func >> func_groups;
     double t;
     static double _last_run_time;
     static double _last_run_completed_fraction;
     int num_streams;
+    {% if parallelize %}
+    cudaStream_t custom_stream[{{num_stream}}];
+    {% endif %}
 
     Network();
     void clear();
