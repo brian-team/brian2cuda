@@ -11,3 +11,6 @@ from . import timedarray
 # TODO: Remove for release, until then debug logs by default
 from brian2.utils.logger import BrianLogger
 BrianLogger.log_level_debug()
+
+from . import _version
+__version__ = _version.get_versions()['version']

@@ -1,5 +1,6 @@
 from pathlib import Path
 from setuptools import setup, find_packages
+import versioneer
 
 # Use readme file as long description
 readme_file = Path(__file__).parent / "README.md"
@@ -7,7 +8,8 @@ long_description = readme_file.read_text()
 
 setup(
     name="brian2cuda",
-    version="0.1",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     packages=find_packages(),
     package_data={
         # include template files
