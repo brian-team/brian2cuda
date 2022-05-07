@@ -7,7 +7,7 @@ readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text()
 
 setup(
-    name="brian2cuda",
+    name="Brian2CUDA",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     packages=find_packages(),
