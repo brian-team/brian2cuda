@@ -43,7 +43,7 @@ def get_config():
     cfg = VersioneerConfig()
     cfg.VCS = "git"
     cfg.style = "pep440-pre"
-    cfg.tag_prefix = ""
+    cfg.tag_prefix = "v"
     cfg.parentdir_prefix = "brian2cuda-"
     cfg.versionfile_source = "brian2cuda/_version.py"
     cfg.verbose = False
