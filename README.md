@@ -80,5 +80,10 @@ reinstall GeNN (remove the compiled filed).
 
 Otherwise follow the instructions from the [GeNN repository](https://github.com/genn-team/genn).
 
+### Citation
+If you use this software in a published article, please cite:
+
+> Alevi, D, Stimberg, M, Sprekeler, H, Obermayer, K, Augustin, M. “Brian2CUDA: flexible and efficient simulation of spiking neural network models on GPUs” Frontiers in Neuroinformatics (2022). doi: 10.3389/fninf.2022.883700.
+
 ### License
 Brian2CUDA is free software licensed under the [GNU General Public License v3 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html).
