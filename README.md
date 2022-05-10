@@ -79,3 +79,6 @@ once. If you change you compiler or environment later on, you might have to
 reinstall GeNN (remove the compiled filed).
 
 Otherwise follow the instructions from the [GeNN repository](https://github.com/genn-team/genn).
+
+### License
+Brian2CUDA is free software licensed under the [GNU General Public License v3 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html).
