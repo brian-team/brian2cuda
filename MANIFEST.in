@@ -1,2 +1,12 @@
+# Versioneer files
 include versioneer.py
 include brian2cuda/_version.py
+
+# Documentation
+include README.md
+include CITATION.cff
+include docs_sphinx/conf.py
+include docs_sphinx/make.bat
+include docs_sphinx/Makefile
+recursive-include docs_sphinx *.rst
+prune docs_sphinx/reference  # will be generated automatically
