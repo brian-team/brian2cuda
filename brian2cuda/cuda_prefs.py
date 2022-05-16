@@ -49,7 +49,7 @@ prefs.register_preferences(
 
     parallel_blocks = BrianPreference(
         docs='''
-        The total number of parallel blocks to use. If `None`, the number of parallel
+        The total number of parallel blocks to use. If ``None``, the number of parallel
         blocks equals the number streaming multiprocessors on the GPU.
         ''',
         validator=lambda v: v is None or (isinstance(v, int) and v > 0),
@@ -57,13 +57,13 @@ prefs.register_preferences(
 
     launch_bounds=BrianPreference(
         docs='''
-        Weather or not to use `__launch_bounds__` to optimise register usage in kernels.
+        Weather or not to use ``__launch_bounds__`` to optimise register usage in kernels.
         ''',
         default=False),
 
     syn_launch_bounds=BrianPreference(
         docs='''
-        Weather or not to use `__launch_bounds__` in synapses and synapses_push to optimise register usage in kernels.
+        Weather or not to use ``__launch_bounds__`` in synapses and synapses_push to optimise register usage in kernels.
         ''',
         default=False),
 
@@ -113,35 +113,35 @@ prefs.register_preferences(
         False, each synapse of a spiking neuron is pushed in the corresponding
         queue individually. For very small bundle sizes (number of synapses
         with same delay, connected to a single neuron), pushing single Synapses
-        can be faster. This option only has effect for `Synapses` objects with
+        can be faster. This option only has effect for ``Synapses`` objects with
         heterogenous delays.''',
         default=True),
 
     threads_per_synapse_bundle=BrianPreference(
         docs='''The number of threads used per synapses bundle during effect
-        application. This has to be a string, which can be passed to Python's `eval`
-        function. The string can can use `{mean}`, `{std}`, `{max}` and `{min}`
+        application. This has to be a string, which can be passed to Python's ``eval``
+        function. The string can can use ``{mean}``, ``{std}``, ``{max}`` and ``{min}``
         expressions, which refer to the statistics across all bundles, and the function
         'ceil'. The result of this expression will be converted to the next
-        lower `int` (e.g. `1.9` will be cast to `1.0`). Examples: `'{mean} + 2 *
-        {std}'` will use the mean bunde size + 2 times the standard deviation over
+        lower ``int`` (e.g. ``1.9`` will be cast to ``1.0``). Examples: ``'{mean} + 2 *
+        {std}'`` will use the mean bunde size + 2 times the standard deviation over
         bundle sizes and round it to the next lower integer. If you want to round up
-        instead, use `'ceil({mean} + 2 * {std}'`.''',
+        instead, use ``'ceil({mean} + 2 * {std}'``.''',
         default="{max}",
         validator=validate_bundle_size_expression),
 
     bundle_threads_warp_multiple=BrianPreference(
         docs='''Whether to round the number of threads used per synapse bundle during
         effect application (see
-        ``devices.cuda_standalone.threads_per_synapse_bundle``) to a multiple of
-        the warp size. Round to next multiple if preference is `'up'`, round to
-        previous multiple if `'low'` and don't round at all if `False` (default). If
-        rounding down results in `0` threads, `1` thread is used instead.''',
+        `devices.cuda_standalone.threads_per_synapse_bundle`) to a multiple of
+        the warp size. Round to next multiple if preference is ``'up'``, round to
+        previous multiple if ``'low'`` and don't round at all if ``False`` (default). If
+        rounding down results in ``0`` threads, ``1`` thread is used instead.''',
         default=False,
         validator=lambda v: v in ['up', 'down', False]),
 
     no_pre_references=BrianPreference(
-        docs='''Set this preference if you don't need access to `i` in any
+        docs='''Set this preference if you don't need access to ``i`` in any
         synaptic code string and no Synapses object applies effects to
         presynaptic variables. This preference is for memory optimization until
         unnecassary device memory allocations in synapse creation are fixed, it
@@ -149,7 +149,7 @@ prefs.register_preferences(
         default=False),
 
     no_post_references=BrianPreference(
-        docs='''Set this preference if you don't need access to `j` in any
+        docs='''Set this preference if you don't need access to ``j`` in any
         synaptic code string and no Synapses object applies effects to
         postsynaptic variables. This preference is for memory optimization until
         unnecassary device memory allocations in synapse creation are fixed, it
@@ -191,9 +191,9 @@ prefs.register_preferences(
     gpu_heap_size = BrianPreference(
         docs='''
         Size of the heap (in MB) used by malloc() and free() device system calls, which
-        are used in the `cudaVector` implementation. `cudaVectors` are used to
-        dynamically allocate device memory for `SpikeMonitors` and the synapse
-        queues in the `CudaSpikeQueue` implementation for networks with
+        are used in the ``cudaVector`` implementation. ``cudaVectors`` are used to
+        dynamically allocate device memory for ``SpikeMonitors`` and the synapse
+        queues in the ``CudaSpikeQueue`` implementation for networks with
         heterogeneously distributed delays.
         ''',
         validator=lambda v: isinstance(v, int) and v >= 0,
@@ -201,7 +201,7 @@ prefs.register_preferences(
 
     detect_gpus=BrianPreference(
         docs='''Whether to detect names and compute capabilities of all available GPUs.
-        This needs access to `nvidia-smi` and `deviceQuery` binaries.''',
+        This needs access to ``nvidia-smi`` and ``deviceQuery`` binaries.''',
         default=True,
         validator=lambda v: isinstance(v, bool)
     ),
@@ -209,12 +209,12 @@ prefs.register_preferences(
     gpu_id=BrianPreference(
         docs='''
         The ID of the GPU that should be used for code execution. Default value is
-        `None`, in which case the GPU with the highest compute capability and lowest ID
+        ``None``, in which case the GPU with the highest compute capability and lowest ID
         is used.
 
-        If environment variable `CUDA_VISIBLE_DEVICES` is set, this preference will be
-        interpreted as ID from the visible devices (e.g. with `CUDA_VISIBLE_DEVICES=2`
-        and `gpu_id=0` preference, the GPU 2 will be used).
+        If environment variable ``CUDA_VISIBLE_DEVICES`` is set, this preference will be
+        interpreted as ID from the visible devices (e.g. with ``CUDA_VISIBLE_DEVICES=2``
+        and ``gpu_id=0`` preference, the GPU 2 will be used).
         ''',
         default=None,
         validator=lambda v: v is None or isinstance(v, int)
@@ -227,7 +227,7 @@ prefs.register_preferences(
 
     compute_capability=BrianPreference(
         docs='''Manually set the compute capability for which CUDA code will be
-        compiled. Has to be a float (e.g. `6.1`) or None. If None, compute capability is
+        compiled. Has to be a float (e.g. ``6.1``) or None. If None, compute capability is
         chosen depending on GPU in use. ''',
         validator=lambda v: v is None or isinstance(v, float),
         default=None
@@ -243,7 +243,7 @@ prefs.register_preferences(
 
     cuda_path=BrianPreference(
         docs='''The path to the CUDA installation. If set, this preferences takes
-        precedence over environment variable `CUDA_PATH`.''',
+        precedence over environment variable ``CUDA_PATH``.''',
         default=None,
         validator=lambda v: v is None or isinstance(v, str)
     ),
