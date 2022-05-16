@@ -90,7 +90,7 @@ installation directory.
 
 Brian2CUDA tries to detect your CUDA installation in the following order:
 
-    1. Use Brian2CUDA preference ` ``devices.cuda_standalone.cuda_backend.cuda_path`` `
+    1. Use Brian2CUDA preference `devices.cuda_standalone.cuda_backend.cuda_path`
     2. Use ``CUDA_PATH`` environment variable
     3. Use location of ``nvcc`` to detect CUDA installation folder (needs ``nvcc`` binary in ``PATH``)
     4. Use standard location ``/usr/local/cuda``
