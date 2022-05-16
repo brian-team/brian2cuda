@@ -25,7 +25,7 @@ jobs:
           twine upload -r testpypi dist/*
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
       - name: Publish distribution release 📦 to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/v') && github.repository == 'brian-team/brian2cuda' }}
         run: |
@@ -33,4 +33,4 @@ jobs:
           twine upload dist/*
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.pypi_password }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
