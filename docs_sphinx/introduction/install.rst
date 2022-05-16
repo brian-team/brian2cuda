@@ -5,7 +5,10 @@ Requirements
 ------------
 .. TODO check minimal compute capability support
 - `NVIDIA CUDA GPU`_ with compute capability 3.5 or larger
-- `CUDA Toolkit`_ with ``nvcc`` compiler
+- `CUDA Toolkit`_ with ``nvcc`` compiler and compiled ``deviceQuery`` binary.
+  - A compiled `deviceQuery` binary is only included and automatically detected
+    in full CUDA toolkit installations. If it is not included in your
+    installation, you can compile it manually, see ...
 - `Python`_ version 3.6 or larger
 - `Brian2`_: Each Brian2CUDA version is compatible with a specific Brian2
   version. The correct Brian2 version is installed during the Brian2CUDA
@@ -20,6 +23,7 @@ with that, check out the `Brian2 installation instructions`_.
 .. _Python: https://www.python.org/
 .. _Brian2: https://briansimulator.org/
 .. _Brian2 installation instructions: https://brian2.readthedocs.io/en/2.5.0.3/introduction/install.html
+
 
 .. _standard_install:
 Standard install
@@ -74,12 +78,30 @@ Brian2.
 
 
 .. _cuda_configuration:
-Configuration for systems with multiple GPUs or non-standard CUDA installation
-------------------------------------------------------------------------------
+Configuring the CUDA backend
+----------------------------
 
-Brian2CUDA tries to detect you CUDA installation and uses the GPU with highest
-compute capability. This section explains how you can manually set which CUDA
-installation or GPU to use or how to compile GPU code on systems without GPU.
+Brian2CUDA tries to detect your CUDA installation and uses the GPU with highest
+compute capability by default. To query information about available GPUs,
+``nvidia-smi`` (installed with NVIDIA drivers) and ``deviceQuery`` binaries are
+used. Some CUDA installations come without ``deviceQuery`` binary, in which
+case it needs to be compiled manually.
+
+This section explains how you can manually set which CUDA installation or GPU
+to use, how to manually compile ``deviceQuery`` if it is missing and how to
+cross-compile GPU code on systems without GPU access (e.g. during remote
+development).
+
+Manually compiling ``deviceQuery``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO: Download `CUDA Samples`_, compile ``deviceQuery``, set
+`devices.cuda_standalone.cuda_backend.device_query_path`
+
+TODO: Don't use deviceQuery:
+- `devices.cuda_standalone.cuda_backend.detect_gpus`
+
+.. _`CUDA Samples`: https://github.com/NVIDIA/cuda-samples/tree/master/Samples
 
 Manually specifying the CUDA installation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,13 +121,20 @@ Brian2CUDA tries to detect your CUDA installation in the following order:
 If you set the path manually via the 1. or 2. option, specify the parant path
 to ``bin/nvcc`` (e.g. ``/usr/local/cuda`` if ``nvcc`` is in ``/usr/local/cuda/bin/nvcc``).
 
+.. TODO Do we need this? Check cluster
 .. Depending on your system configuration, you may also need to set the
 .. ``LD_LIBRARY_PATH`` environment variable to ``$CUDA_PATH/lib64``.
 
-Manually selecting a GPU
-~~~~~~~~~~~~~~~~~~~~~~~~
+Manually selecting a GPU to use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- `devices.cuda_standalone.cuda_backend.gpu_id`
 
 
+Cross-compiling on systems without GPU access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- `devices.cuda_standalone.cuda_backend.detect_gpus`
+- `devices.cuda_standalone.cuda_backend.compute_capability`
+- `devices.cuda_standalone.cuda_backend.cuda_runtime_version`
 
 
 .. _testing_brian2cuda_install:
