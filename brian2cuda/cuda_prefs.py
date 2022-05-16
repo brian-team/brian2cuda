@@ -38,7 +38,7 @@ def validate_bundle_size_expression(string):
 # Preferences
 prefs.register_preferences(
     'devices.cuda_standalone',
-    'CUDA standalone preferences',
+    'Brian2CUDA preferences',
 
     SM_multiplier = BrianPreference(
         default=1,
@@ -186,7 +186,7 @@ prefs.register_preferences(
 
 prefs.register_preferences(
     'devices.cuda_standalone.cuda_backend',
-    'CUDA standalone CUDA backend preferences',
+    'Preferences for the CUDA backend in Brian2CUDA',
 
     gpu_heap_size = BrianPreference(
         docs='''
