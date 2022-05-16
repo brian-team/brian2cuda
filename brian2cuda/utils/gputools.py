@@ -179,8 +179,8 @@ def _get_cuda_path():
     cuda_path_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_path
     if cuda_path_pref is not None:
         logger.info(
-            "CUDA installation directory given via preference "
-            "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
+            f"CUDA installation directory given via preference "
+            f"`prefs.devices.cuda_standalone.cuda_backend.cuda_path={cuda_path_pref}`"
         )
         # Allow home directory as `~` in path
         cuda_path_pref = os.path.expanduser(cuda_path_pref)
@@ -205,7 +205,7 @@ def _get_cuda_path():
         )
         return (cuda_path_nvcc, 'nvcc')
 
-    # Use typical path if nothing else worked
+    # Use standard location /usr/local/cuda
     if os.path.exists("/usr/local/cuda"):
         cuda_path_usr = "/usr/local/cuda"
         logger.info(
@@ -213,11 +213,20 @@ def _get_cuda_path():
         )
         return (cuda_path_usr, 'default')
 
+    # Use standard location /opt/cuda
+    if os.path.exists("/opt/cuda"):
+        cuda_path_opt = "/opt/cuda"
+        logger.info(
+            f"CUDA installation directory found in standard location: {cuda_path_opt}"
+        )
+        return (cuda_path_opt, 'default')
+
     # Raise error if cuda path not found
     raise RuntimeError(
-        "Couldn't find the CUDA installation. Please set the environment variable "
-        "`CUDA_PATH` to point to your CUDA installation directory (this should be the "
-        "directory, where `./bin/nvcc` is located, e.g. `/usr/local/cuda`)"
+        "Couldn't find the CUDA installation. Please set the preference "
+        "`prefs.devices.cuda_standalone.cuda_backend.cuda_path` or the environment "
+        "variable `CUDA_PATH` to point to your CUDA installation directory (this "
+        "should be the directory where `./bin/nvcc` is located, e.g. `/usr/local/cuda`)"
     )
 
 
