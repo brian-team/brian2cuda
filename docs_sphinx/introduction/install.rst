@@ -74,21 +74,68 @@ Brian2.
 
 
 .. _cuda_configuration:
-Configuring
--------------------
-.. .. _testing_brian2cuda:
-.. Testing Brian2CUDA
-.. -------------
-.. 
-.. If you have the pytest_ testing utility installed, you can run Brian2CUDA's test
-.. suite::
-.. 
-..     import brian2cuda
-..     brian2cuda.test()
-.. 
-.. It should end with "OK", showing a number of skipped tests but no errors or
-.. failures. For more control about the tests that are run see the
-.. :doc:`developer documentation on testing <../developer/guidelines/testing>`.
+Configuration for systems with multiple GPUs or non-standard CUDA installation
+------------------------------------------------------------------------------
+
+Brian2CUDA tries to detect you CUDA installation and uses the GPU with highest
+compute capability. This section explains how you can manually set which CUDA
+installation or GPU to use or how to compile GPU code on systems without GPU.
+
+Manually specifying the CUDA installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you installed the `CUDA toolkit`_ in a non-standard location or if you have
+a system with multiple CUDA installations, you may need to manually specify the
+installation directory.
+
+Brian2CUDA tries to detect your CUDA installation in the following order:
+
+    1. Use Brian2CUDA preference ``devices.cuda_standalone.cuda_backend.cuda_path``
+    2. Use ``CUDA_PATH`` environment variable
+    3. Use location of ``nvcc`` to detect CUDA installation folder (needs ``nvcc`` binary in ``PATH``)
+    4. Use standard location ``/usr/local/cuda``
+    5. Use standard location ``/opt/cuda``
+
+If you set the path manually via the 1. or 2. option, specify the parant path
+to ``bin/nvcc`` (e.g. ``/usr/local/cuda`` if ``nvcc`` is in ``/usr/local/cuda/bin/nvcc``).
+
+.. Depending on your system configuration, you may also need to set the
+.. ``LD_LIBRARY_PATH`` environment variable to ``$CUDA_PATH/lib64``.
+
+Manually selecting a GPU
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-.. .. _pytest: https://docs.pytest.org/en/stable/
+
+
+.. _testing_brian2cuda_install:
+Testing your installation
+-------------------------
+You can run a short example script to see if your installation and
+configuration were successful::
+
+    import brian2cuda
+    brian2cuda.example_run()
+
+
+.. _testing_brian2cuda:
+Running the Brian2CUDA test suit
+--------------------------------
+
+If you have the pytest_ testing utility installed, you can run Brian2CUDA's test
+suite::
+
+    import brian2cuda
+    brian2cuda.test()
+
+.. TODO Let known issue tests fail
+This runs all standalone-comatible tests from the Brian2 test suite and
+additional Brian2CUDA tests (see the `Brian2 developer documentation on
+testing`_ for more details). The test suite should end with "OK", showing a
+number of skipped tests but no errors or failures. If you want to run
+individual tests instead of the entire test suite (e.g. during development),
+check out the `Brian2CUDA tools directory`_.
+
+.. _pytest: https://docs.pytest.org/en/stable/
+.. _Brian2 developer documentation on testing: https://brian2.readthedocs.io/en/stable/developer/guidelines/testing.html
+.. _Brian2CUDA tools directory: https://github.com/brian-team/brian2cuda/tree/master/brian2cuda/tools
