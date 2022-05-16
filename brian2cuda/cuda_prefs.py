@@ -113,7 +113,7 @@ prefs.register_preferences(
         False, each synapse of a spiking neuron is pushed in the corresponding
         queue individually. For very small bundle sizes (number of synapses
         with same delay, connected to a single neuron), pushing single Synapses
-        can be faster. This option only has effect for `Synapses` objects ith
+        can be faster. This option only has effect for `Synapses` objects with
         heterogenous delays.''',
         default=True),
 
@@ -123,25 +123,25 @@ prefs.register_preferences(
         function. The string can can use `{mean}`, `{std}`, `{max}` and `{min}`
         expressions, which refer to the statistics across all bundles, and the function
         'ceil'. The result of this expression will be converted to the next
-        lower `int` (e.g. `1.9` will be cast to `1.0`). Examples: ``'{mean} + 2 *
-        {std}'`` will use the mean bunde size + 2 times the standard deviation over
+        lower `int` (e.g. `1.9` will be cast to `1.0`). Examples: `'{mean} + 2 *
+        {std}'` will use the mean bunde size + 2 times the standard deviation over
         bundle sizes and round it to the next lower integer. If you want to round up
-        instead, use ``'ceil({mean} + 2 * {std}'``.''',
+        instead, use `'ceil({mean} + 2 * {std}'`.''',
         default="{max}",
         validator=validate_bundle_size_expression),
 
     bundle_threads_warp_multiple=BrianPreference(
         docs='''Whether to round the number of threads used per synapse bundle during
         effect application (see
-        ``prefs.devices.cuda_standalone.threads_per_synapse_bundle``) to a multiple of
-        the warp size. Round to next multiple if preference is ``'up'``, round to
-        previous multiple if ``'low'`` and don't round at all if ``False`` (default). If
-        rounding down results in ``0`` threads, ``1`` thread is used instead.''',
+        ``devices.cuda_standalone.threads_per_synapse_bundle``) to a multiple of
+        the warp size. Round to next multiple if preference is `'up'`, round to
+        previous multiple if `'low'` and don't round at all if `False` (default). If
+        rounding down results in `0` threads, `1` thread is used instead.''',
         default=False,
         validator=lambda v: v in ['up', 'down', False]),
 
     no_pre_references=BrianPreference(
-        docs='''Set this preference if you don't need access to ``i`` in any
+        docs='''Set this preference if you don't need access to `i` in any
         synaptic code string and no Synapses object applies effects to
         presynaptic variables. This preference is for memory optimization until
         unnecassary device memory allocations in synapse creation are fixed, it
@@ -149,7 +149,7 @@ prefs.register_preferences(
         default=False),
 
     no_post_references=BrianPreference(
-        docs='''Set this preference if you don't need access to ``j`` in any
+        docs='''Set this preference if you don't need access to `j` in any
         synaptic code string and no Synapses object applies effects to
         postsynaptic variables. This preference is for memory optimization until
         unnecassary device memory allocations in synapse creation are fixed, it
