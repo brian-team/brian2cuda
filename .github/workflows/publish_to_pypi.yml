@@ -3,7 +3,7 @@ on: [push, pull_request]
 
 jobs:
   build-n-publish:
-    name: Build packageand publish to (Test)PyPI
+    name: Build package and publish to (Test)PyPI
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
