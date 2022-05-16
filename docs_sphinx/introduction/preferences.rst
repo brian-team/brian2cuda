@@ -6,4 +6,6 @@ List of preferences
 -------------------
 
 
+.. document_brian_prefs:: devices.cuda_standalone.cuda_backend
+
 .. document_brian_prefs:: devices.cuda_standalone
