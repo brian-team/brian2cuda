@@ -53,7 +53,7 @@ do so via Brian2CUDA preference `devices.cuda_standalone.cuda_backend.gpu_id`.
    those GPUs that are visible. E.g. if you run a Brian2CUDA script with
    ``prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0`` on a system with two GPUs
    via ``CUDA_VISIBLE_DEVICES=1 python your-brian2cuda-script.py``, the simulation would
-   run on the second GPU (with ID 1, visible to Brian2CUDA as ID 0).
+   run on the second GPU (with ID ``1``, visible to Brian2CUDA as ID ``0``).
 
 
 Cross-compiling on systems without GPU access
@@ -83,7 +83,8 @@ with CUDA toolkit ``< 11.6``), this was not supported. For those versions, we us
 ``deviceQuery`` tool from the _`CUDA samples`, which is by default installed with the
 CUDA Toolkit under ``extras/demo_suite/deviceQuery`` in the CUDA installation directory.
 For some custom CUDA installations, the CUDA samples are not included, in which case
-Brian2CUDA's GPU detection fails. In that case, you have three options:
+Brian2CUDA's GPU detection fails. In that case, you have three options. Do one of the
+following:
 
 1. Update your NVIDIA driver
 2. Download the _`CUDA samples` to a folder of your choice and compile `deviceQuery`
@@ -98,7 +99,7 @@ Brian2CUDA's GPU detection fails. In that case, you have three options:
    Now set Brian2CUDA preference
    `devices.cuda_standalone.cuda_backend.device_query_path` to point to your
    ``deviceQuery`` binary.
-3. Disable automatic GPU detection (via and manually provide the GPU ID and compute
+3. Disable automatic GPU detection and manually provide the GPU ID and compute
    capability (you can find the compute capability of your GPU on
    https://developer.nvidia.com/cuda-gpus)::
 

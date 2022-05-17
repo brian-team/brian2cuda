@@ -36,5 +36,5 @@ If you use Brian2CUDA in your work, please cite:
 
 .. _Brian2: https://brian2.readthedocs.io/en/stable/index.html
 .. _Brian2 standalone device documentation: https://brian2.readthedocs.io/en/stable/user/computation.html#standalone-code-generation
-.. _Brian2 discource forum: https://brian.discourse.group/
+.. _Brian2 discourse forum: https://brian.discourse.group/
 .. _issue tracker on GitHub: https://github.com/brian-team/brian2cuda/issues?q=is%3Aopen+is%3Aissue+label%3Abug+

@@ -1,6 +1,11 @@
 Brian2cuda specific preferences
 ===============================
 
+For information on the Brian2 preference system, read `Brian2 preference
+documentation`_. The following Brian2CUDA preferences are used in the same way.
+
+.. _Brian2 preference documentation: https://brian2.readthedocs.io/en/stable/advanced/preferences.html
+
 List of preferences
 -------------------
 
