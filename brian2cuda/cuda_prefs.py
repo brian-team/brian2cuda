@@ -42,41 +42,29 @@ prefs.register_preferences(
 
     SM_multiplier = BrianPreference(
         default=1,
-        docs='''
-        The number of blocks per SM. By default, this value is set to 1.
-        ''',
+        docs='The number of blocks per SM. By default, this value is set to 1.',
         ),
 
     parallel_blocks = BrianPreference(
-        docs='''
-        The total number of parallel blocks to use. If ``None``, the number of parallel
-        blocks equals the number streaming multiprocessors on the GPU.
-        ''',
+        docs='''The total number of parallel blocks to use. If ``None``, the number of parallel
+                blocks equals the number streaming multiprocessors on the GPU.''',
         validator=lambda v: v is None or (isinstance(v, int) and v > 0),
         default=1),
 
     launch_bounds=BrianPreference(
-        docs='''
-        Weather or not to use ``__launch_bounds__`` to optimise register usage in kernels.
-        ''',
+        docs='Wether or not to use ``__launch_bounds__`` to optimise register usage in kernels.',
         default=False),
 
     syn_launch_bounds=BrianPreference(
-        docs='''
-        Weather or not to use ``__launch_bounds__`` in synapses and synapses_push to optimise register usage in kernels.
-        ''',
+        docs='Wether or not to use ``__launch_bounds__`` in synapses and synapses_push to optimise register usage in kernels.',
         default=False),
 
     calc_occupancy=BrianPreference(
-        docs='''
-        Weather or not to use cuda occupancy api to choose num_threads and num_blocks.
-        ''',
+        docs='Wether or not to use cuda occupancy api to choose num_threads and num_blocks.',
         default=True),
 
     extra_threshold_kernel=BrianPreference(
-        docs='''
-        Weather or not to use a extra threshold kernel for resetting or not.
-        ''',
+        docs='Wether or not to use a extra threshold kernel for resetting.',
         default=True),
 
     random_number_generator_type=BrianPreference(
@@ -189,13 +177,11 @@ prefs.register_preferences(
     'Preferences for the CUDA backend in Brian2CUDA',
 
     gpu_heap_size = BrianPreference(
-        docs='''
-        Size of the heap (in MB) used by malloc() and free() device system calls, which
+        docs='''Size of the heap (in MB) used by malloc() and free() device system calls, which
         are used in the ``cudaVector`` implementation. ``cudaVectors`` are used to
         dynamically allocate device memory for ``SpikeMonitors`` and the synapse
         queues in the ``CudaSpikeQueue`` implementation for networks with
-        heterogeneously distributed delays.
-        ''',
+        heterogeneously distributed delays.''',
         validator=lambda v: isinstance(v, int) and v >= 0,
         default=128),
 
@@ -207,8 +193,7 @@ prefs.register_preferences(
     ),
 
     gpu_id=BrianPreference(
-        docs='''
-        The ID of the GPU that should be used for code execution. Default value is
+        docs='''The ID of the GPU that should be used for code execution. Default value is
         ``None``, in which case the GPU with the highest compute capability and lowest ID
         is used.
 
@@ -221,7 +206,7 @@ prefs.register_preferences(
     ),
 
     extra_compile_args_nvcc=BrianPreference(
-        docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
+        docs='Extra compile arguments (a list of strings) to pass to the nvcc compiler.',
         default=['-w', '-use_fast_math']
     ),
 
@@ -249,7 +234,7 @@ prefs.register_preferences(
     ),
 
     cuda_runtime_version=BrianPreference(
-        docs='''The CUDA runtime version.''',
+        docs='The CUDA runtime version.',
         default=None,
         validator=lambda v: v is None or isinstance(v, float)
     ),
