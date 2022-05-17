@@ -35,9 +35,8 @@ If you set the path manually via the 1. or 2. option, specify the parant path
 to the ``nvcc`` binary (e.g. ``/usr/local/cuda`` if ``nvcc`` is in
 ``/usr/local/cuda/bin/nvcc``).
 
-.. TODO Do we need this? Check cluster
-.. Depending on your system configuration, you may also need to set the
-.. ``LD_LIBRARY_PATH`` environment variable to ``$CUDA_PATH/lib64``.
+Depending on your system configuration, you may also need to set the
+``LD_LIBRARY_PATH`` environment variable to ``$CUDA_PATH/lib64``.
 
 Manually selecting a GPU to use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
