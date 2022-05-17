@@ -141,10 +141,10 @@ modindex_common_prefix = ['brian2cuda.']
 
 # -- Project information -----------------------------------------------------
 
-project = 'brian2cuda'
+project = 'Brian2CUDA'
 import datetime
-copyright = '2021-{}, Brian2Cuda authors'.format(datetime.datetime.today().year)
-author = 'Brian@Cuda authors'
+copyright = '2021-{}, Brian2CUDA authors'.format(datetime.datetime.today().year)
+author = 'Brian2CUDA authors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
