@@ -5,7 +5,7 @@ Brian2CUDA is a Python package for simulating spiking neural networks on
 graphics processing units (GPUs). It is an extension of the spiking neural
 network simulator `Brian2`_, which allows flexible model definitions in Python.
 Brian2CUDA uses the code generation system from Brian2 to generate simulation
-code in C++/CUDA, which is then executed on NVIDIA graphics processing units (GPUs).
+code in C++/CUDA, which is then executed on NVIDIA GPUs.
 
 To use Brian2CUDA, add the following two lines of code to your Brian2 imports.
 This will execute your simulations on a GPU::
@@ -38,6 +38,8 @@ This will execute your simulations on a GPU::
    :titlesonly:
 
    introduction/index
+   introduction/install
+   introduction/cuda_configuration
    introduction/preferences
 
 

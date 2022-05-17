@@ -5,10 +5,7 @@ Requirements
 ------------
 .. TODO check minimal compute capability support
 - `NVIDIA CUDA GPU`_ with compute capability 3.5 or larger
-- `CUDA Toolkit`_ with ``nvcc`` compiler and compiled ``deviceQuery`` binary.
-  - A compiled `deviceQuery` binary is only included and automatically detected
-    in full CUDA toolkit installations. If it is not included in your
-    installation, you can compile it manually, see ...
+- `CUDA Toolkit`_ with ``nvcc`` compiler
 - `Python`_ version 3.6 or larger
 - `Brian2`_: Each Brian2CUDA version is compatible with a specific Brian2
   version. The correct Brian2 version is installed during the Brian2CUDA
@@ -69,21 +66,21 @@ If you have ``git`` installed, you can also install directly from github::
 
 If you want to either contribute to Brian's development or regularly test its
 latest development version, you can directly clone the git repository at github
-(https://github.com/brian-team/brian2cuda) and then run ``pip install -e .``,
-to install Brian2CUDA in "development mode". As long as the compatible Brian2
-version doesn't change, updating the git repository is in general enough to
-keep up with changes in the code, i.e. it is not necessary to install it again.
-If the compatible Brian2 versions changes though, you need to manually update
-Brian2.
+(https://github.com/brian-team/brian2cuda) and then run ``pip install -e
+/path/to/brian2cuda``, to install Brian2CUDA in "development mode". As long as
+the compatible Brian2 version doesn't change, updating the git repository is in
+general enough to keep up with changes in the code, i.e. it is not necessary to
+install it again. If the compatible Brian2 versions changes though, you need to
+manually update Brian2.
 
 
 .. _testing_brian2cuda_install:
 Testing your installation
 -------------------------
 Brian2CUDA tries to automatically detect your CUDA toolkit installation and
-choose the best GPU on your system to run simulations. To test if this
-detection and your installation were successful, you can run this a short
-example script::
+choose the newest GPU on your system to run simulations. To test if this
+detection and your installation were successful, you can run this test
+simulation::
 
     import brian2cuda
     brian2cuda.example_run()
@@ -104,10 +101,11 @@ suite::
 .. TODO Let known issue tests fail
 This runs all standalone-comatible tests from the Brian2 test suite and
 additional Brian2CUDA tests (see the `Brian2 developer documentation on
-testing`_ for more details). The test suite should end with "OK", showing a
-number of skipped tests but no errors or failures. If you want to run
-individual tests instead of the entire test suite (e.g. during development),
-check out the `Brian2CUDA tools directory`_.
+testing`_ for more details) and can take 1-2 hours, depending on your hardware. The
+test suite should end with "OK", showing a number of skipped tests but no
+errors or failures. If you want to run individual tests instead of the
+entire test suite (e.g. during development), check out the `Brian2CUDA tools
+directory`_.
 
 .. _pytest: https://docs.pytest.org/en/stable/
 .. _Brian2 developer documentation on testing: https://brian2.readthedocs.io/en/stable/developer/guidelines/testing.html
