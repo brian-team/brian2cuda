@@ -11,6 +11,10 @@ This section explains how you can manually set which CUDA installation or GPU
 to use, how to cross-compile Brian2CUDA projects on systems without GPU access (e.g.
 during remote development) and what to do when the compute capability detection fails.
 
+.. contents::
+    :local:
+    :depth: 1
+
 Manually specifying the CUDA installation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -1,7 +1,6 @@
 Brian2cuda specific preferences
 ===============================
 
-
 List of preferences
 -------------------
 

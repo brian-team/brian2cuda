@@ -10,25 +10,31 @@ code in C++/CUDA, which is then executed on NVIDIA GPUs.
 To use Brian2CUDA, add the following two lines of code to your Brian2 imports.
 This will execute your simulations on a GPU::
 
-   from brian2 import *
-   import brian2cuda
-   set_device("cuda_standalone")
+    from brian2 import *
+    import brian2cuda
+    set_device("cuda_standalone")
 
+For more details on the code generation process and settings, read the `Brian2
+standalone device documentation`_.
+
+Getting help and reporting bugs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you need help with Brian2CUDA, please use the `Brian2 discourse forum`_. If you think
+you found a bug, please report it in our `issue tracker on GitHub`_.
+
+Citing Brian2CUDA
+~~~~~~~~~~~~~~~~~
+If you use Brian2CUDA in your work, please cite:
+
+    Alevi, D., Stimberg, M., Sprekeler, H., Obermayer, K., & Augustin, M. (2022).
+    Brian2CUDA: flexible and efficient simulation of spiking neural network models on GPUs.
+    Frontiers in Neuroinformatics. https://doi.org/10.3389/fninf.2022.883700
 
 .. Ref GitHub
 .. Ref examples
 
-
-.. implements a `Brian2 standalone device`_ that generates C++/CUDA code and runs
-.. simulations on NVIDIA graphics processing units (GPUs).
-
-
-
-.. 🚧🚧🚧 This documentation is currently under construction  🚧🚧🚧
-..
-.. It will soon document the ins and outs of `Brian2CUDA
-.. <https://github.com/brian-team/brian2cuda>`_ - a Brian2 extension to simulate
-.. spiking neural networks on GPUs!
-
 .. _Brian2: https://brian2.readthedocs.io/en/stable/index.html
-.. _Brian2 standalone device: https://brian2.readthedocs.io/en/stable/user/computation.html#standalone-code-generation
+.. _Brian2 standalone device documentation: https://brian2.readthedocs.io/en/stable/user/computation.html#standalone-code-generation
+.. _Brian2 discource forum: https://brian.discourse.group/
+.. _issue tracker on GitHub: https://github.com/brian-team/brian2cuda/issues?q=is%3Aopen+is%3Aissue+label%3Abug+

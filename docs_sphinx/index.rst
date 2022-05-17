@@ -8,7 +8,9 @@ Brian2CUDA documentation
    introduction/index
    introduction/install
    introduction/cuda_configuration
+   introduction/known_issues
    introduction/preferences
+   introduction/performance
 
 
 .. toctree::

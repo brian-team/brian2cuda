@@ -1,6 +1,10 @@
 Installation
 ============
 
+.. contents::
+    :local:
+    :depth: 1
+
 Requirements
 ------------
 .. TODO check minimal compute capability support
