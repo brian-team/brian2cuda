@@ -8,6 +8,8 @@ Installation
 Requirements
 ------------
 .. TODO check minimal compute capability support
+- Linux operating system (support for Windows is planned, see
+  https://github.com/brian-team/brian2cuda/issues/225)
 - `NVIDIA CUDA GPU`_ with compute capability 3.5 or larger
 - `CUDA Toolkit`_ with ``nvcc`` compiler
 - `Python`_ version 3.6 or larger
