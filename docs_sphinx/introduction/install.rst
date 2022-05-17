@@ -77,75 +77,19 @@ If the compatible Brian2 versions changes though, you need to manually update
 Brian2.
 
 
-.. _cuda_configuration:
-Configuring the CUDA backend
-----------------------------
-
-Brian2CUDA tries to detect your CUDA installation and uses the GPU with highest
-compute capability by default. To query information about available GPUs,
-``nvidia-smi`` (installed with NVIDIA drivers) and ``deviceQuery`` binaries are
-used. Some CUDA installations come without ``deviceQuery`` binary, in which
-case it needs to be compiled manually.
-
-This section explains how you can manually set which CUDA installation or GPU
-to use, how to manually compile ``deviceQuery`` if it is missing and how to
-cross-compile GPU code on systems without GPU access (e.g. during remote
-development).
-
-Manually compiling ``deviceQuery``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-TODO: Download `CUDA Samples`_, compile ``deviceQuery``, set
-`devices.cuda_standalone.cuda_backend.device_query_path`
-
-TODO: Don't use deviceQuery:
-- `devices.cuda_standalone.cuda_backend.detect_gpus`
-
-.. _`CUDA Samples`: https://github.com/NVIDIA/cuda-samples/tree/master/Samples
-
-Manually specifying the CUDA installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you installed the `CUDA toolkit`_ in a non-standard location or if you have
-a system with multiple CUDA installations, you may need to manually specify the
-installation directory.
-
-Brian2CUDA tries to detect your CUDA installation in the following order:
-
-    1. Use Brian2CUDA preference `devices.cuda_standalone.cuda_backend.cuda_path`
-    2. Use ``CUDA_PATH`` environment variable
-    3. Use location of ``nvcc`` to detect CUDA installation folder (needs ``nvcc`` binary in ``PATH``)
-    4. Use standard location ``/usr/local/cuda``
-    5. Use standard location ``/opt/cuda``
-
-If you set the path manually via the 1. or 2. option, specify the parant path
-to ``bin/nvcc`` (e.g. ``/usr/local/cuda`` if ``nvcc`` is in ``/usr/local/cuda/bin/nvcc``).
-
-.. TODO Do we need this? Check cluster
-.. Depending on your system configuration, you may also need to set the
-.. ``LD_LIBRARY_PATH`` environment variable to ``$CUDA_PATH/lib64``.
-
-Manually selecting a GPU to use
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- `devices.cuda_standalone.cuda_backend.gpu_id`
-
-
-Cross-compiling on systems without GPU access
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- `devices.cuda_standalone.cuda_backend.detect_gpus`
-- `devices.cuda_standalone.cuda_backend.compute_capability`
-- `devices.cuda_standalone.cuda_backend.cuda_runtime_version`
-
-
 .. _testing_brian2cuda_install:
 Testing your installation
 -------------------------
-You can run a short example script to see if your installation and
-configuration were successful::
+Brian2CUDA tries to automatically detect your CUDA toolkit installation and
+choose the best GPU on your system to run simulations. To test if this
+detection and your installation were successful, you can run this a short
+example script::
 
     import brian2cuda
     brian2cuda.example_run()
 
+If the automatic CUDA and GPU detection fails or you want to manually change
+it, read :doc:`Configuring the CUDA backend <cuda_configuration>`.
 
 .. _testing_brian2cuda:
 Running the Brian2CUDA test suit
