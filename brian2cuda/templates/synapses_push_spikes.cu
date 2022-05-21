@@ -1014,7 +1014,7 @@ void _run_{{codeobj_name}}()
                 );
 
         // advance spike queues
-        _advance_kernel_{{codeobj_name}}<<<1, num_parallel_blocks>>>();
+        _advance_kernel_{{codeobj_name}}<<<1, num_parallel_blocks, 0, stream>>>();
 
         CUDA_CHECK_ERROR("_advance_kernel_{{codeobj_name}}");
 

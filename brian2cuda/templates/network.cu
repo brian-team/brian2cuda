@@ -110,12 +110,13 @@ void Network::run(const double duration, void (*report_func)(const double, const
 
         // go through each list of func group - 2 loops
         for(int i=0; i<func_groups.size(); i++){
-            for(int j=0; j<func_groups.size(); j++){
+            for(int j=0; j<func_groups[i].size(); j++){
                 codeobj_func func = func_groups[i][j];
                 func(custom_stream[j]);
             }
             // reset the func group for that sub stream
-            func_groups.resize(0);
+            cudaDeviceSynchronize();
+            func_groups[i].resize(0);
         }
 
         for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)

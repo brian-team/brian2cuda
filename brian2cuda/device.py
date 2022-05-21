@@ -377,7 +377,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if nb_threads > 0:
             raise NotImplementedError("Using OpenMP in a CUDA standalone project is not supported")
 
-    def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks,stream_info):
+    def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks, stream_info):
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -1403,15 +1403,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # associate each code object with a particular stream
         streams_details = defaultdict(list)
-        count = 0
+        count = 1
         for key in streams_organization:
             for object in streams_organization[key]:
                 streams_details[object.name] = count
             count +=1
 
         self.stream_info = streams_details
-        stream_num_max = max(self.stream_info.values())
-        self.stream_info['default'] = stream_num_max+1
+        self.stream_info['default'] = 0
 
 
 

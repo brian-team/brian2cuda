@@ -292,7 +292,7 @@ void _run_{{codeobj_name}}(cudaStream_t stream)
     {% endblock %}
 
     {% block kernel_call %}
-    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads,0,stream>>>(
+    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads, 0, stream>>>(
             _N,
             num_threads,
             ///// HOST_PARAMETERS /////

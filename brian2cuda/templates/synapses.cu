@@ -254,9 +254,10 @@ if ({{pathway.name}}_max_size > 0)
     {
         if (defaultclock.timestep[0] >= {{pathway.name}}_delay)
         {
-            cudaMemcpy(&num_spiking_neurons,
+            CUDA_SAFE_CALL(cudaMemcpyAsync(&num_spiking_neurons,
                     &dev{{_eventspace}}[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
-                    sizeof(int32_t), cudaMemcpyDeviceToHost);
+                    sizeof(int32_t), cudaMemcpyDeviceToHost, stream));
+            CUDA_SAFE_CALL(cudaStreamSynchronize(stream));
             num_blocks = num_parallel_blocks * num_spiking_neurons;
             //TODO collect info abt mean, std of num spiking neurons per time
             //step and print INFO at end of simulation
