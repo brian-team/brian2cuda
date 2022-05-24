@@ -61,7 +61,7 @@ after its last release.
 We regularly upload the latest development version of Brian2CUDA to PyPI's test
 server. You can install it via::
 
-    python -m pip install --upgrade --pre -i https://test.pypi.org/simple/ Brian2CUDA
+    python -m pip install --upgrade --pre -i https://test.pypi.org/simple/ brian2cuda
 
 Note that this requires that you already have a compatible Brian2 version and
 all of its dependencies installed.
