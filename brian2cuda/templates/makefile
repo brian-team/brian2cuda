@@ -7,7 +7,7 @@ OBJS := ${OBJS:.cpp=.o}
 OBJS := ${OBJS:.c=.o}
 NVCC = @{{ nvcc_path }} -ccbin $(CXX)
 NVCCFLAGS = -I. -std=c++11 {{gpu_arch_flags}} {{nvcc_compiler_flags}} {{compiler_debug_flags}} -Xcompiler "{{cpp_compiler_flags}}"
-LFLAGS = -lcurand -I. {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}}
+LFLAGS = -lcurand -lcudart -I. {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}}
 
 all: $(PROGRAM)
 
