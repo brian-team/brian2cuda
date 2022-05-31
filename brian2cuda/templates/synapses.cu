@@ -25,7 +25,7 @@ _run_kernel_{{codeobj_name}}(
     int threads_per_bundle,
     {% endif %}
     int32_t* eventspace,
-    {% if uses_atomics or synaptic_effects == "synapse" %}
+    {% if uses_atomics %}
     int num_spiking_neurons,
     {% else %}
     int neurongroup_size,
@@ -72,7 +72,7 @@ _run_kernel_{{codeobj_name}}(
             {
                 // `spiking_neuron_idx` runs through the eventspace
                 // `post_block_idx` runs through the post neuron blocks of the connectivity matrix
-                {% if uses_atomics or synaptic_effects == "synapse" %}
+                {% if uses_atomics %}
                 int spiking_neuron_idx = bid / num_parallel_blocks;
                 int post_block_idx = bid % num_parallel_blocks;
                 {% else %}
@@ -87,7 +87,7 @@ _run_kernel_{{codeobj_name}}(
                     // spiking_neuron is index in NeuronGroup
                     int32_t spiking_neuron = eventspace[spiking_neuron_idx];
 
-                    {% if uses_atomics or synaptic_effects == "synapse" %}
+                    {% if uses_atomics %}
                     assert(spiking_neuron != -1);
                     {% else %}
                     if(spiking_neuron == -1) // end of spiking neurons
@@ -172,36 +172,6 @@ static int num_threads_per_bundle;
 static int num_loops;
 {% endblock %}
 
-{% block extra_device_helper %}
-int getThreadsPerBundle(){
-    {# Allow using std functions (ceil, floor...) in
-       prefs.device.cuda_standalone.threads_per_synapse_bundle #}
-    using namespace std;
-    using namespace brian;
-    int threads_per_bundle = static_cast<int>({{threads_per_synapse_bundle}});
-    {% if bundle_threads_warp_multiple %}
-    int multiple = threads_per_bundle / num_threads_per_warp;
-    {% if bundle_threads_warp_multiple == 'up' %}
-    int remainder = threads_per_bundle % num_threads_per_warp;
-    if (remainder != 0){
-        // if remainder is 0, just use thread_per_bundle as is
-        // round up to next multiple of warp size
-        threads_per_bundle = (multiple + 1) * num_threads_per_warp;
-    }
-    {% elif bundle_threads_warp_multiple == 'down' %}
-    // ignore remainder, round down to next muptiple of warp size
-    threads_per_bundle = multiple * num_threads_per_warp;
-    {% endif %}
-    {% endif %}
-
-    if (threads_per_bundle < 1){
-        threads_per_bundle = 1;
-    }
-    return threads_per_bundle;
-}
-{% endblock extra_device_helper %}
-
-
 {% block prepare_kernel_inner %}
 {#######################################################################}
 {% if uses_atomics or synaptic_effects == "synapse" %}
@@ -212,14 +182,13 @@ int getThreadsPerBundle(){
 {% endif %}
 num_blocks = num_parallel_blocks;
 num_threads = max_threads_per_block;
+// TODO: effect of mean instead of max?
 {% if bundle_mode %}
-//num_threads_per_bundle = {{pathway.name}}_bundle_size_max;
-num_threads_per_bundle = getThreadsPerBundle();
-printf("INFO _run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_threads_per_bundle);
+num_threads_per_bundle = {{pathway.name}}_max_bundle_size;
 {% endif %}
 num_loops = 1;
 
-{% elif synaptic_effects == "target" %}{# not uses_atomics #}
+{% elif synaptic_effects == "target" %}
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
 num_loops = 1;
@@ -229,9 +198,7 @@ if (!{{owner.name}}_multiple_pre_post){
         num_threads = max_threads_per_block;
     {% if bundle_mode %}
     else  // heterogeneous delays
-        // Since we can only parallelize within each bundle, we use as many threads as
-        // the maximum bundle size
-        num_threads = {{pathway.name}}_bundle_size_max;
+        num_threads = {{pathway.name}}_max_bundle_size;
     {% endif %}
 }
 else {
@@ -279,7 +246,7 @@ else if ({{pathway.name}}_max_size <= 0)
 // only call kernel if we have synapses (otherwise we skipped the push kernel)
 if ({{pathway.name}}_max_size > 0)
 {
-    {% if uses_atomics or synaptic_effects == "synapse" %}
+    {% if uses_atomics %}
     int32_t num_spiking_neurons;
     // we only need the number of spiking neurons if we parallelise effect
     // application over spiking neurons in homogeneous delay mode
@@ -287,9 +254,10 @@ if ({{pathway.name}}_max_size > 0)
     {
         if (defaultclock.timestep[0] >= {{pathway.name}}_delay)
         {
-            cudaMemcpy(&num_spiking_neurons,
+            CUDA_SAFE_CALL(cudaMemcpyAsync(&num_spiking_neurons,
                     &dev{{_eventspace}}[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
-                    sizeof(int32_t), cudaMemcpyDeviceToHost);
+                    sizeof(int32_t), cudaMemcpyDeviceToHost, stream));
+            CUDA_SAFE_CALL(cudaStreamSynchronize(stream));
             num_blocks = num_parallel_blocks * num_spiking_neurons;
             //TODO collect info abt mean, std of num spiking neurons per time
             //step and print INFO at end of simulation
@@ -309,7 +277,7 @@ if ({{pathway.name}}_max_size > 0)
                 num_threads_per_bundle,
                 {% endif %}
                 dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
-                {% if uses_atomics or synaptic_effects == "synapse" %}
+                {% if uses_atomics %}
                 num_spiking_neurons,
                 {% else %}
                 _num_{{_eventspace}}-1,
@@ -318,7 +286,7 @@ if ({{pathway.name}}_max_size > 0)
                 %HOST_PARAMETERS%
             );
         }
-    {% if uses_atomics or synaptic_effects == "synapse" %}
+    {% if uses_atomics %}
     }
     {% endif %}
 

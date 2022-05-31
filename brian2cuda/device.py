@@ -78,11 +78,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.include_dirs.remove('brianlib/randomkit')
         self.library_dirs.remove('brianlib/randomkit')
 
-        # Add code line slots used in our benchmarks
-        # TODO: Add to brian2 and remove here
-        self.code_lines.update({'before_network_run': [],
-                                'after_network_run': []})
-
         ### Attributes specific to CUDAStandaloneDevice:
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
@@ -94,6 +89,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # list of pre/post ID arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
+        # dictionary to store parallalelization information
+        self.stream_info = {}
         # The following nested dictionary collects all codeobjects that use random
         # number generation (RNG).
         self.codeobjects_with_rng = {
@@ -351,18 +348,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Using atomics in synaptic effect application of Synapses object "
                     f"{name}"
                 )
-            threads_expr = prefs.devices.cuda_standalone.threads_per_synapse_bundle
-            pathway_name = template_kwds['pathway'].name
-            replace_expr = {
-                '{mean}': f'{pathway_name}_bundle_size_mean',
-                '{std}': f'{pathway_name}_bundle_size_std',
-                '{min}': f'{pathway_name}_bundle_size_min',
-                '{max}': f'{pathway_name}_bundle_size_max',
-            }
-            for old, new in replace_expr.items():
-                threads_expr = threads_expr.replace(old, new)
-            template_kwds["threads_per_synapse_bundle"] = threads_expr
-            template_kwds["bundle_threads_warp_multiple"] = prefs.devices.cuda_standalone.bundle_threads_warp_multiple
         if template_name in ["synapses_create_generator", "synapses_create_array"]:
             if owner.multisynaptic_index is not None:
                 template_kwds["multisynaptic_idx_var"] = owner.variables[owner.multisynaptic_index]
@@ -376,6 +361,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         template_kwds["sm_multiplier"] = prefs["devices.cuda_standalone.SM_multiplier"]
         template_kwds["syn_launch_bounds"] = prefs["devices.cuda_standalone.syn_launch_bounds"]
         template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
+        template_kwds["stream_info"] = self.stream_info
         if template_name in ["threshold", "spikegenerator"]:
             template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
@@ -391,7 +377,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if nb_threads > 0:
             raise NotImplementedError("Using OpenMP in a CUDA standalone project is not supported")
 
-    def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
+    def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks, stream_info):
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -410,6 +396,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for syn in synapses:
             if syn.multisynaptic_index is not None:
                 multisyn_vars.append(syn.variables[syn.multisynaptic_index])
+        # get number of unique streams
+
+        num_stream = max(Counter(stream_info).values())
         arr_tmp = self.code_object_class().templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -433,7 +422,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects,
-                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host)
+                        parallelize=True,
+                        stream_size=num_stream)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -463,7 +453,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # For codeobjects run every tick, this happens in the init() of
                         # the random number buffer called at first clock cycle of the network
                         main_lines.append('random_number_buffer.ensure_enough_curand_states();')
-                main_lines.append(f'_run_{codeobj.name}();')
+                # add stream - default
+                main_lines.append(f'_run_{codeobj.name}(0);')
             elif func == 'after_run_code_object':
                 codeobj, = args
                 main_lines.append(f'_after_run_{codeobj.name}();')
@@ -944,13 +935,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 sub = 't - lastupdate'
                 if sub in code:
                     code = code.replace(sub, f'float({sub})')
-                    logger.debug(f"Replaced {sub} with float({sub}) in {codeobj.name}")
+                    logger.debug(f"Replaced {sub} with float({sub}) in {codeobj}")
                 # replace double-precision floating-point literals with their
                 # single-precision version (e.g. `1.0` -> `1.0f`)
                 code = replace_floating_point_literals(code)
                 logger.debug(
                     f"Replaced floating point literals by single precision version "
-                    f"(appending `f`) in {codeobj.name}."
+                    f"(appending `f`) in {codeobj}."
                 )
 
             writer.write('code_objects/'+codeobj.name+'.cu', code)
@@ -1004,10 +995,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
+        num_stream = max(Counter(self.stream_info).values())
         network_tmp = self.code_object_class().templater.network(None, None,
                                                                  maximum_run_time=maximum_run_time,
                                                                  eventspace_arrays=self.eventspace_arrays,
-                                                                 spikegenerator_eventspaces=self.spikegenerator_eventspaces)
+                                                                 spikegenerator_eventspaces=self.spikegenerator_eventspaces,
+                                                                 parallelize = True,
+                                                                 stream_info = self.stream_info,
+                                                                 num_stream= num_stream)
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
@@ -1328,7 +1323,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.generate_objects_source(self.writer, self.arange_arrays,
                                      net_synapses, self.static_array_specs,
-                                     self.networks)
+                                     self.networks, self.stream_info)
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
         self.generate_run_source(self.writer)
@@ -1354,6 +1349,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
                 logger.info(f"\t{pref_name} = {prefs[pref_name]}")
+
+        logger.debug("Using the following brian preferences:")
+        for pref_name in prefs:
+            if pref_name not in prefs:
+                logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
@@ -1394,6 +1394,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.clocks.update(net._clocks)
         net.t_ = float(t_end)
+
+
+        # Create dictionary for parallelisation with stream
+        streams_organization = defaultdict(list)
+        for obj in net.sorted_objects:
+            streams_organization[(obj.when, obj.order)].append(obj)
+
+        # associate each code object with a particular stream
+        streams_details = defaultdict(list)
+        count = 1
+        for key in streams_organization:
+            for object in streams_organization[key]:
+                streams_details[object.name] = count
+            count +=1
+
+        self.stream_info = streams_details
+        self.stream_info['default'] = 0
+
+
 
         # TODO: remove this horrible hack
         for clock in self.clocks:
@@ -1529,11 +1548,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # create all random numbers needed for the next clock cycle
         for clock in net._clocks:
-            run_lines.append(f'{net.name}.add(&{clock.name}, _run_random_number_buffer);')
+            run_lines.append(f'{net.name}.add(&{clock.name}, _run_random_number_buffer, {self.stream_info["default"]});')
 
         all_clocks = set()
+        # TODO add for every code object ->  add where in the list are there.
+        # TODO create new dic (code object, position in list)
         for clock, codeobj in code_objects:
-            run_lines.append(f'{net.name}.add(&{clock.name}, _run_{codeobj.name});')
+            # add this position as additional number here
+            # check if codeobj.name has _codeobject in it
+            name = codeobj.name
+            if "_codeobject" in codeobj.name:
+                name = codeobj.name[:-11]
+            if name in self.stream_info.keys():
+                run_lines.append(f'{net.name}.add(&{clock.name}, _run_{codeobj.name}, {self.stream_info[name]});')
+            else:
+                run_lines.append(f'{net.name}.add(&{clock.name}, _run_{codeobj.name}, {self.stream_info["default"]});')
             all_clocks.add(clock)
 
         # Under some rare circumstances (e.g. a NeuronGroup only defining a
@@ -1558,12 +1587,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # release version? (TODO: add via insert_code mechanism)
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
 
-        run_lines.extend(self.code_lines['before_network_run'])
+        run_lines.extend(self.code_lines['before_run'])
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
-        run_lines.extend(self.code_lines['after_network_run'])
+        run_lines.extend(self.code_lines['after_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff

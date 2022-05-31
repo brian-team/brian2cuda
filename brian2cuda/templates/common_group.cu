@@ -63,8 +63,8 @@ namespace {
        (e.g. _host_rand used in _poisson), but we can't put support_code_lines lines
        after block random_functions since random_functions can use functions defined in
        support_code_lines (e.g. _rand) #}
-    randomNumber_t _host_rand(const int _vectorisation_idx);
-    randomNumber_t _host_randn(const int _vectorisation_idx);
+    double _host_rand(const int _vectorisation_idx);
+    double _host_randn(const int _vectorisation_idx);
     int32_t _host_poisson(double _lambda, const int _vectorisation_idx);
 
     ///// block extra_device_helper /////
@@ -77,13 +77,13 @@ namespace {
     {% block random_functions %}
     // Implement dummy functions such that the host compiled code of binomial
     // functions works. Hacky, hacky ...
-    randomNumber_t _host_rand(const int _vectorisation_idx)
+    double _host_rand(const int _vectorisation_idx)
     {
         printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
-    randomNumber_t _host_randn(const int _vectorisation_idx)
+    double _host_randn(const int _vectorisation_idx)
     {
         printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
                 __LINE__);
@@ -109,8 +109,6 @@ __launch_bounds__(1024, {{sm_multiplier}})
 _run_kernel_{{codeobj_name}}(
     int _N,
     int THREADS_PER_BLOCK,
-    {% block extra_kernel_parameters %}
-    {% endblock %}
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -119,11 +117,8 @@ _run_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-
-    {% block indices %}
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
-    {% endblock %}
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
@@ -136,10 +131,12 @@ _run_kernel_{{codeobj_name}}(
     {% block additional_variables %}
     {% endblock %}
 
-    if(_vectorisation_idx >= _N)
+    {% block num_thread_check %}
+    if(_idx >= _N)
     {
         return;
     }
+    {% endblock %}
 
     {% block kernel_maincode %}
 
@@ -158,7 +155,7 @@ _run_kernel_{{codeobj_name}}(
 {% endblock kernel %}
 
 
-void _run_{{codeobj_name}}()
+void _run_{{codeobj_name}}(cudaStream_t stream)
 {
     using namespace brian;
 
@@ -182,9 +179,7 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block prepare_kernel %}
-    {% block static_kernel_dimensions %}
     static int num_threads, num_blocks;
-    {% endblock %}
     static size_t needed_shared_memory = 0;
     static bool first_run = true;
     if (first_run)
@@ -273,11 +268,9 @@ void _run_{{codeobj_name}}()
         else
         {
             printf("INFO _run_kernel_{{codeobj_name}}\n"
-                   {% block kernel_info_num_blocks_str %}
                    "\t%u blocks\n"
-                   {% endblock %}
                    "\t%u threads\n"
-                   "\t%i registers per thread\n"
+                   "\t%i registers per block\n"
                    "\t%i bytes statically-allocated shared memory per block\n"
                    "\t%i bytes local memory per thread\n"
                    "\t%i bytes user-allocated constant memory\n"
@@ -286,10 +279,7 @@ void _run_{{codeobj_name}}()
                    {% else %}
                    "",
                    {% endif %}
-                   {% block kernel_info_num_blocks_var %}
-                   num_blocks,
-                   {% endblock %}
-                   num_threads, funcAttrib.numRegs,
+                   num_blocks, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes{% if calc_occupancy %}, occupancy{% endif %});
         }
@@ -302,11 +292,9 @@ void _run_{{codeobj_name}}()
     {% endblock %}
 
     {% block kernel_call %}
-    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
+    _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads, 0, stream>>>(
             _N,
             num_threads,
-            {% block extra_host_parameters %}
-            {% endblock %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
@@ -338,7 +326,7 @@ void _run_{{codeobj_name}}()
 #ifndef _INCLUDED_{{codeobj_name}}
 #define _INCLUDED_{{codeobj_name}}
 
-void _run_{{codeobj_name}}();
+void _run_{{codeobj_name}}(cudaStream_t);
 
 {% block extra_functions_h %}
 {% endblock %}
@@ -374,7 +362,7 @@ void _after_run_{{codeobj_name}}()
 }
 {% endmacro %}
 
-
+// {{codeobj_name}}
 {% macro after_run_h_file() %}
 #ifndef _INCLUDED_{{codeobj_name}}_after
 #define _INCLUDED_{{codeobj_name}}_affer

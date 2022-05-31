@@ -44,8 +44,9 @@ namespace {
 
 
 // need a function pointer for Network::add(), can't pass a pointer to a class
-// method, which is of different type
-void _run_random_number_buffer()
+// method, which is of different type. Random number buffer runs in default
+// stream always, the `stream` parameter is not used.
+void _run_random_number_buffer(cudaStream_t stream)
 {
     // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
     random_number_buffer.next_time_step();
@@ -472,7 +473,7 @@ void RandomNumberBuffer::next_time_step()
 
 #include <curand.h>
 
-void _run_random_number_buffer();
+void _run_random_number_buffer(cudaStream_t);
 
 class RandomNumberBuffer
 {
