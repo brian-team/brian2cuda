@@ -73,7 +73,7 @@ CUDA_SAFE_CALL(
             )
         );
 
-{# TODO: Use isintance instead (needs to be made available in Jinja templates #}
+{# TODO: Use isintance instead (needs to be made available in Jinja templates) #}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
 // Count the elements in eventspace that are in the subgroup
 thrust::device_ptr<int32_t> _dev_eventspace(_eventspace);

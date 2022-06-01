@@ -1,6 +1,6 @@
 import pytest
 
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
 from brian2 import *
 
 
@@ -39,7 +39,7 @@ def test_spike_monitor_subgroups_all_attr():
     assert_allclose(spikes_1.i, [0])
     assert_allclose(spikes_1.t, [0]*ms)
     assert_allclose(spikes_1.count, [1, 0])
-    assert_allclose(spikes_1.N, 2)
+    assert_allclose(spikes_1.N, 1)
 
     assert len(spikes_2.i) == 0
     assert len(spikes_2.t) == 0
@@ -48,8 +48,8 @@ def test_spike_monitor_subgroups_all_attr():
 
     assert_allclose(spikes_3.i, [0, 1])  # recorded spike indices are relative
     assert_allclose(spikes_3.t, [0, 0] * ms)
-    assert_allclose(spikes_1.count, [1, 1])
-    assert_allclose(spikes_1.N, 2)
+    assert_allclose(spikes_3.count, [1, 1])
+    assert_allclose(spikes_3.N, 2)
 
 if __name__ == '__main__':
     import brian2cuda
