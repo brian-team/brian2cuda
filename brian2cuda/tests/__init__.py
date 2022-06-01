@@ -8,6 +8,7 @@ from brian2 import prefs
 import brian2cuda
 
 # TODO fail_for_not_implemented should probably be False, and update docs
+# TODO test disable_compiler_optim=True
 def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences=True,
         fail_for_not_implemented=True, test_in_parallel=False, build_options=None,
         extra_test_dirs=None, float_dtype=None, quiet=True, debug=False,
