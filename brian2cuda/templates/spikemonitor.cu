@@ -165,13 +165,12 @@ _array_{{owner.name}}_N[0] += _N;
 
 
 {% block kernel_maincode %}
-{% set _eventspace = get_array_name(eventspace_variable) %}
 {# We pass as _eventspace the filtered eventspace, such that all neuron IDs are
    within the subgroup (if this is one). We take care of that with the
    thrust::copy_if above. #}
 
 // Eventspace is filled from left with all neuron IDs that triggered an event, rest -1
-int32_t spiking_neuron = {{_eventspace}}[_idx];
+int32_t spiking_neuron = _eventspace[_idx];
 assert(spiking_neuron != -1);
 
 int _monitor_idx = _vectorisation_idx + _monitor_size;
