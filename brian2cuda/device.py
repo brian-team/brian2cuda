@@ -25,6 +25,8 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
+from brian2.monitors import SpikeMonitor
+from brian2.groups import Subgroup
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
@@ -410,6 +412,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for syn in synapses:
             if syn.multisynaptic_index is not None:
                 multisyn_vars.append(syn.variables[syn.multisynaptic_index])
+        subgroups_with_spikemonitor = set()
+        for codeobj in self.code_objects.values():
+            if isinstance(codeobj.owner, SpikeMonitor):
+                if isinstance(codeobj.owner.source, Subgroup):
+                    subgroups_with_spikemonitor.add(codeobj.owner.source.name)
         arr_tmp = self.code_object_class().templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -433,7 +440,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects,
-                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host)
+                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host,
+                        subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor))
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)

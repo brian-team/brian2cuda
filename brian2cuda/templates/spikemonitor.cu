@@ -43,7 +43,7 @@ int num_events, num_blocks;
 {% if record_variables %}
 // Initialize device vector for subgroup eventspace
 THRUST_CHECK_ERROR(
-    _dev_{{owner.source.name}}_subgroup_eventspace.resize(_num_source_idx)
+    _dev_{{owner.source.name}}_eventspace.resize(_num_source_idx)
 );
 {% endif %}{# not record_variables #}
 {% endif %}{# Subgroup #}
@@ -90,12 +90,12 @@ THRUST_CHECK_ERROR(
     thrust::copy_if(
         _dev_eventspace,
         _dev_eventspace + _num_events,
-        _dev_{{owner.source.name}}_subgroup_eventspace.begin(),
+        _dev_{{owner.source.name}}_eventspace.begin(),
         is_in_subgroup()
     )
 );
 // Use same kernel as without subgroups on copied subgroup eventspace
-_eventspace = thrust::raw_pointer_cast(&_dev_{{owner.source.name}}_subgroup_eventspace[0]);
+_eventspace = thrust::raw_pointer_cast(&_dev_{{owner.source.name}}_eventspace[0]);
 {% endif %}{# not record_variables #}
 {% else %}{# not is_subgroup #}
 // Get the number of events

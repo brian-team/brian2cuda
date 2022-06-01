@@ -59,15 +59,9 @@ int brian::previous_idx{{varname}};
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {% endfor %}
-
-
-{# Some quick hack to declare a device vector for spikemonitors on subgroups #}
-{% for var, varname in array_specs | dictsort(by='value') %}
-{% if not var in dynamic_array_specs %}
-{% if (var.owner.__class__.__name__ == 'SpikeMonitor' and var.name == 'N') %}
-thrust::device_vector<int32_t> brian::_dev_{{var.owner.source.name}}_subgroup_eventspace;
-{% endif %}
-{% endif %}
+{# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
+{% for varname in subgroups_with_spikemonitor %}
+thrust::device_vector<int32_t> brian::_dev_{{varname}}_eventspace;
 {% endfor %}
 
 //////////////// dynamic arrays 2d /////////
@@ -561,13 +555,8 @@ void _dealloc_arrays()
     {% endif %}
     {% endfor %}
 
-    {# Some quick hack for device vector for spikemonitors on subgroups #}
-    {% for var, varname in array_specs | dictsort(by='value') %}
-    {% if not var in dynamic_array_specs %}
-    {% if (var.owner.__class__.__name__ == 'SpikeMonitor' and var.name == 'N') %}
-    thrust::device_vector<int32_t>().swap(_dev_{{var.owner.source.name}}_subgroup_eventspace);
-    {% endif %}
-    {% endif %}
+    {% for varname in subgroups_with_spikemonitor %}
+    thrust::device_vector<int32_t>().swap(_dev_{{varname}}_eventspace);
     {% endfor %}
 
 }
@@ -616,6 +605,9 @@ extern Network {{net.name}};
 extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
 {% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
+{% endfor %}
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -624,9 +616,6 @@ extern {{c_data_type(var.dtype)}} * {{varname}};
 extern {{c_data_type(var.dtype)}} * dev{{varname}};
 extern __device__ {{c_data_type(var.dtype)}} *d{{varname}};
 extern const int _num_{{varname}};
-{% if (var.owner.__class__.__name__ == 'SpikeMonitor' and var.name == 'N') %}
-extern thrust::device_vector<int32_t> _dev_{{var.owner.source.name}}_subgroup_eventspace;
-{% endif %}
 {% endif %}
 {% endfor %}
 
