@@ -270,10 +270,10 @@ class PrintBuffer(object):
         """
         Parameters
         ----------
-        clusterbot : ClusterBot
+        clusterbot : ClusterBot, optional
             ClusterBot instance that sends messages to Slack. If None
             (default), messages will only be printed to stdout (using print).
-        disable_print : bool
+        disable_print : bool, optional
             If `True`, don't print anything.
         """
         self._lines = []
