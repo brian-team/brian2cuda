@@ -1584,18 +1584,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if clock not in all_clocks:
                 run_lines.append(f'{net.name}.add(&{clock.name}, NULL);')
 
-        # In our benchmark scripts we run one example `nvprof` run,
-        # which is informative especially when not running in profile
-        # mode. In order to have the `nvprof` call only profile the
-        # kernels which are run every timestep, we add
-        # `cudaProfilerStart()`, `cudaDeviceSynchronize()` and
-        # `cudaProfilerStop()`. But this might be confusing for anybody
-        # who runs `nvprof` on their generated code, since it will not
-        # report any profiling info about kernels, that initialise
-        # things only once in the beginning? Maybe get rid of it in a
-        # release version? (TODO: add via insert_code mechanism)
-        run_lines.append('CUDA_SAFE_CALL(cudaProfilerStart());')
-
         run_lines.extend(self.code_lines['before_network_run'])
         # run everything that is run on a clock
         run_lines.append(
@@ -1604,9 +1592,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         run_lines.extend(self.code_lines['after_network_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
-        # nvprof stuff
-        run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
-        run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')
 
         self.main_queue.append(('run_network', (net, run_lines)))
 
