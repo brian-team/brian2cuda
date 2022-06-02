@@ -7,9 +7,8 @@ import brian2
 from brian2 import prefs
 import brian2cuda
 
-# TODO fail_for_not_implemented should probably be False, and update docs
 def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences=True,
-        fail_for_not_implemented=True, test_in_parallel=False, build_options=None,
+        fail_for_not_implemented=False, test_in_parallel=False, build_options=None,
         extra_test_dirs=None, float_dtype=None, quiet=True, debug=False,
         additional_args=[], threads=None):
     """
@@ -37,8 +36,8 @@ def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences
         necessary to pass the tests (e.g. for device-specific settings).
     fail_for_not_implemented : bool, optional
         Whether to fail for tests raising a `NotImplementedError`. Defaults to
-        ``True``, but can be switched off for devices known to not implement
-        all of Brian's features.
+        ``False``, because some of the Brian2 tests can't pass in Brian2CUDA due to the
+        way the tests are implemented.
     test_in_parallel : bool, optional
         Whether to run multiple tests in parallel (requires ``xdist`` installed). If
         ``True``, use all available CPU threads to run one test per thread in parallel.
