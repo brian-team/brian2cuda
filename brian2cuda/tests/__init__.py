@@ -8,11 +8,10 @@ from brian2 import prefs
 import brian2cuda
 
 # TODO fail_for_not_implemented should probably be False, and update docs
-# TODO test disable_compiler_optim=True
 def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences=True,
         fail_for_not_implemented=True, test_in_parallel=False, build_options=None,
         extra_test_dirs=None, float_dtype=None, quiet=True, debug=False,
-        additional_args=[], disable_compiler_optim=False, threads=None):
+        additional_args=[], threads=None):
     """
     Run the brian2cuda test suite. This includes all standalone-compatible tests from
     the brian2 test suite. Needs an installation of the pytest testing tool.
@@ -117,18 +116,6 @@ def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences
 
     # Surpress warnings from nvcc compiler
     nvcc_compiler_args = ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
-    if disable_compiler_optim:
-        print('Disabling compiler optimizations for fast compilation')
-        # Switch off code optimization to get faster compilation times
-        nvcc_compiler_args.extend([
-                # Passed to host compiler
-                '-O0',
-                # Disable cuda code optimizations
-                '-Xcicc -O0',
-                '-Xptxas -O0',
-            ]
-        )
-
 
     # Set number of threads for parallel compilation
     if threads is not None:
