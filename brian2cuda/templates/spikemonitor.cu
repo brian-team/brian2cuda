@@ -40,12 +40,10 @@ int num_events, num_blocks;
 
 {% block modify_kernel_dimensions %}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-{% if record_variables %}
 // Initialize device vector for subgroup eventspace
 THRUST_CHECK_ERROR(
     _dev_{{owner.source.name}}_eventspace.resize(_num_source_idx)
 );
-{% endif %}{# not record_variables #}
 {% endif %}{# Subgroup #}
 {% endblock %}
 
@@ -84,7 +82,6 @@ THRUST_CHECK_ERROR(
         is_in_subgroup()
     )
 );
-{% if record_variables %}
 // Copy all neuron IDs that are in this subgroup to the new device pointer
 THRUST_CHECK_ERROR(
     thrust::copy_if(
@@ -96,13 +93,12 @@ THRUST_CHECK_ERROR(
 );
 // Use same kernel as without subgroups on copied subgroup eventspace
 _eventspace = thrust::raw_pointer_cast(&_dev_{{owner.source.name}}_eventspace[0]);
-{% endif %}{# not record_variables #}
 {% else %}{# not is_subgroup #}
 // Get the number of events
 _N = _num_events;
 {% endif %}{# is_subgroup #}
 
-{# If we don't record variables, we don't need the kernel, only count the events #}
+{# If we don't record variables, we don't need to resize the monitor vectors #}
 {% if record_variables %}
 {# Get any item to read the size (we need to resize before HOST_CONSTANTS
    because the pointers underlying the device vectors change when resizing
@@ -119,6 +115,7 @@ THRUST_CHECK_ERROR(
         {{dev_array_name}}.resize(_monitor_size + _N)
         );
 {% endfor %}
+{% endif %}{# not record_variables #}
 
 // Round up number of blocks according to number of events
 num_blocks = (_N + num_threads - 1) / num_threads;
@@ -129,7 +126,9 @@ if (_N > 0)
     _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
             num_threads,
+            {% if record_variables %}
             _monitor_size,
+            {% endif %}
             _eventspace,
             {# We need to get a new raw_pointer_cast because the thrust vectors
                were resized, which changes the underlying data pointer if memory
@@ -144,9 +143,6 @@ if (_N > 0)
 
     CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 }
-{% else %}{# not record_variables #}
-// No variables to record, only counting events
-{% endif %}
 
 // Increase total number of events in monitor
 _array_{{owner.name}}_N[0] += _N;
@@ -155,7 +151,9 @@ _array_{{owner.name}}_N[0] += _N;
 
 {# Add _eventspace manually as it can be the copied event space for subgroups #}
 {% block extra_kernel_parameters %}
+        {% if record_variables %}
         int _monitor_size,
+        {% endif %}
         int32_t* _eventspace,
         {% for varname, var in record_variables.items() %}
         {% set _array_name = get_array_name(var) %}
@@ -173,7 +171,9 @@ _array_{{owner.name}}_N[0] += _N;
 int32_t spiking_neuron = _eventspace[_idx];
 assert(spiking_neuron != -1);
 
+{% if record_variables %}
 int _monitor_idx = _vectorisation_idx + _monitor_size;
+{% endif %}
 _idx = spiking_neuron;
 _vectorisation_idx = _idx;
 
