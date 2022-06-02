@@ -59,6 +59,10 @@ int brian::previous_idx{{varname}};
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {% endfor %}
+{# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
+{% for varname in subgroups_with_spikemonitor %}
+thrust::device_vector<int32_t> brian::_dev_{{varname}}_eventspace;
+{% endfor %}
 
 //////////////// dynamic arrays 2d /////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
@@ -356,8 +360,8 @@ void _write_arrays()
                 or var in dynamic_array_2d_specs
                 or var in static_array_specs
               ) %}
-    {# Don't copy StateMonitor's N variables, which are modified on host only #}
-    {% if not (var.owner.__class__.__name__ == 'StateMonitor' and var.name == 'N') %}
+    {# Don't copy State- & SpikeMonitor's N variables, which are modified on host only #}
+    {% if not (var.owner.__class__.__name__ in ['StateMonitor', 'SpikeMonitor'] and var.name == 'N') %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
@@ -551,6 +555,10 @@ void _dealloc_arrays()
     {% endif %}
     {% endfor %}
 
+    {% for varname in subgroups_with_spikemonitor %}
+    thrust::device_vector<int32_t>().swap(_dev_{{varname}}_eventspace);
+    {% endfor %}
+
 }
 
 {% endmacro %}
@@ -592,10 +600,13 @@ extern Clock {{clock.name}};
 extern Network {{net.name}};
 {% endfor %}
 
-//////////////// dynamic arrays ///////////
+//////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
 {% endfor %}
 
 //////////////// arrays ///////////////////
