@@ -25,7 +25,7 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
-from brian2.monitors import SpikeMonitor
+from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
 from brian2.groups import Subgroup
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
@@ -417,6 +417,34 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if isinstance(codeobj.owner, SpikeMonitor):
                 if isinstance(codeobj.owner.source, Subgroup):
                     subgroups_with_spikemonitor.add(codeobj.owner.source.name)
+        # Collect all variables that are stored on host and should not be copied from
+        # device to host at the end of the simulation
+        variables_on_host_only = []
+        for var in self.arrays.keys():
+            try:
+                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+            except ReferenceError:
+                # some variable ownders are weakreference that don't exist anymore
+                # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
+                continue
+            if is_mon and var.name == 'N':
+                variables_on_host_only.append(var)
+        for var in self.dynamic_arrays.keys():
+            varnames = ['delay', '_synaptic_pre', '_synaptic_post']
+            try:
+                is_monitor_t = isinstance(var.owner, StateMonitor) and var.name == 't'
+            except ReferenceError:
+                continue
+            if var in multisyn_vars or var.name in varnames or is_monitor_t:
+                variables_on_host_only.append(var)
+        profile_statemonitor_copy_to_host = prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host
+        profile_statemonitor_vars = []
+        for var in self.dynamic_arrays_2d.keys():
+            is_statemon = isinstance(var.owner, StateMonitor)
+            if (profile_statemonitor_copy_to_host
+                    and isinstance(var.owner, StateMonitor)
+                    and var.name == profile_statemonitor_copy_to_host):
+                profile_statemonitor_vars.append(var)
         arr_tmp = self.code_object_class().templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -440,8 +468,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects,
-                        profile_statemonitor_copy_to_host=prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host,
-                        subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor))
+                        profile_statemonitor_copy_to_host=profile_statemonitor_copy_to_host,
+                        profile_statemonitor_vars=profile_statemonitor_vars,
+                        subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor),
+                        variables_on_host_only=variables_on_host_only)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
