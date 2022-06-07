@@ -126,6 +126,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # `lambda`, sorted by codeobj.name and poisson_name (`poisson-<idx>`):
         #   all_poisson_lamdas[codeobj.name][poisson_name] = lamda
         self.all_poisson_lamdas = defaultdict(dict)
+        # List of multisynaptic index variables (for all Synapses with multisynaptic
+        # index)
+        self.multisyn_vars = []
+        # List of names of all variables which are only required on host and will not
+        # be copied to device memory
+        self.variables_on_host_only = []
 
     def get_array_name(self, var, access_data=True, prefix=None):
         '''
@@ -408,35 +414,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     self.spikegenerator_eventspaces.append(varname)
         for var in self.eventspace_arrays.keys():
             del self.arrays[var]
-        multisyn_vars = []
-        for syn in synapses:
-            if syn.multisynaptic_index is not None:
-                multisyn_vars.append(syn.variables[syn.multisynaptic_index])
         subgroups_with_spikemonitor = set()
         for codeobj in self.code_objects.values():
             if isinstance(codeobj.owner, SpikeMonitor):
                 if isinstance(codeobj.owner.source, Subgroup):
                     subgroups_with_spikemonitor.add(codeobj.owner.source.name)
-        # Collect all variables that are stored on host and should not be copied from
-        # device to host at the end of the simulation
-        variables_on_host_only = []
-        for var in self.arrays.keys():
-            try:
-                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
-            except ReferenceError:
-                # some variable ownders are weakreference that don't exist anymore
-                # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
-                continue
-            if is_mon and var.name == 'N':
-                variables_on_host_only.append(var)
-        for var in self.dynamic_arrays.keys():
-            varnames = ['delay', '_synaptic_pre', '_synaptic_post']
-            try:
-                is_monitor_t = isinstance(var.owner, StateMonitor) and var.name == 't'
-            except ReferenceError:
-                continue
-            if var in multisyn_vars or var.name in varnames or is_monitor_t:
-                variables_on_host_only.append(var)
         profile_statemonitor_copy_to_host = prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host
         profile_statemonitor_vars = []
         for var in self.dynamic_arrays_2d.keys():
@@ -466,12 +448,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         curand_float_type=c_data_type(prefs['core.default_float_dtype']),
                         eventspace_arrays=self.eventspace_arrays,
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
-                        multisynaptic_idx_vars=multisyn_vars,
+                        multisynaptic_idx_vars=self.multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects,
                         profile_statemonitor_copy_to_host=profile_statemonitor_copy_to_host,
                         profile_statemonitor_vars=profile_statemonitor_vars,
                         subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor),
-                        variables_on_host_only=variables_on_host_only)
+                        variables_on_host_only=self.variables_on_host_only)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
         writer.write('objects.*', arr_tmp)
@@ -1345,6 +1327,39 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                              'standalone mode, the following name(s) were used '
                              'more than once: %s' % formatted_names)
 
+        net_synapses = [s for net in self.networks
+                        for s in net.objects
+                        if isinstance(s, Synapses)]
+
+        # Collect all multisynaptic indices in all Synapses (that have them)
+        self.multisyn_vars = []
+        for syn in net_synapses:
+            if syn.multisynaptic_index is not None:
+                self.multisyn_vars.append(syn.variables[syn.multisynaptic_index])
+
+        # Collect all variables that are stored on host only and should not be copied
+        # from device to host at all (e.g. when set by constant or array or at the end
+        # of the simulation)
+        self.variables_on_host_only = []
+        for var, varname in self.arrays.items():
+            try:
+                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+            except ReferenceError:
+                # some variable ownders are weakreference that don't exist anymore
+                # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
+                continue
+            if is_mon and var.name == 'N':
+                # The size variable of monitors is managed on host via device vectors
+                self.variables_on_host_only.append(varname)
+        for var, varname in self.dynamic_arrays.items():
+            varnames = ['delay', '_synaptic_pre', '_synaptic_post']
+            try:
+                is_monitor_t = isinstance(var.owner, StateMonitor) and var.name == 't'
+            except ReferenceError:
+                continue
+            if var in self.multisyn_vars or var.name in varnames or is_monitor_t:
+                self.variables_on_host_only.append(varname)
+
         self.generate_main_source(self.writer)
 
         # Create lists of codobjects using rand, randn, poisson or binomial across all
@@ -1359,10 +1374,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 self.codeobjects_with_rng["host_api"]["all_runs"][key].extend(run_codeobj[key])
 
         self.generate_codeobj_source(self.writer)
-
-        net_synapses = [s for net in self.networks
-                        for s in net.objects
-                        if isinstance(s, Synapses)]
 
         self.generate_objects_source(self.writer, self.arange_arrays,
                                      net_synapses, self.static_array_specs,

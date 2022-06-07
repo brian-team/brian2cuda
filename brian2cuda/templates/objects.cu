@@ -361,7 +361,7 @@ void _write_arrays()
                 or var in static_array_specs
               ) %}
     {# Don't copy State-, Spike- & EventMonitor's N variables, which are modified on host only #}
-    {% if var not in variables_on_host_only %}
+    {% if varname not in variables_on_host_only %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
@@ -381,7 +381,7 @@ void _write_arrays()
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
     {# TODO: pass isinstance to Jinja template to make it available here #}
-    {% if var not in variables_on_host_only %}
+    {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};
