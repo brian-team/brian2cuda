@@ -518,20 +518,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname += f'[current_idx{arrayname}]'
                 if is_dynamic:
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                # Set on host
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
                     {{
                         {arrayname}[i] = {rendered_value};
                     }}
-                    CUDA_SAFE_CALL(
-                        cudaMemcpy(
-                            {pointer_arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*{size_str},
-                            cudaMemcpyHostToDevice
-                        )
-                    );
                 '''
+                if arrayname not in self.variables_on_host_only:
+                    # Copy to device
+                    code += f'''
+                        CUDA_SAFE_CALL(
+                            cudaMemcpy(
+                                {pointer_arrayname},
+                                &{arrayname}[0],
+                                sizeof({arrayname}[0])*{size_str},
+                                cudaMemcpyHostToDevice
+                            )
+                        );
+                    '''
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
@@ -540,17 +545,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     pointer_arrayname += f'[current_idx{arrayname}]'
                 if arrayname in self.dynamic_arrays.values():
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                code = f'''
-                    {arrayname}[{item}] = {value};
-                    CUDA_SAFE_CALL(
-                        cudaMemcpy(
-                            {pointer_arrayname} + {item},
-                            &{arrayname}[{item}],
-                            sizeof({arrayname}[{item}]),
-                            cudaMemcpyHostToDevice
-                        )
-                    );
-                '''
+                # Set on host
+                code = f"{arrayname}[{item}] = {value};"
+                if arrayname not in self.variables_on_host_only:
+                    # Copy to device
+                    code += f'''
+                        CUDA_SAFE_CALL(
+                            cudaMemcpy(
+                                {pointer_arrayname} + {item},
+                                &{arrayname}[{item}],
+                                sizeof({arrayname}[{item}]),
+                                cudaMemcpyHostToDevice
+                            )
+                        );
+                    '''
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
@@ -560,37 +568,47 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname in self.dynamic_arrays.values():
                     pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname}; i++)
                     {{
                         {arrayname}[i] = {staticarrayname}[i];
                     }}
-                    CUDA_SAFE_CALL(
-                        cudaMemcpy(
-                            {pointer_arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*{size_str},
-                            cudaMemcpyHostToDevice
-                        )
-                    );
                 '''
+                if arrayname not in self.variables_on_host_only:
+                    # Copy to device
+                    code += f'''
+                        CUDA_SAFE_CALL(
+                            cudaMemcpy(
+                                {pointer_arrayname},
+                                &{arrayname}[0],
+                                sizeof({arrayname}[0])*{size_str},
+                                cudaMemcpyHostToDevice
+                            )
+                        );
+                    '''
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
+                # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname_index}; i++)
                     {{
                         {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
                     }}
-                    CUDA_SAFE_CALL(
-                        cudaMemcpy(
-                            dev{arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*_num_{arrayname},
-                            cudaMemcpyHostToDevice
-                        )
-                    );
                 '''
+                if arrayname not in self.variables_on_host_only:
+                    # Copy to device
+                    code += f'''
+                        CUDA_SAFE_CALL(
+                            cudaMemcpy(
+                                dev{arrayname},
+                                &{arrayname}[0],
+                                sizeof({arrayname}[0])*_num_{arrayname},
+                                cudaMemcpyHostToDevice
+                            )
+                        );
+                    '''
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
