@@ -68,25 +68,27 @@ def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences
         all available threads. Using more threads requires more CPU RAM.
     """
 
-    version = brian2cuda.__version__
-    path = brian2cuda.__file__
-    print(f"Running Brian2CUDA version {version} from '{path}'")
+    b2c_dir = os.path.abspath(os.path.dirname(brian2cuda.__file__))
+    print(f"Running Brian2CUDA version {brian2cuda.__version__} from {b2c_dir}")
 
-    brian2cuda_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    brian2cuda_tests_dir = os.path.abspath(os.path.dirname(__file__))
     if extra_test_dirs is None:
-        extra_test_dirs = [brian2cuda_dir]
+        extra_test_dirs = [brian2cuda_tests_dir]
     elif isinstance(extra_test_dirs, str):
-        extra_test_dirs = [brian2cuda_dir, extra_test_dirs]
+        extra_test_dirs = [brian2cuda_tests_dir, extra_test_dirs]
     else:
-        extra_test_dirs = [brian2cuda_dir, *extra_test_dirs]
+        extra_test_dirs = [brian2cuda_tests_dir, *extra_test_dirs]
 
-    # Set confcutdir, such that all `conftest.py` files inside the brian2 and brian2cuda
-    # directories are loaded (this overwrites confcutdir set in brian2's `make_argv`,
-    # which stops searching for `conftest.py` files outside the `brian2` directory)
+    pytest_rootdir = os.path.dirname(b2c_dir)
     pytest_args = [
+        # Set the pytest rootdir such that we know the node paths for --deselect
+        f'--rootdir={pytest_rootdir}',
+        # Set confcutdir, such that all `conftest.py` files inside the brian2 and
+        # brian2cuda directories are loaded (this overwrites confcutdir set in brian2's
+        # `make_argv`, which stops searching for `conftest.py` files outside the
+        # `brian2` directory)
         f'--confcutdir={os.path.commonpath([brian2.__file__, brian2cuda.__file__])}',
     ]
-    #pytest_args = []
 
     if quiet:
         # set verbosity to max(?)
@@ -105,6 +107,20 @@ def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences
 
     if build_options:
         extra_build_options.update(**build_options)
+
+    # Deselect some tests from the brian2 test suite
+    ignore_brian2_tests = [
+        # These tests assert on the number of warning and fail because of warnings
+        # from brian2cuda (fixed versions of these tests are added to the brian2cuda
+        # test suite)
+        'tests/test_neurongroup.py::test_semantics_floor_division'
+    ]
+    for test in ignore_brian2_tests:
+        test_abspath = os.path.abspath(
+            os.path.join(os.path.dirname(brian2.__file__), test)
+        )
+        test_nodeid = os.path.relpath(test_abspath, pytest_rootdir)
+        additional_args += ['--deselect', test_nodeid]
 
     pytest_args += additional_args
 
