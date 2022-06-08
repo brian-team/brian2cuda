@@ -463,7 +463,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         procedures = [('', main_lines)]
         runfuncs = {}
         run_counter = 0
+        delays_modified = defaultdict(set)
         for func, args in self.main_queue:
+            name, _ = args
+            if name in self.delay_variables:
+                # For each delay variable that will be modified, store how many run
+                # calls happened before
+                delays_modified[name].add(run_counter)
+
             if func=='before_run_code_object':
                 codeobj, = args
                 main_lines.append('_before_run_%s();' % codeobj.name)
@@ -509,6 +516,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             main_lines.extend(stripped_deindented_lines(code))
                 main_lines.extend(netcode)
                 run_counter += 1
+                # Copy delay variable back to device if we are modifying it between this
+                # and the next run call
+                for arrayname, run_counter_set in delays_modified.items():
+                    if run_counter in run_counter_set:
+                        # delay variables are dynamic arrays
+                        pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                        size_str = f"{arrayname}.size()"
+                        code = f'''
+                            CUDA_SAFE_CALL(
+                                cudaMemcpy(
+                                    {pointer_arrayname},
+                                    &{arrayname}[0],
+                                    sizeof({arrayname}[0])*{size_str},
+                                    cudaMemcpyHostToDevice
+                                )
+                            );
+                        '''
+                        main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
                 size_str = f"{arrayname}.size()" if is_dynamic else f"_num_{arrayname}"
