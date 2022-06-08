@@ -26,6 +26,9 @@ def test_changing_delay_scalar():
 
     device.build(direct_call=False, **device.build_options)
 
+    # Note: The monitor runs first in each time step, hence only records variables from
+    #       the previous time step (the spike in the first time step arrives in the
+    #       second time step and is only recorded in the third time step
     # mon.v[i, t]
     assert_allclose(mon.v[:], [[0, 0, 1, 1, 2, 3]])
 

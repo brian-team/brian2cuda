@@ -377,10 +377,6 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     if (scalar_delay)
         {{owner.name}}_delay = max_delay;
     {% endif %}
-    // Delete delay (in sec) on device, we don't need it
-    // TODO: don't copy these delays to the device in first place, see #83
-    dev{{_dynamic_delay}}.clear();
-    dev{{_dynamic_delay}}.shrink_to_fit();
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_after_dealloc = used_device_memory;
 

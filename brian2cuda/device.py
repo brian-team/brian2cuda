@@ -93,9 +93,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # store the ID of the used GPU and it's compute capability
         self.gpu_id = None
         self.compute_capability = None
-        # list of pre/post ID arrays that are not needed in device memory
+        # list of pre/post ID and delay arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
+        self.delete_synaptic_delay = {}
         # The following nested dictionary collects all codeobjects that use random
         # number generation (RNG).
         self.codeobjects_with_rng = {
@@ -283,16 +284,25 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # If deleted, they will be deleted on the device in `run_lines` (see below)
         synapses_object_every_tick = False
         synapses_object_single_tick_after_run = False
+        synapses_object_single_tick_after_run_with_delay = False
         if isinstance(owner, Synapses):
             if template_name in ['synapses', 'stateupdate', 'summed_variable']:
                 synapses_object_every_tick = True
             if not self.first_run and template_name in ['group_variable_set_conditional', 'group_variable_set']:
                 synapses_object_single_tick_after_run = True
+                if 'delay' in owner.variables:
+                    # delay variables can't be accessed in Synapses model code, hence we
+                    # only care about single tick code objects (setting delay values)
+                    synapses_object_single_tick_after_run_with_delay = True
         if synapses_object_every_tick or synapses_object_single_tick_after_run:
             read, write = self.get_array_read_write(abstract_code, variables)
             read_write = read.union(write)
-            synaptic_pre_array_name = self.get_array_name(owner.variables['_synaptic_pre'], False)
-            synaptic_post_array_name = self.get_array_name(owner.variables['_synaptic_post'], False)
+            synaptic_pre_array_name = self.get_array_name(
+                owner.variables['_synaptic_pre'], access_data=False
+            )
+            synaptic_post_array_name = self.get_array_name(
+                owner.variables['_synaptic_post'], access_data=False
+            )
             if synaptic_pre_array_name not in self.delete_synaptic_pre.keys():
                 self.delete_synaptic_pre[synaptic_pre_array_name] = True
             if synaptic_post_array_name not in self.delete_synaptic_post.keys():
@@ -301,7 +311,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                          "was set to True, but {prepost}synaptic index is "
                          "needed for variable {varname} in {owner.name}")
             # Check for all variable that are read or written to if they are
-            # i/j or their indices are pre/post
+            # i/j or their indices are pre/post, and check if they are delays
             for varname in variables.keys():
                 if varname in read_write:
                     idx = variable_indices[varname]
@@ -317,6 +327,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             raise PreferenceError(error_msg.format(prepost='post',
                                                                    varname=varname,
                                                                    owner=owner))
+                    # delay
+                    if synapses_object_single_tick_after_run_with_delay and varname == 'delay':
+                        synaptic_delay_array_name = self.get_array_name(
+                            owner.variables['delay'], access_data=False
+                        )
+                        self.delete_synaptic_delay[synaptic_delay_array_name] = False
             # Summed variables need the indices of their target variable, which
             # are not in the read_write set.
             if template_name == 'summed_variable':
@@ -490,24 +506,35 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='run_network':
                 net, netcode = args
                 if run_counter == 0:
-                    # These lines delete `i`/`j` variables stored per synapse. They need to be called after
-                    # synapses_initialise_queue codeobjects, therefore just before the network creation, so I
-                    # put them here
-                    for synaptic_pre, boolean in self.delete_synaptic_pre.items():
-                        if boolean:
+                    # These lines delete `i`/`j`/`delay` variables stored per synapse.
+                    # They need to be called after before_run_synapses_push_spikes
+                    # codeobjects, therefore just before the network creation, so I put
+                    # them here
+                    # TODO: Move this into before_run_synapses_push_spikes
+                    for synaptic_pre, delete in self.delete_synaptic_pre.items():
+                        if delete:
                             code = f'''
                                 dev{synaptic_pre}.clear();
                                 dev{synaptic_pre}.shrink_to_fit();
                             '''
                             main_lines.extend(stripped_deindented_lines(code))
-                    for synaptic_post, boolean in self.delete_synaptic_post.items():
-                        if boolean:
+                    for synaptic_post, delete in self.delete_synaptic_post.items():
+                        if delete:
                             code = f'''
                                 dev{synaptic_post}.clear();
                                 dev{synaptic_post}.shrink_to_fit();
                             '''
                             main_lines.extend(stripped_deindented_lines(code))
+                    for synaptic_delay, delete in self.delete_synaptic_delay.items():
+                        if delete:
+                            code = f'''
+                                dev{synaptic_delay}.clear();
+                                dev{synaptic_delay}.shrink_to_fit();
+                            '''
+                            main_lines.extend(stripped_deindented_lines(code))
+                # The actual network code
                 main_lines.extend(netcode)
+                # Increment run counter
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
@@ -1370,13 +1397,22 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # The size variable of monitors is managed on host via device vectors
                 self.variables_on_host_only.append(varname)
         for var, varname in self.dynamic_arrays.items():
-            varnames = ['delay', '_synaptic_pre', '_synaptic_post']
+            varnames = ['_synaptic_pre', '_synaptic_post']
             try:
+                # TODO: Manage Spike- & EventMonitor t also on host (modify template)
                 is_monitor_t = isinstance(var.owner, StateMonitor) and var.name == 't'
             except ReferenceError:
                 continue
             if var in self.multisyn_vars or var.name in varnames or is_monitor_t:
                 self.variables_on_host_only.append(varname)
+
+            if var.name == 'delay':
+                # By default, delete all delay variables after
+                # before_run_synapses_push_spikes, but only those that weren't already
+                # set to be deleted during variable set calls (in
+                # self.variableview_set_with_index_array and self.fill_with_array)
+                if varname not in self.delete_synaptic_delay:
+                    self.delete_synaptic_delay[varname] = True
 
         self.generate_main_source(self.writer)
 
@@ -1637,7 +1673,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
                 for key in codeobj.variables.keys():
                     if key.endswith('space'):  # get the correct eventspace name
-                        eventspace_name = self.get_array_name(codeobj.variables[key], False)
+                        eventspace_name = self.get_array_name(codeobj.variables[key],
+                                                              access_data=False)
                         # In case of custom scheduling, the thresholder might come after synapses or monitors
                         # and needs to be initialized in the beginning of the simulation
 
@@ -1669,6 +1706,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.build(direct_call=False, **self.build_options)
 
         self.first_run = False
+
+    def fill_with_array(self, var, *args, **kwargs):
+        # If the delay variable is set after the first run call, do not delete it on the
+        # device (which is happening by default)
+        if not self.first_run and var.name == 'delay':
+            synaptic_delay_array_name = self.get_array_name(var, access_data=False)
+            self.delete_synaptic_delay[synaptic_delay_array_name] = False
+        super().fill_with_array(var, *args, **kwargs)
+
+    def variableview_set_with_index_array(self, variableview, *args, **kwargs):
+        # If the delay variable is set after the first run call, do not delete it on the
+        # device (which is happening by default)
+        if not self.first_run and variableview.name == 'delay':
+            synaptic_delay_array_name = self.get_array_name(variableview.variable,
+                                                            access_data=False)
+            self.delete_synaptic_delay[synaptic_delay_array_name] = False
+        super().variableview_set_with_index_array(variableview, *args, **kwargs)
+
 
     def network_store(self, net, *args, **kwds):
         raise NotImplementedError(('The store/restore mechanism is not '
