@@ -26,13 +26,19 @@
 
 
 {% block extra_kernel_call_post %}
-    {% for var in variables.values() %}
     {# We want to copy only those variables that were potentially modified in aboves kernel call. #}
-    {% if var is not callable and var.array and not var.constant and not var.dynamic %}
-    {% set varname = get_array_name(var, access_data=False) %}
+    {% for var, varname in written_variables.items() %}
+    {% if var.dynamic %}
+    {{varname}} = dev{{varname}};
+    {% else %}
     CUDA_SAFE_CALL(
-            cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
-            );
+        cudaMemcpy(
+            {{varname}},
+            dev{{varname}},
+            sizeof({{c_data_type(var.dtype)}})*_num_{{varname}},
+            cudaMemcpyDeviceToHost
+        )
+    );
     {% endif %}
     {% endfor %}
 {% endblock %}
