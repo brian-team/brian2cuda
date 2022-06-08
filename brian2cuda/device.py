@@ -284,16 +284,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # If deleted, they will be deleted on the device in `run_lines` (see below)
         synapses_object_every_tick = False
         synapses_object_single_tick_after_run = False
-        synapses_object_single_tick_after_run_with_delay = False
+        group_variable_set_templates = ['group_variable_set_conditional', 'group_variable_set']
         if isinstance(owner, Synapses):
             if template_name in ['synapses', 'stateupdate', 'summed_variable']:
                 synapses_object_every_tick = True
-            if not self.first_run and template_name in ['group_variable_set_conditional', 'group_variable_set']:
+            if not self.first_run and template_name in group_variable_set_templates:
                 synapses_object_single_tick_after_run = True
-                if 'delay' in owner.variables:
-                    # delay variables can't be accessed in Synapses model code, hence we
-                    # only care about single tick code objects (setting delay values)
-                    synapses_object_single_tick_after_run_with_delay = True
         if synapses_object_every_tick or synapses_object_single_tick_after_run:
             read, write = self.get_array_read_write(abstract_code, variables)
             read_write = read.union(write)
@@ -311,7 +307,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                          "was set to True, but {prepost}synaptic index is "
                          "needed for variable {varname} in {owner.name}")
             # Check for all variable that are read or written to if they are
-            # i/j or their indices are pre/post, and check if they are delays
+            # i/j or their indices are pre/post
             for varname in variables.keys():
                 if varname in read_write:
                     idx = variable_indices[varname]
@@ -327,12 +323,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             raise PreferenceError(error_msg.format(prepost='post',
                                                                    varname=varname,
                                                                    owner=owner))
-                    # delay
-                    if synapses_object_single_tick_after_run_with_delay and varname == 'delay':
-                        synaptic_delay_array_name = self.get_array_name(
-                            owner.variables['delay'], access_data=False
-                        )
-                        self.delete_synaptic_delay[synaptic_delay_array_name] = False
             # Summed variables need the indices of their target variable, which
             # are not in the read_write set.
             if template_name == 'summed_variable':
@@ -352,6 +342,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                owner=owner))
                 if idx == '_syaptic_post':
                     self.delete_synaptic_post[synaptic_post_array_name] = False
+        # Do a similar check for the delay variables. These can't be modified in
+        # Synapses model code, so we only care about single tick objects (setting
+        # delay values)
+        if (
+            not self.first_run
+            and 'delay' in owner.variables
+            and isinstance(owner, SynapticPathway)
+            and template_name in group_variable_set_templates
+        ):
+            read, write = self.get_array_read_write(abstract_code, variables)
+            read_write = read.union(write)
+            varname = owner.variables['delay'].name
+            if varname in read_write:
+                synaptic_delay_array_name = self.get_array_name(
+                    owner.variables['delay'], access_data=False
+                )
+                self.delete_synaptic_delay[synaptic_delay_array_name] = False
+
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
