@@ -1396,6 +1396,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if is_mon and var.name == 'N':
                 # The size variable of monitors is managed on host via device vectors
                 self.variables_on_host_only.append(varname)
+            if var.name in ('t', 'dt', 'timestep'):
+                # We manage time variables on host and pass them by value to kernels
+                self.variables_on_host_only.append(varname)
         for var, varname in self.dynamic_arrays.items():
             varnames = ['_synaptic_pre', '_synaptic_post']
             try:
