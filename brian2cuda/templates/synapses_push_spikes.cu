@@ -184,12 +184,6 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // number of neurons in target group
     int target_N = {{constant_or_scalar('_n_targets', variables['_n_targets'])}};
 
-    // TODO: for multiple SynapticPathways for the same Synapses object (on_pre and on_post) the following copy is identical in both pathways initialise templates
-    {% if not no_or_const_delay_mode %}
-    // delay (on device) was potentially set in group_variable_set_conditional and needs to be copied to host
-    {{_dynamic_delay}} = dev{{_dynamic_delay}};
-    {% endif %}
-
     //////////////////////
     // Scalar variables //
     //////////////////////
