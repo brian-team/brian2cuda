@@ -120,10 +120,8 @@ _run_kernel_{{codeobj_name}}(
     int tid = threadIdx.x;
     int bid = blockIdx.x;
 
-    {% block indices %}
     int _idx = bid * THREADS_PER_BLOCK + tid;
     int _vectorisation_idx = _idx;
-    {% endblock %}
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
@@ -140,6 +138,9 @@ _run_kernel_{{codeobj_name}}(
     {
         return;
     }
+
+    {% block after_return_N %}
+    {% endblock %}
 
     {% block kernel_maincode %}
 
