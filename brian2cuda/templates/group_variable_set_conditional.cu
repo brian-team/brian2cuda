@@ -26,7 +26,11 @@
 
 
 {% block extra_kernel_call_post %}
-    {# We want to copy only those variables that were potentially modified in aboves kernel call. #}
+    {# We need to copy modifed variables back to host in case they are used in
+       codeobjects that run on the host, which are synapse connect calls (e.g. in the
+       connect condition) and before run synapses push spikes, which initialized
+       synaptic variables.
+    #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
     {{varname}} = dev{{varname}};
