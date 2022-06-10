@@ -330,6 +330,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                owner=owner))
                 if idx == '_syaptic_post':
                     self.delete_synaptic_post[synaptic_post_array_name] = False
+
+        if template_name in ['group_variable_set_conditional', 'group_variable_set']:
+            read, write = self.get_array_read_write(abstract_code, variables)
+            written_variables = {}
+            for variable_name in write:
+                var = variables[variable_name]
+                varname = self.get_array_name(var, access_data=False)
+                written_variables[var] = varname
+            template_kwds['written_variables'] = written_variables
+
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost
             synaptic_effects = "synapse"
