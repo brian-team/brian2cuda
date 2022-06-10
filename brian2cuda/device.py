@@ -342,23 +342,32 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                                owner=owner))
                 if idx == '_syaptic_post':
                     self.delete_synaptic_post[synaptic_post_array_name] = False
-        # Do a similar check for the delay variables. These can't be modified in
-        # Synapses model code, so we only care about single tick objects (setting
-        # delay values)
-        if (
-            not self.first_run
-            and 'delay' in owner.variables
-            and isinstance(owner, SynapticPathway)
-            and template_name in group_variable_set_templates
-        ):
+
+        # Collect all variables written to in group_variable_set_templates so they can
+        # be copied from device to host after being changed on device
+        if template_name in group_variable_set_templates:
             read, write = self.get_array_read_write(abstract_code, variables)
-            read_write = read.union(write)
-            varname = owner.variables['delay'].name
-            if varname in read_write:
-                synaptic_delay_array_name = self.get_array_name(
-                    owner.variables['delay'], access_data=False
-                )
-                self.delete_synaptic_delay[synaptic_delay_array_name] = False
+            written_variables = {}
+            for variable_name in write:
+                var = variables[variable_name]
+                varname = self.get_array_name(var, access_data=False)
+                written_variables[var] = varname
+            template_kwds['written_variables'] = written_variables
+            # Do a similar check for the delay variables as for i/j. Delays can't be
+            # modified in Synapses model code, so we only care about single tick objects
+            # (setting delay values)
+            if (
+                not self.first_run
+                and 'delay' in owner.variables
+                and isinstance(owner, SynapticPathway)
+            ):
+                read_write = read.union(write)
+                varname = owner.variables['delay'].name
+                if varname in read_write:
+                    synaptic_delay_array_name = self.get_array_name(
+                        owner.variables['delay'], access_data=False
+                    )
+                    self.delete_synaptic_delay[synaptic_delay_array_name] = False
 
         if template_name == "synapses":
             prepost = template_kwds['pathway'].prepost

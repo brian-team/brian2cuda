@@ -71,9 +71,9 @@ if (_num__array_{{owner.name}}__indices > 0)
 {% endblock %}
 
 
-{% block indices %}
-    int _vectorisation_idx = bid * THREADS_PER_BLOCK + tid;
-    int _idx = {{_indices}}[_vectorisation_idx];
+{# Need to set _idx here, after threads >= N returend, else this fails #}
+{% block after_return_N %}
+    _idx = {{_indices}}[_vectorisation_idx];
 {% endblock %}
 
 
