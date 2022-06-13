@@ -53,8 +53,8 @@
 
 {% block before_run_defines %}
 // Makro for file and line information in _cudaSafeCall
-#define COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(a, b, c, d) \
-    _copyHostArrayToDeviceSymbol(a, b, c, d, __FILE__, __LINE__)
+#define COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(a, b, c, d, e) \
+    _copyHostArrayToDeviceSymbol(a, b, c, d, e, __FILE__, __LINE__)
 
 namespace {
     // vector_t<T> is an alias for thrust:host_vector<T>
@@ -89,27 +89,27 @@ namespace {
 
     // Copy the data from a host array to global device memory and copy the
     // symbol to a global device variable.
+    // device_array: device pointer to allocate data for and which to copy to device symbol
     // host_array: host array with data to copy
     // device_symbol: global __device__ variable of same type as `host_array`
     // num_elements: number of elements in host_array to copy
     // NOTE: T can be a pointer variable itself (when copying 2D arrays)
     template <typename T>
-    inline void _copyHostArrayToDeviceSymbol(const T *host_array, T *&device_symbol,
-            int num_elements, const char* name, const char* file,
+    inline void _copyHostArrayToDeviceSymbol(T *device_array, const T *host_array,
+            T *&device_symbol, int num_elements, const char* name, const char* file,
             const int line){
-        T *d_ptr_tmp;
         size_t bytes = sizeof(T) * num_elements;
         // allocate device memory
         _cudaSafeCall(
-                cudaMalloc((void**)&d_ptr_tmp, bytes),
+                cudaMalloc((void**)&device_array, bytes),
                 file, line, "cudaMalloc");
         // copy data from host array to device
         _cudaSafeCall(
-                cudaMemcpy(d_ptr_tmp, host_array, bytes, cudaMemcpyHostToDevice),
+                cudaMemcpy(device_array, host_array, bytes, cudaMemcpyHostToDevice),
                 file, line, "cudaMemcpy");
         // copy the device data pointer to the global device symbol
         _cudaSafeCall(
-                cudaMemcpyToSymbol(device_symbol, &d_ptr_tmp, sizeof(T*)),
+                cudaMemcpyToSymbol(device_symbol, &device_array, sizeof(T*)),
                 file, line, "cudaMemcpyToSymbol");
         memory_recorder.push_back(std::make_tuple(name, bytes, num_elements));
     }
@@ -250,9 +250,9 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // synapse IDs for each (preID, postBlock) pair
     vector_t<int32_t>* h_vec_synapse_ids_by_pre = new vector_t<int32_t>[num_pre_post_blocks];
     // array of synapse IDs in device memory for each (preID, postBlock) pair
-    int32_t** d_ptr_synapse_ids_by_pre;
+    int32_t **h_ptr_d_ptr_synapse_ids_by_pre, **d_ptr_d_ptr_synapse_ids_by_pre;
     // number of synapses for each (preID, postBlock) pair
-    int* h_num_synapses_by_pre;
+    int *h_num_synapses_by_pre, *d_ptr_num_synapses_by_pre;
 
     {% if not no_or_const_delay_mode %}
     // delay for each synapse in `h_vec_synapse_ids_by_pre`,
@@ -265,15 +265,18 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // offset in array of all synapse IDs sorted by bundles (we are storing the
     // offset as 32bit int instead of a 64bit pointer to the bundle start)
     vector_t<int> h_synapses_offset_by_bundle;
+    int* d_ptr_synapses_offset_by_bundle;
     // number of synapses in each bundle
     vector_t<int> h_num_synapses_by_bundle;
+    int* d_ptr_num_synapses_by_bundle;
     // start of global bundle ID per (preID, postBlock) pair (+ total num bundles)
     int* h_global_bundle_id_start_by_pre = new int[num_pre_post_blocks + 1];
+    int* d_ptr_global_bundle_id_start_by_pre;
     {% else %}{# not bundle_mode #}
     // array of unique delays [in integer multiples of dt] in device memory
-    int* h_unique_delays_offset_by_pre;
+    int* h_unique_delays_offset_by_pre, *d_ptr_unique_delays_offset_by_pre;
     // number of unique delays for each (preID, postBlock) pair
-    int* h_num_unique_delays_by_pre;
+    int* h_num_unique_delays_by_pre, *d_ptr_num_unique_delays_by_pre;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
@@ -386,7 +389,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     {% endif %}
     {
         h_num_synapses_by_pre = new int[num_pre_post_blocks];
-        d_ptr_synapse_ids_by_pre = new int32_t*[num_pre_post_blocks];
+        h_ptr_d_ptr_synapse_ids_by_pre = new int32_t*[num_pre_post_blocks];
     }
 
     {% if not no_or_const_delay_mode %}
@@ -531,9 +534,9 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
             h_num_synapses_by_pre[i] = num_elements;
 
-            d_ptr_synapse_ids_by_pre[i] = d_ptr_synapse_ids + sum_num_elements;
+            h_ptr_d_ptr_synapse_ids_by_pre[i] = d_ptr_synapse_ids + sum_num_elements;
             CUDA_SAFE_CALL(
-                    cudaMemcpy(d_ptr_synapse_ids_by_pre[i],
+                    cudaMemcpy(h_ptr_d_ptr_synapse_ids_by_pre[i],
                         thrust::raw_pointer_cast(&(h_vec_synapse_ids_by_pre[i][0])),
                         sizeof(int32_t) * num_elements,
                         cudaMemcpyHostToDevice)
@@ -552,13 +555,13 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     if (scalar_delay)
     {% endif %}
     {
-        // synapses size
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_synapses_by_pre,
-                {{owner.name}}_num_synapses_by_pre, num_pre_post_blocks,
-                "number of synapses per pre/post block");
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_num_synapses_by_pre,
+                h_num_synapses_by_pre, {{owner.name}}_num_synapses_by_pre,
+                num_pre_post_blocks, "number of synapses per pre/post block");
         // synapses id
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_synapse_ids_by_pre,
-                {{owner.name}}_synapse_ids_by_pre, num_pre_post_blocks,
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_d_ptr_synapse_ids_by_pre,
+                h_ptr_d_ptr_synapse_ids_by_pre, {{owner.name}}_synapse_ids_by_pre,
+                num_pre_post_blocks,
                 "pointers to synapse IDs");
     }
 
@@ -673,19 +676,20 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                 );
 
         // size by bundle
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_num_synapses_by_bundle,
                 thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
                 {{owner.name}}_num_synapses_by_bundle, num_bundle_ids,
                 "number of synapses per bundle");
 
         // synapses offset by bundle
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_synapses_offset_by_bundle,
                 thrust::raw_pointer_cast(&h_synapses_offset_by_bundle[0]),
                 {{owner.name}}_synapses_offset_by_bundle, num_bundle_ids,
                 "synapses bundle offset");
 
         // global bundle id start idx by pre
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                d_ptr_global_bundle_id_start_by_pre,
                 h_global_bundle_id_start_by_pre,
                 {{owner.name}}_global_bundle_id_start_by_pre,
                 num_pre_post_blocks + 1, "global bundle ID start");
@@ -700,12 +704,15 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
         // unique delay offset
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                d_ptr_unique_delays_offset_by_pre,
                 h_unique_delays_offset_by_pre,
                 {{owner.name}}_unique_delays_offset_by_pre,
                 num_pre_post_blocks, "unique delays offset by pre");
 
         // unique delay size
-        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(h_num_unique_delays_by_pre,
+        COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
+                d_ptr_num_unique_delays_by_pre,
+                h_num_unique_delays_by_pre,
                 {{owner.name}}_num_unique_delays_by_pre, num_pre_post_blocks,
                 "number of unique delays");
         {% endif %}{# bundle_mode #}
@@ -870,7 +877,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     {% endif %}
     {
         delete [] h_num_synapses_by_pre;
-        delete [] d_ptr_synapse_ids_by_pre;
+        delete [] h_ptr_d_ptr_synapse_ids_by_pre;
     }
 
     //delete temp arrays
