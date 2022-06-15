@@ -122,7 +122,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     int _num_threads,
     double _dt,
     int _syn_N,
-    int num_queues,
+    int num_delays,
     bool new_mode)
 {
     using namespace brian;
@@ -136,7 +136,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         0,
         _source_N,
         _syn_N,
-        num_queues,
+        num_delays,
         {{owner.name}}_num_synapses_by_pre,
         {{owner.name}}_num_synapses_by_bundle,
         {{owner.name}}_num_unique_delays_by_pre,
@@ -365,6 +365,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         h_vec_delays_by_pre[pre_post_block_id].push_back(delay);
         {% endif %}
     }
+    int num_delays = max_delay;
     int num_queues = max_delay + 1;  // we also need a current step
 
     {% if no_or_const_delay_mode %}
@@ -864,7 +865,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         num_threads,
         dt,
         syn_N,
-        num_queues,
+        num_delays,
     {% if no_or_const_delay_mode %}
         true
     {% else %}

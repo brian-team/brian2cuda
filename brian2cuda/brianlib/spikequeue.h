@@ -14,6 +14,8 @@ using namespace std;
 //      variables (delays, dt) are assumed to use the same data type
 typedef int32_t DTYPE_int;
 
+typedef cudaVector<DTYPE_int> cuda_vector;
+
 class CudaSpikeQueue
 {
 private:
@@ -31,7 +33,7 @@ private:
 
 public:
     //these vectors should ALWAYS be the same size, since each index refers to a triple of (pre_id, syn_id, post_id)
-    cudaVector<DTYPE_int>** synapses_queue;
+    cuda_vector** synapses_queue;
 
     //our connectivity matrix with dimensions (num_blocks) * neuron_N
     //each element
@@ -47,14 +49,16 @@ public:
     int* unique_delay_start_idcs;
     int current_offset;  // offset in circular queue structure
     int num_queues;
+    int num_delays;
     //int max_num_delays_per_block;
     int num_blocks;
     int neuron_N; // number of neurons in source of SynapticPathway
     int syn_N;
 
-    // When we have 0 synapses, prepare() is not called in synapses_initialise_queue.cu
-    // and for destroy() to still work, synapses_queue needs to be a null pointer
-    __device__ CudaSpikeQueue(): synapses_queue(0) {};
+    // When we have 0 synapses, prepare() is not called in
+    // before_run_synapses_push_spikes and for destroy() to still work,
+    // synapses_queue needs to be a null pointer
+    __device__ CudaSpikeQueue(): synapses_queue(0), semaphore(0), num_queues(0) {};
 
     //Since we can't have a destructor, we need to call this function manually
     __device__ void destroy()
@@ -62,7 +66,9 @@ public:
         if(synapses_queue)
         {
             delete [] synapses_queue;
+            delete [] semaphore;
             synapses_queue = 0;
+            semaphore = 0;
         }
     }
 
@@ -76,7 +82,7 @@ public:
         double _dt,
         int _neuron_N,
         int _syn_N,
-        int _num_queues,
+        int _num_delays,
         int* _num_synapses_by_pre,
         int* _num_synapses_by_bundle,
         int* _num_unique_delays_by_pre,
@@ -89,18 +95,59 @@ public:
         int* _unique_delay_start_idcs
         )
     {
-        if(tid == 0)
-        {
-            // TODO add comments
+        // read queue information from a previous run
+        // (these are all null at the first run)
+        int old_num_queues = num_queues;
+        int required_num_queues = _num_delays + 1;
+        cuda_vector** old_synapses_queue = synapses_queue;
+        bool require_new_queues = (required_num_queues > old_num_queues);
+        int old_current_offset = current_offset;
+        bool initialize_semaphores = (!semaphore);
 
-            semaphore = new int[_num_blocks];
-            current_offset = 0;
+        if (tid == 0)
+        {
+            // allocate semaphore memory only at first prepare() call
+            if (initialize_semaphores)
+            {
+                semaphore = new int[_num_blocks];
+            }
+
+            // only allocate queue pointer memory if the number of queues increased
+            if (require_new_queues)
+            {
+                synapses_queue = new cuda_vector*[required_num_queues];
+                if (!synapses_queue)
+                {
+                    printf("ERROR while allocating memory with size %ld in"
+                           " spikequeue.h/prepare()\n",
+                           sizeof(cuda_vector*) * required_num_queues);
+                }
+                // only reset queue offset if we require new queues, in which
+                // case we copy the old queues such that the offset is reset
+                // (if there are no new queues, the queues remain as they are)
+                current_offset = 0;
+            }
+
+            // set class attributes
+            assert(num_threads == required_num_queues);  // else parallel loop fails below
+            if (!initialize_semaphores)
+            {
+                assert(_num_blocks == num_blocks);  // can't change between runs
+            }
             num_blocks = _num_blocks;
             neuron_N = _neuron_N;
             syn_N = _syn_N;
-            num_queues = _num_queues;
+            num_delays = _num_delays;
+            // we only add queues, but never remove queues (because we could
+            // loose spikes in the queues)
+            if (require_new_queues)
+            {
+                num_queues = required_num_queues;
+            }
 
-            // TODO: do we need num_synapses_by_pre? is num_synapses_by_pre[pre_post_block_id] faster then synapses_by_pre[pre_post_block_id].size()?
+            // TODO: do we need num_synapses_by_pre? is
+            // num_synapses_by_pre[pre_post_block_id] faster then
+            // synapses_by_pre[pre_post_block_id].size()?
             // if so, add unique_num_synapses_by_pre as well!
             num_synapses_by_pre = _num_synapses_by_pre;
             num_synapses_by_bundle = _num_synapses_by_bundle;
@@ -113,27 +160,45 @@ public:
             unique_delays_offset_by_pre = _unique_delays_offset_by_pre;
             unique_delay_start_idcs = _unique_delay_start_idcs;
 
-            synapses_queue = new cudaVector<DTYPE_int>*[num_queues];
-            if(!synapses_queue)
-            {
-                printf("ERROR while allocating memory with size %ld in spikequeue.h/prepare()\n", sizeof(cudaVector<DTYPE_int>*)*num_queues);
-            }
         }
         __syncthreads();
 
-        for (int i = tid; i < _num_blocks; i+=num_threads)
+        // initialize semaphores only if they were not initalized before
+        if (initialize_semaphores)
         {
-            semaphore[i] = 0;
-        }
-
-        for(int i = tid; i < num_queues; i+=num_threads)
-        {
-            synapses_queue[i] = new cudaVector<DTYPE_int>[num_blocks];
-            if(!synapses_queue[i])
+            for (int i = tid; i < _num_blocks; i+=num_threads)
             {
-                printf("ERROR while allocating memory with size %ld in spikequeue.h/prepare()\n", sizeof(cudaVector<DTYPE_int>)*num_blocks);
+                semaphore[i] = 0;
             }
         }
+
+        // setup the new queues
+        if (require_new_queues)
+        {
+            // copy old queues over to new queue array
+            for (int i = tid; i < required_num_queues; i += num_threads)
+            {
+                if (i < old_num_queues)
+                {
+                    // copy the old queues to the new array, such that the
+                    // offset is reset back to the start (current_offset is set
+                    // to zero above)
+                    int old_i = (i + old_current_offset) % old_num_queues;
+                    synapses_queue[i] = old_synapses_queue[old_i];
+                } else
+                {
+                    // allocate new memory for cudaVectors of new queues
+                    synapses_queue[i] = new cuda_vector[num_blocks];
+                    if (!synapses_queue[i])
+                    {
+                        printf("ERROR while allocating memory with size %ld in"
+                                " spikequeue.h/prepare()\n",
+                                sizeof(cuda_vector)*num_blocks);
+                    }
+                }
+            }
+        }
+
     };
 
     __device__ void push_synapses(
@@ -436,8 +501,7 @@ public:
 
     } // end push_bundles()
 
-    __device__ void advance(
-        int tid)
+    __device__ void advance(int tid)
     {
         assert(tid < num_blocks && current_offset < num_queues);
         synapses_queue[current_offset][tid].reset();
@@ -446,8 +510,7 @@ public:
             current_offset = (current_offset + 1)%num_queues;
     }
 
-    __device__  void peek(
-        cudaVector<DTYPE_int>** _synapses_queue)
+    __device__  void peek(cuda_vector** _synapses_queue)
     {
         *(_synapses_queue) =  &(synapses_queue[current_offset][0]);
     }
