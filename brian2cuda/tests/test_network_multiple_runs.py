@@ -35,7 +35,7 @@ def test_changing_delay_scalar():
 
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
-def test_changing_delay_heterogeneous():
+def test_increasing_delay_heterogeneous():
 
     set_device('cuda_standalone', directory=None, build_on_run=False)
     inG = NeuronGroup(1, 'v : 1', threshold='True')
@@ -55,6 +55,31 @@ def test_changing_delay_heterogeneous():
     # mon.v[i, t]
     assert_allclose(mon.v[0, :], [0, 1, 2, 3, 4, 5])
     assert_allclose(mon.v[1, :], [0, 0, 1, 1, 2, 3])
+
+
+@pytest.mark.standalone_compatible
+@pytest.mark.multiple_runs
+def test_reducing_delay_heterogeneous():
+
+    set_device('cuda_standalone', directory=None, build_on_run=False)
+    inG = NeuronGroup(1, 'v : 1', threshold='True')
+    G = NeuronGroup(2, 'v : 1')
+    G.v[:] = 0
+    S = Synapses(inG, G, on_pre='v += 1')
+    S.connect()
+    S.delay[:] = '2*j*dt'
+    mon = StateMonitor(G, 'v', record=True)
+
+    run(1*defaultclock.dt)
+    S.delay[:] = '1*j*dt'
+    run(5*defaultclock.dt)
+
+    device.build(direct_call=False, **device.build_options)
+
+    # mon.v[i, t]
+    assert_allclose(mon.v[0, :], [0, 1, 2, 3, 4, 5])
+    assert_allclose(mon.v[1, :], [0, 0, 0, 2, 3, 4])
+
 
 if __name__ == '__main__':
     #test_changing_delay_scalar()
