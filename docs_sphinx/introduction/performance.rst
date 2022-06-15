@@ -7,5 +7,5 @@ If you have performance questions or want to share your experience with Brian2CU
 performance, feel free to post on the `Brian2 discourse forum`_.
 
 
-.. _Brian2 discource forum: https://brian.discourse.group/
+.. _Brian2 discourse forum: https://brian.discourse.group/
 .. _Brian2CUDA paper: https://www.frontiersin.org/articles/10.3389/fninf.2022.883700/abstract

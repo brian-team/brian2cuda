@@ -31,7 +31,7 @@ Brian2CUDA tries to detect your CUDA installation in the following order:
     4. Use standard location ``/usr/local/cuda``
     5. Use standard location ``/opt/cuda``
 
-If you set the path manually via the 1. or 2. option, specify the parant path
+If you set the path manually via the 1. or 2. option, specify the parent path
 to the ``nvcc`` binary (e.g. ``/usr/local/cuda`` if ``nvcc`` is in
 ``/usr/local/cuda/bin/nvcc``).
 
@@ -42,7 +42,7 @@ Manually selecting a GPU to use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 On systems with multiple GPUs, Brian2CUDA uses the first GPU with highest compute
-capability as returend by ``nvidia-smi``. If you want to manually choose a GPU your can
+capability as returned by ``nvidia-smi``. If you want to manually choose a GPU you can
 do so via Brian2CUDA preference `devices.cuda_standalone.cuda_backend.gpu_id`.
 
 .. note::
@@ -79,14 +79,14 @@ Detecting GPU compute capability on systems with outdated NVIDIA drivers
 We use ``nvidia-smi`` to query the compute capability of GPUs during automatic GPU
 selection. On older driver versions (``< 510.39.01``, these are driver versions shipped
 with CUDA toolkit ``< 11.6``), this was not supported. For those versions, we use the
-``deviceQuery`` tool from the _`CUDA samples`, which is by default installed with the
+``deviceQuery`` tool from the `CUDA samples`_, which is by default installed with the
 CUDA Toolkit under ``extras/demo_suite/deviceQuery`` in the CUDA installation directory.
 For some custom CUDA installations, the CUDA samples are not included, in which case
 Brian2CUDA's GPU detection fails. In that case, you have three options. Do one of the
 following:
 
 1. Update your NVIDIA driver
-2. Download the _`CUDA samples` to a folder of your choice and compile `deviceQuery`
+2. Download the `CUDA samples`_ to a folder of your choice and compile ``deviceQuery``
    manually::
 
       git clone https://github.com/NVIDIA/cuda-samples.git
@@ -108,4 +108,5 @@ following:
    See `devices.cuda_standalone.cuda_backend.detect_gpus` and
    `devices.cuda_standalone.cuda_backend.compute_capability`.
 
-.. _`CUDA Samples`: https://github.com/NVIDIA/cuda-samples/tree/master/Samples
+.. _`CUDA samples`: https://github.com/NVIDIA/cuda-samples/tree/master/Samples
+.. _`CUDA toolkit`: https://developer.nvidia.com/cuda-toolkit

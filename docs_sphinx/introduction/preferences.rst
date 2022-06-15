@@ -1,4 +1,4 @@
-Brian2cuda specific preferences
+Brian2CUDA specific preferences
 ===============================
 
 For information on the Brian2 preference system, read `Brian2 preference
@@ -14,4 +14,3 @@ List of preferences
 
 .. _prefs_cuda_backend:
 .. document_brian_prefs:: devices.cuda_standalone.cuda_backend
-
