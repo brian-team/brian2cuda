@@ -1027,7 +1027,7 @@ void _run_{{codeobj_name}}()
     if ({{owner.name}}_scalar_delay)
     {
         int num_eventspaces = dev{{_eventspace}}.size();
-        {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
+        {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} + 1) % num_eventspaces;
 
         //////////////////////////////////////////////
         //// No pushing in no_or_const_delay_mode ////
