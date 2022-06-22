@@ -123,31 +123,43 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     double _dt,
     int _syn_N,
     int num_delays,
-    bool new_mode)
+    bool scalar_delay)
 {
     using namespace brian;
 
     int tid = threadIdx.x;
 
-    {{owner.name}}.queue->prepare(
-        tid,
-        _num_threads,
-        _num_blocks,
-        0,
-        _source_N,
-        _syn_N,
-        num_delays,
-        {{owner.name}}_num_synapses_by_pre,
-        {{owner.name}}_num_synapses_by_bundle,
-        {{owner.name}}_num_unique_delays_by_pre,
-        {{owner.name}}_unique_delays,
-        {{owner.name}}_global_bundle_id_start_by_pre,
-        {{owner.name}}_synapses_offset_by_bundle,
-        {{owner.name}}_synapse_ids,
-        {{owner.name}}_synapse_ids_by_pre,
-        {{owner.name}}_unique_delays_offset_by_pre,
-        {{owner.name}}_unique_delay_start_idcs);
-    {{owner.name}}.no_or_const_delay_mode = new_mode;
+    if (scalar_delay)
+    {
+        if (tid == 0)
+        {
+            {{owner.name}}.queue->num_blocks = _num_blocks;
+            {{owner.name}}.queue->num_delays = num_delays;
+        }
+    }
+    else
+    {
+        {{owner.name}}.queue->prepare(
+            tid,
+            _num_threads,
+            _num_blocks,
+            0,
+            _source_N,
+            _syn_N,
+            num_delays,
+            {{owner.name}}_num_synapses_by_pre,
+            {{owner.name}}_num_synapses_by_bundle,
+            {{owner.name}}_num_unique_delays_by_pre,
+            {{owner.name}}_unique_delays,
+            {{owner.name}}_global_bundle_id_start_by_pre,
+            {{owner.name}}_synapses_offset_by_bundle,
+            {{owner.name}}_synapse_ids,
+            {{owner.name}}_synapse_ids_by_pre,
+            {{owner.name}}_unique_delays_offset_by_pre,
+            {{owner.name}}_unique_delay_start_idcs
+        );
+    }
+    {{owner.name}}.no_or_const_delay_mode = scalar_delay;
 }
 {% endblock before_run_defines %}
 
@@ -155,6 +167,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 {% block before_run_host_maincode %}
     std::clock_t start_timer = std::clock();
     const double to_MB = 1.0 / (1024.0 * 1024.0);
+    static bool first_run = true;
 
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_start = used_device_memory;
@@ -250,9 +263,11 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // synapse IDs for each (preID, postBlock) pair
     vector_t<int32_t>* h_vec_synapse_ids_by_pre = new vector_t<int32_t>[num_pre_post_blocks];
     // array of synapse IDs in device memory for each (preID, postBlock) pair
-    int32_t **h_ptr_d_ptr_synapse_ids_by_pre, **d_ptr_d_ptr_synapse_ids_by_pre;
+    int32_t** h_ptr_d_ptr_synapse_ids_by_pre;
+    static int32_t **d_ptr_d_ptr_synapse_ids_by_pre;
     // number of synapses for each (preID, postBlock) pair
-    int *h_num_synapses_by_pre, *d_ptr_num_synapses_by_pre;
+    int* h_num_synapses_by_pre;
+    static int* d_ptr_num_synapses_by_pre;
 
     {% if not no_or_const_delay_mode %}
     // delay for each synapse in `h_vec_synapse_ids_by_pre`,
@@ -265,25 +280,30 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // offset in array of all synapse IDs sorted by bundles (we are storing the
     // offset as 32bit int instead of a 64bit pointer to the bundle start)
     vector_t<int> h_synapses_offset_by_bundle;
-    int* d_ptr_synapses_offset_by_bundle;
+    static int* d_ptr_synapses_offset_by_bundle;
     // number of synapses in each bundle
     vector_t<int> h_num_synapses_by_bundle;
-    int* d_ptr_num_synapses_by_bundle;
+    static int* d_ptr_num_synapses_by_bundle;
     // start of global bundle ID per (preID, postBlock) pair (+ total num bundles)
-    int* h_global_bundle_id_start_by_pre = new int[num_pre_post_blocks + 1];
-    int* d_ptr_global_bundle_id_start_by_pre;
+    int* h_global_bundle_id_start_by_pre;
+    static int* d_ptr_global_bundle_id_start_by_pre;
     {% else %}{# not bundle_mode #}
     // array of unique delays [in integer multiples of dt] in device memory
-    int* h_unique_delays_offset_by_pre, *d_ptr_unique_delays_offset_by_pre;
+    int* h_unique_delays_offset_by_pre;
+    static int* d_ptr_unique_delays_offset_by_pre;
     // number of unique delays for each (preID, postBlock) pair
-    int* h_num_unique_delays_by_pre, *d_ptr_num_unique_delays_by_pre;
+    int* h_num_unique_delays_by_pre;
+    static int* d_ptr_num_unique_delays_by_pre;
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
 
 
     // we need to allocate device memory for synapse IDs independent of delay mode
-    int32_t* d_ptr_synapse_ids;
+    static int32_t* d_ptr_synapse_ids;
     size_t memory_synapse_ids = sizeof(int32_t) * syn_N;
+    if (!first_run) {
+        CUDA_SAFE_CALL(cudaFree(d_ptr_synapse_ids));
+    }
     CUDA_SAFE_CALL(
             cudaMalloc((void**)&d_ptr_synapse_ids, memory_synapse_ids)
             );
@@ -397,7 +417,9 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // allocate memory only if the delays are not all the same
     if (!scalar_delay)
     {
-        {% if not bundle_mode %}
+        {% if bundle_mode %}
+        h_global_bundle_id_start_by_pre = new int[num_pre_post_blocks + 1];
+        {% else %}
         h_unique_delays_offset_by_pre =  new int[num_pre_post_blocks];
         h_num_unique_delays_by_pre = new int[num_pre_post_blocks];
         {% endif %}
@@ -556,6 +578,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     if (scalar_delay)
     {% endif %}
     {
+        if (!first_run) {
+            CUDA_SAFE_CALL(cudaFree(d_ptr_num_synapses_by_pre));
+            CUDA_SAFE_CALL(cudaFree(d_ptr_d_ptr_synapse_ids_by_pre));
+        }
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_num_synapses_by_pre,
                 h_num_synapses_by_pre, {{owner.name}}_num_synapses_by_pre,
                 num_pre_post_blocks, "number of synapses per pre/post block");
@@ -593,7 +619,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         {% if bundle_mode %}
         assert(sum_bundle_sizes == syn_N);
         {% else %}{# not bundle_mode #}
-        int *d_ptr_unique_delay_start_idcs;
+        static int *d_ptr_unique_delay_start_idcs;
+        if (!first_run) {
+            CUDA_SAFE_CALL(cudaFree(d_ptr_unique_delay_start_idcs));
+        }
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&d_ptr_unique_delay_start_idcs,
                     memory_unique_delays_by_pre)
@@ -605,7 +634,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
         // array of all unique delas, sorted first by pre_post_block and per
         // pre_post_block by delay
-        int *d_ptr_unique_delays;
+        static int *d_ptr_unique_delays;
+        if (!first_run) {
+            CUDA_SAFE_CALL(cudaFree(d_ptr_unique_delays));
+        }
         CUDA_SAFE_CALL(
                 cudaMalloc((void**)&d_ptr_unique_delays, memory_unique_delays_by_pre)
                 );
@@ -676,6 +708,11 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                                    sizeof(d_ptr_synapse_ids))
                 );
 
+        if (!first_run) {
+            CUDA_SAFE_CALL(cudaFree(d_ptr_num_synapses_by_bundle));
+            CUDA_SAFE_CALL(cudaFree(d_ptr_synapses_offset_by_bundle));
+            CUDA_SAFE_CALL(cudaFree(d_ptr_global_bundle_id_start_by_pre));
+        }
         // size by bundle
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_num_synapses_by_bundle,
                 thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
@@ -703,6 +740,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                                    sizeof(d_ptr_unique_delay_start_idcs))
                 );
 
+        if (!first_run) {
+            CUDA_SAFE_CALL(cudaFree(d_ptr_unique_delays_offset_by_pre));
+            CUDA_SAFE_CALL(cudaFree(d_ptr_num_unique_delays_by_pre));
+        }
         // unique delay offset
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(
                 d_ptr_unique_delays_offset_by_pre,
@@ -943,6 +984,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         std::cout << " and used " << used_bytes * to_MB << "MB of device memory.";
     }
     std::cout << std::endl;
+
+    first_run = false;
 {% endblock before_run_host_maincode %}
 
 
