@@ -395,7 +395,6 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {# TODO: pass isinstance to Jinja template to make it available here #}
     {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}

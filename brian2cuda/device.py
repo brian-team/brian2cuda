@@ -1424,6 +1424,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # self.variableview_set_with_index_array and self.fill_with_array)
                 if varname not in self.delete_synaptic_delay:
                     self.delete_synaptic_delay[varname] = True
+                    # This avoids copying the delted delay array from device to host
+                    # at the end of the simulation
+                    self.variables_on_host_only.append(varname)
 
         self.generate_main_source(self.writer)
 
