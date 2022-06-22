@@ -1688,34 +1688,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.array_cache[clock.variables['timestep']] = np.array([clock._i_end])
             self.array_cache[clock.variables['t']] = np.array([clock._i_end * clock.dt_])
 
-        # Initialize eventspaces with -1 before the network runs
-        for codeobj in self.code_objects.values():
-            if codeobj.template_name == "threshold" or codeobj.template_name == "spikegenerator":
-                for key in codeobj.variables.keys():
-                    if key.endswith('space'):  # get the correct eventspace name
-                        eventspace_name = self.get_array_name(codeobj.variables[key],
-                                                              access_data=False)
-                        # In case of custom scheduling, the thresholder might come after synapses or monitors
-                        # and needs to be initialized in the beginning of the simulation
-
-                        # See generate_main_source() for main_queue formats
-
-                        # Initialize entire eventspace array with -1 at beginning of main
-                        self.main_queue.insert(
-                            0,  # list insert position
-                            # func            , (arrayname, value, is_dynamic)
-                            ('set_by_constant', (eventspace_name, -1, False))
-                        )
-                        # Set the last value (index N) in the eventspace array to 0 (-> event counter)
-                        self.main_queue.insert(
-                            1,  # list insert position
-                            (
-                                'set_by_single_value',  # func
-                                # arrayname     , item,                                , value
-                                (eventspace_name, f"_num_{eventspace_name} - 1", 0)
-                            )
-                        )
-
         if self.build_on_run:
             if self.has_been_run:
                 raise RuntimeError('The network has already been built and run '

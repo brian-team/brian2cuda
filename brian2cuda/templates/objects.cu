@@ -307,7 +307,22 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
             );
+    // initialize eventspace with -1
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    for (int i=0; i<{{var.size}}-1; i++)
+    {
+        {{varname}}[i] = -1;
+    }
+    // initialize eventspace counter with 0
+    {{varname}}[{{var.size}} - 1] = 0;
+    CUDA_SAFE_CALL(
+        cudaMemcpy(
+            dev{{varname}}[0],
+            {{varname}},
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{varname}},
+            cudaMemcpyHostToDevice
+        )
+    );
     {% endfor %}
 
     CUDA_CHECK_MEMORY();
