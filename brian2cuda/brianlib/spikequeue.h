@@ -129,7 +129,7 @@ public:
             }
 
             // set class attributes
-            assert(num_threads == required_num_queues);  // else parallel loop fails below
+            assert(num_threads <= required_num_queues);  // else parallel loop fails below
             if (!initialize_semaphores)
             {
                 assert(_num_blocks == num_blocks);  // can't change between runs
