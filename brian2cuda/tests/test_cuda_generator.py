@@ -223,6 +223,7 @@ def test_default_function_convertion_warnings():
 @pytest.mark.parametrize('code', permutation_analysis_good_examples)
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
+@pytest.mark.long
 def test_atomics_parallelisation(code):
     should_be_able_to_use_ufunc_at = not 'NOT_UFUNC_AT_VECTORISABLE' in code
     if should_be_able_to_use_ufunc_at:

@@ -83,6 +83,10 @@ def test_replace_floating_point_literals():
     eq_(code_replaced, solution)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #254',
+    raises=AssertionError
+)
 @pytest.mark.standalone_only
 @pytest.mark.cuda_standalone
 def test_regex_bug():

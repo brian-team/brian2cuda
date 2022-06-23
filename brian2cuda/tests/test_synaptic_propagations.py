@@ -223,6 +223,11 @@ def test_circular_eventspaces_spikegenerator():
     assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(5, n_timesteps + 5) * default_dt)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 def test_circular_eventspaces_different_clock_spikegenerator():
     # same test as test_circular_eventspaces_spikegenerator() but with a
@@ -261,6 +266,11 @@ def test_circular_eventspaces_different_clock_spikegenerator():
     assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 def test_circular_eventspaces_different_clock_neurongroup():
     # same test as test_circular_eventspaces_different_clock_spikegenerator() but with a

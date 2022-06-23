@@ -26,8 +26,11 @@ def test_multiple_runs_with_scalar_delay():
     assert_equal(mon.v[:], [[0, 0, 1, 2]])
 
 
-# XXX: Known issue, see Brian2CUDA issue #302
-@pytest.mark.xfail
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #302',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_increasing_delay_scalar():
@@ -53,8 +56,11 @@ def test_increasing_delay_scalar():
     assert_allclose(mon.v[:], [[0, 0, 1, 1, 2, 3]])
 
 
-# XXX: Known issue, see Brian2CUDA issue #302
-@pytest.mark.xfail
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #302',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_decreasing_delay_scalar():
@@ -147,8 +153,11 @@ def test_reducing_delay_heterogeneous():
     assert_allclose(mon.v[1, :], [0, 0, 0, 2, 3, 4])
 
 
-# XXX: Known issue, see Brian2CUDA issue #136
-@pytest.mark.xfail
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #136',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 @pytest.mark.multiple_runs
 def test_changed_dt_spikes_in_queue_heterogenenous_delay():
