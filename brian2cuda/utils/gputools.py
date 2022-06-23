@@ -179,8 +179,8 @@ def _get_cuda_path():
     cuda_path_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_path
     if cuda_path_pref is not None:
         logger.info(
-            "CUDA installation directory given via preference "
-            "`prefs.devices.cuda_standalone.cuda_backend.cuda_path={}`".format(cuda_path_pref)
+            f"CUDA installation directory given via preference "
+            f"`prefs.devices.cuda_standalone.cuda_backend.cuda_path={cuda_path_pref}`"
         )
         # Allow home directory as `~` in path
         cuda_path_pref = os.path.expanduser(cuda_path_pref)
@@ -205,7 +205,7 @@ def _get_cuda_path():
         )
         return (cuda_path_nvcc, 'nvcc')
 
-    # Use typical path if nothing else worked
+    # Use standard location /usr/local/cuda
     if os.path.exists("/usr/local/cuda"):
         cuda_path_usr = "/usr/local/cuda"
         logger.info(
@@ -213,11 +213,20 @@ def _get_cuda_path():
         )
         return (cuda_path_usr, 'default')
 
+    # Use standard location /opt/cuda
+    if os.path.exists("/opt/cuda"):
+        cuda_path_opt = "/opt/cuda"
+        logger.info(
+            f"CUDA installation directory found in standard location: {cuda_path_opt}"
+        )
+        return (cuda_path_opt, 'default')
+
     # Raise error if cuda path not found
     raise RuntimeError(
-        "Couldn't find the CUDA installation. Please set the environment variable "
-        "`CUDA_PATH` to point to your CUDA installation directory (this should be the "
-        "directory, where `./bin/nvcc` is located, e.g. `/usr/local/cuda`)"
+        "Couldn't find the CUDA installation. Please set the preference "
+        "`prefs.devices.cuda_standalone.cuda_backend.cuda_path` or the environment "
+        "variable `CUDA_PATH` to point to your CUDA installation directory (this "
+        "should be the directory where `./bin/nvcc` is located, e.g. `/usr/local/cuda`)"
     )
 
 
@@ -378,10 +387,12 @@ def _get_available_gpus():
         gpu_info_lines = _run_command_with_output(command).split("\n")
     except (RuntimeError, FileNotFoundError) as excepted_error:
         new_error = RuntimeError(
-            f"Running `{command}` failed. If `nvidia-smi` is not available in your "
-            "system, you can disable automatic detection of GPU name and compute "
-            "capability by setting "
-            "`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`"
+            f"Running `{command}` failed. This typically means that you have no "
+            f"NVIDIA driver installed. Are you sure there is an NVIDIA GPU on this "
+            f"machine?"
+            #"If `nvidia-smi` is not available in your system, you can disable "
+            #"automatic detection of GPU name and compute capability by setting "
+            #"`prefs.devices.cuda_standalone.cuda_backend.detect_gpus` = `False`"
         )
         raise new_error from excepted_error
 
@@ -429,8 +440,26 @@ def get_compute_capability(gpu_id):
     """
     Get compute capability of GPU with ID `gpu_id`. Returns a float (e.g. `6.1`).
     """
+    # nvidia-smi allows querying compute capability only for more recent driver versions
+    # (couldn't find the required driver version, sometime around CUDA toolkit 11.6)
+    command = "nvidia-smi --query-gpu=compute_cap --format=csv,noheader"
+    try:
+        compute_capability_list = _run_command_with_output(command).split("\n")
+        compute_capability = float(compute_capability_list[gpu_id])
+    except RuntimeError as error:
+        logger.debug(f"`{command} failed with RuntimeError: {error}")
+        # Use `deviceQuery` for systems with older driver versions
+        compute_capability = _get_compute_capability_with_device_query(gpu_id)
+
+    return compute_capability
+
+
+def _get_compute_capability_with_device_query(gpu_id):
+    """
+    Use `deviceQuery` binary from CUDA samples to get compute capability of `gpu_id`.
+    """
     gpu_list = get_available_gpus()
-    # Use preference if set
+    # Use preference for `deviceQuery` path if set
     device_query_path = prefs.devices.cuda_standalone.cuda_backend.device_query_path
     if device_query_path is None:
         # Look for it in the demo_suite directory
@@ -445,12 +474,15 @@ def get_compute_capability(gpu_id):
             #    https://gist.github.com/huitseeker/b2c79e5b763d58b06b9985de2b3c0d4d
             # 2. add a preference to point to the self-compiled binary?
             raise RuntimeError(
-                f"Couldn't find `{device_query_path}` binary to detect the compute "
-                "capability of your GPU. Please set "
-                "`prefs.devices.cuda_standalone.cuda_backend.device_query_path` to point "
-                "to the deviceQuery binary (you can compile it from the CUDA Samples) or "
-                "disable GPU " "detection via "
-                "`prefs.devices.cuda_standalone.cuda_backend.detect_gpu = False`"
+                f"GPU compute capability detection failed. Your NVIDIA driver version "
+                f"doesn't support it and your CUDA toolkit installation has no "
+                f"`deviceQuery` binary in `{device_query_path}`. You have the following "
+                f"options to solve this: 1) update your NVIDIA driver or 2) manually "
+                f"compile the `deviceQuery` binary from the CUDA Samples and set "
+                f"`prefs.devices.cuda_standalone.cuda_backend.device_query_path` "
+                f"accordingly or 3) disable automatic GPU detection via "
+                f"`prefs.devices.cuda_standalone.cuda_backend.detect_gpu = False`. See "
+                f"Brian2CUDA documentations for more details."
             )
     else:
         logger.info(
