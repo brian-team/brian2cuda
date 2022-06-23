@@ -16,7 +16,7 @@ from brian2.units import second
 # (brian2 test asserts for 0 warnings, brian2cuda warns for int to float64 conversion)
 @pytest.mark.standalone_compatible
 def test_semantics_floor_division():
-    # See github issues #815 and #661
+    # See Brian2 github issues #815 and #661
     G = NeuronGroup(11, '''a : integer
                            b : integer
                            x : 1

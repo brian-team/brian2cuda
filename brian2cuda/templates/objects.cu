@@ -307,7 +307,22 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
             );
+    // initialize eventspace with -1
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    for (int i=0; i<{{var.size}}-1; i++)
+    {
+        {{varname}}[i] = -1;
+    }
+    // initialize eventspace counter with 0
+    {{varname}}[{{var.size}} - 1] = 0;
+    CUDA_SAFE_CALL(
+        cudaMemcpy(
+            dev{{varname}}[0],
+            {{varname}},
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{varname}},
+            cudaMemcpyHostToDevice
+        )
+    );
     {% endfor %}
 
     CUDA_CHECK_MEMORY();
@@ -361,7 +376,7 @@ void _write_arrays()
                 or var in static_array_specs
               ) %}
     {# Don't copy State-, Spike- & EventMonitor's N variables, which are modified on host only #}
-    {% if var not in variables_on_host_only %}
+    {% if varname not in variables_on_host_only %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
@@ -380,8 +395,7 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {# TODO: pass isinstance to Jinja template to make it available here #}
-    {% if var not in variables_on_host_only %}
+    {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};

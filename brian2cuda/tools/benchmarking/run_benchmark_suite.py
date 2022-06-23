@@ -434,6 +434,9 @@ try:
 
         # run nvprof on n_range[2] for all configurations
         if not args.no_nvprof:
+            # XXX: removed cudaProfilerStart(), cudaProfilerStop() in commit f436abf
+            #      If nvprof here should be used, use the insert_code mechanism to
+            #      insert the code
             for conf in configurations:
                 #for n in speed_test.n_range[n_slice]:
                 ns = speed_test.n_range[n_slice]

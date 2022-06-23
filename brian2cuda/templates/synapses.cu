@@ -67,8 +67,7 @@ _run_kernel_{{codeobj_name}}(
             int32_t spikes_stop = {{pathway.name}}.spikes_stop;
 
             // for the first delay timesteps the eventspace is not yet filled
-            // note that num_queues is the number of eventspaces, num_queues-1 the delay in timesteps
-            if (timestep >= {{pathway.name}}.queue->num_queues - 1)
+            if (timestep >= {{pathway.name}}.queue->num_delays)
             {
                 // `spiking_neuron_idx` runs through the eventspace
                 // `post_block_idx` runs through the post neuron blocks of the connectivity matrix
