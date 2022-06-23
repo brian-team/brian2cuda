@@ -219,93 +219,85 @@ def test_default_function_convertion_warnings():
 
 
 
+# Adapted from brian2.test_synapses:test_ufunc_at_vectorisation()
+@pytest.mark.parametrize('code', permutation_analysis_good_examples)
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
-@pytest.mark.long
-def test_atomics_parallelisation():
-    # Adapted from brian2.test_synapses:test_ufunc_at_vectorisation()
-    for n, code in enumerate(permutation_analysis_good_examples):
-        should_be_able_to_use_ufunc_at = not 'NOT_UFUNC_AT_VECTORISABLE' in code
-        if should_be_able_to_use_ufunc_at:
-            use_ufunc_at_list = [False, True]
-        else:
-            use_ufunc_at_list = [True]
-        code = deindent(code)
-        vars = get_identifiers(code)
-        vars_src = []
-        vars_tgt = []
-        vars_syn = []
-        vars_shared = []
-        vars_const = {}
-        for var in vars:
-            if var.endswith('_pre'):
-                vars_src.append(var[:-4])
-            elif var.endswith('_post'):
-                vars_tgt.append(var[:-5])
-            elif var.endswith('_syn'):
-                vars_syn.append(var[:-4])
-            elif var.endswith('_shared'):
-                vars_shared.append(var[:-7])
-            elif var.endswith('_const'):
-                vars_const[var[:-6]] = 42
-        eqs_src = '\n'.join(var+':1' for var in vars_src)
-        eqs_tgt = '\n'.join(var+':1' for var in vars_tgt)
-        eqs_syn = '\n'.join(var+':1' for var in vars_syn)
-        eqs_syn += '\n' + '\n'.join(var+':1 (shared)' for var in vars_shared)
-        origvals = {}
-        endvals = {}
-        group_size = 1000
-        syn_size = group_size**2
-        try:
-            BrianLogger._log_messages.clear()
-            with catch_logs(log_level=logging.INFO) as caught_logs:
-                for use_ufunc_at in use_ufunc_at_list:
-                    set_device('cuda_standalone', directory=None,
-                               compile=True, run=True, debug=False)
-                    CUDACodeGenerator._use_atomics = use_ufunc_at
-                    src = NeuronGroup(group_size, eqs_src, threshold='True', name='src')
-                    tgt = NeuronGroup(group_size, eqs_tgt, name='tgt')
-                    syn = Synapses(src, tgt, eqs_syn,
-                                   on_pre=code.replace('_syn', '').replace('_const', '').replace('_shared', ''),
-                                   name='syn', namespace=vars_const)
-                    syn.connect()
-                    for G, vars in [(src, vars_src), (tgt, vars_tgt), (syn, vars_syn)]:
-                        for var in vars:
-                            fullvar = var+G.name
-                            if fullvar in origvals:
-                                G.state(var)[:] = origvals[fullvar]
-                            else:
-                                if isinstance(G, Synapses):
-                                    val = rand(syn_size)
-                                else:
-                                    val = rand(len(G))
-                                G.state(var)[:] = val
-                                origvals[fullvar] = val.copy()
-                    Network(src, tgt, syn).run(5*defaultclock.dt)
-                    for G, vars in [(src, vars_src), (tgt, vars_tgt), (syn, vars_syn)]:
-                        for var in vars:
-                            fullvar = var+G.name
-                            val = G.state(var)[:].copy()
-                            if fullvar in endvals:
-                                assert_allclose(val, endvals[fullvar],
-                                                err_msg='%d: %s' % (n, code),
-                                                rtol=1e-5)
-                            else:
-                                endvals[fullvar] = val
-                    device.reinit()
-                    device.activate()
-                cuda_generator_messages = [l for l in caught_logs
-                                           if l[1]=='brian2.codegen.generators.cuda_generator']
-                if should_be_able_to_use_ufunc_at:
-                    assert len(cuda_generator_messages) == 0, cuda_generator_messages
-                else:
-                    assert len(cuda_generator_messages) == 1, cuda_generator_messages
-                    log_lev, log_mod, log_msg = cuda_generator_messages[0]
-                    assert log_msg.startswith('Failed to parallelise code'), log_msg
-        finally:
-            CUDACodeGenerator._use_atomics = False  #restore it
+def test_atomics_parallelisation(code):
+    should_be_able_to_use_ufunc_at = not 'NOT_UFUNC_AT_VECTORISABLE' in code
+    if should_be_able_to_use_ufunc_at:
+        use_ufunc_at_list = [False, True]
+    else:
+        use_ufunc_at_list = [True]
+    code = deindent(code)
+    vars = get_identifiers(code)
+    vars_src = []
+    vars_tgt = []
+    vars_syn = []
+    vars_shared = []
+    vars_const = {}
+    for var in vars:
+        if var.endswith('_pre'):
+            vars_src.append(var[:-4])
+        elif var.endswith('_post'):
+            vars_tgt.append(var[:-5])
+        elif var.endswith('_syn'):
+            vars_syn.append(var[:-4])
+        elif var.endswith('_shared'):
+            vars_shared.append(var[:-7])
+        elif var.endswith('_const'):
+            vars_const[var[:-6]] = 42
+    eqs_src = '\n'.join(var+':1' for var in vars_src)
+    eqs_tgt = '\n'.join(var+':1' for var in vars_tgt)
+    eqs_syn = '\n'.join(var+':1' for var in vars_syn)
+    eqs_syn += '\n' + '\n'.join(var+':1 (shared)' for var in vars_shared)
+    origvals = {}
+    endvals = {}
+    group_size = 1000
+    syn_size = group_size**2
+    BrianLogger._log_messages.clear()
+    with catch_logs(log_level=logging.INFO) as caught_logs:
+        for use_ufunc_at in use_ufunc_at_list:
+            set_device('cuda_standalone', directory=None,
+                       compile=True, run=True, debug=False)
+            CUDACodeGenerator._use_atomics = use_ufunc_at
+            src = NeuronGroup(group_size, eqs_src, threshold='True', name='src')
+            tgt = NeuronGroup(group_size, eqs_tgt, name='tgt')
+            syn = Synapses(src, tgt, eqs_syn,
+                           on_pre=code.replace('_syn', '').replace('_const', '').replace('_shared', ''),
+                           name='syn', namespace=vars_const)
+            syn.connect()
+            for G, vars in [(src, vars_src), (tgt, vars_tgt), (syn, vars_syn)]:
+                for var in vars:
+                    fullvar = var+G.name
+                    if fullvar in origvals:
+                        G.state(var)[:] = origvals[fullvar]
+                    else:
+                        if isinstance(G, Synapses):
+                            val = rand(syn_size)
+                        else:
+                            val = rand(len(G))
+                        G.state(var)[:] = val
+                        origvals[fullvar] = val.copy()
+            Network(src, tgt, syn).run(5*defaultclock.dt)
+            for G, vars in [(src, vars_src), (tgt, vars_tgt), (syn, vars_syn)]:
+                for var in vars:
+                    fullvar = var+G.name
+                    val = G.state(var)[:].copy()
+                    if fullvar in endvals:
+                        assert_allclose(val, endvals[fullvar], rtol=1e-5)
+                    else:
+                        endvals[fullvar] = val
             device.reinit()
             device.activate()
+        cuda_generator_messages = [l for l in caught_logs
+                                   if l[1]=='brian2.codegen.generators.cuda_generator']
+        if should_be_able_to_use_ufunc_at:
+            assert len(cuda_generator_messages) == 0, cuda_generator_messages
+        else:
+            assert len(cuda_generator_messages) == 1, cuda_generator_messages
+            log_lev, log_mod, log_msg = cuda_generator_messages[0]
+            assert log_msg.startswith('Failed to parallelise code'), log_msg
 
 
 if __name__ == '__main__':
