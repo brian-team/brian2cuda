@@ -68,8 +68,8 @@ def test_wrong_cuda_path_error(reset_cuda_detection, use_default_prefs, monkeypa
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_wrong_cuda_path_error2(reset_cuda_detection, use_default_prefs, monkeypatch):
-    # When cuda detection is off and compute capability not given, we get a RuntimError
-    # because deviceQuery is not found
+    # When cuda detection is off and compute capability not given, we don't want to
+    # raise the `nvcc` not found error
     set_device("cuda_standalone", directory=None)
     prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
     # Set wrong CUDA_PATH
@@ -77,8 +77,16 @@ def test_wrong_cuda_path_error2(reset_cuda_detection, use_default_prefs, monkeyp
     with pytest.raises(RuntimeError) as exc:
         run(0*ms)
 
-    device_query_path = os.path.join("/tmp", "extras", "demo_suite", "deviceQuery")
-    exc.match(f"Couldn't find `{device_query_path}` binary .*")
+    raised_nvcc_not_found = True
+    try:
+        exc.match("Couldn't find `nvcc` binary .*")
+    except AssertionError:
+        raised_nvcc_not_found = False
+
+    if raised_nvcc_not_found:
+        raise AssertionError(
+            "Raised `nvcc` not found error even though CUDA detection was disabled"
+        )
 
 
 @pytest.mark.cuda_standalone

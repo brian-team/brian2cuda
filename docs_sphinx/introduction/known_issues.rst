@@ -16,7 +16,6 @@ Known issues when using multiple ``run`` calls
 
 Changing the integration time step of ``Synapses`` with delays between ``run`` calls
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 Changing the integration time step of `Synapses` objects with transmission
 delays between successive ``run`` calls currently leads to the loss of spikes.
 This is the case for spikes that are queued for effect application but haven't
@@ -28,7 +27,6 @@ been applied yet when the first ``run`` call terminates. See `Brian2CUDA issue
 
 Changing delays between ``run`` calls
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 Changing the delay of ``Synapses`` objects between ``run`` calls currently
 leads to the loss of spikes. This is the case when changing homogenenous delays
 or when switching between homogeneous and heterogeneous delays (e.g.
@@ -43,13 +41,12 @@ See `Brian2CUDA issue #302`_ for progress on this issue.
 
 Using a different integration time for ``Synapses`` and its source ``NeuronGroup``
 ----------------------------------------------------------------------------------
-
 There is currently a bug when using ``Synapses`` with homogeneous delays and
 choosing a different integration time step (``dt``) for any of its
 ``SynapticPathway`` and its associated source ``NeuronGroup``. This bug does
 not occur when the delays are heterogenenous or when only the target
-``NeuronGroup`` has a different clock. See `Brian2CUDA issue #222`_. Any of the
-following examples has this bug::
+``NeuronGroup`` has a different clock. See `Brian2CUDA issue #222`_ for
+progress on the issue. Any of the following examples has this bug::
 
     from brian2 import *
 
@@ -103,3 +100,19 @@ by time but not always by index given a fixed time point. See `Brian2CUDA issue
 #46`_ for progress on this issue.
 
 .. _Brian2CUDA issue #46: https://github.com/brian-team/brian2cuda/issues/46
+
+
+Single precision mode fails when using variable names with double digit and dot or scientific notations in name
+---------------------------------------------------------------------------------------------------------------
+In single precision mode (set via ``prefs.core.default_float_dtype``),
+Brian2CUDA replaces floating point literals like ``.2``, ``1.`` or ``.4`` in generated code with
+single precision versions ``1.2f``, ``1.f`` and ``.4f``. Under some
+circumstances, the search/replace algorithm fails and performs a wrong string
+replacement. This is the case e.g. for variable name with double digit and a
+dot in their name, such as ``variable12.attribute`` or when variable names have
+a substring that can be interpreted as a scientific number, e.g.
+`variable28e2`, which has `28e2` as substring. If such a wrong replacement
+occurs, compilation typically fails due to not declared variables. See
+`Brian2CUDA issue #254`_ for progress on the issue.
+
+.. _Brian2CUDA issue #254: https://github.com/brian-team/brian2cuda/issues/254

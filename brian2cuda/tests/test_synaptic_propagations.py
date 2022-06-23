@@ -223,6 +223,11 @@ def test_circular_eventspaces_spikegenerator():
     assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(5, n_timesteps + 5) * default_dt)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 def test_circular_eventspaces_different_clock_spikegenerator():
     # same test as test_circular_eventspaces_spikegenerator() but with a
@@ -261,6 +266,11 @@ def test_circular_eventspaces_different_clock_spikegenerator():
     assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
 def test_circular_eventspaces_different_clock_neurongroup():
     # same test as test_circular_eventspaces_different_clock_spikegenerator() but with a
@@ -330,21 +340,20 @@ def test_synaptic_effect_modes():
     assert_allclose(mon.v[:], 0)
 
 
-@pytest.mark.cuda_standalone
-@pytest.mark.standalone_only
-def test_threads_per_synapse_bundle_prefs():
-
-    expressions = [
+@pytest.mark.parametrize(
+    'expression',
+    [
         'ceil({mean} + 2*{std})',
         '{max}',
         '{min}',
         '5',
     ]
-    for expression in expressions:
+)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_threads_per_synapse_bundle_prefs(expression):
 
-        set_device('cuda_standalone', build_on_run=False, with_output=False)
-        Synapses.__instances__().clear()
-        reinit_devices()
+        set_device('cuda_standalone', directory=None, with_output=False)
 
         prefs.devices.cuda_standalone.threads_per_synapse_bundle = expression
 
@@ -359,7 +368,6 @@ def test_threads_per_synapse_bundle_prefs():
         mon = SpikeMonitor(G)
 
         run(6*default_dt)
-        device.build(directory=None, with_output=False)
 
         # neurons should spike in the timestep after effect application
         assert_allclose(mon.t[mon.i[:] == 3], 4*default_dt)
