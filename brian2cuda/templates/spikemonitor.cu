@@ -1,4 +1,4 @@
-{# USES_VARIABLES { N, count, _source_start, _source_stop} #}
+{# USES_VARIABLES { N, count, _source_start, _source_stop, _source_idx} #}
 {# WRITES_TO_READ_ONLY_VARIABLES { N, count } #}
 {% extends 'common_group.cu' %}
 
@@ -8,6 +8,20 @@
 //#include <thrust/count.h>
 //#include <thrust/execution_policy.h>
 {% endblock %}
+
+
+{% block extra_device_helper %}
+{% if owner.source.__class__.__name__ == 'Subgroup' %}
+struct is_in_subgroup
+{
+  __device__
+  bool operator()(const int32_t &neuron)
+  {
+    return (_source_start <= neuron && neuron < _source_stop);
+  }
+};
+{% endif %}{# Subgroup #}
+{% endblock extra_device_helper %}
 
 
 {# We change _N depending on number of events and subgroups #}
@@ -24,6 +38,16 @@ int num_events, num_blocks;
 {% endblock %}
 
 
+{% block modify_kernel_dimensions %}
+{% if owner.source.__class__.__name__ == 'Subgroup' %}
+// Initialize device vector for subgroup eventspace
+THRUST_CHECK_ERROR(
+    _dev_{{owner.source.name}}_eventspace.resize(_num_source_idx)
+);
+{% endif %}{# Subgroup #}
+{% endblock %}
+
+
 {% block kernel_call %}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 {# Our eventspace is an unsorted array of neuron indices, followed by -1 values
@@ -36,7 +60,7 @@ int num_events, num_blocks;
    neurons are part of the subgroup). #}
 
 // Number of events in eventspace
-int _num_events;
+int _num_events, _num_events_subgroup;
 int32_t* _eventspace = dev{{_eventspace}}[current_idx{{_eventspace}}];
 CUDA_SAFE_CALL(
         cudaMemcpy(
@@ -47,47 +71,34 @@ CUDA_SAFE_CALL(
             )
         );
 
-{# TODO: Use isintance instead (needs to be made available in Jinja templates #}
+{# TODO: Use isintance instead (needs to be made available in Jinja templates) #}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-struct is_in_subgroup
-{
-  __device__
-  bool operator()(int32_t &neuron)
-  {
-    return (_source_start <= neuron && neuron < _source_stop);
-  }
-};
-{% if not record_variables %}
-// TODO: fix
 // Count the elements in eventspace that are in the subgroup
-//int _num_events_subgroup = THRUST_CHECK_ERROR(
-//    thrust::count_if(
-//        thrust::device,
-//        _eventspace,
-//        _eventspace + _num_events,
-//        is_in_subgroup()
-//    )
-//);
-{% else %}{# record_variables #}
-// TODO: fix
-//thrust::device_vector<int32_t> _dev_eventspace_subgroup;
-//THRUST_CHECK_ERROR(
-//    thrust::copy_if(
-//        thrust::device_ptr<int32_t>(_eventspace),
-//        thrust::device_ptr<int32_t>(_eventspace + _num_events),
-//        _dev_eventspace_subgroup.begin(),
-//        is_in_subgroup()
-//    )
-//);
-//_eventspace = thrust::raw_pointer_cast(&_dev_eventspace_subgroup[0]);
-//_N = _dev_eventspace_subgroup.size();
-{% endif %}{# not record_variables #}
+thrust::device_ptr<int32_t> _dev_eventspace(_eventspace);
+THRUST_CHECK_ERROR(
+    _N = thrust::count_if(
+        _dev_eventspace,
+        _dev_eventspace + _num_events,
+        is_in_subgroup()
+    )
+);
+// Copy all neuron IDs that are in this subgroup to the new device pointer
+THRUST_CHECK_ERROR(
+    thrust::copy_if(
+        _dev_eventspace,
+        _dev_eventspace + _num_events,
+        _dev_{{owner.source.name}}_eventspace.begin(),
+        is_in_subgroup()
+    )
+);
+// Use same kernel as without subgroups on copied subgroup eventspace
+_eventspace = thrust::raw_pointer_cast(&_dev_{{owner.source.name}}_eventspace[0]);
 {% else %}{# not is_subgroup #}
 // Get the number of events
 _N = _num_events;
 {% endif %}{# is_subgroup #}
 
-{# If we don't record variables, we don't need the kernel, only count the events #}
+{# If we don't record variables, we don't need to resize the monitor vectors #}
 {% if record_variables %}
 {# Get any item to read the size (we need to resize before HOST_CONSTANTS
    because the pointers underlying the device vectors change when resizing
@@ -104,6 +115,7 @@ THRUST_CHECK_ERROR(
         {{dev_array_name}}.resize(_monitor_size + _N)
         );
 {% endfor %}
+{% endif %}{# not record_variables #}
 
 // Round up number of blocks according to number of events
 num_blocks = (_N + num_threads - 1) / num_threads;
@@ -114,7 +126,9 @@ if (_N > 0)
     _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
             _N,
             num_threads,
+            {% if record_variables %}
             _monitor_size,
+            {% endif %}
             _eventspace,
             {# We need to get a new raw_pointer_cast because the thrust vectors
                were resized, which changes the underlying data pointer if memory
@@ -129,9 +143,6 @@ if (_N > 0)
 
     CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
 }
-{% else %}{# not record_variables #}
-// No variables to record, only counting events
-{% endif %}
 
 // Increase total number of events in monitor
 _array_{{owner.name}}_N[0] += _N;
@@ -140,7 +151,9 @@ _array_{{owner.name}}_N[0] += _N;
 
 {# Add _eventspace manually as it can be the copied event space for subgroups #}
 {% block extra_kernel_parameters %}
+        {% if record_variables %}
         int _monitor_size,
+        {% endif %}
         int32_t* _eventspace,
         {% for varname, var in record_variables.items() %}
         {% set _array_name = get_array_name(var) %}
@@ -150,23 +163,29 @@ _array_{{owner.name}}_N[0] += _N;
 
 
 {% block kernel_maincode %}
-{% set _eventspace = get_array_name(eventspace_variable) %}
 {# We pass as _eventspace the filtered eventspace, such that all neuron IDs are
    within the subgroup (if this is one). We take care of that with the
    thrust::copy_if above. #}
 
 // Eventspace is filled from left with all neuron IDs that triggered an event, rest -1
-int32_t spiking_neuron = {{_eventspace}}[_idx];
-assert(_source_start <= spiking_neuron \
-        && spiking_neuron < _source_stop \
-        && spiking_neuron != -1);
+int32_t spiking_neuron = _eventspace[_idx];
+assert(spiking_neuron != -1);
 
+{% if record_variables %}
 int _monitor_idx = _vectorisation_idx + _monitor_size;
+{% endif %}
 _idx = spiking_neuron;
 _vectorisation_idx = _idx;
 
 // vector_code
 {{vector_code|autoindent}}
+
+{#
+{% if owner.source.__class__.__name__ == 'Subgroup' %}
+assert({{_source_idx}}[_source_start] <= spiking_neuron);
+assert(spiking_neuron < {{_source_idx}}[_source_stop]);
+{% endif %}
+#}
 
 // fill the monitors
 {% for varname, var in record_variables.items() %}

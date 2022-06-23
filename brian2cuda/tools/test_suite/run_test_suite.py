@@ -10,8 +10,8 @@ parser = argparse.ArgumentParser(description='Run the brian2 testsuite on GPU.')
 parser.add_argument('--no-long-tests', action='store_false',
                     help="Set to not run long tests. By default they are run.")
 
-parser.add_argument('--skip-not-implemented', action='store_true',
-                    help="Weather to reset prefs between tests or not.")
+parser.add_argument('--fail-not-implemented', action='store_true',
+                    help="Fail tests that raise a `NotImplementedError`.")
 
 parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                     help="Weather to use multiple cores for testing. Optionally the "
@@ -185,7 +185,7 @@ for target in args.targets:
                        test_codegen_independent=False,
                        test_standalone=target,
                        reset_preferences=False,
-                       fail_for_not_implemented=not args.skip_not_implemented,
+                       fail_for_not_implemented=args.fail_not_implemented,
                        test_in_parallel=test_in_parallel,
                        extra_test_dirs=extra_test_dirs,
                        float_dtype=None,

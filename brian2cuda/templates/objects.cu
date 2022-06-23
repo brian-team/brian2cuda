@@ -59,6 +59,10 @@ int brian::previous_idx{{varname}};
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {% endfor %}
+{# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
+{% for varname in subgroups_with_spikemonitor %}
+thrust::device_vector<int32_t> brian::_dev_{{varname}}_eventspace;
+{% endfor %}
 
 //////////////// dynamic arrays 2d /////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
@@ -303,7 +307,22 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
             );
+    // initialize eventspace with -1
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    for (int i=0; i<{{var.size}}-1; i++)
+    {
+        {{varname}}[i] = -1;
+    }
+    // initialize eventspace counter with 0
+    {{varname}}[{{var.size}} - 1] = 0;
+    CUDA_SAFE_CALL(
+        cudaMemcpy(
+            dev{{varname}}[0],
+            {{varname}},
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{varname}},
+            cudaMemcpyHostToDevice
+        )
+    );
     {% endfor %}
 
     CUDA_CHECK_MEMORY();
@@ -356,8 +375,8 @@ void _write_arrays()
                 or var in dynamic_array_2d_specs
                 or var in static_array_specs
               ) %}
-    {# Don't copy StateMonitor's N variables, which are modified on host only #}
-    {% if not (var.owner.__class__.__name__ == 'StateMonitor' and var.name == 'N') %}
+    {# Don't copy State-, Spike- & EventMonitor's N variables, which are modified on host only #}
+    {% if varname not in variables_on_host_only %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
@@ -376,11 +395,7 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {# TODO: pass isinstance to Jinja template to make it available here #}
-    {% if not (var in multisynaptic_idx_vars
-                or var.name in ['delay', '_synaptic_pre', '_synaptic_post']
-                or (var.owner.__class__.__name__ == 'StateMonitor' and var.name == 't')
-              ) %}
+    {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};
@@ -396,7 +411,7 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-        {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+        {% if var in profile_statemonitor_vars %}
         {# Record copying statemonitor variable from device to host for benchmarking #}
         std::clock_t before_copy_statemon;
         string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
@@ -406,7 +421,7 @@ void _write_arrays()
         outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
         if(outfile_{{varname}}.is_open())
         {
-            {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+            {% if var in profile_statemonitor_vars %}
             before_copy_statemon = std::clock();
             {% endif %}
             thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
@@ -414,7 +429,7 @@ void _write_arrays()
             {
                 temp_array{{varname}}[n] = {{varname}}[n];
             }
-            {% if profile_statemonitor_copy_to_host and var.owner.__class__.__name__ == 'StateMonitor' and var.name == profile_statemonitor_copy_to_host %}
+            {% if var in profile_statemonitor_vars %}
             string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
             copy_time_statemon += (double)(std::clock() - before_copy_statemon) / CLOCKS_PER_SEC;
             {% endif %}
@@ -551,6 +566,10 @@ void _dealloc_arrays()
     {% endif %}
     {% endfor %}
 
+    {% for varname in subgroups_with_spikemonitor %}
+    thrust::device_vector<int32_t>().swap(_dev_{{varname}}_eventspace);
+    {% endfor %}
+
 }
 
 {% endmacro %}
@@ -592,10 +611,13 @@ extern Clock {{clock.name}};
 extern Network {{net.name}};
 {% endfor %}
 
-//////////////// dynamic arrays ///////////
+//////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
 {% endfor %}
 
 //////////////// arrays ///////////////////
