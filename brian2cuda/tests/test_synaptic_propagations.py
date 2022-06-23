@@ -224,7 +224,7 @@ def test_circular_eventspaces_spikegenerator():
 
 
 @pytest.mark.standalone_compatible
-def test_circular_eventspaces_different_clock():
+def test_circular_eventspaces_different_clock_spikegenerator():
     # same test as test_circular_eventspaces_spikegenerator() but with a
     # SpikeGeneratorGroup on a different clock (dt=2*defaultclock.dt)
 
@@ -236,6 +236,48 @@ def test_circular_eventspaces_different_clock():
     indices = [0] * (n_timesteps // clock_multiplier)
     times = arange(0, n_timesteps, clock_multiplier) * default_dt
     inp = SpikeGeneratorGroup(1, indices, times, dt=2*default_dt)
+    G = NeuronGroup(5, 'v:1', threshold='v>1', reset='v=0')
+    # synapses with homogenous delays
+    S0 = Synapses(inp, G, on_pre='v+=1.1', delay=0*ms)
+    S0.connect(i=0, j=0)
+    S1 = Synapses(inp, G, on_pre='v+=1.1', delay=2*default_dt)
+    S1.connect(i=0, j=1)
+    S2 = Synapses(inp, G, on_pre='v+=1.1', delay=4*default_dt)
+    S2.connect(i=0, j=2)
+    # synapse with heterogeneous delays
+    S3 = Synapses(inp, G, on_pre='v+=1.1')
+    S3.connect(i=0, j=[3, 4])  # delays: 6, 8
+    S3.delay = '2*j*default_dt'
+    mon = SpikeMonitor(G)
+
+    run((n_timesteps + 9) * default_dt)
+
+    # neurons should spike in the timestep after effect application
+    # TODO: remove sorted() when #46 is fixed
+    assert_allclose(sorted(mon.t[mon.i[:] == 0]), arange(1, n_timesteps + 1, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 1]), arange(3, n_timesteps + 3, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 2]), arange(5, n_timesteps + 5, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 3]), arange(7, n_timesteps + 7, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
+
+
+@pytest.mark.standalone_compatible
+def test_circular_eventspaces_different_clock_neurongroup():
+    # same test as test_circular_eventspaces_different_clock_spikegenerator() but with a
+    # NeuronGroup instead of SpikeGeneratorGroup (also on a different clock:
+    # dt=2*defaultclock.dt)
+
+    default_dt = defaultclock.dt
+
+    # Neuron 0 spikes every second time step in first n_timesteps
+    clock_multiplier = 2  # factor by which SpikeGeneratorGroup clock is slower
+    n_timesteps = 12
+    inp = NeuronGroup(
+        1,
+        'default_t_in_timesteps = timestep(t, default_dt): 1',
+        threshold='default_t_in_timesteps % clock_multiplier == 0 and default_t_in_timesteps < n_timesteps',
+        dt=2*default_dt,
+    )
     G = NeuronGroup(5, 'v:1', threshold='v>1', reset='v=0')
     # synapses with homogenous delays
     S0 = Synapses(inp, G, on_pre='v+=1.1', delay=0*ms)
