@@ -285,7 +285,7 @@ def test_atomics_parallelisation(code):
                     fullvar = var+G.name
                     val = G.state(var)[:].copy()
                     if fullvar in endvals:
-                        assert_allclose(val, endvals[fullvar], rtol=1e-5)
+                        assert_allclose(val, endvals[fullvar])
                     else:
                         endvals[fullvar] = val
             device.reinit()
