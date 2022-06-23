@@ -9,7 +9,7 @@ List of known issues:
 
 .. contents::
     :local:
-    :depth: 1
+    :depth: 2
 
 Known issues when using multiple ``run`` calls
 ----------------------------------------------
@@ -39,3 +39,67 @@ between ``run`` calls is not effected from this bug and should work as expected
 See `Brian2CUDA issue #302`_ for progress on this issue.
 
 .. _Brian2CUDA issue #302: https://github.com/brian-team/brian2cuda/issues/302
+
+
+Using a different integration time for ``Synapses`` and its source ``NeuronGroup``
+----------------------------------------------------------------------------------
+
+There is currently a bug when using ``Synapses`` with homogeneous delays and
+choosing a different integration time step (``dt``) for any of its
+``SynapticPathway`` and its associated source ``NeuronGroup``. This bug does
+not occur when the delays are heterogenenous or when only the target
+``NeuronGroup`` has a different clock. See `Brian2CUDA issue #222`_. Any of the
+following examples has this bug::
+
+    from brian2 import *
+
+    group_different_dt = NeuronGroup(1, 'v:1', threshold='True', dt=2*defaultclock.dt)
+    group_same_dt = NeuronGroup(1, 'v:1', threshold='True', dt=defaultclock.dt)
+
+    # Bug: Source of pre->post synaptic pathway uses different dt than synapses
+    #      and synapses have homogeneous delays
+    synapses = Synapses(
+        group_different_dt,
+        group_same_dt,
+        on_pre='v+=1',
+        delay=1*ms,
+        dt=defaultclock.dt
+    )
+
+    # No bug: Synapses have no delays
+    synapses = Synapses(
+        group_different_dt,
+        group_same_dt,
+        on_pre='v+=1',
+        dt=defaultclock.dt
+    )
+
+    # No bug: Synapses have heterogeneous delays
+    synapses = Synapses(
+        group_different_dt,
+        group_same_dt,
+        on_pre='v+=1',
+        dt=defaultclock.dt
+    )
+    synapses.delay = 'j*ms'
+
+    # No bug: Source of pre->post synaptic pathway uses the same dt as synapses
+    synapses = Synapses(
+        group_same_dt,
+        group_different_dt,
+        on_post='v+=1',
+        delay=1*ms,
+        dt=defaultclock.dt
+    )
+
+.. _Brian2CUDA issue #222: https://github.com/brian-team/brian2cuda/issues/222
+
+
+``SpikeMonitor`` and ``EventMonitor`` data is not sorted by indices
+-------------------------------------------------------------------
+In all Brian2 devices, ``SpikeMonitor`` and ``EventMonitor`` data is first
+sorted by time and then by neuron index. In Brian2CUDA, the data is only sorted
+by time but not always by index given a fixed time point. See `Brian2CUDA issue
+#46`_ for progress on this issue.
+
+.. _Brian2CUDA issue #46: https://github.com/brian-team/brian2cuda/issues/46
