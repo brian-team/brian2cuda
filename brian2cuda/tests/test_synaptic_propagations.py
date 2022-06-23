@@ -41,7 +41,7 @@ def test_CudaSpikeQueue_push_outer_loop():
     even_indices = np.arange(0,N,2)  # delay=0
     odd_indices = np.arange(1,N,2)  # delay=dt
 
-    assert_allclose(S.delay[even_indices], 0)
+    assert_allclose(S.delay[even_indices], 0*second)
     assert_allclose(S.delay[odd_indices], default_dt)
     assert_equal(sorted(mon.i[mon.t==default_dt]), even_indices)
     assert_equal(sorted(mon.i[mon.t==2*default_dt]), odd_indices)
