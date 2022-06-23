@@ -23,11 +23,11 @@ def validate_bundle_size_expression(string):
         return False
 
     # Replase names from C++ std with numpy version for eval test below
-    replaced = formatted.replace("ceil", "np.ceil")
-    replaced = formatted.replace("floor", "np.floor")
+    formatted = formatted.replace("ceil", "np.ceil")
+    formatted = formatted.replace("floor", "np.floor")
 
     try:
-        eval(replaced)
+        eval(formatted)
     except Exception:
         logger.error(f"Can't evaluate expression '{string}'")
         return False
@@ -114,7 +114,7 @@ prefs.register_preferences(
         lower ``int`` (e.g. ``1.9`` will be cast to ``1.0``). Examples: ``'{mean} + 2 *
         {std}'`` will use the mean bunde size + 2 times the standard deviation over
         bundle sizes and round it to the next lower integer. If you want to round up
-        instead, use ``'ceil({mean} + 2 * {std}'``.''',
+        instead, use ``'ceil({mean} + 2 * {std})'``.''',
         default="{max}",
         validator=validate_bundle_size_expression),
 
