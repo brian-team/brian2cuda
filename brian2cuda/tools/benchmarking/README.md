@@ -47,7 +47,7 @@ should run:
   `brian2cuda/tests/features/speed.py`.
 
 If you don't want to use the Brian2CUDA and Brian2 from this repository but some other versions you have installed, you can also execute the Python file `run_benchmark_suite.py` file directly (see the `--help` options for the parameters).
-  
+
 ### Examples
 
 To run all benchmarks for all configurations defined in `run_benchmark_suite.py`, execute:
@@ -68,7 +68,7 @@ This will store the results in
 To run single instances of an example model with a specific size and configuration, you
 can use the Python files in the `brian2cuda/examples` directory of this repository.
 If you haven't done so yet, please first follow the installation instructions on the main
-respositories README page (the example scripts don't automatically set the correct
+repositories README page (the example scripts don't automatically set the correct
 PYTHONPATH for you).
 
 Each of the scripts has a number of optional command line arguments to specify the
@@ -98,23 +98,23 @@ corresponding script calls:
 
   `python brunelhakim.py --heterog-delays`
   </dd>
-  <dt>STDP benchmark I: Dynamic synapses with spike-timing dependent plasticity and homogeneous synaptic delays 
+  <dt>STDP benchmark I: Dynamic synapses with spike-timing dependent plasticity and homogeneous synaptic delays
   </dt>
   <dd>
 
   `python stdp.py --delays homogeneous`
   </dd>
-  <dt>STDP benchmark II: Dynamic synapses with spike-timing dependent plasticity and heterogeneous synaptic delays 
+  <dt>STDP benchmark II: Dynamic synapses with spike-timing dependent plasticity and heterogeneous synaptic delays
   </dt>
   <dd>
-  
+
   `python stdp.py --delays heterogeneous`
   </dd>
   <dt>
   Mushroom body benchmark: Complex model with multiple neuronal populations, spike-timing dependent plasticity and noise
   </dt>
   <dd>
-  
+
   `python mushroombody.py`
   </dd>
 </dl>
