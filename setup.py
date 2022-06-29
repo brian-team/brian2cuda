@@ -38,7 +38,7 @@ setup(
         "Documentation": "https://brian2cuda.readthedocs.io/en/latest/",
         "Bug tracker": "https://github.com/brian-team/brian2cuda/issues",
     },
-    description="A Brian2 extention to simulate spiking neural networks on GPUs",
+    description="A Brian2 extension to simulate spiking neural networks on GPUs",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Denis Alevi, Moritz Augustin and Marcel Stimberg",
