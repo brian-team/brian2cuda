@@ -173,12 +173,12 @@ def run(test_standalone=['cuda_standalone'], long_tests=False, reset_preferences
         if not all_success:
             num_fails = len(successes) - sum(successes)
             print(
-                f"ERROR: Test suit(s) for {num_fails}/{len(successes)} standalone"
+                f"ERROR: Test suite(s) for {num_fails}/{len(successes)} standalone"
                 f" targets did not complete successfully (see above)."
             )
         else:
             print(
-                f"OK: Test suit(s) for {len(successes)}/{len(successes)} standalone "
+                f"OK: Test suite(s) for {len(successes)}/{len(successes)} standalone "
                 f"targets did complete successfully"
             )
         return all_success

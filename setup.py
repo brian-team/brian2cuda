@@ -23,7 +23,7 @@ setup(
         ],
         # Include external code for tests
         "brian2cuda.tests": [
-            "func_def_cuda.cpp",
+            "func_def_cuda.cu",
             "func_def_cuda.h",
         ],
     },
