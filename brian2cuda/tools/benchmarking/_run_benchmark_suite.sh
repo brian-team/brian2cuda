@@ -26,8 +26,12 @@ source $init_genn_sh
 echo -e "\nINFO: sourced $init_genn_sh\n  CUDA_PATH=$CUDA_PATH\n  GENN_PATH=$GENN_PATH\n" \
     | tee -a "$logfile"
 
+benchmark_suite_cmd="python run_benchmark_suite.py $benchmark_suite_args"
+echo "$benchmark_suite_cmd" | tee -a "$logfile"
+PYTHONPATH="../../..:../../../frozen_repos/brian2:$PYTHONPATH" \
+    $test_suite_cmd 2>&1 | tee -a "$logfile"
 PYTHONPATH="../../..:../../../frozen_repos/brian2:../../../frozen_repos/brian2genn:$PYTHONPATH" \
-    python run_benchmark_suite.py $benchmark_suite_args 2>&1 | tee -a "$logfile"
+    $benchmark_suite_cmd 2>&1 | tee -a "$logfile"
 
 runtime=$(( $(date +%s) - $start_time ))
 min=$(( $runtime / 60 ))

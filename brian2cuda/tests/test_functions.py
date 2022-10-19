@@ -36,7 +36,7 @@ def test_user_defined_function():
     G.variable = test_array
     mon = StateMonitor(G, 'func', record=True)
     run(default_dt)
-    assert_equal(np.sin(test_array), mon.func_.flatten())
+    assert_allclose(np.sin(test_array), mon.func_.flatten())
 
 
 @pytest.mark.cuda_standalone

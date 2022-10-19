@@ -23,6 +23,9 @@ R. Brette - Dec 2007
 devicename = 'cuda_standalone'
 #devicename = 'cpp_standalone'
 
+# random seed for reproducible simulations
+seed = None
+
 #------------------------------------------------------------------------------
 # choose mode
 
@@ -57,8 +60,9 @@ monitors = True
 # single precision
 single_precision = False
 
-# number of post blocks (None is default)
-num_blocks = None
+# number of connectivity matrix partitions
+# (None uses as many as there are SMs on the GPU)
+partitions = None
 
 # atomic operations
 atomics = True
@@ -66,27 +70,39 @@ atomics = True
 # push synapse bundles
 bundle_mode = True
 
+# runtime in seconds
+runtime = 1
+
+# number of C++ threads (default 0: single thread without OpenMP)
+# (only for devicename == 'cpp_standalone')
+cpp_threads = 0
+
+# pre or post parallelization mode in Brian2GeNN (only for devicename == 'genn')
+genn_mode = 'post'
 ###############################################################################
 ## CONFIGURATION
+from utils import set_prefs, update_from_command_line
 
+# create paramter dictionary that can be modified from command line
 params = {'devicename': devicename,
+          'seed': seed,
           'scenario': scenario,
           'resultsfolder': resultsfolder,
           'codefolder': codefolder,
           'N': N,
+          'runtime': runtime,
           'profiling': profiling,
           'monitors': monitors,
           'single_precision': single_precision,
-          'num_blocks': num_blocks,
+          'partitions': partitions,
           'atomics': atomics,
-          'bundle_mode': bundle_mode}
+          'bundle_mode': bundle_mode,
+          'cpp_threads': cpp_threads,
+          'genn_mode': genn_mode}
 
-# Add parameter restrictions
-choices = {'devicename': ['cuda_standalone', 'cpp_standalone', 'genn'],
-           'scenario': ['brian2-example', 'uncoupled', 'pseudocoupled-80',
+# add parameter restrictions
+choices = {'scenario': ['brian2-example','uncoupled', 'pseudocoupled-80',
                         'pseudocoupled-1000']}
-
-from utils import set_prefs, update_from_command_line
 
 # update params from command line
 update_from_command_line(params, choices=choices)
@@ -118,6 +134,9 @@ print('compiling model in {}'.format(codefolder))
 set_device(params['devicename'], directory=codefolder, compile=True, run=True,
            debug=False)
 
+if params['seed'] is not None:
+    seed(params['seed'])
+
 # Parameters
 area = 20000*umetre**2
 Cm = (1*ufarad*cm**-2) * area
@@ -146,15 +165,15 @@ dn/dt = alpha_n*(1-n)-beta_n*n : 1
 dh/dt = alpha_h*(1-h)-beta_h*h : 1
 dge/dt = -ge*(1./taue) : siemens
 dgi/dt = -gi*(1./taui) : siemens
-alpha_m = 0.32*(mV**-1)*(13*mV-v+VT)/
-         (exp((13*mV-v+VT)/(4*mV))-1.)/ms : Hz
-beta_m = 0.28*(mV**-1)*(v-VT-40*mV)/
-        (exp((v-VT-40*mV)/(5*mV))-1)/ms : Hz
-alpha_h = 0.128*exp((17*mV-v+VT)/(18*mV))/ms : Hz
-beta_h = 4./(1+exp((40*mV-v+VT)/(5*mV)))/ms : Hz
-alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
-         (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
-beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
+alpha_m = 0.32*(mV**-1)*(13.*mV-v+VT)/
+         (exp((13.*mV-v+VT)/(4.*mV))-1.)/ms : Hz
+beta_m = 0.28*(mV**-1.)*(v-VT-40.*mV)/
+        (exp((v-VT-40.*mV)/(5.*mV))-1.)/ms : Hz
+alpha_h = 0.128*exp((17.*mV-v+VT)/(18.*mV))/ms : Hz
+beta_h = 4./(1.+exp((40.*mV-v+VT)/(5.*mV)))/ms : Hz
+alpha_n = 0.032*(mV**-1.)*(15.*mV-v+VT)/
+         (exp((15.*mV-v+VT)/(5.*mV))-1.)/ms : Hz
+beta_n = .5*exp((10.*mV-v+VT)/(40.*mV))/ms : Hz
 ''')
 
 P = NeuronGroup(params['N'], model=eqs, threshold='v>-20*mV', refractory=3*ms,
@@ -200,7 +219,7 @@ if params['monitors']:
     spikemon = SpikeMonitor(P)
     popratemon = PopulationRateMonitor(P)
 
-run(1 * second, report='text', profile=params['profiling'])
+run(params['runtime']*second, report='text', profile=params['profiling'])
 
 if not os.path.exists(params['resultsfolder']):
     os.mkdir(params['resultsfolder']) # for plots and profiling txt file
@@ -212,15 +231,20 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 if params['monitors']:
-    subplot(311)
-    plot(spikemon.t/ms, spikemon.i, ',k')
-    subplot(312)
-    plot(trace.t/ms, trace.v[:].T[:, :5])
-    subplot(313)
-    plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms))
-    #show()
+    style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
+    plt.style.use(['seaborn-paper', style_file])
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(7.08, 5))
+    axes[0].plot(trace.t/ms, trace.v[0]/mV, color='black')
+    axes[0].set_ylabel('$V_i$ [mV]')
+    axes[1].plot(spikemon.t/ms, spikemon.i, ',k')
+    axes[1].set_ylabel('Neuron ID')
+    axes[2].plot(popratemon.t/ms, popratemon.smooth_rate(width=1*ms), color='#c53929')
+    axes[2].set(xlabel='Time [ms]', ylabel='Population\nrate [s$^{-1}$]')
+    for ax in axes:
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
 
+    fig.align_labels()
     plotpath = os.path.join(params['resultsfolder'], '{}.png'.format(name))
-    savefig(plotpath)
+    plt.savefig(plotpath, dpi=300)
     print('plot saved in {}'.format(plotpath))
     print('the generated model in {} needs to removed manually if wanted'.format(codefolder))

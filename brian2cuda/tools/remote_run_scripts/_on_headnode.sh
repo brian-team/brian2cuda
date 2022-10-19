@@ -11,14 +11,16 @@
 # $3:    entire path to logfile
 # $4:    path to conda.sh
 # $5:    conda env name
-# $6...: the rest is passed as args to run_test_suite.py
+# $6:    delete temore directory after tests are run or not
+# $7...: the rest is passed as args to run_test_suite.py
 bash_script="$1"
 b2c_dir="$2"
 logfile="$3"
 path_conda_sh="$4"
 conda_env="$5"
 keep_remote_repo="$6"
-shift 6
+parallel="$7"
+shift 7
 test_suite_args="$@"
 
 # deletes the brian2cuda directory
@@ -45,14 +47,24 @@ logfile_dir="$(dirname $logfile)"
 logfile_name="$(basename $logfile)"
 
 # activate bashrc (for conda activation and CUDA paths)
-. "$path_conda_sh"
+source "$path_conda_sh"
 conda activate "$conda_env"
 
 # CUDA
 if test -f ~/.init_cuda.sh; then
-    . ~/.init_cuda.sh
+    source ~/.init_cuda.sh
 else
-    . /cognition/home/local/.init_cuda.sh
+    source /cognition/home/local/.init_cuda.sh
+fi
+
+if [ ! "$parallel" -eq 0 ]; then
+    # Source grid engine commands for qmake/qrsh
+    source /opt/ge/default/common/settings.sh
+    # Set tmpdir in home directory, where different compute nodes have access
+    # to (needed for parallel compilation / execution)
+    export TMPDIR="$b2c_dir/tmp"
+    mkdir $TMPDIR
+    echo "Set TMPDIR=$TMPDIR"
 fi
 
 script_path="$b2c_dir/$bash_script"

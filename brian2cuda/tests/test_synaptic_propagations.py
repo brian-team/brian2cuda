@@ -3,7 +3,7 @@ from numpy.testing import assert_equal, assert_array_equal
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.utils.logger import catch_logs
+from brian2.devices.device import reinit_devices, set_device
 
 import brian2cuda
 
@@ -41,10 +41,10 @@ def test_CudaSpikeQueue_push_outer_loop():
     even_indices = np.arange(0,N,2)  # delay=0
     odd_indices = np.arange(1,N,2)  # delay=dt
 
-    assert_allclose(S.delay[even_indices], 0)
+    assert_allclose(S.delay[even_indices], 0*second)
     assert_allclose(S.delay[odd_indices], default_dt)
-    assert_equal(mon.i[mon.t==default_dt], even_indices)
-    assert_equal(mon.i[mon.t==2*default_dt], odd_indices)
+    assert_equal(sorted(mon.i[mon.t==default_dt]), even_indices)
+    assert_equal(sorted(mon.i[mon.t==2*default_dt]), odd_indices)
     assert len(mon) == N
 
 
@@ -215,15 +215,21 @@ def test_circular_eventspaces_spikegenerator():
     run((n_timesteps + 6) * default_dt)
 
     # neurons should spike in the timestep after effect application
-    assert_allclose(mon.t[mon.i[:] == 0], arange(1, n_timesteps + 1) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 1], arange(3, n_timesteps + 3) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 2], arange(6, n_timesteps + 6) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 3], arange(4, n_timesteps + 4) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 4], arange(5, n_timesteps + 5) * default_dt)
+    # TODO: remove sorted() when #46 is fixed
+    assert_allclose(sorted(mon.t[mon.i[:] == 0]), arange(1, n_timesteps + 1) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 1]), arange(3, n_timesteps + 3) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 2]), arange(6, n_timesteps + 6) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 3]), arange(4, n_timesteps + 4) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(5, n_timesteps + 5) * default_dt)
 
 
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
 @pytest.mark.standalone_compatible
-def test_circular_eventspaces_different_clock():
+def test_circular_eventspaces_different_clock_spikegenerator():
     # same test as test_circular_eventspaces_spikegenerator() but with a
     # SpikeGeneratorGroup on a different clock (dt=2*defaultclock.dt)
 
@@ -252,11 +258,59 @@ def test_circular_eventspaces_different_clock():
     run((n_timesteps + 9) * default_dt)
 
     # neurons should spike in the timestep after effect application
-    assert_allclose(mon.t[mon.i[:] == 0], arange(1, n_timesteps + 1, clock_multiplier) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 1], arange(3, n_timesteps + 3, clock_multiplier) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 2], arange(5, n_timesteps + 5, clock_multiplier) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 3], arange(7, n_timesteps + 7, clock_multiplier) * default_dt)
-    assert_allclose(mon.t[mon.i[:] == 4], arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
+    # TODO: remove sorted() when #46 is fixed
+    assert_allclose(sorted(mon.t[mon.i[:] == 0]), arange(1, n_timesteps + 1, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 1]), arange(3, n_timesteps + 3, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 2]), arange(5, n_timesteps + 5, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 3]), arange(7, n_timesteps + 7, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
+
+
+@pytest.mark.xfail(
+    reason='See Brian2CUDA issue #222',
+    condition="config.device == 'cuda_standalone'",
+    raises=AssertionError
+)
+@pytest.mark.standalone_compatible
+def test_circular_eventspaces_different_clock_neurongroup():
+    # same test as test_circular_eventspaces_different_clock_spikegenerator() but with a
+    # NeuronGroup instead of SpikeGeneratorGroup (also on a different clock:
+    # dt=2*defaultclock.dt)
+
+    default_dt = defaultclock.dt
+
+    # Neuron 0 spikes every second time step in first n_timesteps
+    clock_multiplier = 2  # factor by which SpikeGeneratorGroup clock is slower
+    n_timesteps = 12
+    inp = NeuronGroup(
+        1,
+        'default_t_in_timesteps = timestep(t, default_dt): 1',
+        threshold='default_t_in_timesteps % clock_multiplier == 0 and default_t_in_timesteps < n_timesteps',
+        dt=2*default_dt,
+    )
+    G = NeuronGroup(5, 'v:1', threshold='v>1', reset='v=0')
+    # synapses with homogenous delays
+    S0 = Synapses(inp, G, on_pre='v+=1.1', delay=0*ms)
+    S0.connect(i=0, j=0)
+    S1 = Synapses(inp, G, on_pre='v+=1.1', delay=2*default_dt)
+    S1.connect(i=0, j=1)
+    S2 = Synapses(inp, G, on_pre='v+=1.1', delay=4*default_dt)
+    S2.connect(i=0, j=2)
+    # synapse with heterogeneous delays
+    S3 = Synapses(inp, G, on_pre='v+=1.1')
+    S3.connect(i=0, j=[3, 4])  # delays: 6, 8
+    S3.delay = '2*j*default_dt'
+    mon = SpikeMonitor(G)
+
+    run((n_timesteps + 9) * default_dt)
+
+    # neurons should spike in the timestep after effect application
+    # TODO: remove sorted() when #46 is fixed
+    assert_allclose(sorted(mon.t[mon.i[:] == 0]), arange(1, n_timesteps + 1, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 1]), arange(3, n_timesteps + 3, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 2]), arange(5, n_timesteps + 5, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 3]), arange(7, n_timesteps + 7, clock_multiplier) * default_dt)
+    assert_allclose(sorted(mon.t[mon.i[:] == 4]), arange(9, n_timesteps + 9, clock_multiplier) * default_dt)
 
 
 @pytest.mark.standalone_compatible
@@ -284,3 +338,37 @@ def test_synaptic_effect_modes():
 
     # each timestep there are the same number of + and - to neuron.v
     assert_allclose(mon.v[:], 0)
+
+
+@pytest.mark.parametrize(
+    'expression',
+    [
+        'ceil({mean} + 2*{std})',
+        '{max}',
+        '{min}',
+        '5',
+    ]
+)
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_threads_per_synapse_bundle_prefs(expression):
+
+        set_device('cuda_standalone', directory=None, with_output=False)
+
+        prefs.devices.cuda_standalone.threads_per_synapse_bundle = expression
+
+        default_dt = defaultclock.dt
+
+        inp = SpikeGeneratorGroup(1, [0], [0]*ms)
+        G = NeuronGroup(5, 'v:1', threshold='v>1', reset='v=0')
+        # synapse with heterogeneous delays
+        S = Synapses(inp, G, on_pre='v+=1.1')
+        S.connect(i=0, j=[3, 4])
+        S.delay = 'j*default_dt'
+        mon = SpikeMonitor(G)
+
+        run(6*default_dt)
+
+        # neurons should spike in the timestep after effect application
+        assert_allclose(mon.t[mon.i[:] == 3], 4*default_dt)
+        assert_allclose(mon.t[mon.i[:] == 4], 5*default_dt)

@@ -338,7 +338,7 @@ class CUDACodeGenerator(CodeGenerator):
     def translate_to_read_arrays(self, read, write, indices):
         lines = []
         # index and read arrays (index arrays first)
-        for varname in itertools.chain(indices, read):
+        for varname in itertools.chain(sorted(indices), sorted(read)):
             index_var = self.variable_indices[varname]
             var = self.variables[varname]
             if varname not in write:
@@ -353,7 +353,7 @@ class CUDACodeGenerator(CodeGenerator):
     def translate_to_declarations(self, read, write, indices):
         lines = []
         # simply declare variables that will be written but not read
-        for varname in write:
+        for varname in sorted(write):
             if varname not in read and varname not in indices:
                 var = self.variables[varname]
                 line = self.c_data_type(var.dtype) + ' ' + varname + ';'
@@ -383,7 +383,7 @@ class CUDACodeGenerator(CodeGenerator):
     def translate_to_write_arrays(self, write):
         lines = []
         # write arrays
-        for varname in write:
+        for varname in sorted(write):
             index_var = self.variable_indices[varname]
             var = self.variables[varname]
             line = self.get_array_name(var) + '[' + index_var + '] = ' + varname + ';'
@@ -727,7 +727,14 @@ class CUDACodeGenerator(CodeGenerator):
                 # turn off restricted pointers for scalars for safety
                 if var.scalar:
                     restrict = ' '
-                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                # Need to use correct dt type in pointers_lines for single precision,
+                # see #148
+                if varname == "dt" and prefs.core.default_float_dtype == np.float32:
+                    # c_data_type(variable.dtype) is float, but we need double
+                    dtype = "double"
+                else:
+                    dtype = self.c_data_type(var.dtype)
+                line = '{0}* {1} {2} = {3};'.format(dtype,
                                                     restrict,
                                                     pointer_name,
                                                     array_name)
@@ -770,8 +777,14 @@ class CUDACodeGenerator(CodeGenerator):
             if hasattr(variable, 'owner') and isinstance(variable.owner, Clock):
                 # get arrayname without _ptr suffix (e.g. _array_defaultclock_dt)
                 arrayname = self.get_array_name(variable, prefix='')
-                line = "const {dtype}* _ptr{arrayname} = &_value{arrayname};"
-                line = line.format(dtype=c_data_type(variable.dtype), arrayname=arrayname)
+                # kernel_lines appear before dt is cast to float (in scalar_code), hence
+                # we need to still use double (used in kernel parameters), see #148
+                if varname == "dt" and prefs.core.default_float_dtype == np.float32:
+                    # c_data_type(variable.dtype) is float, but we need double
+                    dtype = "double"
+                else:
+                    dtype = dtype=c_data_type(variable.dtype)
+                line = f"const {dtype}* _ptr{arrayname} = &_value{arrayname};"
                 if line not in kernel_lines:
                     kernel_lines.append(line)
 

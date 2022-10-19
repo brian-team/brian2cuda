@@ -10,13 +10,20 @@ parser = argparse.ArgumentParser(description='Run the brian2 testsuite on GPU.')
 parser.add_argument('--no-long-tests', action='store_false',
                     help="Set to not run long tests. By default they are run.")
 
-parser.add_argument('--skip-not-implemented', action='store_true',
-                    help="Weather to reset prefs between tests or not.")
+parser.add_argument('--fail-not-implemented', action='store_true',
+                    help="Fail tests that raise a `NotImplementedError`.")
 
 parser.add_argument('--test-parallel', nargs='?', const=None, default=[],
                     help="Weather to use multiple cores for testing. Optionally the "
                          "targets for which mpi should be used, can be passed as "
                          "arguments. If none are passed, all are run in parallel.")
+
+parser.add_argument('--grid-engine', '-g', action='store_true',
+                    help=("Use grid engine to schedule compile and execute jobs."))
+
+parser.add_argument('--grid-engine-gpu', '-G', default="RTX2080",
+                    choices=[None, "RTX2080", "GTX1080"],
+                    help=("GPU to use for tests. If None, request any GPU."))
 
 parser.add_argument('--notify-slack', action='store_true',
                     help="Send progress reports through Slack via ClusterBot "
@@ -35,6 +42,9 @@ parser.add_argument('-q', '--quiet', action='store_true',
 
 parser.add_argument('-d', '--debug', action='store_true',
                     help=("Debug mode, set pytest to not capture outputs."))
+
+parser.add_argument('-R', '--cuda-runtime', default=11.2, type=float,
+                    help=("Set preference for cuda runtime. Only used for remote targets"))
 
 args, unknown_args = utils.parse_arguments(parser, parse_unknown=True)
 
@@ -70,6 +80,41 @@ all_prefs_combinations, print_lines = utils.set_preferences(args, prefs,
                                                             return_lines=True)
 buffer.add(print_lines)
 buffer.print_all()
+
+if args.grid_engine:
+    import shlex
+    jobs = args.jobs[0]
+    if jobs == 1:
+        make_cmd = "make"
+        make_args = ['-j', '1']
+    else:
+        make_cmd = "/opt/ge/bin/lx-amd64/qmake"
+        #make_args = shlex.split(f"-l cuda=0 -now n -cwd -V -- -j {jobs}")
+        #make_args = shlex.split(f" -now n -cwd -V -- -j {jobs}")
+        make_args = shlex.split(f" -pe cognition.pe {jobs} -now n -cwd -V --")
+    prefs.devices.cpp_standalone.make_cmd_unix = make_cmd
+    prefs.devices.cpp_standalone.extra_make_args_unix = make_args
+    gputype = ""
+    if args.grid_engine_gpu is not None:
+        gputype = f',gputype={args.grid_engine_gpu}'
+    prefs.devices.cpp_standalone.run_cmd_unix = shlex.split(
+        f'qrsh -cwd -V -now n -b y -l cuda=1{gputype} ./main'
+    )
+    runtime = args.cuda_runtime
+    prefs.devices.cuda_standalone.cuda_backend.cuda_path = f"/usr/local/cuda-{runtime}"
+    prefs.devices.cuda_standalone.cuda_backend.detect_cuda = False
+    prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = runtime
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+    if args.grid_engine_gpu == "RTX2080":
+        prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+    elif args.grid_engine_gpu == "GTX1080":
+        prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
+    else:
+        raise RuntimeError(
+            "Can't run parallel without specifying GPU, need to set compute "
+            "capability!"
+        )
 
 extra_test_dirs = os.path.join(os.path.abspath(os.path.dirname(brian2cuda.__file__)), 'tests')
 
@@ -140,7 +185,7 @@ for target in args.targets:
                        test_codegen_independent=False,
                        test_standalone=target,
                        reset_preferences=False,
-                       fail_for_not_implemented=not args.skip_not_implemented,
+                       fail_for_not_implemented=args.fail_not_implemented,
                        test_in_parallel=test_in_parallel,
                        extra_test_dirs=extra_test_dirs,
                        float_dtype=None,

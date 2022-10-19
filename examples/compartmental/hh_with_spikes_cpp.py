@@ -61,10 +61,11 @@ neuron.I[0] = 1*uA # current injection at one end
 run(3*ms)
 neuron.I = 0*amp
 run(50*ms, report='text', profile=True)
-print(profiling_summary())
 
 # cf. https://brian2.readthedocs.io/en/stable/user/computation.html#multiple-run-calls
 device.build( directory=codefolder, compile = True, run = True, debug=False)
+
+print(profiling_summary())
 
 # Calculation of velocity
 slope, intercept, r_value, p_value, std_err = stats.linregress(spikes.t/second,

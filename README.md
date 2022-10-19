@@ -1,63 +1,50 @@
-
 Brian2CUDA
 ==========
 
-Please note that this package is still under developement and has not been released yet.
+Brian2CUDA is an extension of the spiking neural network simulator
+[Brian2](https://github.com/brian-team/brian2), written in Python. It
+generates C++/CUDA code to run simulations on NVIDIA GPUs.
 
-Brian2CUDA is an extention of the spiking neural network simulator [Brian2](https://github.com/brian-team/brian2), implementing a [Brian2 standalone device](http://brian2.readthedocs.io/en/stable/developer/devices.html) to generate C++/CUDA code to run simluations on NVIDIA general purpose graphics processing units (GPGPUs).
+For **support**, please use the [Brian forum](https://brian.discourse.group/). If
+you think you found a bug in Brian2CUDA, please report it at the
+[GitHub issue tracker](https://github.com/brian-team/brian2cuda/issues).
 
-### Usage: 
+For **installation and usage instructions**, check out the
+[Brian2CUDA documentation](https://brian2cuda.readthedocs.io).
+For information on general Brian2 usage, check out the
+[Brian2 documentation](http://brian2.readthedocs.io).
+
+## Quick start
+### Installation
+
+You can install Brian2CUDA via `pip`:
+
+```bash
+python -m pip install brian2cuda
+```
+
+This will install a compatible version of Brian2 as dependency. For installation requirements and GPU configuration, check out the [Brian2CUDA documentation](https://brian2cuda.readthedocs.io/en/latest/index.html).
+
+### Usage
 Use your Brian2 code (see [Brian2 documentation](http://brian2.readthedocs.io/en/stable/index.html)) and modify the imports to:
+
 ```python
+# Standard Brian2 import
 from brian2 import *
+
+# Enable GPU usage via Brian2CUDA
 import brian2cuda
 set_device("cuda_standalone")
 ```
 
-### Installation
-#### Requirements
-- Python2: The current version only supports Python2. For the first release, we will support (only) Python3 (see issue [#161](https://github.com/brian-team/brian2cuda/issues/161))
-- Brian2: The correct version with which this implementation is working is stored in a submodule in `frozen_repos/brian2` 
-- Matplotlib, Seaborn (these dependencies will be removed for the release).
+See [Brian2's standalone code generation](https://brian2.readthedocs.io/en/stable/user/computation.html?highlight=set_device#standalone-code-generation) for more options for the `set_device` call.
 
-After cloning brian2cuda, you can initialise the submodule from inside this repository:
 
-```
-cd brian2cuda
-git submodule update --init frozen_repos/brian2
-```
+## Citation
+If you use this software in a published article, please cite
+[our Brian2CUDA publication](https://www.frontiersin.org/articles/10.3389/fninf.2022.883700):
 
-Next, you need to incorporate a few changes into the brian2 repo. These changes are already included in the newest brian2 version, but need to be added manually to the brian2 version that is used in `frozen_repose`. To add these changes, apply the `brian2.diff` file to the repository:
-```
-cd frozen_repos/brian2
-git apply ../brian2.diff
-# return to the brian2cuda root directory for the following installation
-cd ../..
-```
+> Alevi, D, Stimberg, M, Sprekeler, H, Obermayer, K, Augustin, M. “Brian2CUDA: flexible and efficient simulation of spiking neural network models on GPUs” Frontiers in Neuroinformatics (2022). doi: 10.3389/fninf.2022.883700.
 
-Now you can install the correct brian2 and brian2cuda versions using pip (Be careful if you already have a Brian2 version installed in your current Python environment!):
-```
-pip install .
-pip install ./frozen_repos/brian2
-```
-
-Or just add them to your `PYTHONPATH` (in which case you need to install their dependencies manually).
-
-#### Comparison with brian2genn
-
-The [brian2genn](https://github.com/brian-team/brian2genn) and [GeNN](https://github.com/genn-team/genn) versions that can be used with the same brian2 version as brian2cuda are stored in submodules in `frozen_repos/brian2genn` and `frozen_repos/genn`. You can initialise them with:
-```
-git submodule update --init frozen_repos/brian2genn
-git submodule update --init frozen_repos/genn
-```
-If you are using LINUX and your CUDA is installed in `/usr/local/cuda/`, you can now just source `init_genn` to set the enironmental variables needed for GeNN to work:
-```
-source frozen_repos/init_genn
-```
-Otherwise modify the `CUDA_PATH` in `init_genn` accordingly or follow the instructions from the [GeNN repository](https://github.com/genn-team/genn)
-
-Now you can install `brian2genn` either with pip:
-```
-pip install ./frozen_repos/brian2genn
-```
-or just add it to your `PYTHONPATH`.
+## License
+Brian2CUDA is free software licensed under the [GNU General Public License v3 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html).

@@ -1,5 +1,5 @@
 # example script to run multiple examples, the code and results will be in:
-base='benchmark_consistency_test'
+base='multirun-results'
 codefolder=$base/code
 resultsfolder=$base/results
 lofgile=$base/log.txt

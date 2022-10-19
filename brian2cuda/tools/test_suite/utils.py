@@ -1,6 +1,7 @@
 """Utility funcitons"""
 import traceback
 import time
+import os
 import numpy as np
 from itertools import chain, combinations
 
@@ -107,7 +108,6 @@ def print_prefs_combinations(configurations, condition=None, return_lines=False)
 def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
                     suppress_brian_infos=True, return_lines=False):
 
-    import socket
     import brian2cuda  # need it for preferences (or set prefs conditinally)
 
     prints = []
@@ -132,6 +132,14 @@ def set_preferences(args, prefs, fast_compilation=True, suppress_warnings=True,
         compile_args = ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
         prefs['devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc'].extend(compile_args)
         prints.append("Suppressing compiler warnings")
+
+    slurm_cluster = os.environ.get("SLURM_CLUSTER_NAME", default=None)
+    if slurm_cluster == "hpc":
+        device_query_path = "~/cuda-samples/bin/x86_64/linux/release/deviceQuery"
+        prefs.devices.cuda_standalone.cuda_backend.device_query_path = (
+            device_query_path
+        )
+        prints.append(f"Setting `device_query_path = {device_query_path}")
 
     if args.jobs is not None:
         k = 'devices.cpp_standalone.extra_make_args_unix'
@@ -262,10 +270,10 @@ class PrintBuffer(object):
         """
         Parameters
         ----------
-        clusterbot : ClusterBot
+        clusterbot : ClusterBot, optional
             ClusterBot instance that sends messages to Slack. If None
             (default), messages will only be printed to stdout (using print).
-        disable_print : bool
+        disable_print : bool, optional
             If `True`, don't print anything.
         """
         self._lines = []

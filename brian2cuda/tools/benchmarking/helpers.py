@@ -1,6 +1,7 @@
 import os
 import pickle as pickle
 import pandas as pd
+import numpy as np
 import brian2
 from brian2.tests.features.base import SpeedTestResults
 from collections import defaultdict
@@ -33,9 +34,11 @@ def pickle_results(results, filename):
     assert isinstance(results, SpeedTestResults)
     to_pickle = SpeedTestResults(
         results.full_results,
+        results.feature_results,
         configurations_to_dict(results.configurations),
         results.speed_tests,
         results.brian_stdouts,
+        results.brian_stderrs,
         results.tracebacks
     )
     with open(filename, 'wb') as output:
@@ -56,7 +59,7 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
         be created. If None, all recorded code objects are translated to .csv.
     -------
     '''
-    with open(pkl_file) as f:
+    with open(pkl_file, 'rb') as f:
         speed_test_res = pickle.load(f)
 
     # we have only one speed test per .pkl file
@@ -69,11 +72,23 @@ def translate_pkl_to_csv(pkl_file, profile_suffixes=None):
     num_genn_configs = len([c['classname'] for c in configs if
                             c['classname'].lower().startswith('genn')])
 
-    recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
-    recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                      if not key[0].lower().startswith('genn')])
-    recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
-                                  if key[0].lower().startswith('genn')])
+    #recorded_suffixes = set([key[-1] for key in full_results_dict.keys()])
+    #recorded_not_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+    #                                  if not key[0].lower().startswith('genn')])
+    #recorded_genn_suffixes = set([key[-1] for key in full_results_dict.keys()
+    #                              if key[0].lower().startswith('genn')])
+    recorded_suffixes = set()
+    recorded_not_genn_suffixes = set()
+    recorded_genn_suffixes = set()
+    for key in full_results_dict.keys():
+        configname = key[0]
+        suffix = key[-1]
+        if True: #not suffix.startswith(("standalone_", "python_")):
+            recorded_suffixes.add(suffix)
+            if configname.lower().startswith('genn'):
+                recorded_genn_suffixes.add(suffix)
+            else:
+                recorded_not_genn_suffixes.add(suffix)
 
     if len(recorded_suffixes) <= 3:
         assert 'lrcf' in recorded_suffixes
@@ -112,10 +127,14 @@ def create_csv(file_name, speed_test_name, full_results_dict, configs, ns,
         if genn is None or config_name.lower().startswith('genn') == genn:
             config_names.append(config.name)
             for n in ns:
-                res = full_results_dict[config_name,
-                                        speed_test_name,
-                                        n,
-                                        suffix]
+                try:
+                    res = full_results_dict[config_name,
+                                            speed_test_name,
+                                            n,
+                                            suffix]
+                except KeyError as err:
+                    print(f"WARNING: Results missing, adding NaN. KeyError: {err}")
+                    res = np.nan
                 res = brian2.asarray(res)
                 if not brian2.any(res):
                     # don't save codeobjects that were not profiled
@@ -131,7 +150,7 @@ def plot_from_pkl(pkl_file, plot_dir, base_config='C++ standalone'):
 
     import matplotlib.pyplot as plt
 
-    with open(pkl_file) as f:
+    with open(pkl_file, 'rb') as f:
         # SpeedTestResults object
         res = pickle.load(f)
 

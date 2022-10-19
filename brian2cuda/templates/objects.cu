@@ -59,6 +59,10 @@ int brian::previous_idx{{varname}};
 thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {% endfor %}
+{# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
+{% for varname in subgroups_with_spikemonitor %}
+thrust::device_vector<int32_t> brian::_dev_{{varname}}_eventspace;
+{% endfor %}
 
 //////////////// dynamic arrays 2d /////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
@@ -90,8 +94,10 @@ __device__ int* brian::{{path.name}}_num_synapses_by_bundle;
 __device__ int* brian::{{path.name}}_unique_delays;
 __device__ int* brian::{{path.name}}_synapses_offset_by_bundle;
 __device__ int* brian::{{path.name}}_global_bundle_id_start_by_pre;
-int brian::{{path.name}}_max_bundle_size = 0;
-int brian::{{path.name}}_mean_bundle_size = 0;
+int brian::{{path.name}}_bundle_size_max = 0;
+int brian::{{path.name}}_bundle_size_min = 0;
+double brian::{{path.name}}_bundle_size_mean = 0;
+double brian::{{path.name}}_bundle_size_std = 0;
 int brian::{{path.name}}_max_size = 0;
 __device__ int* brian::{{path.name}}_num_unique_delays_by_pre;
 int brian::{{path.name}}_max_num_unique_delays = 0;
@@ -139,16 +145,16 @@ __global__ void {{path.name}}_init(
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
 double brian::{{codeobj}}_profiling_info = 0.0;
-{% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
 {#
+{% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
 // Profiling information for each of the 5 kernels in spatialstateupdate
 double brian::{{codeobj}}_kernel_integration_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_tridiagsolve_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_coupling_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_combine_profiling_info = 0.0;
 double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
-#}
 {% endif %}
+#}
 {% endfor %}
 {% endif %}
 
@@ -197,7 +203,6 @@ void _init_arrays()
     {% else %}
     num_parallel_blocks = props.multiProcessorCount * {{sm_multiplier}};
     {% endif %}
-    printf("objects cu num par blocks %d\n", num_parallel_blocks);
     max_threads_per_block = props.maxThreadsPerBlock;
     max_threads_per_sm = props.maxThreadsPerMultiProcessor;
     max_shared_mem_size = props.sharedMemPerBlock;
@@ -302,7 +307,22 @@ void _init_arrays()
     CUDA_SAFE_CALL(
             cudaMalloc((void**)&dev{{varname}}[0], sizeof({{c_data_type(var.dtype)}})*_num_{{varname}})
             );
+    // initialize eventspace with -1
     {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+    for (int i=0; i<{{var.size}}-1; i++)
+    {
+        {{varname}}[i] = -1;
+    }
+    // initialize eventspace counter with 0
+    {{varname}}[{{var.size}} - 1] = 0;
+    CUDA_SAFE_CALL(
+        cudaMemcpy(
+            dev{{varname}}[0],
+            {{varname}},
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{varname}},
+            cudaMemcpyHostToDevice
+        )
+    );
     {% endfor %}
 
     CUDA_CHECK_MEMORY();
@@ -351,10 +371,16 @@ void _write_arrays()
     using namespace brian;
 
     {% for var, varname in array_specs | dictsort(by='value') %}
-    {% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs or var in static_array_specs) %}
+    {% if not (var in dynamic_array_specs
+                or var in dynamic_array_2d_specs
+                or var in static_array_specs
+              ) %}
+    {# Don't copy State-, Spike- & EventMonitor's N variables, which are modified on host only #}
+    {% if varname not in variables_on_host_only %}
     CUDA_SAFE_CALL(
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
+    {% endif %}
     ofstream outfile_{{varname}};
     outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
     if(outfile_{{varname}}.is_open())
@@ -369,7 +395,7 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {% if not var in multisynaptic_idx_vars and not var.name in ['delay', '_synaptic_pre', '_synaptic_post'] %}
+    {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
     ofstream outfile_{{varname}};
@@ -385,15 +411,28 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+        {% if var in profile_statemonitor_vars %}
+        {# Record copying statemonitor variable from device to host for benchmarking #}
+        std::clock_t before_copy_statemon;
+        string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
+        double copy_time_statemon;
+        {% endif %}
         ofstream outfile_{{varname}};
         outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
         if(outfile_{{varname}}.is_open())
         {
+            {% if var in profile_statemonitor_vars %}
+            before_copy_statemon = std::clock();
+            {% endif %}
             thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
             for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
             {
                 temp_array{{varname}}[n] = {{varname}}[n];
             }
+            {% if var in profile_statemonitor_vars %}
+            string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
+            copy_time_statemon += (double)(std::clock() - before_copy_statemon) / CLOCKS_PER_SEC;
+            {% endif %}
             for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
             {
                 for(int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
@@ -415,14 +454,18 @@ void _write_arrays()
     if(outfile_profiling_info.is_open())
     {
     {% for codeobj in profiled_codeobjects | sort %}
+    {#
     {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
     outfile_profiling_info << "{{codeobj}}_kernel_integration\t" << {{codeobj}}_kernel_integration_profiling_info << std::endl;
     outfile_profiling_info << "{{codeobj}}_kernel_tridiagsolve\t" << {{codeobj}}_kernel_tridiagsolve_profiling_info << std::endl;
     outfile_profiling_info << "{{codeobj}}_kernel_coupling\t" << {{codeobj}}_kernel_coupling_profiling_info << std::endl;
     outfile_profiling_info << "{{codeobj}}_kernel_combine\t" << {{codeobj}}_kernel_combine_profiling_info << std::endl;
     outfile_profiling_info << "{{codeobj}}_kernel_currents\t" << {{codeobj}}_kernel_currents_profiling_info << std::endl;
-    {% else %}
+    {% endif %}
+    #}
     outfile_profiling_info << "{{codeobj}}\t" << {{codeobj}}_profiling_info << std::endl;
+    {% if profile_statemonitor_copy_to_host %}
+    outfile_profiling_info << profile_statemonitor_copy_to_host_varname << "\t" << copy_time_statemon << std::endl;
     {% endif %}
     {% endfor %}
     outfile_profiling_info.close();
@@ -523,6 +566,10 @@ void _dealloc_arrays()
     {% endif %}
     {% endfor %}
 
+    {% for varname in subgroups_with_spikemonitor %}
+    thrust::device_vector<int32_t>().swap(_dev_{{varname}}_eventspace);
+    {% endfor %}
+
 }
 
 {% endmacro %}
@@ -546,6 +593,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include "rand.h"
 
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
@@ -563,10 +611,13 @@ extern Clock {{clock.name}};
 extern Network {{net.name}};
 {% endfor %}
 
-//////////////// dynamic arrays ///////////
+//////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
 {% endfor %}
 
 //////////////// arrays ///////////////////
@@ -617,8 +668,10 @@ extern __device__ int* {{path.name}}_num_synapses_by_bundle;
 extern __device__ int* {{path.name}}_unique_delays;
 extern __device__ int* {{path.name}}_synapses_offset_by_bundle;
 extern __device__ int* {{path.name}}_global_bundle_id_start_by_pre;
-extern int {{path.name}}_max_bundle_size;
-extern int {{path.name}}_mean_bundle_size;
+extern int {{path.name}}_bundle_size_max;
+extern int {{path.name}}_bundle_size_min;
+extern double {{path.name}}_bundle_size_mean;
+extern double {{path.name}}_bundle_size_std;
 extern int {{path.name}}_max_size;
 extern __device__ int* {{path.name}}_num_unique_delays_by_pre;
 extern int {{path.name}}_max_num_unique_delays;
@@ -637,6 +690,7 @@ extern bool {{path.name}}_scalar_delay;
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
 extern double {{codeobj}}_profiling_info;
+{#
 {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
 // Profiling information for each of the 5 kernels in spatialstateupdate
 extern double {{codeobj}}_kernel_integration_profiling_info;
@@ -645,6 +699,7 @@ extern double {{codeobj}}_kernel_coupling_profiling_info;
 extern double {{codeobj}}_kernel_combine_profiling_info;
 extern double {{codeobj}}_kernel_currents_profiling_info;
 {% endif %}
+#}
 {% endfor %}
 {% endif %}
 
