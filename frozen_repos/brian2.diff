@@ -1,8 +1,8 @@
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 23f6f60b..fc5ecd00 100644
+index 54aeccf5..42da591c 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1065,6 +1065,7 @@ def run(self, directory, with_output, run_args):
+@@ -1055,6 +1055,7 @@ def run(self, directory, with_output, run_args):
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -10,21 +10,6 @@ index 23f6f60b..fc5ecd00 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-@@ -1381,6 +1382,14 @@ def network_run(self, net, duration, report=None, report_period=10*second,
-         # We store this as an instance variable for later access by the
-         # `code_object` method
-         self.enable_profiling = profile
-+
-+        # To profile SpeedTests, we need to be able to set `profile` in
-+        # `set_device`. Here we catch that case.
-+        if 'profile' in self.build_options:
-+            build_profile = self.build_options.pop('profile')
-+            if build_profile:
-+                self.enable_profiling = True
-+
-         all_objects = net.sorted_objects
-         net._clocks = {obj.clock for obj in all_objects}
-         t_end = net.t+duration
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
 index 03a81bfe..83402d97 100644
 --- a/brian2/tests/features/base.py
