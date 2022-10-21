@@ -1,28 +1,5 @@
-diff --git a/brian2/conftest.py b/brian2/conftest.py
-index 5a97ac81..c36a40a7 100644
---- a/brian2/conftest.py
-+++ b/brian2/conftest.py
-@@ -6,7 +6,7 @@
- import numpy as np
- import pytest
- 
--from brian2.devices import reinit_devices
-+from brian2.devices import reinit_devices, get_device
- from brian2.units import ms
- from brian2.core.clocks import defaultclock
- from brian2.core.functions import Function, DEFAULT_FUNCTIONS
-@@ -99,6 +99,9 @@ def pytest_runtest_makereport(item, call):
-     outcome = yield
-     rep = outcome.get_result()
-     if rep.outcome == 'failed':
-+        project_dir = get_device().project_dir
-+        if project_dir is not None:
-+            rep.sections.append(('Standalone project directory', f'{project_dir}'))
-         reinit_devices()
-         if not fail_for_not_implemented:
-             exc_cause = getattr(call.excinfo.value, '__cause__', None)
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 9aaeff30..22682760 100644
+index 23f6f60b..fc5ecd00 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
 @@ -1065,6 +1065,7 @@ def run(self, directory, with_output, run_args):
