@@ -17,7 +17,7 @@ struct is_in_subgroup
   __device__
   bool operator()(const int32_t &neuron)
   {
-    return (_source_start <= neuron && neuron < _source_stop);
+    return ({{_source_start}} <= neuron && neuron < {{_source_stop}});
   }
 };
 {% endif %}{# Subgroup #}

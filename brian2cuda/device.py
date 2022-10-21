@@ -416,6 +416,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         template_kwds["calc_occupancy"] = prefs["devices.cuda_standalone.calc_occupancy"]
         if template_name in ["threshold", "spikegenerator"]:
             template_kwds["extra_threshold_kernel"] = prefs["devices.cuda_standalone.extra_threshold_kernel"]
+        if template_name == "spikemonitor" and '_source_start' in variables:
+            # Provide subgroup start/stop as template keywords for hardcoding into is_in_subgroup
+            template_kwds.update({'_source_start': variables['_source_start'].get_value(),
+                                  '_source_stop': variables['_source_stop'].get_value()})
         codeobj = super(CUDAStandaloneDevice, self).code_object(owner, name, abstract_code, variables,
                                                                 template_name, variable_indices,
                                                                 codeobj_class=codeobj_class,
