@@ -18,6 +18,7 @@ public:
     double epsilon;
     double *dt;
     int64_t *timestep;
+    int64_t i_end;
     double *t;
     Clock(double _epsilon=1e-14) : epsilon(_epsilon) { i_end = 0;};
     inline void tick()
@@ -44,8 +45,6 @@ public:
             i_end = (int64_t)ceil(end/dt[0]);
         }
     }
-private:
-	int64_t i_end;
 };
 
 #endif
