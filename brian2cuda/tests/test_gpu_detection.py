@@ -5,7 +5,7 @@ from io import StringIO
 import pytest
 from numpy.testing import assert_equal
 
-from brian2 import prefs, ms, run, set_device
+from brian2 import prefs, ms, run, set_device, device
 from brian2.utils.logger import catch_logs
 from brian2.core.preferences import PreferenceError
 from brian2cuda.utils.gputools import (
@@ -171,5 +171,5 @@ def test_no_gpu_detection_preference(reset_gpu_detection, use_default_prefs):
     # Test that disabling gpu detection works when setting gpu_id and compute_capability
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
-    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 6.1
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = device.minimal_compute_capability
     run(0*ms)
