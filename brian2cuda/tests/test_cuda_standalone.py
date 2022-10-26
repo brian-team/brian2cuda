@@ -387,6 +387,18 @@ def test_continued_standalone_runs():
     assert target.v[0] == 1  # Make sure the spike got delivered
 
 
+@pytest.mark.cuda_standalone
+@pytest.mark.standalone_only
+def test_constant_replacement():
+    # see github issue #1276
+    set_device('cuda_standalone', directory=None)
+    x = 42
+    G = NeuronGroup(1, 'y : 1')
+    G.y = 'x'
+    run(0*ms)
+    assert G.y[0] == 42.
+
+
 if __name__=='__main__':
     tests = [
         test_cuda_standalone,
@@ -402,7 +414,12 @@ if __name__=='__main__':
         test_delete_directory,
         test_multiple_standalone_runs,
         test_continued_standalone_runs,
+        test_constant_replacement,
     ]
     for t in tests:
-        t()
+        try:
+            t()
+        except Exception:
+            print(f"\nProject directory: {get_device().project_dir}\n")
+            raise
         reinit_and_delete()

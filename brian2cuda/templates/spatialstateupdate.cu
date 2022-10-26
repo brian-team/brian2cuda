@@ -20,6 +20,12 @@
     ///// HOST_CONSTANTS ///////////
     %HOST_CONSTANTS%
 
+    // Number of group units in stateupdate is always N (no subgroups)
+    const int _N = N;
+
+    ///// ADDITIONAL_HOST_CODE /////
+    %ADDITIONAL_HOST_CODE%
+
     {# needed to translate _array... to _ptr_array... #}
     ///// pointers_lines /////
     {{pointers_lines|autoindent}}
@@ -31,7 +37,7 @@
 
     // Inverse axial resistance
     {# {{ openmp_pragma('parallel-static') }} #}
-    for (int _i=1; _i<N; _i++)
+    for (int _i=1; _i<_N; _i++)
         {{_invr}}[_i] = 1.0/(_Ri*(1/{{r_length_2}}[_i-1] + 1/{{r_length_1}}[_i]));
     // Cut sections
     {# {{ openmp_pragma('parallel-static') }} #}
@@ -42,10 +48,10 @@
     // The particular solution
     // a[i,j]=ab[u+i-j,j]   --  u is the number of upper diagonals = 1
     {# {{ openmp_pragma('parallel-static') }} #}
-    for (int _i=0; _i<N; _i++)
+    for (int _i=0; _i<_N; _i++)
         {{_ab_star1}}[_i] = (-({{Cm}}[_i] / {{dt}}) - {{_invr}}[_i] / {{area}}[_i]);
     {# {{ openmp_pragma('parallel-static') }} #}
-    for (int _i=1; _i<N; _i++)
+    for (int _i=1; _i<_N; _i++)
     {
         {{_ab_star0}}[_i] = {{_invr}}[_i] / {{area}}[_i-1];
         {{_ab_star2}}[_i-1] = {{_invr}}[_i] / {{area}}[_i];
@@ -121,7 +127,6 @@
 
 __global__ void _tridiagsolve_kernel_{{codeobj_name}}(
     int _N,
-    int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -130,15 +135,13 @@ __global__ void _tridiagsolve_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = bid * blockDim.x + tid;
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
     ///// kernel_lines /////
     {{kernel_lines|autoindent}}
-
-    assert(THREADS_PER_BLOCK == blockDim.x);
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
     assert(tid == 0 && bid == _idx);
@@ -161,7 +164,7 @@ __global__ void _tridiagsolve_kernel_{{codeobj_name}}(
         {{_u_plus}}[_j]={{_b_plus}}[_j]; // RHS -> _u_plus (solution)
         {{_u_minus}}[_j]={{_b_minus}}[_j]; // RHS -> _u_minus (solution)
         _bi={{_ab_star1}}[_j]-{{_gtot_all}}[_j]; // main diagonal
-        if (_j<N-1)
+        if (_j<_N-1)
             {{_c}}[_j]={{_ab_star0}}[_j+1]; // superdiagonal
         if (_j>0)
         {
@@ -198,7 +201,6 @@ __global__ void _tridiagsolve_kernel_{{codeobj_name}}(
 
 __global__ void _coupling_kernel_{{codeobj_name}}(
     int _N,
-    int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -207,15 +209,13 @@ __global__ void _coupling_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = bid * blockDim.x + tid;
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
     ///// kernel_lines /////
     {{kernel_lines|autoindent}}
-
-    assert(THREADS_PER_BLOCK == blockDim.x);
 
     // we need to run the kernel with 1 thread, 1 block
     assert(_idx == 0);
@@ -315,7 +315,6 @@ __global__ void _coupling_kernel_{{codeobj_name}}(
 
 __global__ void _combine_kernel_{{codeobj_name}}(
     int _N,
-    int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -324,15 +323,13 @@ __global__ void _combine_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = bid * blockDim.x + tid;
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
     ///// kernel_lines /////
     {{kernel_lines|autoindent}}
-
-    assert(THREADS_PER_BLOCK == blockDim.x);
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
     assert(tid == 0 && bid == _idx);
@@ -361,7 +358,6 @@ __global__ void _combine_kernel_{{codeobj_name}}(
 
 __global__ void _currents_kernel_{{codeobj_name}}(
     int _N,
-    int THREADS_PER_BLOCK,
     ///// KERNEL_PARAMETERS /////
     %KERNEL_PARAMETERS%
     )
@@ -370,15 +366,13 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _idx = bid * blockDim.x + tid;
 
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
     ///// kernel_lines /////
     {{kernel_lines|autoindent}}
-
-    assert(THREADS_PER_BLOCK == blockDim.x);
 
     if(_idx >= _N)
     {
@@ -423,7 +417,6 @@ __global__ void _currents_kernel_{{codeobj_name}}(
     int num_threads_tridiagsolve = 1;
     _tridiagsolve_kernel_{{codeobj_name}}<<<num_blocks_tridiagsolve, num_threads_tridiagsolve>>>(
             _N,
-            num_threads_tridiagsolve,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
@@ -445,7 +438,6 @@ __global__ void _currents_kernel_{{codeobj_name}}(
     int num_threads_coupling = 1;
     _coupling_kernel_{{codeobj_name}}<<<num_blocks_coupling, num_threads_coupling>>>(
             _N,
-            num_threads_coupling,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
@@ -467,7 +459,6 @@ __global__ void _currents_kernel_{{codeobj_name}}(
     int num_threads_combine = 1;
     _combine_kernel_{{codeobj_name}}<<<num_blocks_combine, num_threads_combine>>>(
             _N,
-            num_threads_combine,
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );
@@ -544,7 +535,6 @@ __global__ void _currents_kernel_{{codeobj_name}}(
         // run kernel 5
         _currents_kernel_{{codeobj_name}}<<<num_blocks_currents, num_threads_currents>>>(
                 _N,
-                num_threads_currents,
                 ///// HOST_PARAMETERS /////
                 %HOST_PARAMETERS%
             );

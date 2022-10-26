@@ -16,11 +16,9 @@ __global__ void
 __launch_bounds__(1024, {{sm_multiplier}})
 {% endif %}
 _run_kernel_{{codeobj_name}}(
-    {# TODO: we only need _N if we have random numbers per synapse, add a if test here #}
     int _N,
     int bid_offset,
     int timestep,
-    int THREADS_PER_BLOCK,
     {% if bundle_mode %}
     int threads_per_bundle,
     {% endif %}
@@ -36,14 +34,13 @@ _run_kernel_{{codeobj_name}}(
 {
     using namespace brian;
 
-    assert(THREADS_PER_BLOCK == blockDim.x);
-
     int tid = threadIdx.x;
     int bid = blockIdx.x + bid_offset;
     //TODO: do we need _idx here? if no, get also rid of scoping after scalar code
     // scalar_code can depend on _idx (e.g. if the state update depends on a
     // subexpression that is the same for all synapses, ?)
-    int _idx = bid * THREADS_PER_BLOCK + tid;
+    int _threads_per_block = blockDim.x;
+    int _idx = bid * _threads_per_block + tid;
     int _vectorisation_idx = _idx;
 
     ///// KERNEL_CONSTANTS /////
@@ -102,7 +99,7 @@ _run_kernel_{{codeobj_name}}(
                         int pre_post_block_id = (spiking_neuron - spikes_start) * num_parallel_blocks + post_block_idx;
                         int num_synapses = {{pathway.name}}_num_synapses_by_pre[pre_post_block_id];
                         int32_t* propagating_synapses = {{pathway.name}}_synapse_ids_by_pre[pre_post_block_id];
-                        for(int j = tid; j < num_synapses; j+=THREADS_PER_BLOCK)
+                        for(int j = tid; j < num_synapses; j+=_threads_per_block)
                         {
                             // _idx is the synapse id
                             int32_t _idx = propagating_synapses[j];
@@ -127,7 +124,7 @@ _run_kernel_{{codeobj_name}}(
             {% if bundle_mode %}
             // use a fixed number of threads per bundle, i runs through all those threads of all bundles
             // for threads_per_bundle == 1, we have one thread per bundle (parallel)
-            for (int i = tid; i < queue_size*threads_per_bundle; i+=THREADS_PER_BLOCK)
+            for (int i = tid; i < queue_size*threads_per_bundle; i+=_threads_per_block)
             {
                 // bundle_idx runs through all bundles
                 int bundle_idx = i / threads_per_bundle;
@@ -149,7 +146,7 @@ _run_kernel_{{codeobj_name}}(
             {% else %}{# no bundle_mode #}
 
                     // use one thread per synapse
-                    for(int j = tid; j < queue_size; j+=THREADS_PER_BLOCK)
+                    for(int j = tid; j < queue_size; j+=_threads_per_block)
                     {
                         int32_t _idx = synapses_queue[bid].at(j);
                         {
@@ -303,7 +300,6 @@ if ({{pathway.name}}_max_size > 0)
                 _N,
                 bid_offset,
                 {{owner.clock.name}}.timestep[0],
-                num_threads,
                 {% if bundle_mode %}
                 num_threads_per_bundle,
                 {% endif %}
