@@ -27,7 +27,7 @@ setup(
             "func_def_cuda.h",
         ],
     },
-    install_requires=["brian2==2.4.2"],
+    install_requires=["brian2==2.5.1"],
     provides=["brian2cuda"],
     extras_require={
         "test": ["pytest", "pytest-xdist>=1.22.3"],
