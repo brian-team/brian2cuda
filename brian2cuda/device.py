@@ -1208,6 +1208,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
                 nvcc_compiler_flags += ['-NDEBUG']
 
+            # Set brian2cuda standalone log leven based ot Brian2 log level
+            nvcc_compiler_flags += [f'-DLOG_LEVEL_{prefs["logging.console_log_level"].upper()}']
+
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
                 source_files=' '.join(sorted(writer.source_files)),

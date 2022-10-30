@@ -204,7 +204,7 @@ void _debugmsg_{{codeobj_name}}()
     // HOST_CONSTANTS
     %HOST_CONSTANTS%
 
-    printf("Number of spikes: %d\n", _array_{{owner.name}}_N[0]);
+    LOG_DEBUG("Number of spikes: %d\n", _array_{{owner.name}}_N[0]);
 }
 {% endblock %}
 

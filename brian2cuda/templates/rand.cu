@@ -116,16 +116,16 @@ void RandomNumberBuffer::init()
             num_per_gen_{{type}}_{{co.name}} = num_per_gen_{{type}}_{{co.name}} + 1;
         }
 
-        // make sure that we don't use more memory then available
+        // make sure that we don't use more memory than available
         // this checks per codeobject the number of generated floats against total available floats
         while (num_free_floats < num_per_gen_{{type}}_{{co.name}})
         {
-            printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
+            LOG_DEBUG("Not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
             if (num_per_gen_{{type}}_{{co.name}} < num_per_cycle_{{type}}_{{co.name}})
             {
                 if (num_free_floats < num_per_cycle_{{type}}_{{co.name}})
                 {
-                    printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
+                    LOG_ERROR("Not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
                     _dealloc_arrays();
                     exit(1);
                 }
@@ -137,7 +137,7 @@ void RandomNumberBuffer::init()
             }
             num_per_gen_{{type}}_{{co.name}} /= 2;
         }
-        printf("INFO generating %i {{type}} every %i clock cycles for {{co.name}}\n", num_per_gen_{{type}}_{{co.name}}, {{type}}_interval_{{co.name}});
+        LOG_DEBUG("Generating %i {{type}} every %i clock cycles for {{co.name}}\n", num_per_gen_{{type}}_{{co.name}}, {{type}}_interval_{{co.name}});
 
         {% if type in ['rand', 'randn'] %}
         {% set dtype = "randomNumber_t" %}
@@ -162,9 +162,9 @@ void RandomNumberBuffer::init()
         {
             // TODO: find a way to deal with this? E.g. looping over buffers sorted
             // by buffer size and reducing them until it fits.
-            printf("MEMORY ERROR: Trying to generate more random numbers than fit "
-                   "into available memory. Please report this as an issue on "
-                   "GitHub: https://github.com/brian-team/brian2cuda/issues/new");
+            LOG_ERROR("%s", "MEMORY ERROR: Trying to generate more random numbers than fit "
+                      "into available memory. Please report this as an issue on "
+                      "GitHub: https://github.com/brian-team/brian2cuda/issues/new");
             _dealloc_arrays();
             exit(1);
         }
@@ -384,7 +384,6 @@ void RandomNumberBuffer::refill_poisson_numbers(
 {
     // generate poisson distributed random numbers and reset buffer index
 
-    printf("num_per_gen_poisson %d, lambda %f\n", num_per_gen_poisson, lambda);
     CUDA_SAFE_CALL(
             curandGeneratePoisson(curand_generator, dev_poisson_allocator, num_per_gen_poisson, lambda)
             );

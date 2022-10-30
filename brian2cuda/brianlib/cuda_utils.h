@@ -1,10 +1,5 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
-#include <stdio.h>
-#include <thrust/system_error.h>
-#include "objects.h"
-#include "curand.h"
-
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
 // Define this to synchronize device before checking errors
@@ -15,6 +10,80 @@
 // Define this to synchronize device before checking memory
 //#define BRIAN2CUDA_MEMORY_CHECK_BLOCKING
 
+// Choose which LOG macros to define based on LOG_LEVEL_<level> macro defined
+// during compilation, <level> is one of DEBUG, INFO, WARNING, ERROR, CRITICAL
+// For now we treat CRITICAL the same as ERROR
+
+// TODO Could make this with less code with if !defined? Though this is easier
+// to understand.
+#if defined LOG_LEVEL_CRITICAL || defined LOG_LEVEL_ERROR
+    #define DEF_LOG_CUDA_ERROR
+    #define DEF_LOG_ERROR
+#elif defined LOG_LEVEL_WARNING
+    #define DEF_LOG_CUDA_ERROR
+    #define DEF_LOG_ERROR
+    #define DEF_LOG_WARNING
+#elif defined LOG_LEVEL_INFO
+    #define DEF_LOG_CUDA_ERROR
+    #define DEF_LOG_ERROR
+    #define DEF_LOG_WARNING
+    #define DEF_LOG_INFO
+#elif defined LOG_LEVEL_DEBUG
+    #define DEF_LOG_CUDA_ERROR
+    #define DEF_LOG_ERROR
+    #define DEF_LOG_WARNING
+    #define DEF_LOG_INFO
+    #define DEF_LOG_DEBUG
+#elif defined LOG_LEVEL_DIAGNOSTIC
+    #define DEF_LOG_CUDA_ERROR
+    #define DEF_LOG_ERROR
+    #define DEF_LOG_WARNING
+    #define DEF_LOG_INFO
+    #define DEF_LOG_DEBUG
+    #define DEF_LOG_DIAGNOSTIC
+#endif
+
+// DEFINE the LOG macros as printf statements or no_ops if not defined
+// LOG_CUDA_ERROR is the only macro usable in device code currently and will
+//   be printed to stdout when CUDA ring buffer is flushed at host/device
+//   serialization (this sometimes does not happen when the program crashes).
+// TODO: All other LOG macros could in principle be redirected to the Brian2
+// log file via fprintf (not implemented yet)
+#ifdef DEF_LOG_CUDA_ERROR
+    #define LOG_CUDA_ERROR(fmt, ...)    printf("GPU ERROR\t"        fmt, __VA_ARGS__)
+#else
+    #define LOG_CUDA_ERROR(fmt, ...)    do {} while(0)
+#endif
+
+#ifdef DEF_LOG_ERROR
+    #define LOG_ERROR(fmt, ...)         printf("CUDA ERROR\t"       fmt, __VA_ARGS__); fflush(stdout);
+#else
+    #define LOG_ERROR(fmt, ...)         do {} while(0)
+#endif
+
+#ifdef DEF_LOG_WARNING
+    #define LOG_WARNING(fmt, ...)       printf("CUDA WARNING\t"     fmt, __VA_ARGS__); fflush(stdout);
+#else
+    #define LOG_WARNING(fmt, ...)       do {} while(0)
+#endif
+
+#ifdef DEF_LOG_INFO
+    #define LOG_INFO(fmt, ...)          printf("CUDA INFO\t"        fmt, __VA_ARGS__); fflush(stdout);
+#else
+    #define LOG_INFO(fmt, ...)          do {} while(0)
+#endif
+
+#ifdef DEF_LOG_DEBUG
+    #define LOG_DEBUG(fmt, ...)         printf("CUDA DEBUG\t"       fmt, __VA_ARGS__); fflush(stdout);
+#else
+    #define LOG_DEBUG(fmt, ...)         do {} while(0)
+#endif
+
+#ifdef DEF_LOG_DIAGNOSTIC
+    #define LOG_DIAGNOSTIC(fmt, ...)    printf("CUDA DIAGNOSTIC\t"  fmt, __VA_ARGS__); fflush(stdout);
+#else
+    #define LOG_DIAGNOSTIC(fmt, ...)    do {} while(0)
+#endif
 
 // partly adapted from https://gist.github.com/ashwin/2652488
 #define CUDA_SAFE_CALL(err)     _cudaSafeCall(err, __FILE__, __LINE__, #err)
@@ -23,6 +92,11 @@
 #define THRUST_CHECK_ERROR(code)  { try {code;} \
     catch(...) {_thrustCheckError(__FILE__, __LINE__, #code);} }
 
+// Place includes after macro definitions to avoid circular includes
+#include <stdio.h>
+#include <thrust/system_error.h>
+#include "objects.h"
+#include "curand.h"
 
 // adapted from NVIDIA cuda samples, shipped with cuda 10.1 (common/inc/helper_cuda.h)
 #ifdef CURAND_H_
@@ -79,8 +153,8 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
-                call, file, line, cudaGetErrorString(err));
+        LOG_ERROR("%s failed at %s:%i : %s\n",
+                  call, file, line, cudaGetErrorString(err));
         exit(-1);
     }
 #endif
@@ -94,8 +168,8 @@ inline void _cudaSafeCall(curandStatus_t err, const char *file, const int line, 
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (CURAND_STATUS_SUCCESS != err)
     {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
-                call, file, line, _curandGetErrorEnum(err));
+        LOG_ERROR("%s failed at %s:%i : %s\n",
+                  call, file, line, _curandGetErrorEnum(err));
         exit(-1);
     }
 #endif
@@ -111,8 +185,8 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaDeviceSynchronize();
     if(cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
-                msg, file, line, cudaGetErrorString(err));
+        LOG_ERROR("CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
+                  msg, file, line, cudaGetErrorString(err));
         exit(-1);
     }
 #else
@@ -120,8 +194,8 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed at %s:%i : %s\n",
-                file, line, cudaGetErrorString(err));
+        LOG_ERROR("CUDA_CHECK_ERROR() failed at %s:%i : %s\n",
+                  file, line, cudaGetErrorString(err));
         exit(-1);
     }
 
@@ -153,16 +227,16 @@ inline void _cudaCheckMemory(const char *file, const int line)
     // newly requested allocation.
     if (diff > 0)
     {
-        fprintf(stdout, "INFO: cuda device memory usage in %s:%i\n"
-               "\t used:  \t %f MB\n"
-               "\t avail: \t %f MB\n"
-               "\t total: \t %f MB\n"
-               "\t diff:  \t %f MB \t (%zu bytes)\n",
-               file, line,
-               double(used) * to_MB,
-               double(avail) * to_MB,
-               double(total) * to_MB,
-               double(diff) * to_MB, diff);
+        LOG_DEBUG("CUDA device memory usage in %s:%i\n"
+                  "\t\t\t used:  \t %f MB\n"
+                  "\t\t\t avail: \t %f MB\n"
+                  "\t\t\t total: \t %f MB\n"
+                  "\t\t\t diff:  \t %f MB \t (%zu bytes)\n",
+                  file, line,
+                  double(used) * to_MB,
+                  double(avail) * to_MB,
+                  double(total) * to_MB,
+                  double(diff) * to_MB, diff);
         brian::used_device_memory = used;
     }
 #endif
@@ -172,7 +246,7 @@ inline void _cudaCheckMemory(const char *file, const int line)
 inline void _thrustCheckError(const char *file, const int line,
         const char *code)
 {
-    fprintf(stderr, "ERROR: THRUST_CHECK_ERROR() caught an exception from %s at %s:%i\n",
+    LOG_ERROR("THRUST_CHECK_ERROR() caught an exception from %s at %s:%i\n",
             code, file, line);
     throw;
 }

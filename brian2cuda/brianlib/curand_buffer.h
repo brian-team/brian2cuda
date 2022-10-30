@@ -39,9 +39,9 @@ private:
     {
         if (current_idx != buffer_size && memory_allocated)
         {
-            printf("WARNING: CurandBuffer::generate_numbers() called before "
-                    "buffer was empty (current_idx = %u, buffer_size = %u)",
-                    current_idx, buffer_size);
+            LOG_WARNING("CurandBuffer::generate_numbers() called before "
+                        "buffer was empty (current_idx = %u, buffer_size = %u)",
+                        current_idx, buffer_size);
         }
         // TODO: should we allocate the memory in the constructor (even if we end up not using it)?
         if (!memory_allocated)
@@ -50,16 +50,16 @@ private:
             host_data = new randomNumber_t[buffer_size];
             if (!host_data)
             {
-                printf("ERROR allocating host_data for CurandBuffer (size %ld)\n", sizeof(randomNumber_t)*buffer_size);
+                LOG_ERROR("Allocating host_data for CurandBuffer (size %ld)\n", sizeof(randomNumber_t)*buffer_size);
                 exit(EXIT_FAILURE);
             }
             // allocate device memory
             cudaError_t status = cudaMalloc((void **)&dev_data, buffer_size*sizeof(randomNumber_t));
             if (status != cudaSuccess)
             {
-                printf("ERROR allocating memory on device (size = %ld) in %s(%d):\n\t%s\n",
-                        buffer_size*sizeof(randomNumber_t), __FILE__, __LINE__,
-                        cudaGetErrorString(status));
+                LOG_ERROR("Allocating memory on device (size = %ld) in %s(%d):\n\t\t\t%s\n",
+                          buffer_size*sizeof(randomNumber_t), __FILE__, __LINE__,
+                          cudaGetErrorString(status));
                 exit(EXIT_FAILURE);
             }
             memory_allocated = true;
@@ -70,7 +70,7 @@ private:
             curandStatus_t status = generateUniform(*generator, dev_data, buffer_size);
             if (status != CURAND_STATUS_SUCCESS)
             {
-                printf("ERROR generating random numbers in %s(%d):\n", __FILE__, __LINE__);
+                LOG_ERROR("Generating random numbers in %s(%d):\n", __FILE__, __LINE__);
                 exit(EXIT_FAILURE);
             }
         }
@@ -79,8 +79,8 @@ private:
             curandStatus_t status = generateNormal(*generator, dev_data, buffer_size, 0, 1);
             if (status != CURAND_STATUS_SUCCESS)
             {
-                printf("ERROR generating normal distributed random numbers in %s(%d):\n",
-                        __FILE__, __LINE__);
+                LOG_ERROR("Generating normal distributed random numbers in %s(%d):\n",
+                          __FILE__, __LINE__);
                 exit(EXIT_FAILURE);
             }
         }
@@ -88,9 +88,9 @@ private:
         cudaError_t status = cudaMemcpy(host_data, dev_data, buffer_size*sizeof(randomNumber_t), cudaMemcpyDeviceToHost);
         if (status != cudaSuccess)
         {
-            printf("ERROR copying device to host memory (size = %ld) in %s(%d):\n\t%s\n",
-                    buffer_size*sizeof(randomNumber_t), __FILE__, __LINE__,
-                    cudaGetErrorString(status));
+            LOG_ERROR("Copying device to host memory (size = %ld) in %s(%d):\n\t\t\t%s\n",
+                      buffer_size*sizeof(randomNumber_t), __FILE__, __LINE__,
+                      cudaGetErrorString(status));
             exit(EXIT_FAILURE);
         }
         // reset buffer index
@@ -99,14 +99,14 @@ private:
 
     curandStatus_t generateUniform(curandGenerator_t generator, randomNumber_t *outputPtr, size_t num)
     {
-        printf("ERROR curand can only generate random numbers as 'float' or 'double' types.\n");
+        LOG_ERROR("%s", "Curand can only generate random numbers as 'float' or 'double' types.\n");
         exit(EXIT_FAILURE);
     }
 
     curandStatus_t generateNormal(curandGenerator_t generator, randomNumber_t *outputPtr,
             size_t n, randomNumber_t mean, randomNumber_t stddev)
     {
-        printf("ERROR curand can only generate random numbers as 'float' or 'double' types.\n");
+        LOG_ERROR("%s", "Curand can only generate random numbers as 'float' or 'double' types.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -140,7 +140,7 @@ public:
         cudaError_t status = cudaFree(dev_data);
         if (status != cudaSuccess)
         {
-            printf("ERROR freeing device memory in %s(%d):%s\n",
+            LOG_ERROR("Freeing device memory in %s(%d):%s\n",
                     __FILE__, __LINE__, cudaGetErrorString(status));
             exit(EXIT_FAILURE);
         }

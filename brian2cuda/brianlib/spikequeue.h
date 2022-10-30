@@ -118,9 +118,9 @@ public:
                 synapses_queue = new cuda_vector*[required_num_queues];
                 if (!synapses_queue)
                 {
-                    printf("ERROR while allocating memory with size %ld in"
-                           " spikequeue.h/prepare()\n",
-                           sizeof(cuda_vector*) * required_num_queues);
+                    LOG_CUDA_ERROR("While allocating memory with size %ld in"
+                                   " spikequeue.h/prepare()\n",
+                                   sizeof(cuda_vector*) * required_num_queues);
                 }
                 // only reset queue offset if we require new queues, in which
                 // case we copy the old queues such that the offset is reset
@@ -191,9 +191,9 @@ public:
                     synapses_queue[i] = new cuda_vector[num_blocks];
                     if (!synapses_queue[i])
                     {
-                        printf("ERROR while allocating memory with size %ld in"
-                                " spikequeue.h/prepare()\n",
-                                sizeof(cuda_vector)*num_blocks);
+                        LOG_CUDA_ERROR("While allocating memory with size %ld in"
+                                       " spikequeue.h/prepare()\n",
+                                       sizeof(cuda_vector)*num_blocks);
                     }
                 }
             }

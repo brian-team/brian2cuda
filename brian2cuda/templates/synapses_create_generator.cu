@@ -152,13 +152,15 @@ size_t used_device_memory_start = used_device_memory;
 
 {% block profiling_stop %}
 CUDA_CHECK_MEMORY();
+#ifdef DEF_LOG_DEBUG
 const double to_MB = 1.0 / (1024.0 * 1024.0);
 double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
 double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-std::cout << "INFO: {{owner.name}} creation took " <<  time_passed << "s";
+std::cout << "CUDA DEBUG: {{owner.name}} creation took " <<  time_passed << "s";
 if (tot_memory_MB > 0)
     std::cout << " and used " << tot_memory_MB << "MB of memory.";
 std::cout << std::endl;
+#endif
 {% endblock %}
 
 {% block host_maincode %}
@@ -260,8 +262,8 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             _uiter_size = _n_total;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is bigger than the " <<
-                    "population size " << _n_total << "." << endl;
+            LOG_ERROR("Error: Requested sample size %ld is bigger than the population "
+                      "size %d.\n", _uiter_size, _n_total);
             exit(1);
             {% endif %}
         } else if (_uiter_size < 0)
@@ -269,7 +271,7 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             continue;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is negative." << endl;
+            LOG_ERROR("Error: Requested sample size %ld is negative.\n", _uiter_size);
             exit(1);
             {% endif %}
         } else if (_uiter_size == 0)
@@ -352,8 +354,9 @@ std::cout << std::endl;
                     {% if skip_if_invalid %}
                     continue;
                     {% else %}
-                    cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} << " outside range 0 to " <<
-                                            _{{result_index_size}}-1 << endl;
+                    LOG_ERROR("Error: tried to create synapse to neuron "
+                              "{{result_index}}=%ld outside range 0 to %d\n",
+                              _{{result_index}}, _{{result_index_size}}-1);
                     exit(1);
                     {% endif %}
                 }
@@ -376,8 +379,9 @@ std::cout << std::endl;
                 {% if skip_if_invalid %}
                 continue;
                 {% else %}
-                cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} <<
-                        " outside range 0 to " << _{{result_index_size}}-1 << endl;
+                LOG_ERROR("Error: tried to create synapse to neuron "
+                          "{{result_index}}=%ld outside range 0 to %d\n",
+                          _{{result_index}}, _{{result_index_size}}-1);
                 exit(1);
                 {% endif %}
             }
@@ -438,7 +442,6 @@ std::cout << std::endl;
         {{dynamic_multisynaptic_idx}}[_i] = source_target_count[source_target];
         {% endif %}
         source_target_count[source_target]++;
-        //printf("source target count = %i\n", source_target_count[source_target]);
         if (source_target_count[source_target] > 1)
         {
             {{owner.name}}_multiple_pre_post = true;

@@ -188,8 +188,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         return;
     }
     else if (syn_N_check > INT_MAX){
-        printf("ERROR: There are more Synapses (%lu) than an int can "
-               "hold on this system (%u).\n", syn_N_check, INT_MAX);
+        LOG_ERROR("There are more Synapses (%lu) than an int can "
+                  "hold on this system (%u).\n", syn_N_check, INT_MAX);
     }
     // total number of synapses
     int syn_N = (int)syn_N_check;
@@ -573,8 +573,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         sum_num_elements += num_elements;
         updateMeanStd(count_num_elements, mean_num_elements, M2_num_elements, num_elements);
     }  // end for loop through connectivity matrix
-    printf("INFO connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
-            size_connectivity_matrix, num_pre_post_blocks);
+    LOG_DEBUG("Connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
+              size_connectivity_matrix, num_pre_post_blocks);
 
     {# If we have don't have heterogeneous delays, we just need to copy the
        synapse IDs and number of synapses per (preID, postBlock) to the device #}
@@ -799,29 +799,30 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     double std_num_unique_elements = getStd(count_num_unique_elements, M2_num_unique_elements);
     {% endif %}{# not no_or_const_delay_mode #}
 
+#ifdef DEF_LOG_DEBUG
     // print memory information
     std::cout.precision(1);
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
-    std::cout << "INFO: synapse statistics and memory usage for {{owner.name}}:\n"
-        << "\tnumber of synapses: " << syn_N << "\n"
+    std::cout << "CUDA DEBUG\tSynapse statistics and memory usage for {{owner.name}}:\n"
+        << "\t\t\tnumber of synapses: " << syn_N << "\n"
     {% if not no_or_const_delay_mode and bundle_mode %}
-        << "\tnumber of bundles: " << num_bundle_ids << "\n"
+        << "\t\t\tnumber of bundles: " << num_bundle_ids << "\n"
     {% endif %}
-        << "\tnumber of pre/post blocks: " << num_pre_post_blocks << "\n"
-        << "\tnumber of synapses over all pre/post blocks:\n"
-        << "\t\tmean: " << mean_num_elements << "\tstd: "
+        << "\t\t\tnumber of pre/post blocks: " << num_pre_post_blocks << "\n"
+        << "\t\t\tnumber of synapses over all pre/post blocks:\n"
+        << "\t\t\t\tmean: " << mean_num_elements << "\tstd: "
             << std_num_elements << "\n"
     {% if not no_or_const_delay_mode %}
-        << "\tnumber of unique delays over all pre/post blocks:\n"
-        << "\t\tmean: " << mean_num_unique_elements << "\tstd: "
+        << "\t\t\tnumber of unique delays over all pre/post blocks:\n"
+        << "\t\t\t\tmean: " << mean_num_unique_elements << "\tstd: "
             << std_num_unique_elements << "\n"
     {% if bundle_mode %}
-    << "\tbundle size over all bundles:\n"
-        << "\t\tmean: " << mean_bundle_sizes << "\tstd: "
+    << "\t\t\tbundle size over all bundles:\n"
+        << "\t\t\t\tmean: " << mean_bundle_sizes << "\tstd: "
         << std_bundle_sizes << "\n"
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
-    << "\n\tmemory usage: TOTAL: " << total_memory_MB << " MB (~"
+    << "\n\t\t\tmemory usage: TOTAL: " << total_memory_MB << " MB (~"
         << total_memory_MB / syn_N * 1024.0 * 1024.0  << " byte per synapse)"
         << std::endl;
 
@@ -832,10 +833,11 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         std::tie(name, bytes, num_elements) = tuple;
         double memory = bytes * to_MB;
         double fraction = memory / total_memory_MB * 100;
-        std::cout << "\t\t" << std::setprecision(1) << std::fixed << fraction
+        std::cout << "\t\t\t\t" << std::setprecision(1) << std::fixed << fraction
             << "%\t" << std::setprecision(3) << std::fixed << memory << " MB\t"
             << name << " [" << num_elements << "]" << std::endl;
     }
+#endif
 
 
     // Create circular eventspaces in no_or_const_delay_mode
@@ -895,31 +897,31 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     {
         // use the max num_threads before launch failure
         num_threads = funcAttrib.maxThreadsPerBlock;
-        printf("WARNING Not enough ressources available to call "
-               "_before_run_kernel_{{codeobj_name}}"
-               "with maximum possible threads per block (%u). "
-               "Reducing num_threads to %u. (Kernel needs %i "
-               "registers per block, %i bytes of "
-               "statically-allocated shared memory per block, %i "
-               "bytes of local memory per thread and a total of %i "
-               "bytes of user-allocated constant memory)\n",
-               max_threads_per_block, num_threads, funcAttrib.numRegs,
-               funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
-               funcAttrib.constSizeBytes);
+        LOG_WARNING("Not enough ressources available to call "
+                    "_before_run_kernel_{{codeobj_name}}"
+                    "with maximum possible threads per block (%u). "
+                    "Reducing num_threads to %u. (Kernel needs %i "
+                    "registers per block, %i bytes of "
+                    "statically-allocated shared memory per block, %i "
+                    "bytes of local memory per thread and a total of %i "
+                    "bytes of user-allocated constant memory)\n",
+                    max_threads_per_block, num_threads, funcAttrib.numRegs,
+                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                    funcAttrib.constSizeBytes);
     }
     else
     {
-        printf("INFO _before_run_kernel_{{codeobj_name}}\n"
-               "\t%u blocks\n"
-               "\t%u threads\n"
-               "\t%i registers per thread\n"
-               "\t%i bytes statically-allocated shared memory per block\n"
-               "\t%i bytes local memory per thread\n"
-               "\t%i bytes user-allocated constant memory\n"
-               "",
-               num_blocks, num_threads, funcAttrib.numRegs,
-               funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
-               funcAttrib.constSizeBytes);
+        LOG_DEBUG("_before_run_kernel_{{codeobj_name}}\n"
+                  "\t\t\t%u blocks\n"
+                  "\t\t\t%u threads\n"
+                  "\t\t\t%i registers per thread\n"
+                  "\t\t\t%i bytes statically-allocated shared memory per block\n"
+                  "\t\t\t%i bytes local memory per thread\n"
+                  "\t\t\t%i bytes user-allocated constant memory\n"
+                  "",
+                  num_blocks, num_threads, funcAttrib.numRegs,
+                  funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
+                  funcAttrib.constSizeBytes);
     }
 
     _before_run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
@@ -970,15 +972,16 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     cudaError_t status = cudaGetLastError();
     if (status != cudaSuccess)
     {
-        printf("ERROR initialising {{owner.name}} in %s:%d %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(status));
+        LOG_ERROR("ERROR initialising {{owner.name}} in %s:%d %s\n",
+                  __FILE__, __LINE__, cudaGetErrorString(status));
         _dealloc_arrays();
         exit(status);
     }
 
     CUDA_CHECK_MEMORY();
+#ifdef DEF_LOG_DEBUG
     double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-    std::cout << "INFO: {{owner.name}} initialisation took " <<  time_passed << "s";
+    std::cout << "CUDA DEBUG: {{owner.name}} initialisation took " <<  time_passed << "s";
     if (used_device_memory_after_dealloc < used_device_memory_start){
         size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
         std::cout << ", freed " << freed_bytes * to_MB << "MB";
@@ -988,6 +991,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         std::cout << " and used " << used_bytes * to_MB << "MB of device memory.";
     }
     std::cout << std::endl;
+#endif
 
     first_run = false;
 {% endblock before_run_host_maincode %}
@@ -1084,7 +1088,7 @@ _run_kernel_{{codeobj_name}}(
 {% endblock host_maincode %}
 
 {% block kernel_info_num_blocks_str %}
-"\tvariable number of blocks (depends on number of spiking neurons)\n"
+"\t\t\tvariable number of blocks (depends on number of spiking neurons)\n"
 {% endblock %}
 {% block kernel_info_num_blocks_var %}
 {% endblock %}
