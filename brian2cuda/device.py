@@ -1731,31 +1731,21 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.insert_code("before_start", SETUP_TIMER.format(fname=self.timers_file))
             self.insert_code("before_start", TIME_DIFF.format(name="before_start"))
             self.insert_code(
-                "before_start",
-                r'LOG_INFO("%s", "Initializing standalone simulation...\n");'
-            )
-            self.insert_code(
                 "before_network_run", TIME_DIFF.format(name="before_network_run")
             )
             self.insert_code(
-                "before_network_run",
-                r'LOG_INFO("%s", "Starting simulation loop...\n");'
-            )
-            self.insert_code(
                 "after_network_run", TIME_DIFF.format(name="after_network_run")
-            )
-            self.insert_code(
-                "before_network_run",
-                r'LOG_INFO("%s", "Finalizing standalone simulation...\n");'
             )
             self.insert_code("after_end", TIME_DIFF.format(name="after_end"))
             self.insert_code("after_end", CLOSE_TIMER)
 
         run_lines.extend(self.code_lines['before_network_run'])
+        run_lines.append(r'LOG_INFO("%s", "Starting simulation loop...\n");')
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
+        run_lines.append(r'LOG_INFO("%s", "Finalizing standalone simulation...\n");')
         run_lines.extend(self.code_lines['after_network_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')

@@ -27,6 +27,7 @@
 
 int main(int argc, char **argv)
 {
+    LOG_INFO("%s", "Initializing standalone simulation...\n");
     {{'\n'.join(code_lines['before_start'])|autoindent}}
 
     // seed variable set in Python through brian2.seed() calls can use this
