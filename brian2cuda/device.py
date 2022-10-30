@@ -1480,8 +1480,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
+            logger.info("Compiling CUDA standalone project...")
             self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
+                logger.info("Running CUDA standalone simulation...")
                 self.run(directory, with_output, run_args)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
