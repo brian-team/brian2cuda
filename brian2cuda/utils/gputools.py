@@ -178,7 +178,7 @@ def _get_cuda_path():
     # Use preference if set
     cuda_path_pref = prefs.devices.cuda_standalone.cuda_backend.cuda_path
     if cuda_path_pref is not None:
-        logger.info(
+        logger.debug(
             f"CUDA installation directory given via preference "
             f"`prefs.devices.cuda_standalone.cuda_backend.cuda_path={cuda_path_pref}`"
         )
@@ -189,7 +189,7 @@ def _get_cuda_path():
     # Use environment variable if set
     cuda_path = os.environ.get("CUDA_PATH", "")  # Nvidia default on Windows
     if os.path.exists(cuda_path):
-        logger.info(
+        logger.debug(
             "CUDA installation directory given via environment variable `CUDA_PATH={}`"
             "".format(cuda_path)
         )
@@ -199,7 +199,7 @@ def _get_cuda_path():
     nvcc_path = shutil.which("nvcc")
     if nvcc_path is not None:
         cuda_path_nvcc = os.path.dirname(os.path.dirname(nvcc_path))
-        logger.info(
+        logger.debug(
             "CUDA installation directory detected via location of `nvcc` binary: {}"
             "".format(cuda_path_nvcc)
         )
@@ -208,7 +208,7 @@ def _get_cuda_path():
     # Use standard location /usr/local/cuda
     if os.path.exists("/usr/local/cuda"):
         cuda_path_usr = "/usr/local/cuda"
-        logger.info(
+        logger.debug(
             f"CUDA installation directory found in standard location: {cuda_path_usr}"
         )
         return (cuda_path_usr, 'default')
@@ -216,7 +216,7 @@ def _get_cuda_path():
     # Use standard location /opt/cuda
     if os.path.exists("/opt/cuda"):
         cuda_path_opt = "/opt/cuda"
-        logger.info(
+        logger.debug(
             f"CUDA installation directory found in standard location: {cuda_path_opt}"
         )
         return (cuda_path_opt, 'default')
@@ -317,7 +317,7 @@ def _select_gpu():
             compute_capability = get_compute_capability(gpu_id)
         gpu_list = get_available_gpus()
     else:
-        logger.info(
+        logger.debug(
             "Automatic detection of GPU names and compute capabilities disabled, using "
             "manual preferences"
         )
@@ -336,7 +336,7 @@ def _select_gpu():
     if gpu_list is not None:
         gpu_name = f" ({gpu_list[gpu_id]})"
 
-    logger.info(
+    logger.debug(
         f"Compiling device code for GPU {gpu_id}{gpu_name}"
     )
 
@@ -485,7 +485,7 @@ def _get_compute_capability_with_device_query(gpu_id):
                 f"Brian2CUDA documentations for more details."
             )
     else:
-        logger.info(
+        logger.debug(
             "Path to `deviceQuery` binary set via "
             "`prefs.devices.cuda_standalone.cuda_backend.device_query_path = "
             f"{device_query_path}`"

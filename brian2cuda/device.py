@@ -1174,14 +1174,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # Log compiled GPU architecture
         if self.compute_capability is None:
-            logger.info(
+            logger.debug(
                 f"Compiling device code with manually set architecture flags "
                 f"({gpu_arch_flags}). Be aware that the minimal supported compute "
                 f"capability is {self.minimal_compute_capability} "
                 "(we are not checking your compile flags)"
             )
         else:
-            logger.info(
+            logger.debug(
                 f"Compiling device code for compute capability "
                 f"{self.compute_capability} (compiler flags: {gpu_arch_flags})"
             )
@@ -1469,10 +1469,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for net in self.networks:
             net.after_run()
 
-        logger.info("Using the following preferences for CUDA standalone:")
+        logger.debug("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
-                logger.info(f"\t{pref_name} = {prefs[pref_name]}")
+                logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         logger.debug("Using the following brian preferences:")
         for pref_name in prefs:
