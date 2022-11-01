@@ -101,6 +101,13 @@ CUDA_CHECK_MEMORY();
 // update the total number of synapses
 {{N}} = newsize;
 
+{# We don't care about ocurrences of multiple source-target pairs if we have
+   not multisynaptic indices in the model and are using atomics in
+   synapses.cu. Unfortunately, we don't know here if we are using atomics
+   in synapses.cu. Need to find a way to expose that boolean here via
+   CudaGenerator, where it is set. But for now, we assume, synapses.cu uses
+   atomics (else there an error is raised there) #}
+{% if multisynaptic_index %}
 // Check for occurrence of multiple source-target pairs in synapses ("synapse number")
 std::map<std::pair<int32_t, int32_t>, int32_t> source_target_count;
 for (int _i=0; _i<newsize; _i++)
@@ -122,7 +129,8 @@ for (int _i=0; _i<newsize; _i++)
         {% endif %}
     }
 }
-// Check
+{% endif %}
+
 // copy changed host data to device
 dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
 dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
