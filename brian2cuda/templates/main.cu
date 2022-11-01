@@ -27,8 +27,12 @@
 
 int main(int argc, char **argv)
 {
+    {% if helpful %}
     LOG_INFO("%s", "Initializing standalone simulation...\n");
+    {% else %}
+    LOG_DEBUG("%s", "Initializing standalone simulation...\n");
     {{'\n'.join(code_lines['before_start'])|autoindent}}
+    {% endif %}
 
     // seed variable set in Python through brian2.seed() calls can use this
     // variable (see device.py CUDAStandaloneDevice.generate_main_source())

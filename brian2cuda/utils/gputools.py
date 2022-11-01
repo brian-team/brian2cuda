@@ -336,9 +336,11 @@ def _select_gpu():
     if gpu_list is not None:
         gpu_name = f" ({gpu_list[gpu_id]})"
 
-    logger.debug(
-        f"Compiling device code for GPU {gpu_id}{gpu_name}"
-    )
+    msg = f"Compiling device code for GPU {gpu_id}{gpu_name}"
+    if prefs.devices.cuda_standalone.helpful:
+        logger.info(msg)
+    else:
+        logger.debug(msg)
 
     return gpu_id, compute_capability
 

@@ -705,7 +705,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
                                                            user_headers=user_headers,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
+                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size'],
+                                                           helpful=prefs.devices.cuda_standalone.helpful
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -1488,10 +1489,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
-            logger.info("Compiling CUDA standalone project...")
+            if prefs.devices.cuda_standalone.helpful:
+                logger.info("Compiling CUDA standalone project...")
+            else:
+                logger.debug("Compiling CUDA standalone project...")
             self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
-                logger.info("Running CUDA standalone simulation...")
+                if prefs.devices.cuda_standalone.helpful:
+                    logger.info("Running CUDA standalone simulation...")
+                else:
+                    logger.debug("Running CUDA standalone simulation...")
                 self.run(directory, with_output, run_args)
                 if self.report_timers:
                     # Read standalone timers from file, using same code we used for
@@ -1526,8 +1533,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         cpp_timers['after_end'] - cpp_timers['after_network_run']
                     )
 
-                    print()
-                    print(computation_time_summary())
+                    print(f"\n{computation_time_summary()}")
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
@@ -1740,12 +1746,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.insert_code("after_end", CLOSE_TIMER)
 
         run_lines.extend(self.code_lines['before_network_run'])
-        run_lines.append(r'LOG_INFO("%s", "Starting simulation loop...\n");')
+
+        if prefs.devices.cuda_standalone.helpful:
+            start_sim = r'LOG_INFO("%s", "Starting simulation loop...\n");'
+        else:
+            start_sim = r'LOG_DEBUG("%s", "Starting simulation loop...\n");'
+        run_lines.append(start_sim)
+
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
-        run_lines.append(r'LOG_INFO("%s", "Finalizing standalone simulation...\n");')
+
+        if prefs.devices.cuda_standalone.helpful:
+            start_fin = r'LOG_INFO("%s", "Finalizing standalone simulation...\n");'
+        else:
+            start_fin = r'LOG_DEBUG("%s", "Finalizing standalone simulation...\n");'
+        run_lines.append(start_fin)
+
         run_lines.extend(self.code_lines['after_network_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
