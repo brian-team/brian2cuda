@@ -129,7 +129,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # be copied to device memory
         self.variables_on_host_only = []
         # Report self.timers
-        self.report_timers = False
+        self.report_timers = True
         self.timers_file = None
         self.timers['run_binary'] = {
             'initialization': None, 'simulation_loop': None, 'finalization': None
