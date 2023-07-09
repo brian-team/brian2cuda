@@ -7,7 +7,6 @@ import subprocess
 import shutil
 import shlex
 import re
-import distutils
 
 from brian2.core.preferences import prefs, PreferenceError
 from brian2.codegen.cpp_prefs import get_compiler_and_args
