@@ -13,7 +13,7 @@ dynamic = ["version", "readme"]
 description = 'A Brian2 extension to simulate spiking neural networks on GPUs'
 keywords = ['computational neuroscience', 'simulation', 'neural networks', 'spiking neurons', 'gpu', 'cuda']
 classifiers = [
-    'Development Status :: 3- Alpha',
+    'Development Status :: 3 - Alpha',
     'Intended Audience :: Science/Research',
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
     'Natural Language :: English',
