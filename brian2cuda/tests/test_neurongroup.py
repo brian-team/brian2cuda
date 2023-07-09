@@ -24,9 +24,9 @@ def test_semantics_floor_division():
                            fvalue : 1
                            ivalue : integer''',
                     dtype={'a': np.int32, 'b': np.int64,
-                           'x': np.float, 'y': np.double})
+                           'x': np.float32, 'y': np.float64})
     int_values = np.arange(-5, 6)
-    float_values = np.arange(-5.0, 6.0, dtype=np.double)
+    float_values = np.arange(-5.0, 6.0, dtype=np.float64)
     G.ivalue = int_values
     G.fvalue = float_values
     with catch_logs() as l:
