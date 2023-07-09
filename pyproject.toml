@@ -1,0 +1,55 @@
+[project]
+name = "Brian2Cuda"
+authors = [
+    {name = 'Denis Alevi'},
+    {name = 'Moritz Augustin'},
+    {name ='Marcel Stimberg'}
+]
+requires-python = '>=3.7'
+dependencies = [
+    'brian2==2.5.1',
+]
+dynamic = ["version", "readme"]
+description = 'A Brian2 extension to simulate spiking neural networks on GPUs'
+keywords = ['computational neuroscience', 'simulation', 'neural networks', 'spiking neurons', 'gpu', 'cuda']
+classifiers = [
+    'Development Status :: 3- Alpha',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Environment :: GPU :: NVIDIA CUDA',
+    'Topic :: Scientific/Engineering :: Bio-Informatics'
+]
+
+[project.optional-dependencies]
+test = ['pytest', 'pytest-xdist>=1.22.3']
+docs = ['sphinx>=1.8']
+
+[project.urls]
+Documentation ='https://brian2cuda.readthedocs.io/'
+Source = 'https://github.com/brian-team/brian2cuda'
+Tracker = 'https://github.com/brian-team/brian2cuda/issues'
+
+[tool.setuptools]
+packages = ['brian2cuda']
+
+[tool.setuptools.dynamic]
+readme = {file = 'README.md', content-type = "text/markdown"}
+
+[tool.setuptools_scm]
+version_scheme = 'post-release'
+local_scheme = 'no-local-version'
+write_to = 'brian2cuda/_version.py'
+tag_regex = '^(?P<version>v\d+(?:\.\d+){0,2}[^\+]*(?:\+.*)?)$'
+fallback_version = 'unknown'
+
+[build-system]
+requires = [
+    "setuptools>=61",
+    "setuptools_scm[toml]>=6.2"
+]
+build-backend = "setuptools.build_meta"
+

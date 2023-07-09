@@ -1,5 +1,4 @@
 # Versioneer files
-include versioneer.py
 include brian2cuda/_version.py
 
 # Documentation
