@@ -9,3 +9,5 @@ include docs_sphinx/make.bat
 include docs_sphinx/Makefile
 recursive-include docs_sphinx *.rst
 prune docs_sphinx/reference  # will be generated automatically
+prune dev
+prune brian2cuda/tools
