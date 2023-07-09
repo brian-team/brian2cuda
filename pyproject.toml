@@ -33,8 +33,8 @@ Documentation ='https://brian2cuda.readthedocs.io/'
 Source = 'https://github.com/brian-team/brian2cuda'
 Tracker = 'https://github.com/brian-team/brian2cuda/issues'
 
-[tool.setuptools]
-packages = ['brian2cuda']
+[tool.setuptools.packages.find]
+namespaces = false
 
 [tool.setuptools.dynamic]
 readme = {file = 'README.md', content-type = "text/markdown"}
