@@ -4,9 +4,9 @@
 
 
 {% block extra_headers %}
-// TODO: uncomment when thrust calls below are fixed
-//#include <thrust/count.h>
-//#include <thrust/execution_policy.h>
+#include <thrust/copy.h>
+#include <thrust/count.h>
+#include <thrust/execution_policy.h>
 {% endblock %}
 
 
