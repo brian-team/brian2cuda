@@ -11,17 +11,17 @@ index b4f34065..ffdac84a 100644
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
 diff --git a/brian2/tests/features/__init__.py b/brian2/tests/features/__init__.py
-index 7db0122c..7442aaf7 100644
+index 9ad11c0b..7442aaf7 100644
 --- a/brian2/tests/features/__init__.py
 +++ b/brian2/tests/features/__init__.py
-@@ -6,5 +6,6 @@
+@@ -5,6 +5,7 @@
+     "Configuration",
      "run_feature_tests",
  ]
- 
--from . import input, monitors, neurongroup, speed, synapses
-+# isort: skip_file # We need to do the base import first to prevent a circular import later
++
+ # isort: skip_file # We need to do the base import first to prevent a circular import later
  from .base import *
-+from . import input, monitors, neurongroup, speed, synapses
+ from . import input, monitors, neurongroup, speed, synapses
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
 index d8a83041..3ef9c96d 100644
 --- a/brian2/tests/features/base.py
