@@ -704,8 +704,11 @@ class CUDACodeGenerator(CodeGenerator):
         # set up the restricted pointers, these are used so that the compiler
         # knows there is no aliasing in the pointers, for optimisation
         pointers = []
-        # Add additional lines inside the kernel functions
+        # Add additional lines inside the kernel functions, also contains the clock_pointers
+        # lines from below for backwards compatibility
         kernel_lines = []
+        # Translate clock variables back into pointers
+        clock_pointers = []
         # It is possible that several different variable names refer to the
         # same array. E.g. in gapjunction code, v_pre and v_post refer to the
         # same array if a group is connected to itself
@@ -783,16 +786,17 @@ class CUDACodeGenerator(CodeGenerator):
                     # c_data_type(variable.dtype) is float, but we need double
                     dtype = "double"
                 else:
-                    dtype = dtype=c_data_type(variable.dtype)
+                    dtype = c_data_type(variable.dtype)
                 line = f"const {dtype}* _ptr{arrayname} = &_value{arrayname};"
-                if line not in kernel_lines:
-                    kernel_lines.append(line)
+                if line not in clock_pointers:
+                    clock_pointers.append(line)
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
                     'hashdefine_lines': stripped_deindented_lines('\n'.join(hash_defines)),
                     'denormals_code_lines': stripped_deindented_lines('\n'.join(self.denormals_to_zero_code())),
-                    'kernel_lines': stripped_deindented_lines('\n'.join(kernel_lines)),
+                    'kernel_lines': stripped_deindented_lines('\n'.join(kernel_lines + clock_pointers)),
+                    'clock_pointers': stripped_deindented_lines('\n'.join(clock_pointers)),
                     'uses_atomics': self.uses_atomics
                     }
         keywords.update(template_kwds)

@@ -88,7 +88,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
         # the minimal supported GPU compute capability
-        self.minimal_compute_capability = 3.5
+        self.minimal_compute_capability = 5.0
         # store the ID of the used GPU and it's compute capability
         self.gpu_id = None
         self.compute_capability = None

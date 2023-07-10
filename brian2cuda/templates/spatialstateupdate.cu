@@ -140,8 +140,8 @@ __global__ void _tridiagsolve_kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
-    ///// kernel_lines /////
-    {{kernel_lines|autoindent}}
+    ///// translate clock variables into pointers /////
+    {{clock_pointers|autoindent}}
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
     assert(tid == 0 && bid == _idx);
@@ -214,8 +214,8 @@ __global__ void _coupling_kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
-    ///// kernel_lines /////
-    {{kernel_lines|autoindent}}
+    ///// translate clock variables into pointers /////
+    {{clock_pointers|autoindent}}
 
     // we need to run the kernel with 1 thread, 1 block
     assert(_idx == 0);
@@ -328,8 +328,8 @@ __global__ void _combine_kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
-    ///// kernel_lines /////
-    {{kernel_lines|autoindent}}
+    ///// translate clock variables into pointers /////
+    {{clock_pointers|autoindent}}
 
     // we need to run the kernel with 1 thread per block (to be changed by optimization)
     assert(tid == 0 && bid == _idx);
@@ -371,8 +371,8 @@ __global__ void _currents_kernel_{{codeobj_name}}(
     ///// KERNEL_CONSTANTS /////
     %KERNEL_CONSTANTS%
 
-    ///// kernel_lines /////
-    {{kernel_lines|autoindent}}
+    ///// translate clock variables into pointers /////
+    {{clock_pointers|autoindent}}
 
     if(_idx >= _N)
     {
