@@ -17,6 +17,9 @@
 {% block before_run_defines %}
 {% endblock %}
 
+///// Support code /////
+{{support_code_lines|autoindent}}
+
 void _before_run_{{codeobj_name}}()
 {
     using namespace brian;
