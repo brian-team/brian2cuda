@@ -48,3 +48,8 @@ If you use this software in a published article, please cite
 
 ## License
 Brian2CUDA is free software licensed under the [GNU General Public License v3 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
+## Testing
+To run the test suite on Google Collab (no installation or GPU required), click on the badge below:
+
+[![Open In Collab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brian-team/brian2cuda/blob/master/brian2cuda/tools/test_suite/run_tests.ipynb)
