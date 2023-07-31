@@ -18,7 +18,7 @@ def test_spikegenerator_extreme_period():
     times   = np.array([0, 1, 2]) * ms
     SG = SpikeGeneratorGroup(5, indices, times, period=1e6*second)
     s_mon = SpikeMonitor(SG)
-    with catch_logs() as l:
+    with catch_logs(only_from=("brian2cuda",)) as l:
         run(10*ms)
 
     assert_equal(s_mon.i, np.array([0, 1, 2]))

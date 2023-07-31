@@ -39,7 +39,7 @@ def test_multiple_noise_variables_extended():
     for eqs_noise in all_eqs_noise:
         monitors.append(dict())
         for method_name, method in [('euler', euler), ('heun', heun)]:
-            with catch_logs('WARNING'):
+            with catch_logs('WARNING', only_from=("brian2cuda",)):
                 G = NeuronGroup(2, eqs_noise, method=method)
                 G.x = [0.5, 1]
                 G.y = [0, 0.5] * Hz
@@ -91,7 +91,7 @@ def test_multiple_noise_variables_deterministic_noise(fake_randn_randn_fixture):
         monitors.append(dict())
 
         for method_name, method in [('euler', euler), ('heun', heun)]:
-            with catch_logs('WARNING'):
+            with catch_logs('WARNING', only_from=("brian2cuda",)):
                 G = NeuronGroup(2, eqs_noise, method=method)
                 G.x = [5,  17]
                 G.y = [25, 5 ] * Hz

@@ -29,7 +29,7 @@ def test_semantics_floor_division():
     float_values = np.arange(-5.0, 6.0, dtype=np.float64)
     G.ivalue = int_values
     G.fvalue = float_values
-    with catch_logs() as l:
+    with catch_logs(only_from=("brian2cuda",)) as l:
         G.run_regularly('''
         a = ivalue//3
         b = ivalue//3

@@ -21,7 +21,7 @@ from brian2cuda.utils.gputools import get_cuda_runtime_version
 __all__ = ['CUDACodeGenerator', 'CUDAAtomicsCodeGenerator', 'c_data_type']
 
 
-logger = get_logger('brian2.codegen.generators.cuda_generator')
+logger = get_logger(__name__)
 
 
 class ParallelisationError(Exception):

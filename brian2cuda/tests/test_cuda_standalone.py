@@ -334,11 +334,11 @@ def test_delete_directory():
     dummy_file = os.path.join(device.project_dir, 'results', 'dummy.txt')
     open(dummy_file, 'w').flush()
     assert os.path.isfile(dummy_file)
-    with catch_logs() as logs:
+    with catch_logs(only_from=("brian2cuda",)) as logs:
         device.delete(directory=True)
     assert len(logs) == 1
     assert os.path.isfile(dummy_file)
-    with catch_logs() as logs:
+    with catch_logs(only_from=("brian2cuda",)) as logs:
         device.delete(directory=True, force=True)
     assert len(logs) == 0
     # everything should be deleted

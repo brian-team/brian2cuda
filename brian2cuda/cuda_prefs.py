@@ -8,7 +8,7 @@ from brian2.core.core_preferences import default_float_dtype_validator, dtype_re
 from brian2.utils.logger import get_logger
 
 
-logger = get_logger('brian2.devices.cuda_standalone.cuda_prefs')
+logger = get_logger(__name__)
 
 def validate_bundle_size_expression(string):
     known_vars = ['mean', 'std', 'max', 'min']

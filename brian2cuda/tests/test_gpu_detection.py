@@ -102,13 +102,13 @@ def test_wrong_cuda_path_warning(reset_cuda_detection, use_default_prefs, monkey
     # Set wrong CUDA_PATH
     monkeypatch.setenv("CUDA_PATH", "/tmp")
 
-    with catch_logs() as logs:
+    with catch_logs(only_from=("brian2cuda",)) as logs:
         run(0*ms)
 
     assert len(logs) == 1, logs
     log = logs[0]
     assert log[0] == "WARNING"
-    assert log[1] == "brian2.devices.cuda_standalone"
+    assert log[1] == "brian2cuda.device"
     assert log[2].startswith("Couldn't find `nvcc` binary ")
 
 
@@ -118,7 +118,7 @@ def test_manual_setting_compute_capability(reset_gpu_detection):
     set_device("cuda_standalone", directory=None)
     compute_capability_pref = '6.0'
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = float(compute_capability_pref)
-    with catch_logs(log_level=logging.INFO) as logs:
+    with catch_logs(log_level=logging.INFO, only_from=("brian2cuda",)) as logs:
         run(0*ms)
     log_start = "Compiling device code for compute capability "
     log_start_num_chars = len(log_start)
@@ -143,13 +143,13 @@ def test_warning_compute_capability_set_twice(reset_gpu_detection, use_default_p
     set_device("cuda_standalone", directory=None)
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 5.3
     prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc.append('-arch=sm_52')
-    with catch_logs() as logs:
+    with catch_logs(only_from=("brian2cuda",)) as logs:
         run(0*ms)
 
     assert len(logs) == 1, logs
     log = logs[0]
     assert log[0] == "WARNING"
-    assert log[1] == "brian2.devices.cuda_standalone"
+    assert log[1] == "brian2cuda.device"
     assert log[2].startswith("GPU architecture for compilation was specified via ")
 
 
