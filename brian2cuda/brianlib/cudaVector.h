@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <assert.h>
+#include "cuda_utils.h"
 
 /*
  * current memory allocation strategy:
@@ -35,7 +36,8 @@ public:
             }
             else
             {
-                printf("ERROR while creating cudaVector with size %ld in cudaVector.h (constructor)\n", sizeof(scalar)*INITIAL_SIZE);
+                LOG_CUDA_ERROR("While creating cudaVector with size %ld in cudaVector.h"
+                               "(constructor)\n", sizeof(scalar)*INITIAL_SIZE);
                 assert(m_data != NULL);
             }
         }
@@ -56,7 +58,8 @@ public:
         if (index < 0 || index >= m_size)
         {
             // TODO: check for proper exception throwing in cuda kernels
-            printf("ERROR returning a reference to index %d in cudaVector::at() (size = %u)\n", index, m_size);
+            LOG_CUDA_ERROR("Returning a reference to index %d in cudaVector::at()"
+                           "(size = %u)\n", index, m_size);
             assert(index < m_size);
         }
         return m_data[index];
@@ -85,7 +88,7 @@ public:
         }
         else
         {
-            printf("ERROR invalid index %d, must be in range 0 - %d\n", pos, m_size);
+            LOG_CUDA_ERROR("Invalid index %d, must be in range 0 - %d\n", pos, m_size);
             assert(pos <= m_size);
         }
     };
@@ -134,7 +137,8 @@ public:
             }
             else
             {
-                printf("ERROR while allocating %ld bytes in cudaVector.h/reserve()\n", sizeof(scalar)*new_capacity);
+                LOG_CUDA_ERROR("While allocating %ld bytes in cudaVector.h/reserve()\n",
+                               sizeof(scalar)*new_capacity);
                 assert(new_data != NULL);
             }
         }

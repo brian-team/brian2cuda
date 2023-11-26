@@ -510,14 +510,14 @@ __global__ void _currents_kernel_{{codeobj_name}}(
             float occupancy_currents = (max_active_blocks_currents * num_threads_currents / num_threads_per_warp) /
                               (float)(max_threads_per_sm / num_threads_per_warp);
 
-            printf("INFO _currents\n_kernel_{{codeobj_name}}"
-                       "\t%u blocks\n"
-                       "\t%u threads\n"
-                       "\t%i registers per thread\n"
-                       "\t%i bytes statically-allocated shared memory per block\n"
-                       "\t%i bytes local memory per thread\n"
-                       "\t%i bytes user-allocated constant memory\n"
-                       "\t%.3f theoretical occupancy\n",
+            LOG_DEBUG("_currents\n_kernel_{{codeobj_name}}"
+                       "\t\t\t%u blocks\n"
+                       "\t\t\t%u threads\n"
+                       "\t\t\t%i registers per thread\n"
+                       "\t\t\t%i bytes statically-allocated shared memory per block\n"
+                       "\t\t\t%i bytes local memory per thread\n"
+                       "\t\t\t%i bytes user-allocated constant memory\n"
+                       "\t\t\t%.3f theoretical occupancy\n",
                        num_blocks_currents, num_threads_currents, funcAttrib_currents.numRegs,
                        funcAttrib_currents.sharedSizeBytes, funcAttrib_currents.localSizeBytes,
                        funcAttrib_currents.constSizeBytes, occupancy_currents);

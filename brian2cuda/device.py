@@ -18,13 +18,13 @@ from brian2.core.namespace import get_local_namespace
 from brian2.core.preferences import prefs, PreferenceError
 from brian2.core.variables import ArrayVariable, DynamicArrayVariable, Constant
 from brian2.parsing.rendering import CPPNodeRenderer
-from brian2.devices.device import all_devices
+from brian2.devices.device import all_devices, get_device
 from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.utils.filetools import copy_directory, ensure_directory
 from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
-from brian2.units import second
+from brian2.units import second, msecond
 from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
 from brian2.groups import Subgroup
 
@@ -80,10 +80,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.include_dirs.remove('brianlib/randomkit')
         self.library_dirs.remove('brianlib/randomkit')
 
-        # Add code line slots used in our benchmarks
-        # TODO: Add to brian2 and remove here
-        self.code_lines.update({'before_network_run': [],
-                                'after_network_run': []})
         ### Attributes specific to CUDAStandaloneDevice:
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
@@ -132,6 +128,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # List of names of all variables which are only required on host and will not
         # be copied to device memory
         self.variables_on_host_only = []
+        # Report self.timers
+        self.report_timers = True
+        self.timers_file = None
+        self.timers['run_binary'] = {
+            'initialization': None, 'simulation_loop': None, 'finalization': None
+        }
+
 
     def get_array_name(self, var, access_data=True, prefix=None):
         '''
@@ -702,7 +705,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
                                                            user_headers=user_headers,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
+                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size'],
+                                                           helpful=prefs.devices.cuda_standalone.helpful
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -1178,14 +1182,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         # Log compiled GPU architecture
         if self.compute_capability is None:
-            logger.info(
+            logger.debug(
                 f"Compiling device code with manually set architecture flags "
                 f"({gpu_arch_flags}). Be aware that the minimal supported compute "
                 f"capability is {self.minimal_compute_capability} "
                 "(we are not checking your compile flags)"
             )
         else:
-            logger.info(
+            logger.debug(
                 f"Compiling device code for compute capability "
                 f"{self.compute_capability} (compiler flags: {gpu_arch_flags})"
             )
@@ -1208,9 +1212,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 compiler_debug_flags = ''
                 linker_debug_flags = ''
 
+            # TODO: CHECK THIS IS WORKING?
             if disable_asserts:
                 # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
                 nvcc_compiler_flags += ['-NDEBUG']
+
+            # Set brian2cuda standalone log leven based ot Brian2 log level
+            nvcc_compiler_flags += [f'-DLOG_LEVEL_{prefs["logging.console_log_level"].upper()}']
 
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
@@ -1470,10 +1478,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for net in self.networks:
             net.after_run()
 
-        logger.info("Using the following preferences for CUDA standalone:")
+        logger.debug("Using the following preferences for CUDA standalone:")
         for pref_name in prefs:
             if "devices.cuda_standalone" in pref_name:
-                logger.info(f"\t{pref_name} = {prefs[pref_name]}")
+                logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         logger.debug("Using the following brian preferences:")
         for pref_name in prefs:
@@ -1481,9 +1489,51 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
+            if prefs.devices.cuda_standalone.helpful:
+                logger.info("Compiling CUDA standalone project...")
+            else:
+                logger.debug("Compiling CUDA standalone project...")
             self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
+                if prefs.devices.cuda_standalone.helpful:
+                    logger.info("Running CUDA standalone simulation...")
+                else:
+                    logger.debug("Running CUDA standalone simulation...")
                 self.run(directory, with_output, run_args)
+                if self.report_timers:
+                    # Read standalone timers from file, using same code we used for
+                    # benchmarks in brian2/tests/features/base.py (brian2.diff)
+                    assert self.timers_file is not None
+                    # Load timers from standalone project
+                    cpp_timers = {}
+                    timers_file_path = os.path.join(directory, self.timers_file)
+                    if os.path.exists(timers_file_path):
+                        with open(timers_file_path, "r") as f:
+                            for line in f.readlines():
+                                name, time = line.split()
+                                if time == "None":
+                                    time = None
+                                else:
+                                    # We record in microseconds, convert to seconds
+                                    time = float(time) / 1e6
+                                cpp_timers[name] = time
+                    else:
+                        logger.error(
+                            f"timers_file_path not found at {timers_file_path}"
+                        )
+
+                    self.timers['run_binary']['initialization'] = (
+                        cpp_timers['before_network_run'] - cpp_timers['before_start']
+                    )
+                    self.timers['run_binary']['simulation_loop'] = (
+                        cpp_timers['after_network_run']
+                        - cpp_timers['before_network_run']
+                    )
+                    self.timers['run_binary']['finalization'] = (
+                        cpp_timers['after_end'] - cpp_timers['after_network_run']
+                    )
+
+                    print(f"\n{computation_time_summary()}")
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
@@ -1509,6 +1559,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         t_end = net.t+duration
         for clock in net._clocks:
             clock.set_interval(net.t, t_end)
+
+        if 'report_timers' in self.build_options:
+            self.report_timers = self.build_options.pop('report_timers')
 
         # Get the local namespace
         if namespace is None:
@@ -1671,11 +1724,46 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if clock not in all_clocks:
                 run_lines.append(f'{net.name}.add(&{clock.name}, NULL);')
 
+        # Insert timer code when reporting timers is enabled (this needs to happen
+        # before the before/after_network_run slots are added to run_lines
+        if self.report_timers:
+            # Need chrono header for timing functions
+            prefs.codegen.cpp.headers += ["<chrono>"]
+            from .tests.features.cuda_configuration import (
+                SETUP_TIMER, TIME_DIFF, CLOSE_TIMER
+            )
+            # Insert code for timers, file path is relative to main.cu
+            self.timers_file = os.path.join('results', 'timers')
+            self.insert_code("before_start", SETUP_TIMER.format(fname=self.timers_file))
+            self.insert_code("before_start", TIME_DIFF.format(name="before_start"))
+            self.insert_code(
+                "before_network_run", TIME_DIFF.format(name="before_network_run")
+            )
+            self.insert_code(
+                "after_network_run", TIME_DIFF.format(name="after_network_run")
+            )
+            self.insert_code("after_end", TIME_DIFF.format(name="after_end"))
+            self.insert_code("after_end", CLOSE_TIMER)
+
         run_lines.extend(self.code_lines['before_network_run'])
+
+        if prefs.devices.cuda_standalone.helpful:
+            start_sim = r'LOG_INFO("%s", "Starting simulation loop...\n");'
+        else:
+            start_sim = r'LOG_DEBUG("%s", "Starting simulation loop...\n");'
+        run_lines.append(start_sim)
+
         # run everything that is run on a clock
         run_lines.append(
             f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
         )
+
+        if prefs.devices.cuda_standalone.helpful:
+            start_fin = r'LOG_INFO("%s", "Finalizing standalone simulation...\n");'
+        else:
+            start_fin = r'LOG_DEBUG("%s", "Finalizing standalone simulation...\n");'
+        run_lines.append(start_fin)
+
         run_lines.extend(self.code_lines['after_network_run'])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
@@ -1732,6 +1820,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.build(direct_call=False, **self.build_options)
 
         self.first_run = False
+
     def fill_with_array(self, var, *args, **kwargs):
         # If the delay variable is set after the first run call, do not delete it on the
         # device (which is happening by default)
@@ -1758,6 +1847,75 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                    'supported in CUDA standalone'))
 
 
+class ComputationTimeSummary(object):
+    """
+    Class to nicely display the contribution of different computations times. Objects of
+    this class are returned by `computation_time_summary`.
+    """
+    def __init__(self, timers):
+        if timers is not None:
+            names = timers.keys()
+            times = timers.values()
+        else:  # Happens if report_timers is False
+            # Use a dummy entry to prevent problems with empty lists later
+            names = ['no computation tims have been recorded']
+            times = [0*second]
+        self.total_time = sum(times)
+        self.time_unit = msecond
+        if self.total_time>1*second:
+            self.time_unit = second
+        if self.total_time>0*second:
+            self.percentages = [100.0*time/self.total_time for time in times]
+        else:
+            self.percentages = [0. for _ in times]
+        self.names_maxlen = max(len(name) for name in names)
+        self.names = [name+' '*(self.names_maxlen-len(name)) for name in names]
+        self.times = times
+
+    def __repr__(self):
+        times = [f'{time / self.time_unit:.2f} {self.time_unit}' for time in self.times]
+        times_maxlen = max(len(time) for time in times)
+        times = [' '*(times_maxlen-len(time))+time for time in times]
+        percentages = [f'{percentage:.2f} %' for percentage in self.percentages]
+        percentages_maxlen = max(len(percentage) for percentage in percentages)
+        percentages = [(' '*(percentages_maxlen-len(percentage)))+percentage for percentage in percentages]
+
+        s = 'Computation time summary'
+        s += f"\n{'=' * len(s)}\n"
+        for name, time, percentage in zip(self.names, times, percentages):
+            s += f'{name}    {time}    {percentage}\n'
+        return s
+
+    def _repr_html_(self):
+        times = [f'{time / self.time_unit:.2f} {self.time_unit}' for time in self.times]
+        percentages = [f'{percentage:.2f} %' for percentage in self.percentages]
+        s = '<h2 class="brian_comp_time_summary_header">Computation time summary</h2>\n'
+        s += '<table class="brian_comp_time_summary_table">\n'
+        for name, time, percentage in zip(self.names, times, percentages):
+            s += '<tr>'
+            s += f'<td>{name}</td>'
+            s += f'<td style="text-align: right">{time}</td>'
+            s += f'<td style="text-align: right">{percentage}</td>'
+            s += '</tr>\n'
+        s += '</table>'
+        return s
+
+
+def computation_time_summary():
+    """
+    Returns a `ComputationTimeSummary` of the profiling info for a run. This object
+    can be transformed to a string explicitly but on an interactive console
+    simply calling `profiling_summary` is enough since it will
+    automatically convert the `ProfilingSummary` object.
+    """
+    device_timers = get_device().timers
+    pretty_times = {
+        'Compilation': sum(filter(None, device_timers['compile'].values())) * second,
+        'Initialization': device_timers['run_binary']['initialization'] * second,
+        'Simulation loop': device_timers['run_binary']['simulation_loop'] * second,
+        'Finalization': device_timers['run_binary']['finalization'] * second
+    }
+    return ComputationTimeSummary(pretty_times)
 
 def prepare_codeobj_code_for_rng(codeobj):
     '''

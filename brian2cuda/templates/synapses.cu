@@ -211,7 +211,7 @@ num_threads = max_threads_per_block;
 {% if bundle_mode %}
 //num_threads_per_bundle = {{pathway.name}}_bundle_size_max;
 num_threads_per_bundle = getThreadsPerBundle();
-printf("INFO _run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_threads_per_bundle);
+LOG_DEBUG("_run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_threads_per_bundle);
 {% endif %}
 num_loops = 1;
 
@@ -231,12 +231,12 @@ if (!{{owner.name}}_multiple_pre_post){
     {% endif %}
 }
 else {
-    printf("WARNING: Detected multiple synapses for same (pre, post) neuron "
-           "pair in Synapses object ``{{owner.name}}`` and no atomic operations are used. "
-           "Falling back to serialised effect application for SynapticPathway "
-           "``{{pathway.name}}``. This will be slow. You can avoid serialisation "
-           "by separating this Synapses object into multiple Synapses objects "
-           "with at most one connection between the same (pre, post) neuron pair.\n");
+    LOG_WARNING("%s", "Detected multiple synapses for same (pre, post) neuron "
+                "pair in Synapses object ``{{owner.name}}`` and no atomic operations are used. "
+                "Falling back to serialised effect application for SynapticPathway "
+                "``{{pathway.name}}``. This will be slow. You can avoid serialisation "
+                "by separating this Synapses object into multiple Synapses objects "
+                "with at most one connection between the same (pre, post) neuron pair.\n");
 }
 if (num_threads > max_threads_per_block)
     num_threads = max_threads_per_block;
@@ -255,7 +255,7 @@ num_threads_per_bundle = 1;
 num_loops = num_parallel_blocks;
 
 {% else %}
-printf("ERROR: got unknown 'synaptic_effects' mode ({{synaptic_effects}})\n");
+LOG_ERROR("%s", "Got unknown 'synaptic_effects' mode ({{synaptic_effects}})\n");
 _dealloc_arrays();
 exit(1);
 {% endif %}
@@ -265,7 +265,7 @@ exit(1);
 {% block extra_info_msg %}
 else if ({{pathway.name}}_max_size <= 0)
 {
-    printf("INFO there are no synapses in the {{pathway.name}} pathway. Skipping synapses_push and synapses kernels.\n");
+    LOG_DEBUG("%s", "There are no synapses in the {{pathway.name}} pathway. Skipping synapses_push and synapses kernels.\n");
 }
 {% endblock %}
 
@@ -325,7 +325,7 @@ if ({{pathway.name}}_max_size > 0)
 void _debugmsg_{{codeobj_name}}()
 {
     using namespace brian;
-    std::cout << "Number of synapses: " << {{constant_or_scalar('N', variables['N'])}} << endl;
+    LOG_DEBUG("Number of synapses: %d\n", {{constant_or_scalar('N', variables['N'])}});
 }
 {% endblock %}
 

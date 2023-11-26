@@ -40,6 +40,11 @@ prefs.register_preferences(
     'devices.cuda_standalone',
     'Brian2CUDA preferences',
 
+    helpful=BrianPreference(
+        default=False,
+        docs="Give basic information message to help new Brian2CUDA users",
+        validator=lambda v: v in [True, False]),
+
     SM_multiplier = BrianPreference(
         default=1,
         docs='The number of blocks per SM. By default, this value is set to 1.',

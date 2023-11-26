@@ -326,13 +326,15 @@ void _init_arrays()
     {% endfor %}
 
     CUDA_CHECK_MEMORY();
+#ifdef DEF_LOG_DEBUG
     const double to_MB = 1.0 / (1024.0 * 1024.0);
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
     double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
-    std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
+    std::cout << "CUDA DEBUG: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
         std::cout << " and used " << tot_memory_MB << "MB of device memory.";
     std::cout << std::endl;
+#endif
 }
 
 void _load_arrays()
@@ -351,7 +353,7 @@ void _load_arrays()
         {% endif %}
     } else
     {
-        std::cout << "Error opening static array {{name}}." << endl;
+        LOG_ERROR("%s", "Error opening static array {{name}}.\n");
     }
     {% if not (name in dynamic_array_specs.values()) %}
     CUDA_SAFE_CALL(
@@ -389,7 +391,7 @@ void _write_arrays()
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        LOG_ERROR("%s", "Error writing output file for {{varname}}.\n");
     }
     {% endif %}
     {% endfor %}
@@ -406,7 +408,7 @@ void _write_arrays()
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        LOG_ERROR("%s", "Error writing output file for {{varname}}.\n");
     }
     {% endfor %}
 
@@ -443,7 +445,7 @@ void _write_arrays()
             outfile_{{varname}}.close();
         } else
         {
-            std::cout << "Error writing output file for {{varname}}." << endl;
+            LOG_ERROR("%s", "Error writing output file for {{varname}}.\n");
         }
     {% endfor %}
 
@@ -471,7 +473,7 @@ void _write_arrays()
     outfile_profiling_info.close();
     } else
     {
-        std::cout << "Error writing profiling info to file." << std::endl;
+        LOG_ERROR("%s", "Error writing profiling info to file.\n");
     }
     {% endif %}
     // Write last run info to disk
@@ -483,7 +485,7 @@ void _write_arrays()
         outfile_last_run_info.close();
     } else
     {
-        std::cout << "Error writing last run info to file." << std::endl;
+        LOG_ERROR("%s", "Error writing last run info to file.\n");
     }
 }
 

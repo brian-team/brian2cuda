@@ -164,7 +164,7 @@ class BenchmarkConfiguration(Configuration):
         with open(python_benchmark_path, "w") as file:
             # Timer for `brian.run()` call recorded in `TimedSpeedTest.timed_run()`
             file.write(f"run_brian {self.feature_test.runtime}\n")
-            # Timers for compilcation and binary execution recorded in
+            # Timers for compilation and binary execution recorded in
             # `device.compile_source()` and `device.run()`
             for key, value in device.timers.items():
                 if isinstance(value, float):
