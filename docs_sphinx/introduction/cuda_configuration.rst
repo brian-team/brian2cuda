@@ -66,7 +66,7 @@ do so, set the following preferences::
 
    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
    prefs.devices.cuda_standalone.cuda_backend.compute_capability = <compute_capability>
-   prefs.devices.cuda_standalone.cuda_backend.runtime_version = <runtime_version>
+   prefs.devices.cuda_standalone.cuda_backend.cuda_runtime_version = <cuda_runtime_version>
 
 See `devices.cuda_standalone.cuda_backend.detect_gpus`,
 `devices.cuda_standalone.cuda_backend.compute_capability` and
