@@ -1,3 +1,4 @@
+import functools
 import os
 import logging
 from io import StringIO
@@ -6,7 +7,7 @@ import pytest
 from numpy.testing import assert_equal
 
 from brian2 import prefs, ms, run, set_device, device
-from brian2.utils.logger import catch_logs
+from brian2.utils.logger import catch_logs as _catch_logs
 from brian2.core.preferences import PreferenceError
 from brian2cuda.utils.gputools import (
     reset_cuda_installation,
@@ -16,6 +17,9 @@ from brian2cuda.utils.gputools import (
     get_gpu_selection,
     restore_gpu_selection,
 )
+
+# Only catch our own log messages
+catch_logs = functools.partial(_catch_logs, only_from=["brian2cuda"])
 
 
 ### Pytest fixtures ###
@@ -108,7 +112,7 @@ def test_wrong_cuda_path_warning(reset_cuda_detection, use_default_prefs, monkey
     assert len(logs) == 1, logs
     log = logs[0]
     assert log[0] == "WARNING"
-    assert log[1] == "brian2.devices.cuda_standalone"
+    assert log[1] == "brian2cuda.utils.gputools"
     assert log[2].startswith("Couldn't find `nvcc` binary ")
 
 
@@ -149,7 +153,7 @@ def test_warning_compute_capability_set_twice(reset_gpu_detection, use_default_p
     assert len(logs) == 1, logs
     log = logs[0]
     assert log[0] == "WARNING"
-    assert log[1] == "brian2.devices.cuda_standalone"
+    assert log[1] == "brian2cuda.device"
     assert log[2].startswith("GPU architecture for compilation was specified via ")
 
 

@@ -1,16 +1,21 @@
+import functools
+
 import pytest
 import numpy as np
 import logging
 
 from brian2 import *
 from brian2.tests.utils import assert_allclose
-from brian2.utils.logger import catch_logs
+from brian2.utils.logger import catch_logs as _catch_logs
 from brian2.devices.device import set_device
 from brian2.tests.test_synapses import permutation_analysis_good_examples
 from brian2.utils.stringtools import get_identifiers, deindent
 
 import brian2cuda
 from brian2cuda.cuda_generator import CUDACodeGenerator
+
+# Only catch our own log messages
+catch_logs = functools.partial(_catch_logs, only_from=["brian2cuda"])
 
 
 @pytest.mark.parametrize(
@@ -198,24 +203,24 @@ def test_default_function_convertion_warnings():
 
     assert len(logs1) == 1, len(logs1)
     assert logs1[0][0] == 'WARNING'
-    assert logs1[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs1[0][1] == 'brian2cuda.cuda_generator'
     assert len(logs2) == 1, len(logs2)
     assert logs2[0][0] == 'WARNING'
-    assert logs2[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs2[0][1] == 'brian2cuda.cuda_generator'
     assert len(logs3) == 0, len(logs3)
     assert len(logs4) == 0, len(logs4)
     assert len(logs5) == 1, len(logs5)
     assert logs5[0][0] == 'WARNING'
-    assert logs5[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs5[0][1] == 'brian2cuda.cuda_generator'
     assert len(logs6) == 1, len(logs6)
     assert logs6[0][0] == 'WARNING'
-    assert logs6[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs6[0][1] == 'brian2cuda.cuda_generator'
     assert len(logs7) == 1, len(logs7)
     assert logs7[0][0] == 'WARNING'
-    assert logs7[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs7[0][1] == 'brian2cuda.cuda_generator'
     assert len(logs8) == 1, len(logs8)
     assert logs8[0][0] == 'WARNING'
-    assert logs8[0][1] == 'brian2.codegen.generators.cuda_generator'
+    assert logs8[0][1] == 'brian2cuda.cuda_generator'
 
 
 
@@ -292,7 +297,7 @@ def test_atomics_parallelisation(code):
             device.reinit()
             device.activate()
         cuda_generator_messages = [l for l in caught_logs
-                                   if l[1]=='brian2.codegen.generators.cuda_generator']
+                                   if l[1]=='brian2cuda.cuda_generator']
         if should_be_able_to_use_ufunc_at:
             assert len(cuda_generator_messages) == 0, cuda_generator_messages
         else:

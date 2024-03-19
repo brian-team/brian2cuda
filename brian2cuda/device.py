@@ -40,7 +40,7 @@ from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObjec
 
 __all__ = []
 
-logger = get_logger('brian2.devices.cuda_standalone')
+logger = get_logger(__name__)
 
 
 class CUDAWriter(CPPWriter):
