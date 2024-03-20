@@ -1,3 +1,5 @@
+brian2cuda/_version.py
+
 # Compiled Python files
 *.py[cod]
 
@@ -29,6 +31,9 @@ nosetests.xml
 
 # pycharm project files
 .idea
+
+# VisualStudio Code
+.vscode/
 
 # egg-info files
 /*.egg-info
