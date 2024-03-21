@@ -1995,7 +1995,7 @@ def prepare_codeobj_code_for_rng(codeobj):
     # If the codeobjec does not need curand states for poisson, check if it needs
     # them for  binomial calls
     if not codeobj.needs_curand_states:
-        match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+        match = re.search(r'_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
         if match is not None:
             codeobj.needs_curand_states = True
 
