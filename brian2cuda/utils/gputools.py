@@ -13,7 +13,7 @@ from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.utils.logger import get_logger
 from brian2cuda.utils.logger import report_issue_message
 
-logger = get_logger("brian2.devices.cuda_standalone")
+logger = get_logger(__name__)
 
 # To list all GPUs: nvidia-smi -L
 

@@ -1,6 +1,7 @@
 """
 Package implementing the CUDA "standalone" `Device` and `CodeObject`.
 """
+import logging
 
 from . import cuda_prefs
 from .codeobject import CUDAStandaloneCodeObject

@@ -17,7 +17,7 @@ try:
 except ImportError:
     pass
 
-logger = get_logger('brian2.devices.cuda_standalone.cuda_configuration')
+logger = get_logger(__name__)
 
 __all__ = ['CUDAStandaloneConfiguration']
 

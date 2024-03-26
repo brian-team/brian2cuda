@@ -40,7 +40,7 @@ from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObjec
 
 __all__ = []
 
-logger = get_logger('brian2.devices.cuda_standalone')
+logger = get_logger(__name__)
 
 
 class CUDAWriter(CPPWriter):
@@ -433,7 +433,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if nb_threads > 0:
             raise NotImplementedError("Using OpenMP in a CUDA standalone project is not supported")
 
-    def generate_objects_source(self, writer, arange_arrays, synapses, static_array_specs, networks):
+    def generate_objects_source(
+        self,
+        writer,
+        arange_arrays,
+        synapses,
+        static_array_specs,
+        networks,
+        timed_arrays,
+    ):
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
@@ -443,7 +451,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         for var, varname in self.arrays.items():
             if var.name.endswith('space'):  # get all eventspace variables
                 self.eventspace_arrays[var] = varname
-                #if hasattr(var, 'owner') and isinstance(v.owner, Clock):
+                # if hasattr(var, 'owner') and isinstance(v.owner, Clock):
                 if isinstance(var.owner, SpikeGeneratorGroup):
                     self.spikegenerator_eventspaces.append(varname)
         for var in self.eventspace_arrays.keys():
@@ -474,6 +482,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         networks=networks,
                         code_objects=self.code_objects.values(),
                         get_array_filename=self.get_array_filename,
+                        get_array_name=self.get_array_name,
                         all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
                         sm_multiplier=sm_multiplier,
                         num_parallel_blocks=num_parallel_blocks,
@@ -487,6 +496,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         profile_statemonitor_copy_to_host=profile_statemonitor_copy_to_host,
                         profile_statemonitor_vars=profile_statemonitor_vars,
                         subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor),
+                        timed_arrays=timed_arrays,
                         variables_on_host_only=self.variables_on_host_only)
         # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
         self.arrays.update(self.eventspace_arrays)
@@ -1227,7 +1237,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             )
             writer.write('makefile', makefile_tmp)
 
-    def build(self, directory='output',
+    def build(self, directory='output', results_directory="results",
               compile=True, run=True, debug=False, clean=False,
               with_output=True, disable_asserts=False,
               additional_source_files=None,
@@ -1307,6 +1317,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             directory = tempfile.mkdtemp(prefix='brian_standalone_')
         self.project_dir = directory
         ensure_directory(directory)
+        if os.path.isabs(results_directory):
+            raise TypeError(
+                "The 'results_directory' argument needs to be a relative path but was "
+                f"'{results_directory}'."
+            )
+        # Translate path to absolute path which ends with /
+        self.results_dir = os.path.join(
+            os.path.abspath(os.path.join(directory, results_directory)), ""
+        )
 
         # Determine compiler flags and directories
         cpp_compiler, cpp_default_extra_compile_args = get_compiler_and_args()
@@ -1447,9 +1466,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         self.generate_codeobj_source(self.writer)
 
-        self.generate_objects_source(self.writer, self.arange_arrays,
-                                     self.synapses, self.static_array_specs,
-                                     self.networks)
+        self.generate_objects_source(
+            self.writer,
+            self.arange_arrays,
+            self.synapses,
+            self.static_array_specs,
+            self.networks,
+            self.timed_arrays,
+        )
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
         self.generate_run_source(self.writer)
@@ -1483,13 +1507,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         if compile:
             self.compile_source(directory, cpp_compiler, debug, clean)
             if run:
-                self.run(directory, with_output, run_args)
+                self.run(
+                    directory=directory,
+                    results_directory=results_directory,
+                    with_output=with_output,
+                    run_args=run_args,
+                )
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
-        ###################################################
-        ### This part is copied from CPPStandaoneDevice ###
-        ###################################################
+        ####################################################
+        ### This part is copied from CPPStandaloneDevice ###
+        ####################################################
         self.networks.add(net)
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
@@ -1671,12 +1700,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if clock not in all_clocks:
                 run_lines.append(f'{net.name}.add(&{clock.name}, NULL);')
 
-        run_lines.extend(self.code_lines['before_network_run'])
-        # run everything that is run on a clock
+        run_lines.extend(self.code_lines["before_network_run"])
+        if not self.run_args_applied:
+            run_lines.append("set_from_command_line(args);")
+            self.run_args_applied = True
         run_lines.append(
-            f'{net.name}.run({float(duration)!r}, {report_call}, {float(report_period)!r});'
+            f"{net.name}.run({float(duration)!r}, {report_call},"
+            f" {float(report_period)!r});"
         )
-        run_lines.extend(self.code_lines['after_network_run'])
+        run_lines.extend(self.code_lines["after_network_run"])
         # for multiple runs, the random number buffer needs to be reset
         run_lines.append('random_number_buffer.run_finished();')
         # nvprof stuff
@@ -1756,7 +1788,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def network_restore(self, net, *args, **kwds):
         raise NotImplementedError(('The store/restore mechanism is not '
                                    'supported in CUDA standalone'))
-
 
 
 def prepare_codeobj_code_for_rng(codeobj):
@@ -1964,7 +1995,7 @@ def prepare_codeobj_code_for_rng(codeobj):
     # If the codeobjec does not need curand states for poisson, check if it needs
     # them for  binomial calls
     if not codeobj.needs_curand_states:
-        match = re.search('_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
+        match = re.search(r'_binomial\w*\(const int vectorisation_idx\)', codeobj.code.cu_file)
         if match is not None:
             codeobj.needs_curand_states = True
 

@@ -1,8 +1,8 @@
 diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index b4f34065..ffdac84a 100644
+index 7cb100b9..10f878c6 100644
 --- a/brian2/devices/cpp_standalone/device.py
 +++ b/brian2/devices/cpp_standalone/device.py
-@@ -1240,6 +1240,7 @@ def run(self, directory, with_output, run_args):
+@@ -1341,6 +1341,7 @@ def run(
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -23,7 +23,7 @@ index 9ad11c0b..7442aaf7 100644
  from .base import *
  from . import input, monitors, neurongroup, speed, synapses
 diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
-index d8a83041..3ef9c96d 100644
+index 1f19da86..ee692cde 100644
 --- a/brian2/tests/features/base.py
 +++ b/brian2/tests/features/base.py
 @@ -11,6 +11,7 @@
@@ -261,7 +261,7 @@ index d8a83041..3ef9c96d 100644
                  overheadstime = float(runtime)
                  for codeobjname, proftime in prof_info:
 @@ -568,17 +672,35 @@ def run_speed_tests(
-                 ] = overheadstime
+                 )
              if verbose:
                  print("]", end=" ")
 +                sys.stdout.flush()

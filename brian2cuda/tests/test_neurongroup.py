@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
@@ -7,13 +6,13 @@ from brian2.core.clocks import defaultclock
 from brian2.core.magic import run
 from brian2.groups.neurongroup import NeuronGroup
 from brian2.synapses import Synapses
-from brian2.tests import make_argv
 from brian2.tests.utils import assert_allclose
 from brian2.utils.logger import catch_logs
 from brian2.units import second
 
 # Adapted from brian2/tests/test_neurongroup.py::test_semantics_floor_division
 # (brian2 test asserts for 0 warnings, brian2cuda warns for int to float64 conversion)
+# Can be removed with the next version that includes brian-team/brian2#1519
 @pytest.mark.standalone_compatible
 def test_semantics_floor_division():
     # See Brian2 github issues #815 and #661
