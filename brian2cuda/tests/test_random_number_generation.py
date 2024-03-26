@@ -122,8 +122,8 @@ def test_rng_occurrence_counting():
     S_randn = Synapses(G_randn, G_randn, on_pre='''x += randn()''', name='S_randn')
     S_randn.connect()
 
-    G_poisson = NeuronGroup(10, '''dx/dt = poisson(1)/ms : 1''', threshold='True', name='G_poisson')
-    S_poisson = Synapses(G_poisson, G_poisson, on_pre='''x += poisson(1)''', name='S_poisson')
+    G_poisson = NeuronGroup(10, '''dx/dt = poisson(2.0)/ms : 1''', threshold='True', name='G_poisson')
+    S_poisson = Synapses(G_poisson, G_poisson, on_pre='''x += poisson(2.0)''', name='S_poisson')
     S_poisson.connect()
 
     run(0*ms)
@@ -149,9 +149,9 @@ def test_rng_occurrence_counting():
 
                 if rng_type == 'poisson_0':
                     co_lamda = code_object.poisson_lamdas['poisson_0']
-                    assert co_lamda == 1.0, co_lamda
+                    assert co_lamda == 2.0, co_lamda
                     d_lamda = device.all_poisson_lamdas[code_object.name]['poisson_0']
-                    assert d_lamda == 1.0, f"{d_lamda} {code_object.name}"
+                    assert d_lamda == 2.0, f"{d_lamda} {code_object.name}"
 
                 assert not code_object.needs_curand_states
 
