@@ -3,11 +3,11 @@ name = "Brian2Cuda"
 authors = [
     {name = 'Denis Alevi'},
     {name = 'Moritz Augustin'},
-    {name ='Marcel Stimberg'}
+    {name = 'Marcel Stimberg'}
 ]
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 dependencies = [
-    'brian2==2.6.0',
+    'brian2==2.7.0',
 ]
 dynamic = ["version", "readme"]
 description = 'A Brian2 extension to simulate spiking neural networks on GPUs'
@@ -52,4 +52,3 @@ requires = [
     "setuptools_scm[toml]>=6.2"
 ]
 build-backend = "setuptools.build_meta"
-
