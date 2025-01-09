@@ -75,15 +75,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
     def __init__(self):
         super(CUDAStandaloneDevice, self).__init__()
-        ### Reset variables we don't need from CPPStandaloneDevice.__init__()
-        # remove randomkit, which we don't use for CUDA Standalone
-        self.include_dirs.remove('brianlib/randomkit')
-        self.library_dirs.remove('brianlib/randomkit')
-
-        # Add code line slots used in our benchmarks
-        # TODO: Add to brian2 and remove here
-        self.code_lines.update({'before_network_run': [],
-                                'after_network_run': []})
         ### Attributes specific to CUDAStandaloneDevice:
         # only true during first run call (relevant for synaptic pre/post ID deletion)
         self.first_run = True
