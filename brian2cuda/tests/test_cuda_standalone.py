@@ -326,21 +326,39 @@ def test_delete_code_data():
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_delete_directory():
-    set_device('cuda_standalone', build_on_run=True, directory=None)
-    group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : volt', method='exact')
-    group.v = np.arange(10)*mV  # uses the static array mechanism
+    set_device("cuda_standalone", build_on_run=True, directory=None)
+    group = NeuronGroup(10, "dv/dt = -v / (10*ms) : volt", method="exact")
+    group.v = np.arange(10) * mV  # uses the static array mechanism
     run(defaultclock.dt)
     # Add a new file
-    dummy_file = os.path.join(device.project_dir, 'results', 'dummy.txt')
-    open(dummy_file, 'w').flush()
+    dummy_file = os.path.join(device.project_dir, "results", "dummy.txt")
+    open(dummy_file, "w").flush()
     assert os.path.isfile(dummy_file)
     with catch_logs() as logs:
         device.delete(directory=True)
-    assert len(logs) == 1
+    assert (
+        len(
+            [
+                l
+                for l in logs
+                if l[1] == "brian2.devices.cpp_standalone.device.delete_skips_directory"
+            ]
+        )
+        == 1
+    )
     assert os.path.isfile(dummy_file)
     with catch_logs() as logs:
         device.delete(directory=True, force=True)
-    assert len(logs) == 0
+    assert (
+        len(
+            [
+                l
+                for l in logs
+                if l[1] == "brian2.devices.cpp_standalone.device.delete_skips_directory"
+            ]
+        )
+        == 0
+    )
     # everything should be deleted
     assert not os.path.exists(device.project_dir)
 
