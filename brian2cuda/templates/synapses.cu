@@ -216,6 +216,8 @@ printf("INFO _run_kernel_{{codeobj_name}}: Using %d threads per bundle\n", num_t
 num_loops = 1;
 
 {% elif synaptic_effects == "target" %}{# not uses_atomics #}
+LOG_ERROR("Internal error, check this line with git blame in brian2cuda source code: %s(%d)\n", __FILE__, __LINE__);
+exit(1);
 // Synaptic effects modify target group variables but NO source group variables.
 num_blocks = num_parallel_blocks;
 num_loops = 1;
