@@ -45,7 +45,7 @@ static int start_offset = current_iteration - _numt_host;
 
 
 {% block extra_kernel_call %}
-// If the StateMonitor is run outside the MagicNetwork, we need to resize it.
+// If the StateMonitor is run outside the Network, we need to resize it.
 // Happens e.g. when StateMonitor.record_single_timestep() is called.
 if(current_iteration >= num_iterations)
 {

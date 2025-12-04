@@ -25,7 +25,7 @@ void Network::clear()
     objects.clear();
 }
 
-void Network::add(Clock *clock, codeobj_func func)
+void Network::add(BaseClock* clock, codeobj_func func)
 {
 #if defined(_MSC_VER) && (_MSC_VER>=1700)
     objects.push_back(std::make_pair(std::move(clock), std::move(func)));
@@ -44,7 +44,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
     compute_clocks();
     // set interval for all clocks
 
-    for(std::set<Clock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
+    for(std::set<BaseClock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
         (*i)->set_interval(t, t_end);
 
     start = std::clock();
@@ -53,7 +53,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
         report_func(0.0, 0.0, t_start, duration);
     }
 
-    Clock* clock = next_clocks();
+    BaseClock* clock = next_clocks();
     double elapsed_realtime;
     bool did_break_early = false;
 
@@ -73,7 +73,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
                     next_report_time += report_period;
                 }
             }
-            Clock *obj_clock = objects[i].first;
+            BaseClock *obj_clock = objects[i].first;
             // Only execute the object if it uses the right clock for this step
             if (curclocks.find(obj_clock) != curclocks.end())
             {
@@ -84,7 +84,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
                 }
             }
         }
-        for(std::set<Clock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)
+        for(std::set<BaseClock*>::iterator i=curclocks.begin(); i!=curclocks.end(); i++)
             (*i)->tick();
         clock = next_clocks();
 
@@ -129,21 +129,21 @@ void Network::compute_clocks()
     clocks.clear();
     for(int i=0; i<objects.size(); i++)
     {
-        Clock *clock = objects[i].first;
+        BaseClock *clock = objects[i].first;
         clocks.insert(clock);
     }
 }
 
-Clock* Network::next_clocks()
+BaseClock* Network::next_clocks()
 {
     // find minclock, clock with smallest t value
-    Clock *minclock = *clocks.begin();
+    BaseClock *minclock = *clocks.begin();
     if (!minclock) // empty list of clocks
         return NULL;
 
-    for(std::set<Clock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
+    for(std::set<BaseClock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
     {
-        Clock *clock = *i;
+        BaseClock *clock = *i;
         if(clock->t[0]<minclock->t[0])
             minclock = clock;
     }
@@ -151,9 +151,9 @@ Clock* Network::next_clocks()
     curclocks.clear();
 
     double t = minclock->t[0];
-    for(std::set<Clock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
+    for(std::set<BaseClock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
     {
-        Clock *clock = *i;
+        BaseClock *clock = *i;
         double s = clock->t[0];
         if(s==t || fabs(s-t)<=Clock_epsilon)
             curclocks.insert(clock);
@@ -178,18 +178,18 @@ typedef void (*codeobj_func)();
 
 class Network
 {
-    std::set<Clock*> clocks, curclocks;
+    std::set<BaseClock*> clocks, curclocks;
     void compute_clocks();
-    Clock* next_clocks();
+    BaseClock* next_clocks();
 public:
-    std::vector< std::pair< Clock*, codeobj_func > > objects;
+    std::vector< std::pair< BaseClock*, codeobj_func > > objects;
     double t;
     static double _last_run_time;
     static double _last_run_completed_fraction;
 
     Network();
     void clear();
-    void add(Clock *clock, codeobj_func func);
+    void add(BaseClock *clock, codeobj_func func);
     void run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period);
 };
 

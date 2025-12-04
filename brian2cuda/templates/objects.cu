@@ -35,8 +35,13 @@ size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
 
 //////////////// clocks ///////////////////
+// attributes will be set in run.cu
 {% for clock in clocks | sort(attribute='name') %}
+{% if clock.__class__.__name__ == "EventClock" %}
+EventClock brian::{{clock.name}};
+{% else %}
 Clock brian::{{clock.name}};
+{% endif %}
 {% endfor %}
 
 //////////////// networks /////////////////
@@ -750,8 +755,12 @@ extern size_t used_device_memory;
 extern std::string results_dir;
 
 //////////////// clocks ///////////////////
-{% for clock in clocks %}
+{% for clock in clocks | sort(attribute='name') %}
+{% if clock.__class__.__name__ == "EventClock" %}
+extern EventClock {{clock.name}};
+{% else %}
 extern Clock {{clock.name}};
+{% endif %}
 {% endfor %}
 
 //////////////// networks /////////////////

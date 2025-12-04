@@ -13,7 +13,7 @@ import numpy as np
 
 from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.codegen.translation import make_statements
-from brian2.core.clocks import Clock, defaultclock
+from brian2.core.clocks import Clock, defaultclock, EventClock
 from brian2.core.namespace import get_local_namespace
 from brian2.core.preferences import prefs, PreferenceError
 from brian2.core.variables import ArrayVariable, DynamicArrayVariable, Constant
@@ -1715,8 +1715,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # not accessible by the normal means until the code has been built and
         # run)
         for clock in net._clocks:
-            self.array_cache[clock.variables['timestep']] = np.array([clock._i_end])
-            self.array_cache[clock.variables['t']] = np.array([clock._i_end * clock.dt_])
+            self.array_cache[clock.variables["timestep"]] = np.array([clock._i_end])
+            # FIXME: Not ideal to condition this on the type of clock
+            if isinstance(clock, EventClock):
+                self.array_cache[clock.variables["t"]] = np.array(
+                    [clock._times[clock._i_end]]
+                )
+            else:
+                self.array_cache[clock.variables["t"]] = np.array(
+                    [clock._i_end * clock.dt_]
+                )
 
         # Initialize eventspaces with -1 before the network runs
         for codeobj in self.code_objects.values():
