@@ -1,8 +1,8 @@
-diff --git a/brian2/devices/cpp_standalone/device.py b/brian2/devices/cpp_standalone/device.py
-index 7cb100b9..10f878c6 100644
---- a/brian2/devices/cpp_standalone/device.py
-+++ b/brian2/devices/cpp_standalone/device.py
-@@ -1341,6 +1341,7 @@ def run(
+diff --git i/brian2/devices/cpp_standalone/device.py w/brian2/devices/cpp_standalone/device.py
+index 729385f7..495c916b 100644
+--- i/brian2/devices/cpp_standalone/device.py
++++ w/brian2/devices/cpp_standalone/device.py
+@@ -1315,6 +1315,7 @@ def run(
                  run_time, completed_fraction = last_run_info.split()
                  self._last_run_time = float(run_time)
                  self._last_run_completed_fraction = float(completed_fraction)
@@ -10,10 +10,10 @@ index 7cb100b9..10f878c6 100644
  
          # Make sure that integration did not create NaN or very large values
          owners = [var.owner for var in self.arrays]
-diff --git a/brian2/tests/features/__init__.py b/brian2/tests/features/__init__.py
+diff --git i/brian2/tests/features/__init__.py w/brian2/tests/features/__init__.py
 index 9ad11c0b..7442aaf7 100644
---- a/brian2/tests/features/__init__.py
-+++ b/brian2/tests/features/__init__.py
+--- i/brian2/tests/features/__init__.py
++++ w/brian2/tests/features/__init__.py
 @@ -5,6 +5,7 @@
      "Configuration",
      "run_feature_tests",
@@ -22,10 +22,10 @@ index 9ad11c0b..7442aaf7 100644
  # isort: skip_file # We need to do the base import first to prevent a circular import later
  from .base import *
  from . import input, monitors, neurongroup, speed, synapses
-diff --git a/brian2/tests/features/base.py b/brian2/tests/features/base.py
+diff --git i/brian2/tests/features/base.py w/brian2/tests/features/base.py
 index 1f19da86..ee692cde 100644
---- a/brian2/tests/features/base.py
-+++ b/brian2/tests/features/base.py
+--- i/brian2/tests/features/base.py
++++ w/brian2/tests/features/base.py
 @@ -11,6 +11,7 @@
  import numpy
  
@@ -413,10 +413,10 @@ index 1f19da86..ee692cde 100644
  
  
  # Code below auto generates restructured text tables, copied from:
-diff --git a/brian2/tests/features/speed.py b/brian2/tests/features/speed.py
+diff --git i/brian2/tests/features/speed.py w/brian2/tests/features/speed.py
 index 0bdc3ca2..ef33e046 100644
---- a/brian2/tests/features/speed.py
-+++ b/brian2/tests/features/speed.py
+--- i/brian2/tests/features/speed.py
++++ w/brian2/tests/features/speed.py
 @@ -23,7 +23,17 @@ class LinearNeuronsOnly(SpeedTest):
      category = "Neurons only"
      name = "Linear 1D"
