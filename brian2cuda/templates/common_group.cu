@@ -8,6 +8,7 @@
 #include "brianlib/common_math.h"
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
+#include <chrono>
 #include <cmath>
 #include <stdint.h>
 #include <ctime>
@@ -168,7 +169,7 @@ void _run_{{codeobj_name}}()
 
     {% block profiling_start %}
     {% if profiled %}
-    const std::clock_t _start_time = std::clock();
+    const auto _start_time = std::chrono::high_resolution_clock::now();
     {% endif %}
     {% endblock %}
 
@@ -329,7 +330,8 @@ void _run_{{codeobj_name}}()
     CUDA_SAFE_CALL(
             cudaDeviceSynchronize()
             );
-    const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+    const auto _end_time = std::chrono::high_resolution_clock::now();
+    const auto _run_time = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time);
     {{codeobj_name}}_profiling_info += _run_time;
     {% endif %}
     {% endblock %}

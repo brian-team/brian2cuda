@@ -5,6 +5,7 @@
 #include "network.h"
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
 #include <ctime>
 #include <utility>
 #include <stdio.h>
@@ -36,7 +37,7 @@ void Network::add(BaseClock* clock, codeobj_func func)
 
 void Network::run(const double duration, void (*report_func)(const double, const double, const double, const double), const double report_period)
 {
-    std::clock_t start, current;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, current;
     const double t_start = t;
     const double t_end = t + duration;
     double next_report_time = report_period;
@@ -47,7 +48,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
     for(std::set<BaseClock*>::iterator i=clocks.begin(); i!=clocks.end(); i++)
         (*i)->set_interval(t, t_end);
 
-    start = std::clock();
+    start = std::chrono::high_resolution_clock::now();
     if (report_func)
     {
         report_func(0.0, 0.0, t_start, duration);
@@ -65,8 +66,8 @@ void Network::run(const double duration, void (*report_func)(const double, const
         {
             if (report_func)
             {
-                current = std::clock();
-                const double elapsed = (double)(current - start) / CLOCKS_PER_SEC;
+                current = std::chrono::high_resolution_clock::now();
+                const double elapsed = std::chrono::duration<double>(current - start).count();
                 if (elapsed > next_report_time)
                 {
                     report_func(elapsed, (clock->t[0]-t_start)/duration, t_start, duration);
@@ -96,8 +97,8 @@ void Network::run(const double duration, void (*report_func)(const double, const
         brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::dev{{varname}}.size();
         {% endfor %}
 
-        current = std::clock();
-        elapsed_realtime = (double)(current - start)/CLOCKS_PER_SEC;
+        current = std::chrono::high_resolution_clock::now();
+        elapsed_realtime = std::chrono::duration<double>(current - start).count();
 
         {% if maximum_run_time is not none %}
         if(elapsed_realtime>{{maximum_run_time}})
