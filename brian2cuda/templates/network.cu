@@ -97,10 +97,10 @@ void Network::run(const double duration, void (*report_func)(const double, const
         brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::dev{{varname}}.size();
         {% endfor %}
 
+        {% if maximum_run_time is not none %}
         current = std::chrono::high_resolution_clock::now();
         elapsed_realtime = std::chrono::duration<double>(current - start).count();
-
-        {% if maximum_run_time is not none %}
+        
         if(elapsed_realtime>{{maximum_run_time}})
         {
             did_break_early = true;
@@ -109,6 +109,9 @@ void Network::run(const double duration, void (*report_func)(const double, const
         {% endif %}
 
     }
+
+    current = std::chrono::high_resolution_clock::now();
+    elapsed_realtime = std::chrono::duration<double>(current - start).count();    
 
     if(!did_break_early) t = t_end;
 
