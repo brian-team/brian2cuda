@@ -977,7 +977,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     }
 
     CUDA_CHECK_MEMORY();
-    double time_passed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start_timer);
+    double time_passed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_timer).count();
     std::cout << "INFO: {{owner.name}} initialisation took " <<  time_passed << "s";
     if (used_device_memory_after_dealloc < used_device_memory_start){
         size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
