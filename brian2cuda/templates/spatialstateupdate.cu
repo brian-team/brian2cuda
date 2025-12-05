@@ -403,14 +403,16 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    {{codeobj_name}}_kernel_integration_profiling_info += (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
+    const auto _end_time = std::chrono::high_resolution_clock::now();
+    const auto _run_time = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time);
+    {{codeobj_name}}_kernel_integration_profiling_info += _run_time;
     {% endif %}
 #}
 
     // run kernel 2 (tridiag solve): branches many blocks with one thread each
 {#
     {% if profiled %}
-    std::clock_t _start_time_tridiagsolve = std::clock();
+    const auto _start_time_tridiagsolve = std::chrono::high_resolution_clock::now();
     {% endif %}
 #}
     int num_blocks_tridiagsolve = _num_B-1;
@@ -424,14 +426,14 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    {{codeobj_name}}_kernel_tridiagsolve_profiling_info += (double)(std::clock() -_start_time_tridiagsolve)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_kernel_tridiagsolve_profiling_info += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() -_start_time_tridiagsolve);
     {% endif %}
 #}
 
     // kernel 3 (coupling): one block one thread
 {#
     {% if profiled %}
-    std::clock_t _start_time_coupling = std::clock();
+    const auto _start_time_coupling = std::chrono::high_resolution_clock::now();
     {% endif %}
 #}
     int num_blocks_coupling = 1;
@@ -445,14 +447,14 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    {{codeobj_name}}_kernel_coupling_profiling_info += (double)(std::clock() -_start_time_coupling)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_kernel_coupling_profiling_info += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() -_start_time_coupling);
     {% endif %}
 #}
 
     // kernel 4 (combine): branches many blocks with one thread each
 {#
     {% if profiled %}
-    std::clock_t _start_time_combine = std::clock();
+    const auto _start_time_combine = std::chrono::high_resolution_clock::now();
     {% endif %}
 #}
     int num_blocks_combine = _num_B-1;
@@ -466,7 +468,7 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    {{codeobj_name}}_kernel_combine_profiling_info += (double)(std::clock() -_start_time_combine)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_kernel_combine_profiling_info += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() -_start_time_combine);
     {% endif %}
 #}
 
@@ -529,7 +531,7 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 
 {#
         {% if profiled %}
-        std::clock_t _start_time_currents = std::clock();
+        const auto _start_time_currents = std::chrono::high_resolution_clock::now();
         {% endif %}
 #}
         // run kernel 5
@@ -543,7 +545,7 @@ __global__ void _currents_kernel_{{codeobj_name}}(
 {#
     {% if profiled %}
     CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    {{codeobj_name}}_kernel_currents_profiling_info += (double)(std::clock() -_start_time_currents)/CLOCKS_PER_SEC;
+    {{codeobj_name}}_kernel_currents_profiling_info += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() -_start_time_currents);
     {% endif %}
 #}
 

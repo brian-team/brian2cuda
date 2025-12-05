@@ -23,6 +23,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <ctime>
 #include <utility>
 
@@ -35,8 +36,13 @@ size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
 
 //////////////// clocks ///////////////////
+// attributes will be set in run.cu
 {% for clock in clocks | sort(attribute='name') %}
+{% if clock.__class__.__name__ == "EventClock" %}
+EventClock brian::{{clock.name}};
+{% else %}
 Clock brian::{{clock.name}};
+{% endif %}
 {% endfor %}
 
 //////////////// networks /////////////////
@@ -291,15 +297,15 @@ __global__ void {{path.name}}_init(
 {% if profiled_codeobjects is defined %}
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
-double brian::{{codeobj}}_profiling_info = 0.0;
+std::chrono::nanoseconds brian::{{codeobj}}_profiling_info(0);
 {#
 {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
 // Profiling information for each of the 5 kernels in spatialstateupdate
-double brian::{{codeobj}}_kernel_integration_profiling_info = 0.0;
-double brian::{{codeobj}}_kernel_tridiagsolve_profiling_info = 0.0;
-double brian::{{codeobj}}_kernel_coupling_profiling_info = 0.0;
-double brian::{{codeobj}}_kernel_combine_profiling_info = 0.0;
-double brian::{{codeobj}}_kernel_currents_profiling_info = 0.0;
+std::chrono::nanoseconds brian::{{codeobj}}_kernel_integration_profiling_info(0);
+std::chrono::nanoseconds brian::{{codeobj}}_kernel_tridiagsolve_profiling_info(0);
+std::chrono::nanoseconds brian::{{codeobj}}_kernel_coupling_profiling_info(0);
+std::chrono::nanoseconds brian::{{codeobj}}_kernel_combine_profiling_info(0);
+std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 {% endif %}
 #}
 {% endfor %}
@@ -335,7 +341,7 @@ void _init_arrays()
 {
     using namespace brian;
 
-    std::clock_t start_timer = std::clock();
+    const auto start_timer = std::chrono::high_resolution_clock::now();
 
     CUDA_CHECK_MEMORY();
     size_t used_device_memory_start = used_device_memory;
@@ -475,7 +481,7 @@ void _init_arrays()
     CUDA_CHECK_MEMORY();
     const double to_MB = 1.0 / (1024.0 * 1024.0);
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
-    double time_passed = (double)(std::clock() - start_timer) / CLOCKS_PER_SEC;
+    double time_passed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_timer).count();
     std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
         std::cout << " and used " << tot_memory_MB << "MB of device memory.";
@@ -560,16 +566,16 @@ void _write_arrays()
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
         {% if var in profile_statemonitor_vars %}
         {# Record copying statemonitor variable from device to host for benchmarking #}
-        std::clock_t before_copy_statemon;
+        std::chrono::nanoseconds before_copy_statemon;
         string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
-        double copy_time_statemon;
+        std::chrono::nanoseconds copy_time_statemon;
         {% endif %}
         ofstream outfile_{{varname}};
         outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
         if(outfile_{{varname}}.is_open())
         {
             {% if var in profile_statemonitor_vars %}
-            before_copy_statemon = std::clock();
+            before_copy_statemon = std::chrono::high_resolution_clock::now();
             {% endif %}
             thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
             for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
@@ -578,7 +584,7 @@ void _write_arrays()
             }
             {% if var in profile_statemonitor_vars %}
             string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
-            copy_time_statemon += (double)(std::clock() - before_copy_statemon) / CLOCKS_PER_SEC;
+            copy_time_statemon += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - before_copy_statemon);
             {% endif %}
             for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
             {
@@ -603,14 +609,14 @@ void _write_arrays()
     {% for codeobj in profiled_codeobjects | sort %}
     {#
     {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
-    outfile_profiling_info << "{{codeobj}}_kernel_integration\t" << {{codeobj}}_kernel_integration_profiling_info << std::endl;
-    outfile_profiling_info << "{{codeobj}}_kernel_tridiagsolve\t" << {{codeobj}}_kernel_tridiagsolve_profiling_info << std::endl;
-    outfile_profiling_info << "{{codeobj}}_kernel_coupling\t" << {{codeobj}}_kernel_coupling_profiling_info << std::endl;
-    outfile_profiling_info << "{{codeobj}}_kernel_combine\t" << {{codeobj}}_kernel_combine_profiling_info << std::endl;
-    outfile_profiling_info << "{{codeobj}}_kernel_currents\t" << {{codeobj}}_kernel_currents_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_integration\t" << std::chrono::duration<double>({{codeobj}}_kernel_integration_profiling_info).count() << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_tridiagsolve\t" << std::chrono::duration<double>({{codeobj}}_kernel_tridiagsolve_profiling_info).count() << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_coupling\t" << std::chrono::duration<double>({{codeobj}}_kernel_coupling_profiling_info).count() << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_combine\t" << std::chrono::duration<double>({{codeobj}}_kernel_combine_profiling_info).count() << std::endl;
+    outfile_profiling_info << "{{codeobj}}_kernel_currents\t" << std::chrono::duration<double>({{codeobj}}_kernel_currents_profiling_info).count() << std::endl;
     {% endif %}
     #}
-    outfile_profiling_info << "{{codeobj}}\t" << {{codeobj}}_profiling_info << std::endl;
+    outfile_profiling_info << "{{codeobj}}\t" << std::chrono::duration<double>({{codeobj}}_profiling_info).count() << std::endl;
     {% if profile_statemonitor_copy_to_host %}
     outfile_profiling_info << profile_statemonitor_copy_to_host_varname << "\t" << copy_time_statemon << std::endl;
     {% endif %}
@@ -741,6 +747,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#include <chrono>
 #include <curand.h>
 #include <curand_kernel.h>
 
@@ -750,8 +757,12 @@ extern size_t used_device_memory;
 extern std::string results_dir;
 
 //////////////// clocks ///////////////////
-{% for clock in clocks %}
+{% for clock in clocks | sort(attribute='name') %}
+{% if clock.__class__.__name__ == "EventClock" %}
+extern EventClock {{clock.name}};
+{% else %}
 extern Clock {{clock.name}};
+{% endif %}
 {% endfor %}
 
 //////////////// networks /////////////////
@@ -839,15 +850,15 @@ extern bool {{path.name}}_scalar_delay;
 {% if profiled_codeobjects is defined %}
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
-extern double {{codeobj}}_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_profiling_info;
 {#
 {% if 'spatialstateupdater' in codeobj and 'prepare' not in codeobj %}
 // Profiling information for each of the 5 kernels in spatialstateupdate
-extern double {{codeobj}}_kernel_integration_profiling_info;
-extern double {{codeobj}}_kernel_tridiagsolve_profiling_info;
-extern double {{codeobj}}_kernel_coupling_profiling_info;
-extern double {{codeobj}}_kernel_combine_profiling_info;
-extern double {{codeobj}}_kernel_currents_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_kernel_integration_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_kernel_tridiagsolve_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_kernel_coupling_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_kernel_combine_profiling_info;
+extern std::chrono::nanoseconds {{codeobj}}_kernel_currents_profiling_info;
 {% endif %}
 #}
 {% endfor %}

@@ -11,14 +11,18 @@ from collections import defaultdict
 from brian2.codegen.codeobject import CodeObject, constant_or_scalar
 from brian2.codegen.targets import codegen_targets
 from brian2.codegen.templates import Templater
-from brian2.devices.cpp_standalone import CPPStandaloneCodeObject
 from brian2.core.functions import DEFAULT_FUNCTIONS
+from brian2.core.preferences import prefs
+from brian2.devices.cpp_standalone import CPPStandaloneCodeObject
+
 #from brian2.devices.cpp_standalone.codeobject import constant_or_scalar
 from brian2.devices.device import get_device
-from brian2.core.preferences import prefs
 
-from brian2cuda.cuda_generator import (CUDAAtomicsCodeGenerator,
-                                       CUDACodeGenerator, c_data_type)
+from brian2cuda.cuda_generator import (
+    CUDAAtomicsCodeGenerator,
+    CUDACodeGenerator,
+    c_data_type,
+)
 
 __all__ = ['CUDAStandaloneCodeObject',
            'CUDAStandaloneAtomicsCodeObject']
@@ -34,7 +38,9 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     '''
     templater = Templater('brian2cuda', '.cu',
                           env_globals={'c_data_type': c_data_type,
-                                       'constant_or_scalar': constant_or_scalar})
+                                       'constant_or_scalar': constant_or_scalar,
+                                       'prefs': prefs,
+                                       })
     generator_class = CUDACodeGenerator
 
     def __init__(self, *args, **kwargs):

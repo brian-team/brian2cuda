@@ -7,7 +7,7 @@ authors = [
 ]
 requires-python = '>=3.10'
 dependencies = [
-    'brian2==2.8.0',
+    'brian2==2.10.1',
 ]
 dynamic = ["version", "readme"]
 description = 'A Brian2 extension to simulate spiking neural networks on GPUs'
@@ -15,7 +15,6 @@ keywords = ['computational neuroscience', 'simulation', 'neural networks', 'spik
 classifiers = [
     'Development Status :: 3 - Alpha',
     'Intended Audience :: Science/Research',
-    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
     'Natural Language :: English',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
@@ -23,6 +22,7 @@ classifiers = [
     'Environment :: GPU :: NVIDIA CUDA',
     'Topic :: Scientific/Engineering :: Bio-Informatics'
 ]
+license = " GPL-3.0-only"
 
 [project.optional-dependencies]
 test = ['pytest', 'pytest-xdist>=1.22.3']

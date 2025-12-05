@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "objects.h"
+#include <csignal>
 #include <ctime>
 #include <time.h>
 #include "run.h"
@@ -36,8 +37,20 @@ void set_from_command_line(const std::vector<std::string> args)
 	}
 }
 
+void _int_handler(int signal_num) {
+	if (Network::_globally_running and !Network::_globally_stopped) {
+		Network::_globally_stopped = true;
+	} else {
+		std::signal(signal_num, SIG_DFL);
+		std::raise(signal_num);
+	}
+}
+
 int main(int argc, char **argv)
 {
+    {% if prefs.core.stop_on_keyboard_interrupt %}
+    std::signal(SIGINT, _int_handler);
+    {% endif %}
     std::vector<std::string> args(argv + 1, argv + argc);
     if (args.size() >=2 && args[0] == "--results_dir")
     {
@@ -53,7 +66,7 @@ int main(int argc, char **argv)
     // variable (see device.py CUDAStandaloneDevice.generate_main_source())
     unsigned long long seed;
 
-    //const std::clock_t _start_time = std::clock();
+    //const const auto _start_time = std::chrono::high_resolution_clock::now();
 
     CUDA_SAFE_CALL(
             cudaSetDevice({{gpu_id}})
@@ -71,30 +84,21 @@ int main(int argc, char **argv)
             cudaDeviceSynchronize()
             );
 
-    //const double _run_time2 = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-    //printf("INFO: setting cudaDevice stuff took %f seconds\n", _run_time2);
 
     brian_start();
 
     {{'\n'.join(code_lines['after_start'])|autoindent}}
 
-    //const std::clock_t _start_time3 = std::clock();
     {
         using namespace brian;
 
         {{main_lines|autoindent}}
     }
 
-    //const double _run_time3 = (double)(std::clock() -_start_time3)/CLOCKS_PER_SEC;
-    //printf("INFO: main_lines took %f seconds\n", _run_time3);
 
     {{'\n'.join(code_lines['before_end'])|autoindent}}
     brian_end();
     {{'\n'.join(code_lines['after_end'])|autoindent}}
-
-    // Profiling
-    //const double _run_time = (double)(std::clock() -_start_time)/CLOCKS_PER_SEC;
-    //printf("INFO: main function took %f seconds\n", _run_time);
 
     return 0;
 }
