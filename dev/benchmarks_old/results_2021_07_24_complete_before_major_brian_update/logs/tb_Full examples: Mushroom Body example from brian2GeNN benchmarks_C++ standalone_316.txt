@@ -1,2 +1,0 @@
-INFO _last_run_time = 7.86494 s
-
