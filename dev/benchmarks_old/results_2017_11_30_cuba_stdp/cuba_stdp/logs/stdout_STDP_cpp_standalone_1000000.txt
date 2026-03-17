@@ -1,3 +1,0 @@
-Number of synapses: 1000000
-Number of spikes: 14994297
-Number of synapses: 1000000
