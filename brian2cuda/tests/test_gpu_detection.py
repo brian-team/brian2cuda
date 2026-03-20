@@ -1,20 +1,20 @@
 import functools
-import os
 import logging
+import os
 from io import StringIO
 
 import pytest
 from numpy.testing import assert_equal
 
-from brian2 import prefs, ms, run, set_device, device
-from brian2.utils.logger import catch_logs as _catch_logs
+from brian2 import device, ms, prefs, run, set_device
 from brian2.core.preferences import PreferenceError
+from brian2.utils.logger import catch_logs as _catch_logs
 from brian2cuda.utils.gputools import (
-    reset_cuda_installation,
     get_cuda_installation,
-    restore_cuda_installation,
-    reset_gpu_selection,
     get_gpu_selection,
+    reset_cuda_installation,
+    reset_gpu_selection,
+    restore_cuda_installation,
     restore_gpu_selection,
 )
 
@@ -177,3 +177,113 @@ def test_no_gpu_detection_preference(reset_gpu_detection, use_default_prefs):
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = device.minimal_compute_capability
     run(0*ms)
+
+
+### Preference file loading tests (Issue #281) ###
+@pytest.mark.codegen_independent
+def test_missing_files_no_error(use_default_prefs):
+    """
+    Test that missing preference files don't cause errors.
+
+    Regression test for issue #281:
+    https://github.com/brian-team/brian2cuda/issues/281
+    """
+    import importlib
+    import tempfile
+
+    import brian2cuda
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        original_home = os.environ.get('HOME')
+        original_cwd = os.getcwd()
+
+        try:
+            # Use empty directory (no preference files)
+            os.environ['HOME'] = tmpdir
+            os.chdir(tmpdir)
+
+            # Should reload without error
+            importlib.reload(brian2cuda)
+
+            # Check it doesn't crash - preference should have a value
+            assert prefs['devices.cuda_standalone.SM_multiplier'] is not None
+        finally:
+            if original_home:
+                os.environ['HOME'] = original_home
+            os.chdir(original_cwd)
+
+
+@pytest.mark.codegen_independent
+def test_load_user_preference_file(tmp_path, use_default_prefs):
+    """
+    Test that user preference file (~/.brian2cuda_preferences) loads.
+
+    Regression test for issue #281:
+    https://github.com/brian-team/brian2cuda/issues/281
+    """
+    import importlib
+
+    import brian2cuda
+
+    # Create preference file in user's home directory
+    prefs_file = tmp_path / ".brian2cuda_preferences"
+    prefs_file.write_text("""
+[devices.cuda_standalone]
+SM_multiplier = 3
+launch_bounds = True
+""")
+
+    original_home = os.environ.get('HOME')
+    os.environ['HOME'] = str(tmp_path)
+
+    try:
+        # Reload to trigger preference loading
+        importlib.reload(brian2cuda)
+
+        # Check preferences were loaded
+        assert prefs['devices.cuda_standalone.SM_multiplier'] == 3
+        assert prefs['devices.cuda_standalone.launch_bounds'] is True
+    finally:
+        if original_home:
+            os.environ['HOME'] = original_home
+
+
+@pytest.mark.codegen_independent
+def test_local_overrides_user(tmp_path, monkeypatch, use_default_prefs):
+    """
+    Test that local preference file overrides user file.
+
+    Regression test for issue #281:
+    https://github.com/brian-team/brian2cuda/issues/281
+    """
+    import importlib
+
+    import brian2cuda
+
+    # Create user file
+    user_file = tmp_path / ".brian2cuda_preferences"
+    user_file.write_text("""
+[devices.cuda_standalone]
+SM_multiplier = 2
+""")
+
+    # Create local file with different value
+    local_file = tmp_path / "brian2cuda_preferences"
+    local_file.write_text("""
+[devices.cuda_standalone]
+SM_multiplier = 5
+""")
+
+    original_home = os.environ.get('HOME')
+    os.environ['HOME'] = str(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    try:
+        # Reload to trigger preference loading
+        importlib.reload(brian2cuda)
+
+        # Local should override user
+        assert prefs['devices.cuda_standalone.SM_multiplier'] == 5
+    finally:
+        if original_home:
+            os.environ['HOME'] = original_home
