@@ -16,6 +16,10 @@ from brian2cuda.utils.gputools import (
     reset_gpu_selection,
     get_gpu_selection,
     restore_gpu_selection,
+    _parse_nvidia_smi_gpu_metrics,
+    _parse_device_query_device_blocks,
+    _parse_device_query_performance_metrics,
+    get_best_gpu,
 )
 
 # Only catch our own log messages
@@ -177,3 +181,97 @@ def test_no_gpu_detection_preference(reset_gpu_detection, use_default_prefs):
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = device.minimal_compute_capability
     run(0*ms)
+
+
+def test_parse_nvidia_smi_gpu_metrics():
+    parsed = _parse_nvidia_smi_gpu_metrics(
+        "0, 24564, 20000, 5\n1, 24564, 1000, 97\n"
+    )
+    assert parsed == [
+        {
+            "gpu_id": 0,
+            "memory_total_mb": 24564.0,
+            "memory_free_mb": 20000.0,
+            "utilization_percent": 5.0,
+        },
+        {
+            "gpu_id": 1,
+            "memory_total_mb": 24564.0,
+            "memory_free_mb": 1000.0,
+            "utilization_percent": 97.0,
+        },
+    ]
+
+
+def test_parse_device_query_device_blocks():
+    output = (
+        'Device 0: "GPU0"\n'
+        "  CUDA Capability Major/Minor version number:    8.6\n"
+        "  Multiprocessors, (128) CUDA Cores/MP:           80 multiprocessors\n"
+        "  GPU Max Clock rate:                             1800 MHz\n"
+        'Device 1: "GPU1"\n'
+        "  CUDA Capability Major/Minor version number:    8.0\n"
+        "  Multiprocessors, (64) CUDA Cores/MP:            108 multiprocessors\n"
+        "  GPU Max Clock rate:                             1410 MHz\n"
+    )
+    blocks = _parse_device_query_device_blocks(output)
+    assert sorted(blocks) == [0, 1]
+    assert blocks[0][0] == 'Device 0: "GPU0"'
+    assert blocks[1][0] == 'Device 1: "GPU1"'
+
+
+def test_parse_device_query_performance_metrics():
+    block_lines = [
+        'Device 0: "GPU0"',
+        "  Some unrelated line",
+        "  CUDA Capability Major/Minor version number:    8.6",
+        "  Multiprocessors, (128) CUDA Cores/MP:           80 multiprocessors",
+        "  GPU Max Clock rate:                             1800 MHz",
+    ]
+    parsed = _parse_device_query_performance_metrics(block_lines)
+    assert parsed["compute_capability"] == 8.6
+    assert parsed["multiprocessors"] == 80
+    assert parsed["cores_per_sm"] == 128
+    assert parsed["clock_rate_khz"] == 1800000.0
+    assert parsed["performance"] == 80 * 128 * 1800000.0
+
+
+def test_performance_gpu_selection_prefers_higher_cuda_performance(monkeypatch, use_default_prefs):
+    prefs.devices.cuda_standalone.cuda_backend.gpu_selection_strategy = "performance"
+
+    monkeypatch.setattr(
+        "brian2cuda.utils.gputools.get_available_gpus",
+        lambda: ["GPU0", "GPU1"],
+    )
+    monkeypatch.setattr(
+        "brian2cuda.utils.gputools.get_gpu_performance",
+        lambda gpu_id: {
+            0: {"compute_capability": 8.6, "performance": 80 * 128 * 1800000.0},
+            1: {"compute_capability": 9.0, "performance": 120 * 128 * 1200000.0},
+        }[gpu_id],
+    )
+
+    gpu_id, compute_capability = get_best_gpu()
+    assert gpu_id == 1
+    assert compute_capability == 9.0
+
+
+def test_performance_gpu_selection_falls_back_to_legacy(monkeypatch, use_default_prefs):
+    prefs.devices.cuda_standalone.cuda_backend.gpu_selection_strategy = "performance"
+
+    monkeypatch.setattr(
+        "brian2cuda.utils.gputools.get_available_gpus",
+        lambda: ["GPU0", "GPU1"],
+    )
+    monkeypatch.setattr(
+        "brian2cuda.utils.gputools.get_compute_capability",
+        lambda gpu_id: {0: 7.0, 1: 8.0}[gpu_id],
+    )
+    monkeypatch.setattr(
+        "brian2cuda.utils.gputools.get_gpu_performance",
+        lambda gpu_id: (_ for _ in ()).throw(RuntimeError("deviceQuery unavailable")),
+    )
+
+    gpu_id, compute_capability = get_best_gpu()
+    assert gpu_id == 1
+    assert compute_capability == 8.0
