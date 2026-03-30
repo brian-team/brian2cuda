@@ -44,7 +44,7 @@ version_scheme = 'post-release'
 local_scheme = 'no-local-version'
 write_to = 'brian2cuda/_version.py'
 tag_regex = '^(?P<version>v\d+(?:\.\d+){0,2}[^\+]*(?:\+.*)?)$'
-fallback_version = 'unknown'
+fallback_version = '0.0'
 
 [build-system]
 requires = [
