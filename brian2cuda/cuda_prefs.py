@@ -207,8 +207,8 @@ prefs.register_preferences(
 
     gpu_selection_strategy=BrianPreference(
         docs='''Strategy used to select a GPU automatically when ``gpu_id`` is not set.
-        ``performance`` uses a CUDA-sample style metric based on
-        ``multiprocessors * cuda_cores_per_multiprocessor * clock_rate``.
+        ``performance`` uses an ``nvidia-smi``-based estimate derived from
+        ``free_memory_mb * compute_capability * (1 - utilization_gpu / 100)``.
         ``legacy`` selects the GPU with the highest compute capability.''',
         default='performance',
         validator=lambda v: v in ['legacy', 'performance']

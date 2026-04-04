@@ -78,40 +78,6 @@ def _parse_device_query_device_blocks(device_query_output):
     return blocks
 
 
-def _compute_capability_to_cores_per_sm(compute_capability):
-    cores_per_sm = {
-        3.0: 192,
-        3.2: 192,
-        3.5: 192,
-        3.7: 192,
-        5.0: 128,
-        5.2: 128,
-        5.3: 128,
-        6.0: 64,
-        6.1: 128,
-        6.2: 128,
-        7.0: 64,
-        7.2: 64,
-        7.5: 64,
-        8.0: 64,
-        8.6: 128,
-        8.7: 128,
-        8.9: 128,
-        9.0: 128,
-        10.0: 128,
-        10.3: 128,
-        11.0: 128,
-        12.0: 128,
-    }
-    try:
-        return cores_per_sm[compute_capability]
-    except KeyError as error:
-        raise RuntimeError(
-            f"Unsupported compute capability {compute_capability} for GPU "
-            "performance estimation."
-        ) from error
-
-
 def _parse_device_query_compute_capability(block_lines):
     for line in block_lines:
         stripped = line.strip()
@@ -121,45 +87,6 @@ def _parse_device_query_compute_capability(block_lines):
             return major + 0.1 * minor
 
     raise RuntimeError("Could not parse compute capability from `deviceQuery` output.")
-
-
-def _parse_device_query_performance_metrics(block_lines):
-    multiprocessors = None
-    clock_rate_khz = None
-
-    for line in block_lines:
-        stripped = line.strip()
-        if stripped.startswith("Multiprocessors,"):
-            match = re.search(r"(\d+)\s+multiprocessors", stripped)
-            if match is None:
-                raise RuntimeError(
-                    f"Could not parse multiprocessor count from line: {line}"
-                )
-            multiprocessors = int(match.group(1))
-        elif stripped.startswith("GPU Max Clock rate:"):
-            match = re.search(r"GPU Max Clock rate:\s*([0-9.]+)\s*MHz", stripped)
-            if match is not None:
-                clock_rate_khz = float(match.group(1)) * 1000.0
-                continue
-            match = re.search(r"GPU Max Clock rate:\s*([0-9.]+)\s*kHz", stripped)
-            if match is not None:
-                clock_rate_khz = float(match.group(1))
-
-    if multiprocessors is None or clock_rate_khz is None:
-        raise RuntimeError(
-            "Could not parse performance metrics from `deviceQuery` output."
-        )
-
-    compute_capability = _parse_device_query_compute_capability(block_lines)
-    cores_per_sm = _compute_capability_to_cores_per_sm(compute_capability)
-    performance = multiprocessors * cores_per_sm * clock_rate_khz
-    return {
-        "compute_capability": compute_capability,
-        "multiprocessors": multiprocessors,
-        "cores_per_sm": cores_per_sm,
-        "clock_rate_khz": clock_rate_khz,
-        "performance": performance,
-    }
 
 
 def get_cuda_path():
@@ -635,38 +562,51 @@ def _get_compute_capability_with_device_query(gpu_id):
     return _parse_device_query_compute_capability(block_lines)
 
 
-def get_gpu_performance(gpu_id):
-    """
-    Estimate GPU performance using the metric from CUDA samples'
-    ``findCudaDevice`` helper.
-    """
-    gpu_list = get_available_gpus()
-    device_query_path = prefs.devices.cuda_standalone.cuda_backend.device_query_path
-    if device_query_path is None:
-        cuda_path = get_cuda_path()
-        device_query_path = os.path.join(
-            cuda_path, "extras", "demo_suite", "deviceQuery"
-        )
-    else:
-        device_query_path = os.path.expanduser(device_query_path)
-
-    if not os.path.exists(device_query_path):
-        raise RuntimeError(
-            f"Couldn't find `{device_query_path}` binary to estimate GPU performance."
-        )
-
-    device_query_output = _run_command_with_output(device_query_path)
-    blocks = _parse_device_query_device_blocks(device_query_output)
+def _get_nvidia_smi_gpu_metrics():
+    command = (
+        "nvidia-smi --query-gpu=index,memory.total,memory.free,utilization.gpu "
+        "--format=csv,noheader,nounits"
+    )
     try:
-        block_lines = blocks[gpu_id]
-    except KeyError as error:
+        return _parse_nvidia_smi_gpu_metrics(
+            _run_command_with_output(command)
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
         raise RuntimeError(
-            f"Could not find GPU {gpu_id} in `deviceQuery` output."
+            "Failed to query GPU memory/utilization metrics with `nvidia-smi`."
         ) from error
 
-    gpu_name = re.findall(r'\"(.+?)\"', block_lines[0])[0]
-    assert gpu_list[gpu_id] == gpu_name
-    return _parse_device_query_performance_metrics(block_lines)
+
+def get_gpu_performance(gpu_id):
+    """
+    Estimate GPU suitability from free memory, GPU utilization, and compute capability.
+    """
+    gpu_metrics = _get_nvidia_smi_gpu_metrics()
+    try:
+        gpu_metric = next(
+            metric
+            for metric in gpu_metrics
+            if metric["gpu_id"] == gpu_id
+        )
+    except StopIteration as error:
+        raise RuntimeError(
+            f"Could not find GPU {gpu_id} in `nvidia-smi` metrics output."
+        ) from error
+
+    compute_capability = get_compute_capability(gpu_id)
+    memory_free_mb = gpu_metric["memory_free_mb"]
+    utilization_percent = gpu_metric["utilization_percent"]
+    performance = (
+        memory_free_mb
+        * compute_capability
+        * (1.0 - utilization_percent / 100.0)
+    )
+    return {
+        "compute_capability": compute_capability,
+        "memory_free_mb": memory_free_mb,
+        "utilization_percent": utilization_percent,
+        "performance": performance,
+    }
 
 
 def get_best_gpu():
@@ -705,7 +645,7 @@ def get_best_gpu_legacy():
 
 def get_best_gpu_by_performance():
     """
-    Select the GPU with the highest CUDA-sample style performance metric.
+    Select the GPU with the highest nvidia-smi-based performance estimate.
     """
     gpu_list = get_available_gpus()
     best_gpu_id = 0
