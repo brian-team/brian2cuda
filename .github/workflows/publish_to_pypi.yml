@@ -40,7 +40,7 @@ jobs:
           name: packages
           path: dist/
       - name: Deploy to Test PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0  # cef221092ed1bacb1cc03d23a2d87d1d172e277b
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           repository-url: https://test.pypi.org/legacy/
   
@@ -59,4 +59,4 @@ jobs:
           name: packages
           path: dist/
       - name: Deploy to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0  # cef221092ed1bacb1cc03d23a2d87d1d172e277b
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
