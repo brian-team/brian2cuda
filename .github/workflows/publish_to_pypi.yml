@@ -1,5 +1,6 @@
 name: Build and publish to TestPyPI or PyPI
 on: [push, pull_request]
+permissions: {}
 
 jobs:
   build-n-publish:
