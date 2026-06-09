@@ -1,0 +1,23 @@
+PROGRAM = main
+
+SRCS = {{source_files}}
+H_SRCS = {{header_files}}
+OBJS = ${SRCS:.cu=.o}
+OBJS := ${OBJS:.cpp=.o}
+OBJS := ${OBJS:.c=.o}
+HIPCC = @{{ hipcc_path }}
+HIPCCFLAGS = -I. -std=c++17 {{gpu_arch_flags}} {{hipcc_compiler_flags}} {{compiler_debug_flags}} -D__HIP_PLATFORM_AMD__ -DUSE_HIP -fgpu-rdc
+LFLAGS = -lhiprand -I. {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}} -fgpu-rdc
+
+all: $(PROGRAM)
+
+.PHONY: all clean
+
+$(PROGRAM): $(OBJS)
+	$(HIPCC) $(LFLAGS) $(OBJS) -o $(PROGRAM)
+
+clean:
+	{{rm_cmd}}
+
+%.o : %.cu
+	$(HIPCC) $(HIPCCFLAGS) -c $< -o $@

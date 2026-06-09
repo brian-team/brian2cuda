@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <thrust/system_error.h>
 #include "objects.h"
-#include "curand.h"
+#include "cuda_to_hip.h"
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
@@ -24,9 +24,7 @@
     catch(...) {_thrustCheckError(__FILE__, __LINE__, #code);} }
 
 
-// adapted from NVIDIA cuda samples, shipped with cuda 10.1 (common/inc/helper_cuda.h)
-#ifdef CURAND_H_
-// cuRAND API errors
+// cuRAND/hipRAND API errors (cuda_to_hip.h maps curand types to hiprand)
 static const char *_curandGetErrorEnum(curandStatus_t error) {
   switch (error) {
     case CURAND_STATUS_SUCCESS:
@@ -67,11 +65,11 @@ static const char *_curandGetErrorEnum(curandStatus_t error) {
 
     case CURAND_STATUS_INTERNAL_ERROR:
       return "CURAND_STATUS_INTERNAL_ERROR";
-  }
 
-  return "<unknown>";
+    default:
+      return "<unknown>";
+  }
 }
-#endif
 
 
 inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")

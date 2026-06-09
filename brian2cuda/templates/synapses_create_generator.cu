@@ -10,7 +10,7 @@
 {% block extra_headers %}
 {{ super() }}
 #include<iostream>
-#include<curand.h>
+#include "brianlib/cuda_to_hip.h"
 #include<brianlib/curand_buffer.h>
 #include "brianlib/cuda_utils.h"
 #include<map>

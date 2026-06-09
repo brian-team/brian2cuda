@@ -33,6 +33,7 @@ from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
+from brian2cuda.utils.hip_backend import is_hip_backend, get_rocm_path
 from brian2cuda.utils.logger import report_issue_message
 
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
@@ -45,6 +46,82 @@ logger = get_logger(__name__)
 # Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
+
+
+def get_hipcc_path():
+    """Return the path to the hipcc compiler."""
+    import shutil
+
+    # Check the resolved ROCm path (rocm_path preference, ROCM_PATH env, default)
+    rocm_path = get_rocm_path()
+    hipcc_in_rocm = os.path.join(rocm_path, 'bin', 'hipcc')
+    # On Windows, the binary has a .exe extension
+    hipcc_in_rocm_exe = hipcc_in_rocm + ('.exe' if os.name == 'nt' else '')
+    if os.path.exists(hipcc_in_rocm_exe):
+        return hipcc_in_rocm_exe
+    if os.path.exists(hipcc_in_rocm):
+        return hipcc_in_rocm
+
+    # Check PATH
+    hipcc_path = shutil.which('hipcc')
+    if hipcc_path:
+        return hipcc_path
+
+    raise RuntimeError(
+        "Couldn't find hipcc. Please set ROCM_PATH environment variable or "
+        "ensure hipcc is in your PATH."
+    )
+
+
+def get_hip_gpu_arch():
+    """Detect the GPU architecture for HIP compilation."""
+    import subprocess
+
+    # Check hip_backend preference first (works on all platforms)
+    try:
+        gpu_arch_pref = prefs.devices.hip_standalone.hip_backend.gpu_arch
+        if gpu_arch_pref is not None:
+            logger.info(f"Using GPU architecture from preference: {gpu_arch_pref}")
+            return gpu_arch_pref
+    except AttributeError:
+        pass  # Preferences not registered yet
+
+    # Try rocminfo to get GPU arch
+    try:
+        result = subprocess.run(
+            ['rocminfo'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if 'Name:' in line and 'gfx' in line:
+                    arch = line.split(':')[1].strip()
+                    logger.info(f"Detected GPU architecture: {arch}")
+                    return arch
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Check HIP_VISIBLE_DEVICES or default to gfx90a
+    logger.warn("Could not detect GPU architecture, defaulting to gfx90a")
+    return "gfx90a"
+
+
+def select_hip_gpu():
+    """Select a HIP GPU and return (gpu_id, gpu_arch).
+
+    The returned gpu_id is an index within the set selected by
+    HIP_VISIBLE_DEVICES (not the physical GPU ID), mirroring how the CUDA
+    backend interprets ``gpu_id`` relative to CUDA_VISIBLE_DEVICES. It honors
+    ``prefs.devices.hip_standalone.hip_backend.gpu_id`` when set; the default
+    (``None``) selects the first visible GPU.
+    """
+    gpu_id = prefs.devices.hip_standalone.hip_backend.gpu_id
+    if gpu_id is None:
+        gpu_id = 0
+    gpu_arch = get_hip_gpu_arch()
+    return gpu_id, gpu_arch
 
 
 class CUDAWriter(CPPWriter):
@@ -689,9 +766,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
-        # Store the GPU ID and it's compute capability. The latter can be overwritten in
-        # self.generate_makefile() via preferences
-        self.gpu_id, self.compute_capability = select_gpu()
+        # Store the GPU ID and architecture/compute capability.
+        # The latter can be overwritten in self.generate_makefile() via preferences
+        if is_hip_backend():
+            self.gpu_id, self.gpu_arch = select_hip_gpu()
+            self.compute_capability = None  # Not used for HIP
+        else:
+            self.gpu_id, self.compute_capability = select_gpu()
+            self.gpu_arch = None  # Not used for CUDA
 
         # generate the finalisations
         for codeobj in self.code_objects.values():
@@ -699,6 +781,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.append(codeobj.code.main_finalise)
 
         user_headers = self.headers + prefs['codegen.cpp.headers']
+        if is_hip_backend():
+            gpu_heap_size = prefs['devices.hip_standalone.hip_backend.gpu_heap_size']
+        else:
+            gpu_heap_size = prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
         main_tmp = self.code_object_class().templater.main(None, None,
                                                            gpu_id=self.gpu_id,
                                                            main_lines=main_lines,
@@ -707,7 +793,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                            report_func=self.report_func,
                                                            dt=float(defaultclock.dt),
                                                            user_headers=user_headers,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
+                                                           gpu_heap_size=gpu_heap_size
                                                           )
         writer.write('main.cu', main_tmp)
 
@@ -1197,96 +1283,165 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 f"{self.compute_capability} (compiler flags: {gpu_arch_flags})"
             )
 
-        nvcc_path = get_nvcc_path()
+        # Check if using HIP backend
+        use_hip = is_hip_backend()
 
-        if disable_asserts:
-            nvcc_compiler_flags.append('-NDEBUG')
-
-        if debug:
-            if cpp_compiler == 'msvc':
-                compiler_debug_flags = '/DEBUG /DDEBUG'
-                linker_debug_flags = '-G'
-            else:
-                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
-                linker_debug_flags = '-g -G'
-        else:
-            compiler_debug_flags = ''
-            linker_debug_flags = ''
-
-        nvcc_flags_str = ' '.join(nvcc_compiler_flags)
-        gpu_arch_str = ' '.join(gpu_arch_flags)
-        linker_flags_str = ' '.join(cpp_linker_flags)
-        # Determine the C++ standard for the host compiler
-        if cpp_compiler == 'msvc':
-            host_cpp_std = CUDA_CPP_STD_MSVC
-            std_prefixes = ('/std:',)
-        else:
-            host_cpp_std = cuda_cpp_std
-            std_prefixes = ('-std=',)
-
-        def _is_std_flag(flag):
-            flag_lower = flag.lower()
-            return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
-
-        std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
-        if std_flags:
-            overridden = [flag for flag in std_flags if flag != host_cpp_std]
-            if overridden:
-                logger.warn(
-                    f"brian2cuda requires {host_cpp_std} for CUDA compilation. "
-                    f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
-                    f"preferences with {host_cpp_std!r}."
-                )
-            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
-            cpp_compiler_flags = [
-                host_cpp_std if _is_std_flag(arg) else arg
-                for arg in cpp_compiler_flags
-            ]
-
-        if cpp_compiler == 'msvc':
-            source_files = sorted(writer.source_files)
-            source_bases = [
-                fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
-                for fname in source_files
-            ]
-            cuda_path = os.path.normpath(get_cuda_path())
-            writer.write('win_makefile', self.code_object_class().templater.win_makefile(
-                None, None,
-                source_files=source_files,
-                source_bases=source_bases,
-                nvcc_invocation=f'"{os.path.normpath(nvcc_path)}" -ccbin cl',
-                cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
-                cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
-                gpu_arch_flags=gpu_arch_str,
-                nvcc_compiler_flags=nvcc_flags_str,
-                cpp_compiler_flags=' '.join(
-                    flag for flag in cpp_compiler_flags if flag
-                ),
-                compiler_debug_flags=compiler_debug_flags,
-                linker_debug_flags=linker_debug_flags,
-            ))
-        else:
-            # Generate the makefile
-            if os.name == 'nt':
-                rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
-            else:
-                rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-
-            makefile_tmp = self.code_object_class().templater.makefile(
-                None, None,
-                source_files=' '.join(sorted(writer.source_files)),
-                header_files=' '.join(sorted(writer.header_files)),
-                cpp_compiler_flags=' '.join(cpp_compiler_flags),
-                compiler_debug_flags=compiler_debug_flags,
-                linker_debug_flags=linker_debug_flags,
-                cpp_linker_flags=linker_flags_str,
-                nvcc_compiler_flags=nvcc_flags_str,
-                gpu_arch_flags=gpu_arch_str,
-                nvcc_path=nvcc_path,
-                rm_cmd=rm_cmd,
+        if use_hip:
+            # HIP/ROCm backend
+            hipcc_path = get_hipcc_path()
+            gpu_arch = getattr(self, 'gpu_arch', None) or get_hip_gpu_arch()
+            gpu_arch_flags = [f"--offload-arch={gpu_arch}"]
+            # User-tunable compile arguments (mirrors how the CUDA backend reads
+            # extra_compile_args_nvcc). __HIP_PLATFORM_AMD__ and USE_HIP are
+            # mandatory for the cuda_to_hip.h compatibility header, so they are
+            # always appended regardless of the preference.
+            hipcc_compiler_flags = list(
+                prefs.devices.hip_standalone.hip_backend.extra_compile_args_hipcc
             )
-            writer.write('makefile', makefile_tmp)
+            hipcc_compiler_flags += ['-D__HIP_PLATFORM_AMD__', '-DUSE_HIP']
+
+            # On Windows, clang cannot find the ROCm device library or HIP headers
+            # automatically. Pass the paths explicitly.
+            if os.name == 'nt':
+                rocm_path = get_rocm_path()
+                if rocm_path:
+                    bitcode_path = os.path.join(rocm_path, 'lib', 'llvm', 'amdgcn', 'bitcode')
+                    include_path = os.path.join(rocm_path, 'include')
+                    # Use forward slashes for Makefile compatibility
+                    bitcode_path = bitcode_path.replace('\\', '/')
+                    include_path = include_path.replace('\\', '/')
+                    if os.path.exists(bitcode_path):
+                        hipcc_compiler_flags += [f'--rocm-device-lib-path={bitcode_path}']
+                    if os.path.exists(include_path):
+                        hipcc_compiler_flags += [f'-I{include_path}']
+
+            if cpp_compiler=='msvc':
+                raise RuntimeError("Windows HIP support requires non-MSVC compiler; "
+                                   "set prefs.codegen.cpp.compiler = 'unix'.")
+            else:
+                if os.name=='nt':
+                    rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
+                else:
+                    rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
+
+                if debug:
+                    compiler_debug_flags = '-g -DDEBUG -DTHRUST_DEBUG'
+                    linker_debug_flags = '-g'
+                else:
+                    compiler_debug_flags = ''
+                    linker_debug_flags = ''
+
+                if disable_asserts:
+                    hipcc_compiler_flags += ['-DNDEBUG']
+
+                logger.info(f"Generating HIP makefile for architecture {gpu_arch}")
+
+                makefile_tmp = self.code_object_class().templater.makefile_hip(
+                    None, None,
+                    source_files=' '.join(sorted(writer.source_files)),
+                    header_files=' '.join(sorted(writer.header_files)),
+                    cpp_compiler_flags=' '.join(cpp_compiler_flags),
+                    compiler_debug_flags=compiler_debug_flags,
+                    linker_debug_flags=linker_debug_flags,
+                    cpp_linker_flags=' '.join(cpp_linker_flags),
+                    hipcc_compiler_flags=' '.join(hipcc_compiler_flags),
+                    gpu_arch_flags=' '.join(gpu_arch_flags),
+                    hipcc_path=hipcc_path,
+                    rm_cmd=rm_cmd,
+                )
+                writer.write('makefile', makefile_tmp)
+        else:
+            # CUDA backend
+            nvcc_path = get_nvcc_path()
+
+            if disable_asserts:
+                nvcc_compiler_flags.append('-NDEBUG')
+
+            if debug:
+                if cpp_compiler == 'msvc':
+                    compiler_debug_flags = '/DEBUG /DDEBUG'
+                    linker_debug_flags = '-G'
+                else:
+                    compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
+                    linker_debug_flags = '-g -G'
+            else:
+                compiler_debug_flags = ''
+                linker_debug_flags = ''
+
+            nvcc_flags_str = ' '.join(nvcc_compiler_flags)
+            gpu_arch_str = ' '.join(gpu_arch_flags)
+            linker_flags_str = ' '.join(cpp_linker_flags)
+            # Determine the C++ standard for the host compiler
+            if cpp_compiler == 'msvc':
+                host_cpp_std = CUDA_CPP_STD_MSVC
+                std_prefixes = ('/std:',)
+            else:
+                host_cpp_std = cuda_cpp_std
+                std_prefixes = ('-std=',)
+
+            def _is_std_flag(flag):
+                flag_lower = flag.lower()
+                return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
+
+            std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
+            # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
+            if std_flags:
+                overridden = [flag for flag in std_flags if flag != host_cpp_std]
+                if overridden:
+                    logger.warn(
+                        f"brian2cuda requires {host_cpp_std} for CUDA compilation. "
+                        f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
+                        f"preferences with {host_cpp_std!r}."
+                    )
+                # Override the host compiler flag for the C++ standard with the CUDA C++ standard
+                cpp_compiler_flags = [
+                    host_cpp_std if _is_std_flag(arg) else arg
+                    for arg in cpp_compiler_flags
+                ]
+
+            if cpp_compiler == 'msvc':
+                source_files = sorted(writer.source_files)
+                source_bases = [
+                    fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
+                    for fname in source_files
+                ]
+                cuda_path = os.path.normpath(get_cuda_path())
+                writer.write('win_makefile', self.code_object_class().templater.win_makefile(
+                    None, None,
+                    source_files=source_files,
+                    source_bases=source_bases,
+                    nvcc_invocation=f'"{os.path.normpath(nvcc_path)}" -ccbin cl',
+                    cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
+                    cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
+                    gpu_arch_flags=gpu_arch_str,
+                    nvcc_compiler_flags=nvcc_flags_str,
+                    cpp_compiler_flags=' '.join(
+                        flag for flag in cpp_compiler_flags if flag
+                    ),
+                    compiler_debug_flags=compiler_debug_flags,
+                    linker_debug_flags=linker_debug_flags,
+                ))
+            else:
+                # Generate the makefile
+                if os.name == 'nt':
+                    rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
+                else:
+                    rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
+
+                makefile_tmp = self.code_object_class().templater.makefile(
+                    None, None,
+                    source_files=' '.join(sorted(writer.source_files)),
+                    header_files=' '.join(sorted(writer.header_files)),
+                    cpp_compiler_flags=' '.join(cpp_compiler_flags),
+                    compiler_debug_flags=compiler_debug_flags,
+                    linker_debug_flags=linker_debug_flags,
+                    cpp_linker_flags=linker_flags_str,
+                    nvcc_compiler_flags=nvcc_flags_str,
+                    gpu_arch_flags=gpu_arch_str,
+                    nvcc_path=nvcc_path,
+                    rm_cmd=rm_cmd,
+                )
+                writer.write('makefile', makefile_tmp)
 
     def build(self, directory='output', results_directory="results",
               compile=True, run=True, debug=False, clean=False,
@@ -1378,8 +1533,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             os.path.abspath(os.path.join(directory, results_directory)), ""
         )
 
-        # Determine compiler flags and directories
-        cpp_compiler, cpp_default_extra_compile_args = get_compiler_and_args()
+        # Determine compiler flags and directories.
+        # On Windows with the HIP backend, get_compiler_and_args() would detect
+        # MSVC and then crash in distutils customize_compiler (cc is None on Windows
+        # with a unix-compiler setting). When HIP is active, the makefile uses hipcc
+        # directly, so we skip the MSVC detection and use an empty extra-args list.
+        if is_hip_backend() and os.name == 'nt':
+            cpp_compiler = 'unix'
+            cpp_default_extra_compile_args = []
+        else:
+            cpp_compiler, cpp_default_extra_compile_args = get_compiler_and_args()
         extra_compile_args = self.extra_compile_args + cpp_default_extra_compile_args
         extra_link_args = self.extra_link_args + prefs['codegen.cpp.extra_link_args']
 
@@ -1565,6 +1728,173 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     with_output=with_output,
                     run_args=run_args,
                 )
+
+    def run(self, directory=None, results_directory=None, with_output=True, run_args=None):
+        """Override to fix executable path on Windows for the HIP backend.
+
+        The parent class calls ["main"] on Windows, which subprocess cannot
+        resolve from the current directory without an explicit path. When using
+        the HIP backend on Windows, inject an absolute path to the executable.
+        """
+        if is_hip_backend() and os.name == 'nt':
+            # On Windows the parent calls subprocess.call(["main"]) which fails
+            # because the CWD is not searched automatically. Temporarily replace
+            # os.name to force the parent to use the Unix run_cmd_unix path, and
+            # set run_cmd_unix to './main' (forward slash works on Windows too).
+            old_run_cmd = prefs.devices.cpp_standalone.run_cmd_unix
+            prefs.devices.cpp_standalone.run_cmd_unix = './main'
+            try:
+                import builtins
+                _real_name = os.name
+
+                class _FakeOS:
+                    def __getattr__(self, name):
+                        if name == 'name':
+                            return 'posix'  # fake Linux to use the Unix branch
+                        return getattr(os, name)
+
+                import sys as _sys
+                # Patch os.name temporarily via the module-level attribute
+                # Since os.name is a property-like read-only attr, we patch
+                # it by swapping the module temporarily -- but that's very invasive.
+                # Simpler: just call super with a fake directory that invokes ./main.
+                pass
+            finally:
+                prefs.devices.cpp_standalone.run_cmd_unix = old_run_cmd
+
+            # Instead of the fragile approach above, replicate the parent logic
+            # with a fixed executable path.
+            if directory is None:
+                directory = self.project_dir
+            if results_directory is not None and not os.path.isabs(results_directory):
+                self.results_dir = os.path.join(
+                    os.path.abspath(os.path.join(directory, results_directory)), ""
+                )
+
+            import subprocess
+            import time
+            import itertools
+            from brian2.utils.filetools import in_directory, ensure_directory
+            from brian2.core.magic import Network
+
+            if run_args is None:
+                run_args = []
+            ensure_directory(self.results_dir)
+            run_args = ['--results_dir', self.results_dir] + run_args
+
+            with in_directory(directory):
+                for key, value in itertools.chain(
+                    prefs['devices.cpp_standalone.run_environment_variables'].items(),
+                    self.run_environment_variables.items(),
+                ):
+                    os.environ[key] = value
+                # On Windows, rocrand.dll uses kpack files for GPU kernels.
+                # Set ROCM_KPACK_PATH to the gfx-specific kpack file so that
+                # hiprandGenerateUniform can find and launch the GPU kernels.
+                # Also, copy TheRock runtime DLLs beside the executable so
+                # Windows loads them instead of the System32 DLLs (loader
+                # searches exe dir before System32, which beats PATH).
+                rocm_path = get_rocm_path()
+                gpu_arch = get_hip_gpu_arch()
+                if rocm_path:
+                    rocm_parent = os.path.dirname(rocm_path)
+                    # Find libraries package (sibling of devel package)
+                    libs_candidates = [
+                        os.path.join(rocm_path, '..', '_rocm_sdk_libraries'),
+                        os.path.join(rocm_parent, '_rocm_sdk_libraries'),
+                    ]
+                    rocm_libs = None
+                    for candidate in libs_candidates:
+                        candidate = os.path.normpath(candidate)
+                        if os.path.isdir(os.path.join(candidate, 'bin')):
+                            rocm_libs = candidate
+                            break
+
+                    # Copy runtime DLLs to exe dir so they load before System32
+                    dlls_to_copy = [
+                        'amdhip64_7.dll', 'hiprand.dll', 'amd_comgr.dll',
+                        'rocm_kpack.dll',
+                    ]
+                    if rocm_libs:
+                        dlls_to_copy.append('rocrand.dll')  # has kpack kernels
+
+                    import shutil as _shutil
+                    exe_dir = os.path.abspath('.')
+                    for dll in dlls_to_copy:
+                        for src_dir in [os.path.join(rocm_path, 'bin'),
+                                        os.path.join(rocm_libs, 'bin') if rocm_libs else '']:
+                            src = os.path.join(src_dir, dll)
+                            if os.path.exists(src):
+                                dst = os.path.join(exe_dir, dll)
+                                if not os.path.exists(dst):
+                                    _shutil.copy2(src, dst)
+                                    logger.info(f"Copied {dll} to exe dir for DLL resolution")
+                                break
+
+                    # Set kpack path for rocrand GPU kernels
+                    if rocm_libs and gpu_arch:
+                        kpack_candidates = [
+                            os.path.join(rocm_libs, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
+                            os.path.join(rocm_path, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
+                        ]
+                        for kpack_path in kpack_candidates:
+                            if os.path.exists(kpack_path):
+                                os.environ['ROCM_KPACK_PATH'] = kpack_path.replace('\\', '/')
+                                logger.info(f"Set ROCM_KPACK_PATH={os.environ['ROCM_KPACK_PATH']}")
+                                break
+                stdout = None
+                if not with_output:
+                    stdout = open(os.path.join(self.results_dir, 'stdout.txt'), 'w')
+                # Use absolute path to avoid CWD-search failure on Windows
+                main_path = os.path.abspath('main')
+                if not os.path.exists(main_path) and os.path.exists(main_path + '.exe'):
+                    main_path = main_path + '.exe'
+                start_time = time.time()
+                Network._globally_running = True
+                x = subprocess.call([main_path] + run_args, stdout=stdout)
+                self.timers['run_binary'] = time.time() - start_time
+                Network._globally_running = False
+                if stdout is not None:
+                    stdout.close()
+                if x:
+                    stdout_fname = os.path.join(self.results_dir, 'stdout.txt')
+                    if os.path.exists(stdout_fname):
+                        with open(stdout_fname) as f:
+                            print(f.read())
+                    raise RuntimeError(
+                        f'Project run failed (project directory: {os.path.abspath(directory)})'
+                    )
+                self.has_been_run = True
+                run_info_fname = os.path.join(self.results_dir, 'last_run_info.txt')
+                if os.path.isfile(run_info_fname):
+                    with open(run_info_fname) as f:
+                        last_run_info = f.read()
+                    run_time, completed_fraction = last_run_info.split()
+                    self._last_run_time = float(run_time)
+                    self._last_run_completed_fraction = float(completed_fraction)
+
+            # Check for invalid states (NaN, inf) -- same as parent
+            from brian2.groups import Group
+            owners = [var.owner for var in self.arrays]
+            already_checked = set()
+            for owner in owners:
+                try:
+                    if not hasattr(owner, 'name') or owner.name in already_checked:
+                        continue
+                    if isinstance(owner, Group):
+                        owner._check_for_invalid_states()
+                        already_checked.add(owner.name)
+                except ReferenceError:
+                    pass
+            return
+
+        # Non-Windows or non-HIP: use parent implementation
+        super().run(
+            directory=directory,
+            results_directory=results_directory,
+            with_output=with_output,
+            run_args=run_args,
+        )
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
