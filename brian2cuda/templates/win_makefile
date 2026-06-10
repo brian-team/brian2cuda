@@ -1,14 +1,25 @@
-all: main.exe
+PROGRAM = main.exe
+NVCC = {{nvcc_invocation}}
 
-clean:
-    del *.obj /s
-    del *.exe /s
+NVCCFLAGS = -I. -I{{cuda_include_quoted}} -std=c++17 {{gpu_arch_flags}} {{nvcc_compiler_flags}} {{compiler_debug_flags}} -Xcompiler "/permissive /EHsc /Zc:preprocessor /std:c++17 /Od /w"
+LDFLAGS   = {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}}
 
-{% for base in source_bases %}
-{{base}}.obj:
-	nvcc {{compiler_flags}} -dc {{base}}.cu -o {{base}}.obj
+LIBS = "{{cuda_lib_quoted}}\cudart.lib" "{{cuda_lib_quoted}}\curand.lib"
 
+OBJS = {% for base in source_bases | sort %} {{base}}.obj {% endfor %}
+
+
+all: $(PROGRAM)
+
+{% for fname, base in zip(source_files, source_bases) | sort(attribute = '0') %}
+{{base}}.obj: win_makefile {{fname}}
+	$(NVCC) $(NVCCFLAGS) -dc {{fname}} -o {{base}}.obj
 {% endfor %}
 
-main.exe: {% for base in source_bases %}{{base}}.obj {% endfor %}
-	nvcc -arch=sm_20 {% for base in source_bases %}{{base}}.obj {% endfor %} -o main.exe
+$(PROGRAM): win_makefile sourcefiles.txt $(OBJS)
+	$(NVCC) $(LDFLAGS) $(OBJS) -o $(PROGRAM) $(LIBS)
+
+clean:
+	del /Q /S *.obj $(PROGRAM) sourcefiles.txt 2>nul
+
+.PHONY: all clean
