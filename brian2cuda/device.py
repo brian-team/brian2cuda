@@ -11,7 +11,7 @@ from itertools import chain
 
 import numpy as np
 
-from brian2.codegen.cpp_prefs import get_compiler_and_args
+from brian2.codegen.cpp_prefs import get_compiler_and_args, get_msvc_env
 from brian2.codegen.translation import make_statements
 from brian2.core.clocks import Clock, defaultclock, EventClock
 from brian2.core.namespace import get_local_namespace
@@ -32,7 +32,7 @@ from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
-from brian2cuda.utils.gputools import select_gpu, get_nvcc_path
+from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
 from brian2cuda.utils.logger import report_issue_message
 
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
@@ -41,6 +41,78 @@ from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObjec
 __all__ = []
 
 logger = get_logger(__name__)
+
+
+def get_vcvarsall_path():
+    """Locate vcvarsall.bat for MSVC build environment initialization."""
+    vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
+    if vcvars_loc:
+        vcvarsall_path = os.path.abspath(vcvars_loc)
+    else:
+        msvc_env, vcvars_cmd = get_msvc_env()
+        if vcvars_cmd:
+            vcvarsall_path = vcvars_cmd.strip().split('"')[1]
+        elif msvc_env:
+            vs_install = msvc_env.get('VSINSTALLDIR') or msvc_env.get('vsinstalldir')
+            if not vs_install:
+                comntools = msvc_env.get('VS170COMNTOOLS') or msvc_env.get('vs170comntools')
+                if comntools:
+                    vs_install = os.path.normpath(os.path.join(comntools, '..', '..'))
+            vcvarsall_path = (
+                os.path.join(
+                    os.path.normpath(vs_install.rstrip('\\')),
+                    'VC', 'Auxiliary', 'Build', 'vcvarsall.bat',
+                ) if vs_install else None
+            )
+        else:
+            vcvarsall_path = None
+    if not vcvarsall_path or not os.path.isfile(vcvarsall_path):
+        raise RuntimeError(
+            'Cannot locate MSVC: set prefs.codegen.cpp.msvc_vars_location '
+            'to your vcvarsall.bat path.'
+        )
+    return vcvarsall_path
+
+def write_windows_build_files(writer, project_dir, templater, nvcc_path,
+                              gpu_arch_flags, nvcc_compiler_flags):
+    source_files = sorted(writer.source_files)
+    source_bases = [
+        fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
+        .replace('/', '\\')
+        for fname in source_files
+    ]
+    cuda_path = get_cuda_path()
+    writer.write('win_makefile', templater.win_makefile(
+        None, None,
+        source_files=source_files,
+        source_bases=source_bases,
+        nvcc_invocation=f'"{nvcc_path}"',
+        cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
+        cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
+        gpu_arch_flags=' '.join(gpu_arch_flags),
+        nvcc_compiler_flags=' '.join(nvcc_compiler_flags),
+        compiler_debug_flags='',
+        linker_debug_flags='',
+    ))
+    vcvars_arch = prefs['codegen.cpp.msvc_architecture'] or 'x86_amd64'
+    writer.write('build.bat', (
+        '@echo off\r\n'
+        f'call "{get_vcvarsall_path()}" {vcvars_arch}\r\n'
+        'if errorlevel 1 (\r\n'
+        '   echo Failed to initialize the MSVC build environment.\r\n'
+        '   exit /b 1\r\n'
+        ')\r\n'
+        'nmake /f win_makefile %*\r\n'
+        'exit /b %ERRORLEVEL%\r\n'
+    ))
+    source_list = ' '.join(source_bases)
+    source_list_fname = os.path.join(project_dir, 'sourcefiles.txt')
+    if os.path.exists(source_list_fname):
+        with open(source_list_fname) as f:
+            if f.read() == source_list:
+                return
+    with open(source_list_fname, 'w') as f:
+        f.write(source_list)
 
 
 class CUDAWriter(CPPWriter):
@@ -1193,8 +1265,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         nvcc_path = get_nvcc_path()
         if cpp_compiler=='msvc':
-            # Check CPPStandaloneDevice.generate_makefile() for how to do things
-            raise RuntimeError("Windows is currently not supported. See https://github.com/brian-team/brian2cuda/issues/225")
+            write_windows_build_files(writer,self.project_dir,self.code_object_class().templater,nvcc_path,gpu_arch_flags,nvcc_compiler_flags)
         else:
             # Generate the makefile
             if os.name=='nt':
