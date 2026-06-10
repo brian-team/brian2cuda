@@ -40,6 +40,7 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
                           env_globals={'c_data_type': c_data_type,
                                        'constant_or_scalar': constant_or_scalar,
                                        'prefs': prefs,
+                                       'zip': zip
                                        })
     generator_class = CUDACodeGenerator
 
