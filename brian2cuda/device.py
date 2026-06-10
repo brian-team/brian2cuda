@@ -75,6 +75,7 @@ def get_vcvarsall_path():
 
 def write_windows_build_files(writer, project_dir, templater, nvcc_path,
                               gpu_arch_flags, nvcc_compiler_flags):
+    """Write the Windows build scripts and source manifest for CUDA standalone."""
     source_files = sorted(writer.source_files)
     source_bases = [
         fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
