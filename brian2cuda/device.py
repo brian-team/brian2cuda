@@ -73,21 +73,24 @@ def get_vcvarsall_path():
         )
     return vcvarsall_path
 
+
 def write_windows_build_files(writer, project_dir, templater, nvcc_path,
                               gpu_arch_flags, nvcc_compiler_flags):
     """Write the Windows build scripts and source manifest for CUDA standalone."""
-    source_files = sorted(writer.source_files)
+    source_files = [
+        fname.replace('/', '\\') for fname in sorted(writer.source_files)
+    ]
     source_bases = [
         fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
-        .replace('/', '\\')
         for fname in source_files
     ]
-    cuda_path = get_cuda_path()
+    cuda_path = os.path.normpath(get_cuda_path())
+    nvcc_path = os.path.normpath(nvcc_path)
     writer.write('win_makefile', templater.win_makefile(
         None, None,
         source_files=source_files,
         source_bases=source_bases,
-        nvcc_invocation=f'"{nvcc_path}"',
+        nvcc_invocation=f'"{nvcc_path}" -ccbin cl',
         cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
         cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
         gpu_arch_flags=' '.join(gpu_arch_flags),
@@ -1284,6 +1287,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             if disable_asserts:
                 # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
                 nvcc_compiler_flags += ['-NDEBUG']
+
+            cpp_compiler_flags = [
+                '-std=c++17' if arg.startswith('-std=') else arg
+                for arg in cpp_compiler_flags
+            ]
 
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,

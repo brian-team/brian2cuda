@@ -269,12 +269,10 @@ def _get_nvcc_path(cuda_path=None):
 
     compiler, _ = get_compiler_and_args()
     if compiler == "msvc":  # Windows
-        nvcc_bin = "bin/nvcc.exe"
+        nvcc_path = os.path.join(cuda_path, "bin", "nvcc.exe")
     else:  # Unix
-        nvcc_bin = "bin/nvcc"
-
-    nvcc_path = os.path.join(cuda_path, nvcc_bin)
-    return nvcc_path
+        nvcc_path = os.path.join(cuda_path, "bin", "nvcc")
+    return os.path.normpath(nvcc_path)
 
 
 def _get_cuda_runtime_version():

@@ -1,0 +1,73 @@
+name: Platform Build
+
+on:
+  pull_request:
+  push:
+    branches: [issue-225-windows-support]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }} - codegen & compile
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-24.04
+            cuda_sub_packages: "[]"
+          - os: windows
+            runner: windows-2022
+            cuda_sub_packages: "[]"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !dev/benchmarks_old
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: Jimver/cuda-toolkit@v0.2.35
+        id: cuda-toolkit
+        with:
+          cuda: '13.2.0'
+          method: network
+          sub-packages: ${{ matrix.cuda_sub_packages }}
+          use-github-cache: false
+          use-local-cache: false
+          log-file-suffix: ${{ matrix.os }}.txt
+
+      - name: Configure MSVC for Windows
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install package
+        run: pip install -e ".[test]"
+
+      - name: Run platform build test (Linux)
+        if: matrix.os == 'linux'
+        shell: bash
+        env:
+          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+          BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
+        run: python brian2cuda/test_platform.py --platform ${{ matrix.os }}
+
+      - name: Run platform build test (Windows)
+        if: matrix.os == 'windows'
+        shell: cmd
+        env:
+          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+          BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
+        run: python brian2cuda/test_platform.py --platform ${{ matrix.os }}
