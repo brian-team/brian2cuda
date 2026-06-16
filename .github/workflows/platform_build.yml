@@ -21,7 +21,7 @@ jobs:
             cuda_sub_packages: "[]"
           - os: windows
             runner: windows-2022
-            cuda_sub_packages: "[]"
+            cuda_sub_packages: '["nvcc", "nvptxcompiler", "nvvm", "crt", "cudart", "curand", "curand_dev", "nvjitlink", "thrust", "cuda_profiler_api"]'
 
     steps:
       - uses: actions/checkout@v4
