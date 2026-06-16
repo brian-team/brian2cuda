@@ -18,10 +18,12 @@ jobs:
         include:
           - os: linux
             runner: ubuntu-24.04
-            cuda_sub_packages: "[]"
+            cuda_sub_packages: '["nvcc", "crt", "cudart", "cudart-dev", "cccl", "profiler-api"]'
+            cuda_non_cuda_sub_packages: '["libnvptxcompiler", "libnvvm", "libcurand", "libcurand-dev", "libnvjitlink"]'
           - os: windows
             runner: windows-2022
             cuda_sub_packages: '["nvcc", "nvptxcompiler", "nvvm", "crt", "cudart", "curand", "curand_dev", "nvjitlink", "thrust", "cuda_profiler_api"]'
+            cuda_non_cuda_sub_packages: "[]"
 
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +45,8 @@ jobs:
           cuda: '13.2.0'
           method: network
           sub-packages: ${{ matrix.cuda_sub_packages }}
-          use-github-cache: false
+          non-cuda-sub-packages: ${{ matrix.cuda_non_cuda_sub_packages }}
+          use-github-cache: true
           use-local-cache: false
           log-file-suffix: ${{ matrix.os }}.txt
 
