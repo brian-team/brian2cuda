@@ -2,8 +2,6 @@
 import argparse
 import os
 import shutil
-import subprocess
-import sys
 import tempfile
 
 from brian2 import *
@@ -27,15 +25,9 @@ def test_compile(platform):
         )
         group.v = "-60*mV"
         run(1 * ms)
-        device.build(directory=out, compile=False, run=False)
+        device.build(directory=out, compile=True, run=False)
 
-        if platform == "windows":
-            subprocess.check_call(["cmd", "/c", "build.bat"], cwd=out)
-            binary = os.path.join(out, "main.exe")
-        else:
-            subprocess.check_call(["make", "-j"], cwd=out)
-            binary = os.path.join(out, "main")
-
+        binary = os.path.join(out, "main.exe" if platform == "windows" else "main")
         if not os.path.isfile(binary):
             raise FileNotFoundError(binary)
         print(f"OK: {platform} codegen + compile")
