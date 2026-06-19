@@ -3,7 +3,9 @@ name: Platform Build
 on:
   pull_request:
   push:
-    branches: [issue-225-windows-support]
+    branches:
+      - master
+      - issue-225-windows-support
 
 permissions:
   contents: read
@@ -26,7 +28,7 @@ jobs:
             cuda_non_cuda_sub_packages: "[]"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
           sparse-checkout-cone-mode: false
@@ -34,15 +36,15 @@ jobs:
             /*
             !dev/benchmarks_old
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
 
-      - uses: Jimver/cuda-toolkit@v0.2.35
+      - uses: Jimver/cuda-toolkit@3d45d157f327c09c04b50ee6ccdea2d9d017ec76 # v0.2.35
         id: cuda-toolkit
         with:
-          cuda: '13.2.0'
+          cuda: '12.8.1'
           method: network
           sub-packages: ${{ matrix.cuda_sub_packages }}
           non-cuda-sub-packages: ${{ matrix.cuda_non_cuda_sub_packages }}
@@ -52,7 +54,7 @@ jobs:
 
       - name: Configure MSVC for Windows
         if: matrix.os == 'windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
