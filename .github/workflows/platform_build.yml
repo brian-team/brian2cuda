@@ -20,11 +20,12 @@ jobs:
         include:
           - os: linux
             runner: ubuntu-24.04
-            cuda_sub_packages: '["nvcc", "crt", "cudart", "cudart-dev", "cccl", "profiler-api"]'
-            cuda_non_cuda_sub_packages: '["libnvptxcompiler", "libnvvm", "libcurand", "libcurand-dev", "libnvjitlink"]'
+            cuda_sub_packages: '["nvcc", "crt", "cudart", "cudart-dev", "cccl", "profiler-api", "nvvm"]'
+            cuda_non_cuda_sub_packages: '["libcurand", "libcurand-dev", "libnvjitlink"]'
           - os: windows
             runner: windows-2022
-            cuda_sub_packages: '["nvcc", "nvptxcompiler", "nvvm", "crt", "cudart", "curand", "curand_dev", "nvjitlink", "thrust", "cuda_profiler_api"]'
+            # Windows 12.8: no crt/nvptxcompiler/nvvm subpkgs; thrust provides CCCL headers
+            cuda_sub_packages: '["nvcc", "cudart", "curand", "curand_dev", "nvjitlink", "thrust", "cuda_profiler_api"]'
             cuda_non_cuda_sub_packages: "[]"
 
     steps:
