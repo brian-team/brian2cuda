@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - issue-225-windows-support
 
 permissions:
   contents: read
