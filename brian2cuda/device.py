@@ -1214,9 +1214,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         linker_flags_str = ' '.join(cpp_linker_flags)
 
         if cpp_compiler == 'msvc':
-            source_files = [
-                fname.replace('/', '\\') for fname in sorted(writer.source_files)
-            ]
+            source_files = sorted(writer.source_files)
             source_bases = [
                 fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
                 for fname in source_files
@@ -1235,7 +1233,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     flag for flag in cpp_compiler_flags if flag
                 ),
                 compiler_debug_flags=compiler_debug_flags,
-                cpp_linker_flags=linker_flags_str,
                 linker_debug_flags=linker_debug_flags,
             ))
         else:

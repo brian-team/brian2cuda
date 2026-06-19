@@ -2,7 +2,7 @@ PROGRAM = main.exe
 NVCC = {{nvcc_invocation}}
 
 NVCCFLAGS = -I. -I{{cuda_include_quoted}} -std=c++17 --threads=0 {{gpu_arch_flags}} {{nvcc_compiler_flags}} -allow-unsupported-compiler -Xcompiler "/permissive /EHsc /Zc:preprocessor /std:c++17 /DWIN32_LEAN_AND_MEAN {{cpp_compiler_flags}} {{compiler_debug_flags}}"
-LDFLAGS   = {{gpu_arch_flags}} {{cpp_linker_flags}} {{linker_debug_flags}}
+LDFLAGS   = {{gpu_arch_flags}} {{linker_debug_flags}}
 
 LIBS = "{{cuda_lib_path}}\cudart.lib" "{{cuda_lib_path}}\curand.lib"
 
