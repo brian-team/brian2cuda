@@ -43,40 +43,6 @@ __all__ = []
 logger = get_logger(__name__)
 
 
-def write_windows_build_files(writer, project_dir, templater, nvcc_path,
-                              gpu_arch_flags, nvcc_compiler_flags):
-    """Write win_makefile and sourcefiles.txt for CUDA standalone on Windows."""
-    source_files = [
-        fname.replace('/', '\\') for fname in sorted(writer.source_files)
-    ]
-    source_bases = [
-        fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
-        for fname in source_files
-    ]
-    cuda_path = os.path.normpath(get_cuda_path())
-    nvcc_path = os.path.normpath(nvcc_path)
-    writer.write('win_makefile', templater.win_makefile(
-        None, None,
-        source_files=source_files,
-        source_bases=source_bases,
-        nvcc_invocation=f'"{nvcc_path}" -ccbin cl',
-        cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
-        cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
-        gpu_arch_flags=' '.join(gpu_arch_flags),
-        nvcc_compiler_flags=' '.join(nvcc_compiler_flags),
-        compiler_debug_flags='',
-        linker_debug_flags='',
-    ))
-    source_list = ' '.join(source_bases)
-    source_list_fname = os.path.join(project_dir, 'sourcefiles.txt')
-    if os.path.exists(source_list_fname):
-        with open(source_list_fname) as f:
-            if f.read() == source_list:
-                return
-    with open(source_list_fname, 'w') as f:
-        f.write(source_list)
-
-
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
         self.project_dir = project_dir
@@ -1153,9 +1119,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
         )
-        nvcc_compiler_flags = prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
+        nvcc_compiler_flags = list(
+            prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
+        )
         gpu_arch_flags = []
-        for flag in nvcc_compiler_flags:
+        for flag in nvcc_compiler_flags[:]:
             if flag.startswith(available_gpu_arch_flags):
                 gpu_arch_flags.append(flag)
                 nvcc_compiler_flags.remove(flag)
@@ -1226,25 +1194,56 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             )
 
         nvcc_path = get_nvcc_path()
-        if cpp_compiler=='msvc':
-            write_windows_build_files(writer,self.project_dir,self.code_object_class().templater,nvcc_path,gpu_arch_flags,nvcc_compiler_flags)
+
+        if disable_asserts:
+            nvcc_compiler_flags.append('-NDEBUG')
+
+        if debug:
+            if cpp_compiler == 'msvc':
+                compiler_debug_flags = '/DEBUG /DDEBUG'
+                linker_debug_flags = '-G'
+            else:
+                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
+                linker_debug_flags = '-g -G'
+        else:
+            compiler_debug_flags = ''
+            linker_debug_flags = ''
+
+        nvcc_flags_str = ' '.join(nvcc_compiler_flags)
+        gpu_arch_str = ' '.join(gpu_arch_flags)
+        linker_flags_str = ' '.join(cpp_linker_flags)
+
+        if cpp_compiler == 'msvc':
+            source_files = [
+                fname.replace('/', '\\') for fname in sorted(writer.source_files)
+            ]
+            source_bases = [
+                fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
+                for fname in source_files
+            ]
+            cuda_path = os.path.normpath(get_cuda_path())
+            writer.write('win_makefile', self.code_object_class().templater.win_makefile(
+                None, None,
+                source_files=source_files,
+                source_bases=source_bases,
+                nvcc_invocation=f'"{os.path.normpath(nvcc_path)}" -ccbin cl',
+                cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
+                cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
+                gpu_arch_flags=gpu_arch_str,
+                nvcc_compiler_flags=nvcc_flags_str,
+                cpp_compiler_flags=' '.join(
+                    flag for flag in cpp_compiler_flags if flag
+                ),
+                compiler_debug_flags=compiler_debug_flags,
+                cpp_linker_flags=linker_flags_str,
+                linker_debug_flags=linker_debug_flags,
+            ))
         else:
             # Generate the makefile
-            if os.name=='nt':
+            if os.name == 'nt':
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-
-            if debug:
-                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
-                linker_debug_flags = '-g -G'
-            else:
-                compiler_debug_flags = ''
-                linker_debug_flags = ''
-
-            if disable_asserts:
-                # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
-                nvcc_compiler_flags += ['-NDEBUG']
 
             cpp_compiler_flags = [
                 '-std=c++17' if arg.startswith('-std=') else arg
@@ -1258,9 +1257,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 cpp_compiler_flags=' '.join(cpp_compiler_flags),
                 compiler_debug_flags=compiler_debug_flags,
                 linker_debug_flags=linker_debug_flags,
-                cpp_linker_flags=' '.join(cpp_linker_flags),
-                nvcc_compiler_flags=' '.join(nvcc_compiler_flags),
-                gpu_arch_flags=' '.join(gpu_arch_flags),
+                cpp_linker_flags=linker_flags_str,
+                nvcc_compiler_flags=nvcc_flags_str,
+                gpu_arch_flags=gpu_arch_str,
                 nvcc_path=nvcc_path,
                 rm_cmd=rm_cmd,
             )
