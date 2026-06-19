@@ -9,7 +9,7 @@ import brian2cuda
 
 
 def _build_test_network():
-    """Same model as brian2cuda.tests.test_cuda_standalone.test_cuda_standalone."""
+    """Based on test_cuda_standalone (N=100 for faster CI compile)."""
     tau = 1 * ms
     eqs = '''
     dV/dt = (-40*mV-V)/tau : volt (unless refractory)
@@ -17,7 +17,7 @@ def _build_test_network():
     threshold = 'V>-50*mV'
     reset = 'V=-60*mV'
     refractory = 5 * ms
-    N = 1000
+    N = 100
 
     G = NeuronGroup(
         N, eqs,
