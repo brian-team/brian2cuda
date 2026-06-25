@@ -30,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
           sparse-checkout-cone-mode: false
           sparse-checkout: |
@@ -71,7 +72,7 @@ jobs:
 
       - name: Run platform build test (Windows)
         if: matrix.os == 'windows'
-        shell: cmd
+        shell:
         env:
           CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
           BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
