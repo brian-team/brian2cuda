@@ -42,6 +42,10 @@ __all__ = []
 
 logger = get_logger(__name__)
 
+# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
+CUDA_CPP_STD = '-std=c++17'
+CUDA_CPP_STD_MSVC = '/std:c++17'
+
 
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
@@ -1114,7 +1118,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         clocks=self.clocks)
         writer.write('run.*', run_tmp)
 
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts, cuda_cpp_std):
         available_gpu_arch_flags = (
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
@@ -1212,6 +1216,33 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
         linker_flags_str = ' '.join(cpp_linker_flags)
+        # Determine the C++ standard for the host compiler
+        if cpp_compiler == 'msvc':
+            host_cpp_std = CUDA_CPP_STD_MSVC
+            std_prefixes = ('/std:',)
+        else:
+            host_cpp_std = cuda_cpp_std
+            std_prefixes = ('-std=',)
+
+        def _is_std_flag(flag):
+            flag_lower = flag.lower()
+            return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
+
+        std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
+        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
+        if std_flags:
+            overridden = [flag for flag in std_flags if flag != host_cpp_std]
+            if overridden:
+                logger.warn(
+                    f"brian2cuda requires {host_cpp_std} for CUDA compilation. "
+                    f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
+                    f"preferences with {host_cpp_std!r}."
+                )
+            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
+            cpp_compiler_flags = [
+                host_cpp_std if _is_std_flag(arg) else arg
+                for arg in cpp_compiler_flags
+            ]
 
         if cpp_compiler == 'msvc':
             source_files = sorted(writer.source_files)
@@ -1241,11 +1272,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-
-            cpp_compiler_flags = [
-                '-std=c++17' if arg.startswith('-std=') else arg
-                for arg in cpp_compiler_flags
-            ]
 
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
@@ -1511,7 +1537,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                cpp_compiler_flags,
                                cpp_linker_flags,
                                debug,
-                               disable_asserts)
+                               disable_asserts,
+                               CUDA_CPP_STD)
         # Not sure what the best place is to call Network.after_run -- at the
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
