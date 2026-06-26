@@ -41,6 +41,12 @@ nosetests.xml
 # IPython
 .ipynb_checkpoints
 
+# Python virtual environments
+.venv/
+
+# ignore all .DS_Store files
+**/.DS_Store
+
 # ignore compiled files in dev folder
 /dev/**/*.o
 /dev/**/main

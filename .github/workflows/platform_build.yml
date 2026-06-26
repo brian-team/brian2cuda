@@ -1,0 +1,69 @@
+name: Platform Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }} - codegen & compile
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-24.04
+            cuda_sub_packages: '["nvcc", "crt", "cudart", "cudart-dev", "cccl", "profiler-api", "nvvm"]'
+            cuda_non_cuda_sub_packages: '["libcurand", "libcurand-dev", "libnvjitlink"]'
+          - os: windows
+            runner: windows-2022
+            # Windows 12.8: no crt/nvptxcompiler/nvvm subpkgs; thrust provides CCCL headers
+            cuda_sub_packages: '["nvcc", "cudart", "curand", "curand_dev", "nvjitlink", "thrust", "cuda_profiler_api"]'
+            cuda_non_cuda_sub_packages: "[]"
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !dev/benchmarks_old
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: Jimver/cuda-toolkit@3d45d157f327c09c04b50ee6ccdea2d9d017ec76 # v0.2.35
+        id: cuda-toolkit
+        with:
+          cuda: '12.8.1'
+          method: network
+          sub-packages: ${{ matrix.cuda_sub_packages }}
+          non-cuda-sub-packages: ${{ matrix.cuda_non_cuda_sub_packages }}
+          use-github-cache: true
+          use-local-cache: false
+          log-file-suffix: ${{ matrix.os }}.txt
+
+      - name: Configure MSVC for Windows
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Install package
+        run: pip install -e ".[test]"
+
+      - name: Run platform build
+        env:
+          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+          BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
+        run: python brian2cuda/test_platform.py --platform ${{ matrix.os }}

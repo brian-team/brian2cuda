@@ -32,7 +32,7 @@ from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
-from brian2cuda.utils.gputools import select_gpu, get_nvcc_path
+from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
 from brian2cuda.utils.logger import report_issue_message
 
 from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
@@ -41,6 +41,10 @@ from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObjec
 __all__ = []
 
 logger = get_logger(__name__)
+
+# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
+CUDA_CPP_STD = '-std=c++17'
+CUDA_CPP_STD_MSVC = '/std:c++17'
 
 
 class CUDAWriter(CPPWriter):
@@ -1114,14 +1118,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         clocks=self.clocks)
         writer.write('run.*', run_tmp)
 
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts, cuda_cpp_std):
         available_gpu_arch_flags = (
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
         )
-        nvcc_compiler_flags = prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
+        nvcc_compiler_flags = list(
+            prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc
+        )
         gpu_arch_flags = []
-        for flag in nvcc_compiler_flags:
+        for flag in nvcc_compiler_flags[:]:
             if flag.startswith(available_gpu_arch_flags):
                 gpu_arch_flags.append(flag)
                 nvcc_compiler_flags.remove(flag)
@@ -1192,26 +1198,80 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             )
 
         nvcc_path = get_nvcc_path()
-        if cpp_compiler=='msvc':
-            # Check CPPStandaloneDevice.generate_makefile() for how to do things
-            raise RuntimeError("Windows is currently not supported. See https://github.com/brian-team/brian2cuda/issues/225")
+
+        if disable_asserts:
+            nvcc_compiler_flags.append('-NDEBUG')
+
+        if debug:
+            if cpp_compiler == 'msvc':
+                compiler_debug_flags = '/DEBUG /DDEBUG'
+                linker_debug_flags = '-G'
+            else:
+                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
+                linker_debug_flags = '-g -G'
+        else:
+            compiler_debug_flags = ''
+            linker_debug_flags = ''
+
+        nvcc_flags_str = ' '.join(nvcc_compiler_flags)
+        gpu_arch_str = ' '.join(gpu_arch_flags)
+        linker_flags_str = ' '.join(cpp_linker_flags)
+        # Determine the C++ standard for the host compiler
+        if cpp_compiler == 'msvc':
+            host_cpp_std = CUDA_CPP_STD_MSVC
+            std_prefixes = ('/std:',)
+        else:
+            host_cpp_std = cuda_cpp_std
+            std_prefixes = ('-std=',)
+
+        def _is_std_flag(flag):
+            flag_lower = flag.lower()
+            return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
+
+        std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
+        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
+        if std_flags:
+            overridden = [flag for flag in std_flags if flag != host_cpp_std]
+            if overridden:
+                logger.warn(
+                    f"brian2cuda requires {host_cpp_std} for CUDA compilation. "
+                    f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
+                    f"preferences with {host_cpp_std!r}."
+                )
+            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
+            cpp_compiler_flags = [
+                host_cpp_std if _is_std_flag(arg) else arg
+                for arg in cpp_compiler_flags
+            ]
+
+        if cpp_compiler == 'msvc':
+            source_files = sorted(writer.source_files)
+            source_bases = [
+                fname.replace('.cu', '').replace('.cpp', '').replace('.c', '')
+                for fname in source_files
+            ]
+            cuda_path = os.path.normpath(get_cuda_path())
+            writer.write('win_makefile', self.code_object_class().templater.win_makefile(
+                None, None,
+                source_files=source_files,
+                source_bases=source_bases,
+                nvcc_invocation=f'"{os.path.normpath(nvcc_path)}" -ccbin cl',
+                cuda_include_quoted=f'"{os.path.join(cuda_path, "include")}"',
+                cuda_lib_path=os.path.join(cuda_path, 'lib', 'x64'),
+                gpu_arch_flags=gpu_arch_str,
+                nvcc_compiler_flags=nvcc_flags_str,
+                cpp_compiler_flags=' '.join(
+                    flag for flag in cpp_compiler_flags if flag
+                ),
+                compiler_debug_flags=compiler_debug_flags,
+                linker_debug_flags=linker_debug_flags,
+            ))
         else:
             # Generate the makefile
-            if os.name=='nt':
+            if os.name == 'nt':
                 rm_cmd = 'del *.o /s\n\tdel main.exe $(DEPS)'
             else:
                 rm_cmd = 'rm $(OBJS) $(PROGRAM) $(DEPS)'
-
-            if debug:
-                compiler_debug_flags = '-g -DDEBUG -G -DTHRUST_DEBUG'
-                linker_debug_flags = '-g -G'
-            else:
-                compiler_debug_flags = ''
-                linker_debug_flags = ''
-
-            if disable_asserts:
-                # NDEBUG precompiler macro disables asserts (both for C++ and CUDA)
-                nvcc_compiler_flags += ['-NDEBUG']
 
             makefile_tmp = self.code_object_class().templater.makefile(
                 None, None,
@@ -1220,9 +1280,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 cpp_compiler_flags=' '.join(cpp_compiler_flags),
                 compiler_debug_flags=compiler_debug_flags,
                 linker_debug_flags=linker_debug_flags,
-                cpp_linker_flags=' '.join(cpp_linker_flags),
-                nvcc_compiler_flags=' '.join(nvcc_compiler_flags),
-                gpu_arch_flags=' '.join(gpu_arch_flags),
+                cpp_linker_flags=linker_flags_str,
+                nvcc_compiler_flags=nvcc_flags_str,
+                gpu_arch_flags=gpu_arch_str,
                 nvcc_path=nvcc_path,
                 rm_cmd=rm_cmd,
             )
@@ -1477,7 +1537,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                cpp_compiler_flags,
                                cpp_linker_flags,
                                debug,
-                               disable_asserts)
+                               disable_asserts,
+                               CUDA_CPP_STD)
         # Not sure what the best place is to call Network.after_run -- at the
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
