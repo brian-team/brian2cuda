@@ -62,16 +62,7 @@ jobs:
       - name: Install package
         run: pip install -e ".[test]"
 
-      - name: Run platform build test (Linux)
-        if: matrix.os == 'linux'
-        shell: bash
-        env:
-          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
-          BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
-        run: python brian2cuda/test_platform.py --platform ${{ matrix.os }}
-
-      - name: Run platform build test (Windows)
-        if: matrix.os == 'windows'
+      - name: Run platform build
         env:
           CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
           BRIAN2CUDA_COMPUTE_CAPABILITY: "7.5"
