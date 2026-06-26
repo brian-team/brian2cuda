@@ -42,10 +42,6 @@ def test_compile(platform):
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
 
-    prefs.devices.cuda_standalone.cuda_backend.extra_compile_args_nvcc.extend(
-        ['-Xcudafe "--diag_suppress=declared_but_not_referenced"']
-    )
-
     out = tempfile.mkdtemp(prefix="brian2cuda_ci_")
     try:
         set_device("cuda_standalone", build_on_run=False, directory=out)
