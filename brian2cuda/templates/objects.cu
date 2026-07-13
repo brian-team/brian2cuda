@@ -14,21 +14,13 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
+#include "objects_thrust.h"
 #include "objects.h"
-#include "synapses_classes.h"
-#include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
-#include "network.h"
 #include "rand.h"
-#include <stdint.h>
 #include <iostream>
 #include <fstream>
 #include <chrono>
-#include <ctime>
-#include <utility>
-
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
@@ -730,26 +722,34 @@ void _dealloc_arrays()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 {% macro h_file() %}
-#include <ctime>
+
 // typedefs need to be outside the include guards to
 // be visible to all files including objects.h
 typedef {{curand_float_type}} randomNumber_t;  // random number type
 
+struct curandGenerator_st;
+typedef struct curandGenerator_st* curandGenerator_t;
+#ifndef CURAND_KERNEL_H_
+struct curandStateXORWOW;
+typedef struct curandStateXORWOW curandState;
+#endif
+
 #ifndef _BRIAN_OBJECTS_H
 #define _BRIAN_OBJECTS_H
 
-#include<vector>
-#include<stdint.h>
-#include "synapses_classes.h"
+#include <vector>
+#include <string>
+#include <stdint.h>
 #include "brianlib/clocks.h"
 #include "network.h"
-#include "rand.h"
-
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
+{% if synapses %}
+#include "synapses_classes.h"
+{% endif %}
+{% if profiled_codeobjects is defined %}
 #include <chrono>
-#include <curand.h>
-#include <curand_kernel.h>
+{% endif %}
+
+class RandomNumberBuffer;
 
 namespace brian {
 
@@ -772,14 +772,6 @@ extern Network {{net.name}};
 
 extern void set_variable_by_name(std::string, std::string);
 
-//////////////// dynamic arrays 1d ///////////
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
-extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
-{% endfor %}
-{% for varname in subgroups_with_spikemonitor %}
-extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
-{% endfor %}
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -794,18 +786,11 @@ extern const int _num_{{varname}};
 //////////////// eventspaces ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}} * {{varname}};
-extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 extern const int _num_{{varname}};
 extern int current_idx{{varname}};
 {% if varname in spikegenerator_eventspaces %}
 extern int previous_idx{{varname}};
 {% endif %}
-{% endfor %}
-
-//////////////// dynamic arrays 2d /////////
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
-extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
 {% endfor %}
 
 /////////////// static arrays /////////////
@@ -906,4 +891,38 @@ void _dealloc_arrays();
 #endif
 
 
+{% endmacro %}
+
+{% macro h_thrust_file() %}
+#include "objects.h"
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+
+#ifndef _BRIAN_OBJECTS_THRUST_H
+#define _BRIAN_OBJECTS_THRUST_H
+
+namespace brian {
+
+//////////////// dynamic arrays 1d ///////////
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
+extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
+{% endfor %}
+
+//////////////// eventspaces ///////////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
+{% endfor %}
+
+//////////////// dynamic arrays 2d /////////
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
+extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
+{% endfor %}
+
+}
+#endif // _BRIAN_OBJECTS_THRUST_H
 {% endmacro %}
