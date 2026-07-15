@@ -2,6 +2,7 @@
 
 {% block extra_headers %}
 {{ super() }}
+#include "objects_thrust.h"
 #include<map>
 {% endblock %}
 

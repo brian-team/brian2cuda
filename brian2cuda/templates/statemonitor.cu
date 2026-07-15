@@ -1,6 +1,9 @@
 {# USES_VARIABLES { t, _indices, N } #}
 {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
 {% extends 'common_group.cu' %}
+{% block extra_headers %}
+#include "objects_thrust.h"
+{% endblock %}
 
 {% block define_N %}
 {% endblock %}

@@ -4,6 +4,7 @@
 
 
 {% block extra_headers %}
+#include "objects_thrust.h"
 #include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>

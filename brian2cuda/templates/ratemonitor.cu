@@ -2,6 +2,9 @@
                     _num_source_neurons, _source_start, _source_stop } #}
 {# WRITES_TO_READ_ONLY_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
+{% block extra_headers}
+#include "objects_thrust.h"
+{% endblock %}
 
 {% block define_N %}
 {% endblock %}

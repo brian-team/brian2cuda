@@ -35,6 +35,8 @@
  # sorted by their delay (if they have any).
  #}
 {% block before_run_headers %}
+{{super()}}
+#include "objects_thrust.h"
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <thrust/unique.h>
