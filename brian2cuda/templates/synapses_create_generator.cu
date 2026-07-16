@@ -10,6 +10,7 @@
 {% block extra_headers %}
 {{ super() }}
 #include "objects_thrust.h"
+#include "rand.h"
 #include<iostream>
 #include<curand.h>
 #include<brianlib/curand_buffer.h>

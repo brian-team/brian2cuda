@@ -2,7 +2,8 @@
 {% extends 'common_group.cu' %}
 
 {% block extra_headers %}
-#include "rand.h"
+#include "objects_thrust.h"
+{# rand.h / curand host API pulled in on demand when this CO uses RNG #}
 {% endblock %}
 
 {% block kernel_maincode %}

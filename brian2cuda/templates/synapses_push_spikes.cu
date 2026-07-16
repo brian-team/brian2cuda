@@ -4,6 +4,10 @@
 {# Get the name of the array that stores these events (e.g. the spikespace array) #}
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 
+{% block extra_headers %}
+#include "objects_thrust.h"
+{% endblock %}
+
 {### BEFORE RUN ###}
 {# TEMPLATE INFO
  # This template creates the connectivity matrix for this SynapticPathway

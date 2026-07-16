@@ -4,6 +4,11 @@
 #include "objects_thrust.h"
 {% endblock %}
 
+{% block after_run_headers %}
+{{ super() }}
+#include "objects_thrust.h"
+{% endblock %}
+
 {# not_refractory and lastspike are added as needed_variables in the
    Thresholder class, we cannot use the USES_VARIABLE mechanism
    conditionally

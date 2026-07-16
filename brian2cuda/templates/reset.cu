@@ -1,5 +1,9 @@
 {# USES_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
+{% block extra_headers %}
+#include "objects_thrust.h"
+{% endblock %}
+
 {% block kernel_maincode %}
 
     {#  Get the name of the array that stores these events (e.g. the spikespace array) #}

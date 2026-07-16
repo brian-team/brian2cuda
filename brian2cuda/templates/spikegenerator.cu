@@ -38,6 +38,9 @@
                    t_in_timesteps, N}
 #}
 {% extends 'common_group.cu' %}
+{% block extra_headers %}
+#include "objects_thrust.h"
+{% endblock %}
 {% block kernel_maincode %}
     // The period in multiples of dt
     const int32_t _the_period = {{_period_bins}};
