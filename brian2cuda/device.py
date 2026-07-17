@@ -1007,6 +1007,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
                 # ADDITIONAL_HOST_CODE is extra code, which needs `_N`
                 code = code.replace('%ADDITIONAL_HOST_CODE%', '\n\t\t'.join(additional_host_code[codeobj.name]))
+                curand_host_define = (
+                    '#define BRIAN2CUDA_CURAND_HOST\n'
+                    if additional_host_code[codeobj.name] else ''
+                )
+                code = code.replace('%CURAND_HOST_DEFINE%', curand_host_define)
                 # KERNEL_CONSTANTS are the same for inside device kernels
                 code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
                 # HOST_PARAMETERS are parameters that device kernels are called with from host code
@@ -1076,13 +1081,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     N_value = co.owner._N
                 needed_number_curand_states[co_name] = (N_ptr, N_value)
 
-        rand_tmp = self.code_object_class().templater.rand(None, None,
-                                                           codeobjects_with_rng_per_run=self.codeobjects_with_rng["host_api"]["per_run"],
-                                                           all_poisson_lamdas=self.all_poisson_lamdas,
-                                                           needed_number_curand_states=needed_number_curand_states,
-                                                           number_run_calls=len(self.codeobjects_with_rng["host_api"]["per_run"]),
-                                                           profiled=self.enable_profiling,
-                                                           curand_float_type=c_data_type(prefs['core.default_float_dtype']))
+        rand_tmp = self.code_object_class().templater.rand(
+            None, None,
+            codeobjects_with_rng_per_run=self.codeobjects_with_rng["host_api"]["per_run"],
+            all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
+            all_poisson_lamdas=self.all_poisson_lamdas,
+            needed_number_curand_states=needed_number_curand_states,
+            number_run_calls=len(self.codeobjects_with_rng["host_api"]["per_run"]),
+            profiled=self.enable_profiling,
+            curand_float_type=c_data_type(prefs['core.default_float_dtype']),
+        )
         writer.write('rand.*', rand_tmp)
 
     def copy_source_files(self, writer, directory):

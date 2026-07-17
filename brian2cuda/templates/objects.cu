@@ -16,13 +16,14 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 
 #include "objects_thrust.h"
 #include "objects.h"
+#define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
 #include "rand.h"
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <ctime>
 #include <curand.h>
-#include <curand_kernel.h>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -303,32 +304,6 @@ std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 {% endfor %}
 {% endif %}
 
-//////////////random numbers//////////////////
-curandGenerator_t brian::curand_generator;
-__device__ unsigned long long* brian::d_curand_seed;
-unsigned long long* brian::dev_curand_seed;
-// dev_{co.name}_{rng_type}_allocator
-//      pointer to start of generated random numbers array
-//      at each generation cycle this array is refilled
-// dev_{co.name}_{rng_type}
-//      pointer moving through generated random number array
-//      until it is regenerated at the next generation cycle
-{% for rng_type in all_codeobj_with_host_rng.keys() %}
-{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
-{% if rng_type in ['rand', 'randn'] %}
-{% set dtype = 'randomNumber_t' %}
-{% else %}  {# rng_type = 'poisson_<idx>' #}
-{% set dtype = 'unsigned int' %}
-{% endif %}
-{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
-{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
-__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
-{% endfor %}{# rng_type #}
-{% endfor %}{# co #}
-curandState* brian::dev_curand_states;
-__device__ curandState* brian::d_curand_states;
-RandomNumberBuffer brian::random_number_buffer;
-
 void _init_arrays()
 {
     using namespace brian;
@@ -485,8 +460,8 @@ void _load_arrays()
     using namespace brian;
 
     {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
-    ifstream f{{name}};
-    f{{name}}.open("static_arrays/{{name}}", ios::in | ios::binary);
+    std::ifstream f{{name}};
+    f{{name}}.open("static_arrays/{{name}}", std::ios::in | std::ios::binary);
     if(f{{name}}.is_open())
     {
         {% if name in dynamic_array_specs.values() %}
@@ -496,7 +471,7 @@ void _load_arrays()
         {% endif %}
     } else
     {
-        std::cout << "Error opening static array {{name}}." << endl;
+        std::cout << "Error opening static array {{name}}." << std::endl;
     }
     {% if not (name in dynamic_array_specs.values()) %}
     CUDA_SAFE_CALL(
@@ -526,15 +501,15 @@ void _write_arrays()
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
     {% endif %}
-    ofstream outfile_{{varname}};
-    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    std::ofstream outfile_{{varname}};
+    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
     if(outfile_{{varname}}.is_open())
     {
         outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}), {{var.size}}*sizeof({{c_data_type(var.dtype)}}));
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        std::cout << "Error writing output file for {{varname}}." << std::endl;
     }
     {% endif %}
     {% endfor %}
@@ -543,15 +518,15 @@ void _write_arrays()
     {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
-    ofstream outfile_{{varname}};
-    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    std::ofstream outfile_{{varname}};
+    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
     if(outfile_{{varname}}.is_open())
     {
         outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        std::cout << "Error writing output file for {{varname}}." << std::endl;
     }
     {% endfor %}
 
@@ -559,11 +534,11 @@ void _write_arrays()
         {% if var in profile_statemonitor_vars %}
         {# Record copying statemonitor variable from device to host for benchmarking #}
         std::chrono::nanoseconds before_copy_statemon;
-        string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
+        std::string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
         std::chrono::nanoseconds copy_time_statemon;
         {% endif %}
-        ofstream outfile_{{varname}};
-        outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+        std::ofstream outfile_{{varname}};
+        outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
         if(outfile_{{varname}}.is_open())
         {
             {% if var in profile_statemonitor_vars %}
@@ -575,7 +550,7 @@ void _write_arrays()
                 temp_array{{varname}}[n] = {{varname}}[n];
             }
             {% if var in profile_statemonitor_vars %}
-            string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
+            std::string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
             copy_time_statemon += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - before_copy_statemon);
             {% endif %}
             for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
@@ -588,14 +563,14 @@ void _write_arrays()
             outfile_{{varname}}.close();
         } else
         {
-            std::cout << "Error writing output file for {{varname}}." << endl;
+            std::cout << "Error writing output file for {{varname}}." << std::endl;
         }
     {% endfor %}
 
     {% if profiled_codeobjects is defined and profiled_codeobjects %}
     // Write profiling info to disk
-    ofstream outfile_profiling_info;
-    outfile_profiling_info.open(results_dir + "profiling_info.txt", ios::out);
+    std::ofstream outfile_profiling_info;
+    outfile_profiling_info.open(results_dir + "profiling_info.txt", std::ios::out);
     if(outfile_profiling_info.is_open())
     {
     {% for codeobj in profiled_codeobjects | sort %}
@@ -620,8 +595,8 @@ void _write_arrays()
     }
     {% endif %}
     // Write last run info to disk
-    ofstream outfile_last_run_info;
-    outfile_last_run_info.open(results_dir + "last_run_info.txt", ios::out);
+    std::ofstream outfile_last_run_info;
+    outfile_last_run_info.open(results_dir + "last_run_info.txt", std::ios::out);
     if(outfile_last_run_info.is_open())
     {
         outfile_last_run_info << (Network::_last_run_time) << " " << (Network::_last_run_completed_fraction) << std::endl;
@@ -749,8 +724,6 @@ typedef struct curandStateXORWOW curandState;
 #include <chrono>
 {% endif %}
 
-class RandomNumberBuffer;
-
 namespace brian {
 
 extern size_t used_device_memory;
@@ -848,31 +821,6 @@ extern std::chrono::nanoseconds {{codeobj}}_kernel_currents_profiling_info;
 #}
 {% endfor %}
 {% endif %}
-
-//////////////// random numbers /////////////////
-extern curandGenerator_t curand_generator;
-extern unsigned long long* dev_curand_seed;
-extern __device__ unsigned long long* d_curand_seed;
-
-{% for rng_type in all_codeobj_with_host_rng.keys() %}
-{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
-{% if rng_type in ['rand', 'randn'] %}
-{% set dtype = 'randomNumber_t' %}
-{% else %}  {# rng_type = 'poisson_<idx>' #}
-{% set dtype = 'unsigned int' %}
-{% endif %}
-// pointer to start of generated random numbers array
-// at each generation cycle this array is refilled
-extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
-// pointer moving through generated random number array
-// until it is regenerated at the next generation cycle
-extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
-extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
-{% endfor %}{# rng_type #}
-{% endfor %}{# co #}
-extern curandState* dev_curand_states;
-extern __device__ curandState* d_curand_states;
-extern RandomNumberBuffer random_number_buffer;
 
 //CUDA
 extern int num_parallel_blocks;

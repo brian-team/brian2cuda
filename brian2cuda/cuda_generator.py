@@ -989,7 +989,13 @@ DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(
     CUDACodeGenerator,
     code=poisson_code,
     name='_poisson',
-    compiler_kwds={"headers": ["<curand.h>"]}
+    compiler_kwds={
+        "headers": [
+            "<curand.h>",
+            "<curand_kernel.h>",
+            '"rand.h"',
+        ],
+    }
 )
 
 

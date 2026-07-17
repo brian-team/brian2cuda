@@ -4,11 +4,17 @@ CUDA implementation of `BinomialFunction`
 import numpy as np
 
 from brian2.core.functions import DEFAULT_FUNCTIONS
-from brian2.units.fundamentalunits import check_units
 from brian2.utils.stringtools import replace
 from brian2.input.binomial import (BinomialFunction, _pre_calc_constants,
                                    _pre_calc_constants_approximated)
 from brian2 import prefs
+#ths can be removed when brian2 is updated to forward compiler_kwds from target generators
+_CUDA_BINOMIAL_COMPILER_KWDS = {
+    "headers": [
+        '"rand.h"',
+        "<curand_kernel.h>",
+    ],
+}
 
 
 def _generate_cuda_code(n, p, use_normal, name):
@@ -103,3 +109,15 @@ def _generate_cuda_code(n, p, use_normal, name):
 
 
 BinomialFunction.implementations['cuda'] = _generate_cuda_code
+
+_original_binomial_init = BinomialFunction.__init__
+
+
+def _binomial_init_with_cuda_headers(self, n, p, approximate=True, name="_binomial*"):
+    _original_binomial_init(self, n, p, approximate=approximate, name=name)
+    cuda_impl = self.implementations._implementations.get("cuda")
+    if cuda_impl is not None:
+        cuda_impl.compiler_kwds = dict(_CUDA_BINOMIAL_COMPILER_KWDS)
+
+
+BinomialFunction.__init__ = _binomial_init_with_cuda_headers
