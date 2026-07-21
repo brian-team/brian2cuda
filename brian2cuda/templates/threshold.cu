@@ -1,12 +1,12 @@
 {# USES_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
 {% block extra_headers %}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 {% endblock %}
 
 {% block after_run_headers %}
 {{ super() }}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 {% endblock %}
 
 {# not_refractory and lastspike are added as needed_variables in the

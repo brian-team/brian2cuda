@@ -14,7 +14,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
-#include "objects_thrust.h"
+#include "objects_storage.h"
 #include "objects.h"
 #define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
@@ -841,13 +841,13 @@ void _dealloc_arrays();
 
 {% endmacro %}
 
-{% macro h_thrust_file() %}
+{% macro h_storage_file() %}
 #include "objects.h"
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#ifndef _BRIAN_OBJECTS_THRUST_H
-#define _BRIAN_OBJECTS_THRUST_H
+#ifndef _BRIAN_OBJECTS_STORAGE_H
+#define _BRIAN_OBJECTS_STORAGE_H
 
 namespace brian {
 
@@ -872,5 +872,5 @@ extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
 {% endfor %}
 
 }
-#endif // _BRIAN_OBJECTS_THRUST_H
+#endif // _BRIAN_OBJECTS_STORAGE_H
 {% endmacro %}

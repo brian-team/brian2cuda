@@ -2,7 +2,7 @@
 
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
-#include "objects_thrust.h"
+#include "objects_storage.h"
 #include "network.h"
 #include <stdlib.h>
 #include <iostream>

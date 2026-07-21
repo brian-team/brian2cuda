@@ -5,7 +5,7 @@
 {% set _eventspace = get_array_name(eventspace_variable, access_data=False) %}
 
 {% block extra_headers %}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 {% endblock %}
 
 {### BEFORE RUN ###}
@@ -40,7 +40,7 @@
  #}
 {% block before_run_headers %}
 {{super()}}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
 #include <thrust/unique.h>

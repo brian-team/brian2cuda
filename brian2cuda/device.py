@@ -64,8 +64,8 @@ class CUDAWriter(CPPWriter):
         elif filename.endswith('.*'):
             self.write(filename[:-1]+'cu', contents.cu_file)
             self.write(filename[:-1]+'h', contents.h_file)
-            if hasattr(contents, 'h_thrust_file'):
-                self.write(filename[:-2]+'_thrust.h', contents.h_thrust_file)
+            if hasattr(contents, 'h_storage_file'):
+                self.write(filename[:-2]+'_storage.h', contents.h_storage_file)
             return
         fullfilename = os.path.join(self.project_dir, filename)
         if os.path.exists(fullfilename):
