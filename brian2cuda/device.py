@@ -66,6 +66,8 @@ class CUDAWriter(CPPWriter):
             self.write(filename[:-1]+'h', contents.h_file)
             if hasattr(contents, 'h_storage_file'):
                 self.write(filename[:-2]+'_storage.h', contents.h_storage_file)
+            if hasattr(contents, 'h_api_file'):
+                self.write(filename[:-2]+'_api.h', contents.h_api_file)
             return
         fullfilename = os.path.join(self.project_dir, filename)
         if os.path.exists(fullfilename):
