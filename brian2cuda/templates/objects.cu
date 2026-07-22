@@ -1123,7 +1123,6 @@ void random_number_buffer_set_seed(unsigned long long seed);
 void random_number_buffer_ensure_enough_curand_states();
 void random_number_buffer_run_finished();
 
-void _run_random_number_buffer();
 
 void curand_generate_normal_double(
         curandGenerator_t gen, double* out, size_t n, double mean, double stddev);

@@ -13,7 +13,7 @@
 
 {% extends 'common_group.cu' %}
 {% block extra_headers %}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 {% endblock %}
 
 
