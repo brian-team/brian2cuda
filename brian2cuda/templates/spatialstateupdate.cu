@@ -12,6 +12,9 @@
 
 
 {% extends 'common_group.cu' %}
+{% block extra_headers %}
+#include "objects_thrust.h"
+{% endblock %}
 
 
 {### BEFORE RUN ###}
