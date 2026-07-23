@@ -1,6 +1,7 @@
 {% macro cu_file() %}
 
 #include "objects.h"
+#include "objects_api.h"
 #include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
@@ -488,6 +489,26 @@ void RandomNumberBuffer::next_time_step()
     }// run_counter == {{run_i}}
     {% endfor %}{# run_i #}
 }
+
+namespace brian {
+
+void random_number_buffer_set_seed(unsigned long long seed)
+{
+    random_number_buffer.set_seed(seed);
+}
+
+void random_number_buffer_ensure_enough_curand_states()
+{
+    random_number_buffer.ensure_enough_curand_states();
+}
+
+void random_number_buffer_run_finished()
+{
+    random_number_buffer.run_finished();
+}
+
+}  // namespace brian
+
 {% endmacro %}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

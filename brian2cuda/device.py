@@ -77,8 +77,10 @@ class CUDAWriter(CPPWriter):
         elif filename.endswith('.*'):
             self.write(filename[:-1]+'cu', contents.cu_file)
             self.write(filename[:-1]+'h', contents.h_file)
-            if hasattr(contents, 'h_thrust_file'):
-                self.write(filename[:-2]+'_thrust.h', contents.h_thrust_file)
+            if hasattr(contents, 'h_storage_file'):
+                self.write(filename[:-2]+'_storage.h', contents.h_storage_file)
+            if hasattr(contents, 'h_api_file'):
+                self.write(filename[:-2]+'_api.h', contents.h_api_file)
             return
         fullfilename = os.path.join(self.project_dir, filename)
         if os.path.exists(fullfilename):
@@ -536,7 +538,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         # At curand state initalization, synapses are not generated yet.
                         # For codeobjects run every tick, this happens in the init() of
                         # the random number buffer called at first clock cycle of the network
-                        main_lines.append('random_number_buffer.ensure_enough_curand_states();')
+                        main_lines.append('random_number_buffer_ensure_enough_curand_states();')
                 main_lines.append(f'_run_{codeobj.name}();')
             elif func == 'after_run_code_object':
                 codeobj, = args
@@ -551,43 +553,37 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # TODO: Move this into before_run_synapses_push_spikes
                     for synaptic_pre, delete in self.delete_synaptic_pre.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_pre}.clear();
-                                dev{synaptic_pre}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            short = _dynamic_short(synaptic_pre)
+                            main_lines.append(f'clear_dev_array_{short}();')
                     for synaptic_post, delete in self.delete_synaptic_post.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_post}.clear();
-                                dev{synaptic_post}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            short = _dynamic_short(synaptic_post)
+                            main_lines.append(f'clear_dev_array_{short}();')
                     for synaptic_delay, delete in self.delete_synaptic_delay.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_delay}.clear();
-                                dev{synaptic_delay}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            short = _dynamic_short(synaptic_delay)
+                            main_lines.append(f'clear_dev_array_{short}();')
                 # The actual network code
                 main_lines.extend(netcode)
                 # Increment run counter
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                size_str = f"{arrayname}.size()" if is_dynamic else f"_num_{arrayname}"
+                short = _dynamic_short(arrayname)
+                host_arrayname = f'host_array_{short}' if short is not None else arrayname
+                size_str = (f'_num_host_array_{short}' if (is_dynamic and short is not None)
+                            else f'_num_{arrayname}')
                 rendered_value = CPPNodeRenderer().render_expr(repr(value))
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
-                if is_dynamic:
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                    pointer_arrayname += f'_view[current_idx{arrayname}]'
+                if is_dynamic and short is not None:
+                    pointer_arrayname = f'dev_array_{short}'
                 # Set on host
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
                     {{
-                        {arrayname}[i] = {rendered_value};
+                        {host_arrayname}[i] = {rendered_value};
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -596,8 +592,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*{size_str},
+                            {host_arrayname},
+                            sizeof({host_arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -605,21 +601,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
+                short = _dynamic_short(arrayname)
+                host_arrayname = f'host_array_{short}' if short is not None else arrayname
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
-                if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                    pointer_arrayname += f'_view[current_idx{arrayname}]'
+                if short is not None:
+                    pointer_arrayname = f'dev_array_{short}'
                 # Set on host
-                code = f"{arrayname}[{item}] = {value};"
+                code = f"{host_arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
                     # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname} + {item},
-                            &{arrayname}[{item}],
-                            sizeof({arrayname}[{item}]),
+                            {host_arrayname} + {item},
+                            sizeof({host_arrayname}[{item}]),
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -627,17 +625,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                size_str = "_num_" + arrayname
-                if is_dynamic:
-                    size_str = arrayname + ".size()"
+                short = _dynamic_short(arrayname)
+                host_arrayname = f'host_array_{short}' if short is not None else arrayname
+                size_str = (f'_num_host_array_{short}' if (is_dynamic and short is not None)
+                            else f'_num_{arrayname}')
                 pointer_arrayname = f"dev{arrayname}"
-                if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
+                if short is not None:
+                    pointer_arrayname = f'dev_array_{short}'
                 # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname}; i++)
                     {{
-                        {arrayname}[i] = {staticarrayname}[i];
+                        {host_arrayname}[i] = {staticarrayname}[i];
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -646,8 +645,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*{size_str},
+                            {host_arrayname},
+                            sizeof({host_arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -655,11 +654,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
+                short = _dynamic_short(arrayname)
+                host_arrayname = f'host_array_{short}' if short is not None else arrayname
+                if short is not None:
+                    dev_ptr = f'dev_array_{short}'
+                    memcpy_size = f'_num_host_array_{short}'
+                else:
+                    dev_ptr = f'dev{arrayname}'
+                    memcpy_size = f'_num_{arrayname}'
                 # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname_index}; i++)
                     {{
-                        {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
+                        {host_arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -667,9 +674,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            dev{arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*_num_{arrayname},
+                            {dev_ptr},
+                            {host_arrayname},
+                            sizeof({host_arrayname}[0])*{memcpy_size},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -677,7 +684,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                code = f'''
+                short = _dynamic_short(array_name)
+                if short is not None:
+                    code = f'resize_dev_array_{short}({new_size});'
+                else:
+                    code = f'''
                     {array_name}.resize({new_size});
                     THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
                 '''
@@ -700,7 +711,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if seed is None:
                     # draw random seed in range of possible uint64 numbers
                     seed = np.random.randint(np.iinfo(np.uint64).max, dtype=np.uint64)
-                main_lines.append(f'random_number_buffer.set_seed({seed!r}ULL);')
+                main_lines.append(f'random_number_buffer_set_seed({seed!r}ULL);')
             else:
                 raise NotImplementedError("Unknown main queue function type "+func)
 
@@ -1804,7 +1815,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         )
         run_lines.extend(self.code_lines["after_network_run"])
         # for multiple runs, the random number buffer needs to be reset
-        run_lines.append('random_number_buffer.run_finished();')
+        run_lines.append('random_number_buffer_run_finished();')
         # nvprof stuff
         run_lines.append('CUDA_SAFE_CALL(cudaDeviceSynchronize());')
         run_lines.append('CUDA_SAFE_CALL(cudaProfilerStop());')

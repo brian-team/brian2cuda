@@ -3,7 +3,7 @@
 {# WRITES_TO_READ_ONLY_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
 {% block extra_headers %}
-#include "objects_thrust.h"
+#include "objects_storage.h"
 {% endblock %}
 
 {% block define_N %}

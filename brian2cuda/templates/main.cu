@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "objects.h"
-#include "objects_thrust.h"
+#include "objects_api.h"
 #include <csignal>
 #include <ctime>
 #include <time.h>

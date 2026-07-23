@@ -9,7 +9,8 @@
 
 {% block extra_headers %}
 {{ super() }}
-#include "objects_thrust.h"
+#include "objects_storage.h"
+#include "objects_api.h"
 #include "rand.h"
 #include<iostream>
 #include<curand.h>
