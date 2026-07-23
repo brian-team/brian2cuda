@@ -4,25 +4,9 @@
 
 
 {% block extra_headers %}
-#include "objects_storage.h"
-#include <thrust/copy.h>
-#include <thrust/count.h>
-#include <thrust/execution_policy.h>
+#include "objects_api.h"
+#include <cassert>
 {% endblock %}
-
-
-{% block extra_device_helper %}
-{% if owner.source.__class__.__name__ == 'Subgroup' %}
-struct is_in_subgroup
-{
-  __device__
-  bool operator()(const int32_t &neuron)
-  {
-    return ({{_source_start}} <= neuron && neuron < {{_source_stop}});
-  }
-};
-{% endif %}{# Subgroup #}
-{% endblock extra_device_helper %}
 
 
 {# We change _N depending on number of events and subgroups #}
@@ -41,10 +25,7 @@ int num_events, num_blocks;
 
 {% block modify_kernel_dimensions %}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-// Initialize device vector for subgroup eventspace
-THRUST_CHECK_ERROR(
-    _dev_{{owner.source.name}}_eventspace.resize(_num_source_idx)
-);
+resize_subgroup_eventspace_{{owner.source.name}}(_num_source_idx);
 {% endif %}{# Subgroup #}
 {% endblock %}
 
@@ -61,8 +42,8 @@ THRUST_CHECK_ERROR(
    neurons are part of the subgroup). #}
 
 // Number of events in eventspace
-int _num_events, _num_events_subgroup;
-int32_t* _eventspace = dev{{_eventspace}}[current_idx{{_eventspace}}];
+int _num_events;
+int32_t* _eventspace = dev{{ _eventspace }}_view[current_idx{{ _eventspace }}];
 CUDA_SAFE_CALL(
         cudaMemcpy(
             &_num_events,
@@ -74,26 +55,15 @@ CUDA_SAFE_CALL(
 
 {# TODO: Use isintance instead (needs to be made available in Jinja templates) #}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-// Count the elements in eventspace that are in the subgroup
-thrust::device_ptr<int32_t> _dev_eventspace(_eventspace);
-THRUST_CHECK_ERROR(
-    _N = thrust::count_if(
-        _dev_eventspace,
-        _dev_eventspace + _num_events,
-        is_in_subgroup()
-    )
-);
-// Copy all neuron IDs that are in this subgroup to the new device pointer
-THRUST_CHECK_ERROR(
-    thrust::copy_if(
-        _dev_eventspace,
-        _dev_eventspace + _num_events,
-        _dev_{{owner.source.name}}_eventspace.begin(),
-        is_in_subgroup()
-    )
-);
-// Use same kernel as without subgroups on copied subgroup eventspace
-_eventspace = thrust::raw_pointer_cast(&_dev_{{owner.source.name}}_eventspace[0]);
+// Filter eventspace to subgroup neurons (implementation in objects.cu)
+_N = filter_subgroup_eventspace(
+        _eventspace,
+        _num_events,
+        dev_array_subgroup_eventspace_{{owner.source.name}},
+        {{_source_start}},
+        {{_source_stop}}
+        );
+_eventspace = dev_array_subgroup_eventspace_{{owner.source.name}};
 {% else %}{# not is_subgroup #}
 // Get the number of events
 _N = _num_events;
@@ -105,16 +75,14 @@ _N = _num_events;
    because the pointers underlying the device vectors change when resizing
    leads to memory reallocation) #}
 {% set var = record_variables.values() | first %}
-{% set dev_array_name = get_array_name(var, access_data=False, prefix='dev') %}
+{% set dyn_name = get_array_name(var, access_data=False) %}
 // Get current size of device vectors
-int _monitor_size = {{dev_array_name}}.size();
+int _monitor_size = _num_dev_array_{{ dyn_name[15:] }};
 
 // Increase device vectors based on number of events
 {% for varname, var in record_variables.items() %}
-{% set dev_array_name = get_array_name(var, access_data=False, prefix='dev') %}
-THRUST_CHECK_ERROR(
-        {{dev_array_name}}.resize(_monitor_size + _N)
-        );
+{% set dyn_name = get_array_name(var, access_data=False) %}
+resize_dev_array_{{ dyn_name[15:] }}(_monitor_size + _N);
 {% endfor %}
 {% endif %}{# not record_variables #}
 
@@ -131,12 +99,9 @@ if (_N > 0)
             _monitor_size,
             {% endif %}
             _eventspace,
-            {# We need to get a new raw_pointer_cast because the thrust vectors
-               were resized, which changes the underlying data pointer if memory
-               has to be reallocated #}
             {% for varname, var in record_variables.items() %}
-            {% set dev_array_name = get_array_name(var, access_data=False, prefix='dev') %}
-            thrust::raw_pointer_cast(&{{dev_array_name}}[0]),
+            {% set dyn_name = get_array_name(var, access_data=False) %}
+            dev_array_{{ dyn_name[15:] }},
             {% endfor %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
@@ -165,8 +130,7 @@ _array_{{owner.name}}_N[0] += _N;
 
 {% block kernel_maincode %}
 {# We pass as _eventspace the filtered eventspace, such that all neuron IDs are
-   within the subgroup (if this is one). We take care of that with the
-   thrust::copy_if above. #}
+   within the subgroup (if this is one). Filtering is done via objects_api. #}
 
 // Eventspace is filled from left with all neuron IDs that triggered an event, rest -1
 int32_t spiking_neuron = _eventspace[_idx];

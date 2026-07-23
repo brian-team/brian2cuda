@@ -222,8 +222,7 @@ thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{va
 thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
-// PIMPL: bare pointers synced from Thrust containers.
-// varname is '_dynamic_array_<name>'; PIMPL symbols use <name> only.
+// varname is '_dynamic_array_<name>'; exposed symbols use <name> only.
 {% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
@@ -977,7 +976,7 @@ extern const int _num_{{name}};
 {% endif %}
 {% endfor %}
 
-//////////////// dynamic arrays 1d (pimpl pointers) ///////////
+//////////////// dynamic arrays 1d ///////////
 {# varname is '_dynamic_array_<name>'; expose <name> only #}
 {% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
@@ -988,19 +987,19 @@ extern {{c_data_type(var.dtype)}}* dev_array_{{ N }};
 extern int _num_dev_array_{{ N }};
 {% endfor %}
 
-//////////////// eventspaces (pimpl pointers) ///////////////
+//////////////// eventspaces (synced views) ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}}** dev{{ varname }}_view;
 extern int _num_dev{{ varname }};
 {% endfor %}
 
-//////////////// dynamic arrays 2d (pimpl pointers) ///////////////
+//////////////// dynamic arrays 2d (synced views) ///////////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}}** monitor_addresses_{{ varname }};
 extern int _num_monitor_addresses_{{ varname }};
 {% endfor %}
 
-//////////////// subgroup eventspace buffers (pimpl pointers) ///////////////
+//////////////// subgroup eventspace buffers ///////////////
 {% for varname in subgroups_with_spikemonitor %}
 extern int32_t* dev_array_subgroup_eventspace_{{varname}};
 extern int _num_subgroup_eventspace_{{varname}};
@@ -1116,7 +1115,6 @@ typedef struct curandGenerator_st* curandGenerator_t;
 
 namespace brian {
 
-{# Public: full refresh after _init_arrays. Per-array sync_* stay internal to objects.cu. #}
 void sync_all_dev_ptrs();
 
 void random_number_buffer_set_seed(unsigned long long seed);

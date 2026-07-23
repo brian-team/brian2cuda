@@ -926,7 +926,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         else:
                                             pimpl_ptr = f'host_array_{short}'
                                         # Avoid `T* const x = x;` when array_name coincides
-                                        # with the global PIMPL pointer name.
+                                        # with the global pointer name.
                                         if array_name != pimpl_ptr:
                                             code_object_defs_lines.append(
                                                 f'{dtype}* const {array_name} = {pimpl_ptr};'
