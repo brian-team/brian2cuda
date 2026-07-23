@@ -46,6 +46,19 @@ logger = get_logger(__name__)
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
 
+# Matches objects.cu DYNAMIC_ARRAY_PREFIX_LEN / '_dynamic_array_<name>'
+_DYNAMIC_ARRAY_PREFIX = '_dynamic_array_'
+_DEV_DYNAMIC_ARRAY_PREFIX = 'dev_dynamic_array_'
+
+
+def _dynamic_short(arrayname):
+    """Map '_dynamic_array_foo' or 'dev_dynamic_array_foo' -> 'foo', else None."""
+    if arrayname.startswith(_DYNAMIC_ARRAY_PREFIX):
+        return arrayname[len(_DYNAMIC_ARRAY_PREFIX):]
+    if arrayname.startswith(_DEV_DYNAMIC_ARRAY_PREFIX):
+        return arrayname[len(_DEV_DYNAMIC_ARRAY_PREFIX):]
+    return None
+
 
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
@@ -895,10 +908,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype = c_data_type(v.dtype)
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
-
-                                    code_object_defs_lines.append(
-                                        f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
-                                    )
+                                    short = _dynamic_short(dyn_array_name)
+                                    if short is not None:
+                                        if prefix == 'dev':
+                                            pimpl_ptr = f'dev_array_{short}'
+                                        else:
+                                            pimpl_ptr = f'host_array_{short}'
+                                        # Avoid `T* const x = x;` when array_name coincides
+                                        # with the global PIMPL pointer name.
+                                        if array_name != pimpl_ptr:
+                                            code_object_defs_lines.append(
+                                                f'{dtype}* const {array_name} = {pimpl_ptr};'
+                                            )
+                                    else:
+                                        code_object_defs_lines.append(
+                                            f'{dtype}* const {array_name} = '
+                                            f'thrust::raw_pointer_cast('
+                                            f'&{dyn_array_name}[0]);'
+                                        )
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
@@ -914,11 +941,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
                                     # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array
-                                    # `{array}.size()`
+                                    # there are two prefixes, base it on host array size
                                     if len(prefixes) == 1 or prefix == '':
+                                        if short is None:
+                                            num_expr = f'{dyn_array_name}.size()'
+                                        elif prefix == '' or len(prefixes) > 1:
+                                            num_expr = f'_num_host_array_{short}'
+                                        else:
+                                            num_expr = f'_num_dev_array_{short}'
                                         code_object_defs_lines.append(
-                                            f'const int _num{k} = {dyn_array_name}.size();'
+                                            f'const int _num{k} = {num_expr};'
                                         )
                                         host_parameters_lines.append(f"_num{k}")
                                         kernel_parameters_lines.append(f"const int _num{k}")
@@ -929,7 +961,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     idx = ''
                                     if k.endswith('space'):
                                         bare_array_name = self.get_array_name(v)
-                                        idx = f'[current_idx{bare_array_name}]'
+                                        idx = f'_view[current_idx{bare_array_name}]'
                                     host_parameters_lines.append(f"{array_name}{idx}")
                                     kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
 

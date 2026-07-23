@@ -464,6 +464,8 @@ std::cout << std::endl;
                 sizeof({{c_data_type(variables['N'].dtype)}}),
                 cudaMemcpyHostToDevice)
             );
+
+    sync_all_dev_ptrs();
 {% endblock host_maincode %}
 
 {% block extra_kernel_call_post %}

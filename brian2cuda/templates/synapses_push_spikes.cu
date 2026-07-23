@@ -883,6 +883,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                 );
                 dev{{_eventspace}}.push_back(new_eventspace);
             }
+            // host_vector may have reallocated; refresh PIMPL views for lean COs
+            sync_all_dev_ptrs();
         }
     }
 

@@ -40,6 +40,7 @@
     );
     {% endif %}
     {% endfor %}
+    sync_all_dev_ptrs();
 {% endblock %}
 
 {# _num_group_idx is defined in HOST_CONSTANTS, so we can't set _N before #}

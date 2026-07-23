@@ -48,6 +48,7 @@
     );
     {% endif %}
     {% endfor %}
+    sync_all_dev_ptrs();
 {% endblock %}
 
 

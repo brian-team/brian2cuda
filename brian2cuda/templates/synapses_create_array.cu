@@ -138,4 +138,6 @@ CUDA_SAFE_CALL(
             cudaMemcpyHostToDevice)
         );
 
+sync_all_dev_ptrs();
+
 {% endblock host_maincode %}

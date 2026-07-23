@@ -216,6 +216,47 @@ thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{va
 thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
+// PIMPL: bare pointers synced from Thrust containers (for lean COs without objects_thrust.h).
+// varname is '_dynamic_array_<name>'; PIMPL symbols use <name> only.
+{% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+{{c_data_type(var.dtype)}}* brian::host_array_{{ N }} = nullptr;
+int brian::_num_host_array_{{ N }} = 0;
+{{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
+int brian::_num_dev_array_{{ N }} = 0;
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+{{c_data_type(var.dtype)}}** brian::dev{{ varname }}_view = nullptr;
+{% endfor %}
+
+namespace brian {
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+void sync_array_{{ N }}() {
+    _num_host_array_{{ N }} = static_cast<int>({{ varname }}.size());
+    host_array_{{ N }} = _num_host_array_{{ N }} ? &{{ varname }}[0] : nullptr;
+    _num_dev_array_{{ N }} = static_cast<int>(dev{{ varname }}.size());
+    dev_array_{{ N }} = _num_dev_array_{{ N }}
+        ? thrust::raw_pointer_cast(&dev{{ varname }}[0]) : nullptr;
+}
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+void sync_eventspace_{{ varname }}() {
+    dev{{ varname }}_view = dev{{ varname }}.empty() ? nullptr : &dev{{ varname }}[0];
+}
+{% endfor %}
+
+void sync_all_dev_ptrs() {
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+    sync_array_{{ varname[DYNAMIC_ARRAY_PREFIX_LEN:] }}();
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+    sync_eventspace_{{ varname }}();
+{% endfor %}
+}
+}
+
 /////////////// static arrays /////////////
 {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
 {# arrays that are initialized from static data are already declared #}
@@ -444,6 +485,8 @@ void _init_arrays()
         )
     );
     {% endfor %}
+
+    sync_all_dev_ptrs();
 
     CUDA_CHECK_MEMORY();
     const double to_MB = 1.0 / (1024.0 * 1024.0);
@@ -756,9 +799,20 @@ extern const int _num_{{varname}};
 {% endif %}
 {% endfor %}
 
+//////////////// dynamic array PIMPL pointers ///////////
+{% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+extern {{c_data_type(var.dtype)}}* host_array_{{ N }};
+extern int _num_host_array_{{ N }};
+extern {{c_data_type(var.dtype)}}* dev_array_{{ N }};
+extern int _num_dev_array_{{ N }};
+{% endfor %}
+
 //////////////// eventspaces ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}} * {{varname}};
+extern {{c_data_type(var.dtype)}}** dev{{varname}}_view;
 extern const int _num_{{varname}};
 extern int current_idx{{varname}};
 {% if varname in spikegenerator_eventspaces %}
@@ -828,6 +882,8 @@ extern int max_threads_per_block;
 extern int max_threads_per_sm;
 extern int max_shared_mem_size;
 extern int num_threads_per_warp;
+
+void sync_all_dev_ptrs();
 
 }
 
