@@ -14,6 +14,7 @@
 #include<brianlib/curand_buffer.h>
 #include "brianlib/cuda_utils.h"
 #include<map>
+#include<set>
 {% endblock extra_headers %}
 
 {% block random_functions %}

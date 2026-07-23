@@ -8,6 +8,7 @@
 #define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
 #include "network.h"
+#include <cassert>
 #include <curand.h>
 #include <ctime>
 #include <curand_kernel.h>
