@@ -1160,7 +1160,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
-        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(None, None)
+        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(
+            None, None, synapses=self.synapses)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
     def generate_run_source(self, writer):

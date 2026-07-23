@@ -462,29 +462,6 @@ int brian::max_threads_per_sm;
 int brian::max_shared_mem_size;
 int brian::num_threads_per_warp;
 
-{% for S in synapses | sort(attribute='name') %}
-{% for path in S._pathways | sort(attribute='name') %}
-__global__ void {{path.name}}_init(
-                int32_t* sources,
-                int32_t* targets,
-                double dt,
-                int32_t source_start,
-                int32_t source_stop
-        )
-{
-    using namespace brian;
-
-    {{path.name}}.init(
-            sources,
-            targets,
-            dt,
-            // TODO: called source here, spikes in SynapticPathway (use same name)
-            source_start,
-            source_stop);
-}
-{% endfor %}
-{% endfor %}
-
 {% if profiled_codeobjects is defined %}
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
@@ -805,17 +782,6 @@ void _write_arrays()
         std::cout << "Error writing last run info to file." << std::endl;
     }
 }
-
-{% for S in synapses | sort(attribute='name') %}
-{% for path in S._pathways | sort(attribute='name') %}
-__global__ void {{path.name}}_destroy()
-{
-    using namespace brian;
-
-    {{path.name}}.destroy();
-}
-{% endfor %}
-{% endfor %}
 
 void _dealloc_arrays()
 {

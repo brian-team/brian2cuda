@@ -1,4 +1,51 @@
 {% macro cu_file() %}
+#include "objects.h"
+#include "synapses_classes.h"
+#include "brianlib/spikequeue.h"
+#include "brianlib/cuda_utils.h"
+
+__device__ void SynapticPathway::init(
+        int32_t* _sources,
+        int32_t* _targets,
+        double _dt,
+        int32_t _spikes_start,
+        int32_t _spikes_stop)
+{
+    dev_sources = _sources;
+    dev_targets = _targets;
+    dt = _dt;
+    spikes_start = _spikes_start;
+    spikes_stop = _spikes_stop;
+    queue = new CudaSpikeQueue;
+}
+
+__device__ void SynapticPathway::destroy()
+{
+    queue->destroy();
+    delete queue;
+}
+
+{% for S in synapses | sort(attribute='name') %}
+{% for path in S._pathways | sort(attribute='name') %}
+__global__ void {{path.name}}_init(
+                int32_t* sources,
+                int32_t* targets,
+                double dt,
+                int32_t source_start,
+                int32_t source_stop)
+{
+    using namespace brian;
+    {{path.name}}.init(sources, targets, dt, source_start, source_stop);
+}
+
+__global__ void {{path.name}}_destroy()
+{
+    using namespace brian;
+    {{path.name}}.destroy();
+}
+{% endfor %}
+{% endfor %}
+
 {% endmacro %}
 
 {% macro h_file() %}
@@ -6,10 +53,9 @@
 #ifndef _BRIAN_SYNAPSES_H
 #define _BRIAN_SYNAPSES_H
 
-#include<vector>
-#include<algorithm>
+#include <stdint.h>
 
-#include "brianlib/spikequeue.h"
+class CudaSpikeQueue;
 
 class SynapticPathway
 {
@@ -26,29 +72,28 @@ public:
     CudaSpikeQueue* queue;
     bool no_or_const_delay_mode;
 
-    //our real constructor
     __device__ void init(
             int32_t* _sources,
             int32_t* _targets,
             double _dt,
             int32_t _spikes_start,
-            int32_t _spikes_stop)
-    {
-        dev_sources = _sources;
-        dev_targets = _targets;
-        dt = _dt;
-        spikes_start = _spikes_start;
-        spikes_stop = _spikes_stop;
-        queue = new CudaSpikeQueue;
-    };
+            int32_t _spikes_stop);
 
-    //our real destructor
-    __device__ void destroy()
-    {
-        queue->destroy();
-        delete queue;
-    }
+    __device__ void destroy();
 };
+
+{% for S in synapses | sort(attribute='name') %}
+{% for path in S._pathways | sort(attribute='name') %}
+__global__ void {{path.name}}_init(
+                int32_t* sources,
+                int32_t* targets,
+                double dt,
+                int32_t source_start,
+                int32_t source_stop);
+__global__ void {{path.name}}_destroy();
+{% endfor %}
+{% endfor %}
+
 #endif
 
 {% endmacro %}
