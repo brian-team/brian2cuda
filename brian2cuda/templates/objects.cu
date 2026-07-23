@@ -18,6 +18,10 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include "objects_storage.h"
 #include "objects.h"
 #include "objects_api.h"
+#include "network.h"
+{% if synapses %}
+#include "synapses_classes.h"
+{% endif %}
 #include "brianlib/cuda_utils.h"
 #include "rand.h"
 #include <iostream>
@@ -881,12 +885,15 @@ typedef struct curandStateXORWOW curandState;
 #include <string>
 #include <stdint.h>
 #include "brianlib/clocks.h"
-#include "network.h"
-{% if synapses %}
-#include "synapses_classes.h"
-{% endif %}
 {% if profiled_codeobjects is defined %}
 #include <chrono>
+{% endif %}
+
+// Forward declarations; TUs that access members include
+// "network.h" / "synapses_classes.h" directly.
+class Network;
+{% if synapses %}
+class SynapticPathway;
 {% endif %}
 
 namespace brian {
