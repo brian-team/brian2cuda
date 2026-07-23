@@ -38,9 +38,6 @@
                    t_in_timesteps, N}
 #}
 {% extends 'common_group.cu' %}
-{% block extra_headers %}
-#include "objects_storage.h"
-{% endblock %}
 {% block kernel_maincode %}
     // The period in multiples of dt
     const int32_t _the_period = {{_period_bins}};
@@ -142,7 +139,7 @@
     // Note: If we have no delays, there is only one spikespace and
     //       current_idx equals previous_idx.
     _reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-            dev{{_spikespace_name}}[previous_idx{{_spikespace_name}}],
+            dev{{ _spikespace_name }}_view[previous_idx{{ _spikespace_name }}],
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
         );

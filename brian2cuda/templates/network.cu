@@ -2,7 +2,6 @@
 
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
-#include "objects_storage.h"
 #include "network.h"
 #include <stdlib.h>
 #include <iostream>
@@ -99,7 +98,7 @@ void Network::run(const double duration, void (*report_func)(const double, const
         {% if varname in spikegenerator_eventspaces %}
         brian::previous_idx{{varname}} = brian::current_idx{{varname}};
         {% endif %}
-        brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::dev{{varname}}.size();
+        brian::current_idx{{varname}} = (brian::current_idx{{varname}} + 1) % brian::_num_dev{{ varname }};
         {% endfor %}
 
         {% if maximum_run_time is not none %}

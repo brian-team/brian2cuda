@@ -3,7 +3,6 @@
 {% extends 'common_group.cu' %}
 
 {% block extra_headers %}
-#include "objects_storage.h"
 #include "objects_api.h"
 {% endblock %}
 
@@ -37,7 +36,7 @@
     #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
-    {{varname}} = dev{{varname}};
+    copy_dev_to_host_array_{{ varname[15:] }}();
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(
@@ -49,7 +48,6 @@
     );
     {% endif %}
     {% endfor %}
-    sync_all_dev_ptrs();
 {% endblock %}
 
 
