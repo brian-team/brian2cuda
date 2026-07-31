@@ -675,16 +675,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif func=='resize_array':
                 array_name, new_size = args
                 short = array_basename(array_name)
-                if short is not None:
-                    code = (
-                        f'resize_host_array_{short}({new_size});\n'
-                        f'resize_dev_array_{short}({new_size});'
-                    )
-                else:
-                    code = f'''
-                    {array_name}.resize({new_size});
-                    THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
-                '''
+                code = (
+                    f'resize_host_array_{short}({new_size});\n'
+                    f'resize_dev_array_{short}({new_size});'
+                )
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='insert_code':
                 main_lines.append(args)
