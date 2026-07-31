@@ -35,29 +35,19 @@ from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
 from brian2cuda.utils.logger import report_issue_message
 
-from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
+from .codeobject import (
+    CUDAStandaloneCodeObject,
+    CUDAStandaloneAtomicsCodeObject,
+    array_basename,
+)
 
 
 __all__ = []
 
 logger = get_logger(__name__)
 
-# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
-
-# Matches objects.cu DYNAMIC_ARRAY_PREFIX_LEN / '_dynamic_array_<name>'
-_DYNAMIC_ARRAY_PREFIX = '_dynamic_array_'
-_DEV_DYNAMIC_ARRAY_PREFIX = 'dev_dynamic_array_'
-
-
-def _dynamic_short(arrayname):
-    """Map '_dynamic_array_foo' or 'dev_dynamic_array_foo' -> 'foo', else None."""
-    if arrayname.startswith(_DYNAMIC_ARRAY_PREFIX):
-        return arrayname[len(_DYNAMIC_ARRAY_PREFIX):]
-    if arrayname.startswith(_DEV_DYNAMIC_ARRAY_PREFIX):
-        return arrayname[len(_DEV_DYNAMIC_ARRAY_PREFIX):]
-    return None
 
 
 class CUDAWriter(CPPWriter):
@@ -553,15 +543,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # TODO: Move this into before_run_synapses_push_spikes
                     for synaptic_pre, delete in self.delete_synaptic_pre.items():
                         if delete:
-                            short = _dynamic_short(synaptic_pre)
+                            short = array_basename(synaptic_pre)
                             main_lines.append(f'clear_dev_array_{short}();')
                     for synaptic_post, delete in self.delete_synaptic_post.items():
                         if delete:
-                            short = _dynamic_short(synaptic_post)
+                            short = array_basename(synaptic_post)
                             main_lines.append(f'clear_dev_array_{short}();')
                     for synaptic_delay, delete in self.delete_synaptic_delay.items():
                         if delete:
-                            short = _dynamic_short(synaptic_delay)
+                            short = array_basename(synaptic_delay)
                             main_lines.append(f'clear_dev_array_{short}();')
                 # The actual network code
                 main_lines.extend(netcode)
@@ -569,7 +559,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                short = _dynamic_short(arrayname)
+                short = array_basename(arrayname)
                 host_arrayname = f'host_array_{short}' if short is not None else arrayname
                 size_str = (f'_num_host_array_{short}' if (is_dynamic and short is not None)
                             else f'_num_{arrayname}')
@@ -601,7 +591,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
-                short = _dynamic_short(arrayname)
+                short = array_basename(arrayname)
                 host_arrayname = f'host_array_{short}' if short is not None else arrayname
                 pointer_arrayname = f"dev{arrayname}"
                 if arrayname.endswith('space'):  # eventspace
@@ -625,7 +615,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                short = _dynamic_short(arrayname)
+                short = array_basename(arrayname)
                 host_arrayname = f'host_array_{short}' if short is not None else arrayname
                 size_str = (f'_num_host_array_{short}' if (is_dynamic and short is not None)
                             else f'_num_{arrayname}')
@@ -654,7 +644,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
-                short = _dynamic_short(arrayname)
+                short = array_basename(arrayname)
                 host_arrayname = f'host_array_{short}' if short is not None else arrayname
                 if short is not None:
                     dev_ptr = f'dev_array_{short}'
@@ -684,9 +674,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                short = _dynamic_short(array_name)
+                short = array_basename(array_name)
                 if short is not None:
-                    code = f'resize_dev_array_{short}({new_size});'
+                    code = (
+                        f'resize_host_array_{short}({new_size});\n'
+                        f'resize_dev_array_{short}({new_size});'
+                    )
                 else:
                     code = f'''
                     {array_name}.resize({new_size});
@@ -919,7 +912,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype = c_data_type(v.dtype)
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
-                                    short = _dynamic_short(dyn_array_name)
+                                    short = array_basename(dyn_array_name)
                                     if short is not None:
                                         if prefix == 'dev':
                                             pimpl_ptr = f'dev_array_{short}'
@@ -952,7 +945,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
                                     # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array size
+                                    # there are two prefixes, base it on host array
+                                    # `{array}.size()`
                                     if len(prefixes) == 1 or prefix == '':
                                         if short is None:
                                             num_expr = f'{dyn_array_name}.size()'
@@ -1270,7 +1264,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
         linker_flags_str = ' '.join(cpp_linker_flags)
-        # Determine the C++ standard for the host compiler
         if cpp_compiler == 'msvc':
             host_cpp_std = CUDA_CPP_STD_MSVC
             std_prefixes = ('/std:',)
@@ -1283,7 +1276,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
 
         std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
         if std_flags:
             overridden = [flag for flag in std_flags if flag != host_cpp_std]
             if overridden:
@@ -1292,7 +1284,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
                     f"preferences with {host_cpp_std!r}."
                 )
-            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
             cpp_compiler_flags = [
                 host_cpp_std if _is_std_flag(arg) else arg
                 for arg in cpp_compiler_flags

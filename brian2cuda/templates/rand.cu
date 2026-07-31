@@ -76,7 +76,6 @@ namespace {
 // method, which is of different type
 void _run_random_number_buffer()
 {
-    // random_number_buffer is a RandomNumberBuffer instance, declared in rand.cu
     random_number_buffer.next_time_step();
 }
 

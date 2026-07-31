@@ -171,8 +171,8 @@ std::cout << std::endl;
     constants or scalar arrays#}
     const size_t _N_pre = {{constant_or_scalar('N_pre', variables['N_pre'])}};
     const size_t _N_post = {{constant_or_scalar('N_post', variables['N_post'])}};
-    resize_host_array_{{ _dynamic_N_incoming[15:] }}(_N_post + _target_offset);
-    resize_host_array_{{ _dynamic_N_outgoing[15:] }}(_N_pre + _source_offset);
+    resize_host_array_{{ array_basename(_dynamic_N_incoming) }}(_N_post + _target_offset);
+    resize_host_array_{{ array_basename(_dynamic_N_outgoing) }}(_N_pre + _source_offset);
 
     size_t _raw_pre_idx, _raw_post_idx;
     {# For a connect call j='k+i for k in range(0, N_post, 2) if k+i < N_post'
@@ -388,21 +388,22 @@ std::cout << std::endl;
             {{vector_code['update']|autoindent}}
 
             for (size_t _repetition=0; _repetition<_n; _repetition++) {
-                host_array_{{ _dynamic_N_outgoing[15:] }}[_pre_idx] += 1;
-                host_array_{{ _dynamic_N_incoming[15:] }}[_post_idx] += 1;
-                push_back_host_array_{{ _dynamic__synaptic_pre[15:] }}(_pre_idx);
-                push_back_host_array_{{ _dynamic__synaptic_post[15:] }}(_post_idx);
+                host_array_{{ array_basename(_dynamic_N_outgoing) }}[_pre_idx] += 1;
+                host_array_{{ array_basename(_dynamic_N_incoming) }}[_post_idx] += 1;
+                push_back_host_array_{{ array_basename(_dynamic__synaptic_pre) }}(_pre_idx);
+                push_back_host_array_{{ array_basename(_dynamic__synaptic_post) }}(_post_idx);
             }
         }
     }
 
     // now we need to resize all registered variables
-    const int32_t newsize = _num_host_array_{{ _dynamic__synaptic_pre[15:] }};
+    const int32_t newsize = _num_host_array_{{ array_basename(_dynamic__synaptic_pre) }};
     {% for variable in owner._registered_variables | sort(attribute='name') %}
         {% set varname = get_array_name(variable, access_data=False) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
-            assert(_num_dev_array_{{ varname[15:] }} <= 1);
-            resize_dev_array_{{ varname[15:] }}(1);
+            assert(_num_dev_array_{{ array_basename(varname) }} <= 1);
+            resize_dev_array_{{ array_basename(varname) }}(1);
+            resize_host_array_{{ array_basename(varname) }}(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
         // prefs['devices.cuda_standalone.no_pre_references'] was set,
         // skipping synaptic_pre resize
@@ -411,9 +412,10 @@ std::cout << std::endl;
         // skipping synaptic_post resize
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
-            resize_dev_array_{{ varname[15:] }}(newsize);
+            resize_dev_array_{{ array_basename(varname) }}(newsize);
+            resize_host_array_{{ array_basename(varname) }}(newsize);
             {% else %}
-            resize_host_array_{{ varname[15:] }}(newsize);
+            resize_host_array_{{ array_basename(varname) }}(newsize);
             {% endif %}
         {% endif %}
     {% endfor %}
@@ -427,12 +429,12 @@ std::cout << std::endl;
         // Note that source_target_count will create a new entry initialized
         // with 0 when the key does not exist yet
         const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>(
-                host_array_{{ _dynamic__synaptic_pre[15:] }}[_i],
-                host_array_{{ _dynamic__synaptic_post[15:] }}[_i]);
+                host_array_{{ array_basename(_dynamic__synaptic_pre) }}[_i],
+                host_array_{{ array_basename(_dynamic__synaptic_post) }}[_i]);
         {% if multisynaptic_index %}
         // Save the "synapse number"
         {% set dynamic_multisynaptic_idx = get_array_name(multisynaptic_idx_var, access_data=False) %}
-        host_array_{{ dynamic_multisynaptic_idx[15:] }}[_i] = source_target_count[source_target];
+        host_array_{{ array_basename(dynamic_multisynaptic_idx) }}[_i] = source_target_count[source_target];
         {% endif %}
         source_target_count[source_target]++;
         //printf("source target count = %i\n", source_target_count[source_target]);
@@ -446,12 +448,12 @@ std::cout << std::endl;
     }
 
     // copy changed host data to device
-    copy_host_to_dev_array_{{ _dynamic_N_incoming[15:] }}();
-    copy_host_to_dev_array_{{ _dynamic_N_outgoing[15:] }}();
-    copy_host_to_dev_array_{{ _dynamic__synaptic_pre[15:] }}();
-    copy_host_to_dev_array_{{ _dynamic__synaptic_post[15:] }}();
+    copy_host_to_dev_array_{{ array_basename(_dynamic_N_incoming) }}();
+    copy_host_to_dev_array_{{ array_basename(_dynamic_N_outgoing) }}();
+    copy_host_to_dev_array_{{ array_basename(_dynamic__synaptic_pre) }}();
+    copy_host_to_dev_array_{{ array_basename(_dynamic__synaptic_post) }}();
     {% if multisynaptic_index %}
-    copy_host_to_dev_array_{{ dynamic_multisynaptic_idx[15:] }}();
+    copy_host_to_dev_array_{{ array_basename(dynamic_multisynaptic_idx) }}();
     {% endif %}
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},

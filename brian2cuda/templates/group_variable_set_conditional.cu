@@ -36,7 +36,7 @@
     #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
-    copy_dev_to_host_array_{{ varname[15:] }}();
+    copy_dev_to_host_array_{{ array_basename(varname) }}();
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(

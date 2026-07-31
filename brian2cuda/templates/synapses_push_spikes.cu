@@ -196,12 +196,6 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     // total number of synapses
     int syn_N = (int)syn_N_check;
 
-    // Skip re-init when delay was cleared after the first run and not repopulated.
-    if (!first_run && (host_array_{{ _dynamic_delay[15:] }} == nullptr
-            || _num_host_array_{{ _dynamic_delay[15:] }} == 0)) {
-        return;
-    }
-
     // simulation time step
     double dt = {{_source_dt}};
     // number of neurons in source group
@@ -323,7 +317,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
 
     //fill vectors of connectivity matrix with synapse IDs and delays (in units of simulation time step)
-    int max_delay = (int)(host_array_{{ _dynamic_delay[15:] }}[0] / dt + 0.5);
+    int max_delay = (int)(host_array_{{ array_basename(_dynamic_delay) }}[0] / dt + 0.5);
     {% if not no_or_const_delay_mode %}
     int min_delay = max_delay;
     {% endif %}
@@ -376,11 +370,11 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         // be NOT equal to the idx in their NeuronGroup
         {% set source_ids = get_array_name(owner.synapse_sources, access_data=False) %}
         {% set target_ids = get_array_name(owner.synapse_targets, access_data=False) %}
-        int32_t pre_neuron_id = host_array_{{ source_ids[15:] }}[syn_id] - {{source_offset}};
-        int32_t post_neuron_id = host_array_{{ target_ids[15:] }}[syn_id] - {{target_offset}};
+        int32_t pre_neuron_id = host_array_{{ array_basename(source_ids) }}[syn_id] - {{source_offset}};
+        int32_t post_neuron_id = host_array_{{ array_basename(target_ids) }}[syn_id] - {{target_offset}};
 
         {% if not no_or_const_delay_mode %}
-        int delay = (int)(host_array_{{ _dynamic_delay[15:] }}[syn_id] / dt + 0.5);
+        int delay = (int)(host_array_{{ array_basename(_dynamic_delay) }}[syn_id] / dt + 0.5);
         if (delay > max_delay)
             max_delay = delay;
         if (delay < min_delay)
@@ -464,23 +458,31 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
             // sort synapses (values) and delays (keys) by delay
             sort_by_key_int_int32(
-                    h_vec_delays_by_pre[i].data(),
-                    h_vec_synapse_ids_by_pre[i].data(),
+                    h_vec_delays_by_pre[i].data(),     // keys start
+                    h_vec_synapse_ids_by_pre[i].data(), // values start
                     num_elements);
 
+            // worst case: number of unique delays is num_elements
             h_vec_unique_delay_start_idcs_by_pre[i].resize(num_elements);
+
+            // Initialise the unique delay start idcs array as a sequence
             fill_sequence_int(
                     h_vec_unique_delay_start_idcs_by_pre[i].data(),
                     num_elements);
 
+            // get delays (keys) and values (indices) for first occurence of each delay value
             size_t num_unique_elements = unique_by_key_int_int(
-                    h_vec_delays_by_pre[i].data(),
-                    h_vec_unique_delay_start_idcs_by_pre[i].data(),
+                    h_vec_delays_by_pre[i].data(),                 // keys start
+                    h_vec_unique_delay_start_idcs_by_pre[i].data(), // values start (position in original delay array)
                     num_elements);
 
+            // erase unneded vector entries
             h_vec_unique_delay_start_idcs_by_pre[i].resize(num_unique_elements);
+            // free not used but allocated host memory
             h_vec_unique_delay_start_idcs_by_pre[i].shrink_to_fit();
             h_vec_delays_by_pre[i].resize(num_unique_elements);
+            // delay_by_pre holds the set of unique delays now
+            // we don't need shrink_to_fit, swap takes care of that
             h_vec_unique_delays_by_pre[i].swap(h_vec_delays_by_pre[i]);
             sum_num_unique_elements += num_unique_elements;
 

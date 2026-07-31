@@ -55,7 +55,8 @@ CUDA_SAFE_CALL(
 
 {# TODO: Use isintance instead (needs to be made available in Jinja templates) #}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-// Filter eventspace to subgroup neurons (implementation in objects.cu)
+// Count the elements in eventspace that are in the subgroup
+// Copy all neuron IDs that are in this subgroup to the new device pointer
 _N = filter_subgroup_eventspace(
         _eventspace,
         _num_events,
@@ -63,6 +64,7 @@ _N = filter_subgroup_eventspace(
         {{_source_start}},
         {{_source_stop}}
         );
+// Use same kernel as without subgroups on copied subgroup eventspace
 _eventspace = dev_array_subgroup_eventspace_{{owner.source.name}};
 {% else %}{# not is_subgroup #}
 // Get the number of events
@@ -77,12 +79,12 @@ _N = _num_events;
 {% set var = record_variables.values() | first %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
 // Get current size of device vectors
-int _monitor_size = _num_dev_array_{{ dyn_name[15:] }};
+int _monitor_size = _num_dev_array_{{ array_basename(dyn_name) }};
 
 // Increase device vectors based on number of events
 {% for varname, var in record_variables.items() %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
-resize_dev_array_{{ dyn_name[15:] }}(_monitor_size + _N);
+resize_dev_array_{{ array_basename(dyn_name) }}(_monitor_size + _N);
 {% endfor %}
 {% endif %}{# not record_variables #}
 
@@ -101,7 +103,7 @@ if (_N > 0)
             _eventspace,
             {% for varname, var in record_variables.items() %}
             {% set dyn_name = get_array_name(var, access_data=False) %}
-            dev_array_{{ dyn_name[15:] }},
+            dev_array_{{ array_basename(dyn_name) }},
             {% endfor %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%

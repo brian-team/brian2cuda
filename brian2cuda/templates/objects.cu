@@ -29,11 +29,13 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <chrono>
 #include <ctime>
 #include <algorithm>
-#include <curand.h>
-#include <thrust/sort.h>
-#include <thrust/sequence.h>
-#include <thrust/unique.h>
+#include <vector>
 #include <thrust/copy.h>
+#include <thrust/count.h>
+#include <thrust/sequence.h>
+#include <thrust/sort.h>
+#include <thrust/unique.h>
+#include <curand.h>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -226,10 +228,8 @@ thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{va
 thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
-// varname is '_dynamic_array_<name>'; exposed symbols use <name> only.
-{% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+{% set N = array_basename(varname) %}
 {{c_data_type(var.dtype)}}* brian::host_array_{{ N }} = nullptr;
 int brian::_num_host_array_{{ N }} = 0;
 {{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
@@ -249,16 +249,105 @@ int brian::_num_subgroup_eventspace_{{varname}} = 0;
 {% endfor %}
 
 namespace brian {
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
-void sync_array_{{ N }}() {
-    _num_host_array_{{ N }} = static_cast<int>({{ varname }}.size());
-    host_array_{{ N }} = _num_host_array_{{ N }} ? &{{ varname }}[0] : nullptr;
-    _num_dev_array_{{ N }} = static_cast<int>(dev{{ varname }}.size());
-    dev_array_{{ N }} = _num_dev_array_{{ N }}
-        ? thrust::raw_pointer_cast(&dev{{ varname }}[0]) : nullptr;
+
+namespace dyn_array {
+
+template <typename T>
+void sync_host_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host_n = static_cast<int>(host.size());
+    host_ptr = host_n ? &host[0] : nullptr;
+    device_n = static_cast<int>(device.size());
+    device_ptr = device_n
+        ? thrust::raw_pointer_cast(&device[0]) : nullptr;
 }
-{% endfor %}
+
+template <typename T>
+void push_back_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T v,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host.push_back(v);
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void resize_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        size_t n,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host.resize(n);
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void resize_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        size_t n,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    THRUST_CHECK_ERROR(device.resize(n));
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void copy_dev_to_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host = device;
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void copy_host_to_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    device = host;
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void clear_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    device.clear();
+    device.shrink_to_fit();
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void sync_device_ptr(
+        thrust::device_vector<T>& device,
+        T*& device_ptr, int& device_n)
+{
+    device_n = static_cast<int>(device.size());
+    device_ptr = device_n
+        ? thrust::raw_pointer_cast(&device[0]) : nullptr;
+}
+
+}  // namespace dyn_array
+
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void sync_eventspace_{{ varname }}() {
     _num_dev{{ varname }} = static_cast<int>(dev{{ varname }}.size());
@@ -267,22 +356,28 @@ void sync_eventspace_{{ varname }}() {
 {% endfor %}
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void sync_monitor_addresses_{{ varname }}() {
-    _num_monitor_addresses_{{ varname }} = static_cast<int>(addresses_monitor_{{ varname }}.size());
-    monitor_addresses_{{ varname }} = _num_monitor_addresses_{{ varname }}
-        ? thrust::raw_pointer_cast(&addresses_monitor_{{ varname }}[0]) : nullptr;
+    dyn_array::sync_device_ptr(
+        addresses_monitor_{{ varname }},
+        monitor_addresses_{{ varname }},
+        _num_monitor_addresses_{{ varname }});
 }
 {% endfor %}
 {% for varname in subgroups_with_spikemonitor %}
 void sync_subgroup_eventspace_{{varname}}() {
-    _num_subgroup_eventspace_{{varname}} = static_cast<int>(_dev_{{varname}}_eventspace.size());
-    dev_array_subgroup_eventspace_{{varname}} = _num_subgroup_eventspace_{{varname}}
-        ? thrust::raw_pointer_cast(&_dev_{{varname}}_eventspace[0]) : nullptr;
+    dyn_array::sync_device_ptr(
+        _dev_{{varname}}_eventspace,
+        dev_array_subgroup_eventspace_{{varname}},
+        _num_subgroup_eventspace_{{varname}});
 }
 {% endfor %}
 
 void sync_all_dev_ptrs() {
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    sync_array_{{ varname[DYNAMIC_ARRAY_PREFIX_LEN:] }}();
+{% set N = array_basename(varname) %}
+    dyn_array::sync_host_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 {% endfor %}
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
     sync_eventspace_{{ varname }}();
@@ -296,32 +391,42 @@ void sync_all_dev_ptrs() {
 }
 
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+{% set N = array_basename(varname) %}
 void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v) {
-    {{ varname }}.push_back(v);
-    sync_array_{{ N }}();
+    dyn_array::push_back_host(
+        {{ varname }}, dev{{ varname }}, v,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 void resize_host_array_{{ N }}(size_t n) {
-    {{ varname }}.resize(n);
-    sync_array_{{ N }}();
+    dyn_array::resize_host(
+        {{ varname }}, dev{{ varname }}, n,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 void resize_dev_array_{{ N }}(size_t n) {
-    THRUST_CHECK_ERROR(dev{{ varname }}.resize(n));
-    {{ varname }}.resize(n);
-    sync_array_{{ N }}();
+    dyn_array::resize_dev(
+        {{ varname }}, dev{{ varname }}, n,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 void copy_dev_to_host_array_{{ N }}() {
-    {{ varname }} = dev{{ varname }};
-    sync_array_{{ N }}();
+    dyn_array::copy_dev_to_host(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 void copy_host_to_dev_array_{{ N }}() {
-    dev{{ varname }} = {{ varname }};
-    sync_array_{{ N }}();
+    dyn_array::copy_host_to_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 void clear_dev_array_{{ N }}() {
-    dev{{ varname }}.clear();
-    dev{{ varname }}.shrink_to_fit();
-    sync_array_{{ N }}();
+    dyn_array::clear_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
 }
 {% endfor %}
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
@@ -353,20 +458,39 @@ void resize_subgroup_eventspace_{{varname}}(size_t n) {
     sync_subgroup_eventspace_{{varname}}();
 }
 {% endfor %}
-struct _subgroup_eventspace_pred {
+// Namespace-scope: nvcc/CUB reject local classes as thrust predicates.
+struct is_in_subgroup
+{
     int32_t start;
     int32_t stop;
-    __device__ bool operator()(int32_t neuron) const {
+
+    __host__ __device__
+    bool operator()(const int32_t& neuron) const
+    {
         return start <= neuron && neuron < stop;
     }
 };
+
 int filter_subgroup_eventspace(
         int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop) {
-    thrust::device_ptr<int32_t> d_src(src);
-    thrust::device_ptr<int32_t> d_dst(dst);
-    auto out = thrust::copy_if(
-            d_src, d_src + n, d_dst, _subgroup_eventspace_pred{start, stop});
-    return static_cast<int>(out - d_dst);
+    if (n <= 0) return 0;
+
+    thrust::device_ptr<int32_t> src_ptr(src);
+    thrust::device_ptr<int32_t> dst_ptr(dst);
+    is_in_subgroup pred{start, stop};
+
+    // Count the elements in eventspace that are in the subgroup
+    int out_n = 0;
+    THRUST_CHECK_ERROR(
+        out_n = static_cast<int>(
+            thrust::count_if(src_ptr, src_ptr + n, pred)
+        )
+    );
+    // Copy all neuron IDs that are in this subgroup to the new device pointer
+    THRUST_CHECK_ERROR(
+        thrust::copy_if(src_ptr, src_ptr + n, dst_ptr, pred)
+    );
+    return out_n;
 }
 void curand_generate_normal_double(
         curandGenerator_t gen, double* out, size_t n, double mean, double stddev) {
@@ -407,14 +531,18 @@ void set_monitor_address_{{ varname }}(int row) {
 }
 {% endfor %}
 void sort_by_key_int_int32(int* keys, int32_t* values, size_t n) {
-    thrust::sort_by_key(thrust::host, keys, keys + n, values);
+    if (n <= 1) {
+        return;
+    }
+    thrust::sort_by_key(keys, keys + n, values);
 }
 void fill_sequence_int(int* out, size_t n) {
-    thrust::sequence(thrust::host, out, out + n);
+    thrust::sequence(out, out + n);
 }
 size_t unique_by_key_int_int(int* keys, int* values, size_t n) {
-    return static_cast<size_t>(thrust::unique_by_key(
-        thrust::host, keys, keys + n, values).first - keys);
+    if (n == 0) return 0;
+    auto out_pair = thrust::unique_by_key(keys, keys + n, values);
+    return static_cast<size_t>(out_pair.first - keys);
 }
 }  // namespace brian
 
@@ -889,8 +1017,6 @@ typedef struct curandStateXORWOW curandState;
 #include <chrono>
 {% endif %}
 
-// Forward declarations; TUs that access members include
-// "network.h" / "synapses_classes.h" directly.
 class Network;
 {% if synapses %}
 class SynapticPathway;
@@ -950,10 +1076,8 @@ extern const int _num_{{name}};
 {% endfor %}
 
 //////////////// dynamic arrays 1d ///////////
-{# varname is '_dynamic_array_<name>'; expose <name> only #}
-{% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+{% set N = array_basename(varname) %}
 extern {{c_data_type(var.dtype)}}* host_array_{{ N }};
 extern int _num_host_array_{{ N }};
 extern {{c_data_type(var.dtype)}}* dev_array_{{ N }};
@@ -1114,9 +1238,8 @@ int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start,
 {% for varname in subgroups_with_spikemonitor %}
 void resize_subgroup_eventspace_{{varname}}(size_t n);
 {% endfor %}
-{% set DYNAMIC_ARRAY_PREFIX_LEN = 15 %}  {# len('_dynamic_array_') #}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = varname[DYNAMIC_ARRAY_PREFIX_LEN:] %}
+{% set N = array_basename(varname) %}
 void resize_host_array_{{ N }}(size_t n);
 void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v);
 void resize_dev_array_{{ N }}(size_t n);
