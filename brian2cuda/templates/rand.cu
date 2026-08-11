@@ -4,6 +4,7 @@
 #include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
+#define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
 #include "network.h"
 #include <curand.h>

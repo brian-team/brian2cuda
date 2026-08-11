@@ -17,6 +17,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
+#define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
 #include "network.h"
 #include "rand.h"

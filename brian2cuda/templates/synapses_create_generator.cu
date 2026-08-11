@@ -12,6 +12,7 @@
 #include<iostream>
 #include<curand.h>
 #include<brianlib/curand_buffer.h>
+#define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/cuda_utils.h"
 #include<map>
 {% endblock extra_headers %}
