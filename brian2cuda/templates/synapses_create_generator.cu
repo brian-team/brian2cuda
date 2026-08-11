@@ -262,7 +262,7 @@ std::cout << std::endl;
             _uiter_size = _n_total;
             {% else %}
             cout << "Error: Requested sample size " << _uiter_size << " is bigger than the " <<
-                    "population size " << _n_total << "." << endl;
+                    "population size " << _n_total << "." << std::endl;
             exit(1);
             {% endif %}
         } else if (_uiter_size < 0)
@@ -270,7 +270,7 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             continue;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is negative." << endl;
+            cout << "Error: Requested sample size " << _uiter_size << " is negative." << std::endl;
             exit(1);
             {% endif %}
         } else if (_uiter_size == 0)
@@ -354,7 +354,7 @@ std::cout << std::endl;
                     continue;
                     {% else %}
                     cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} << " outside range 0 to " <<
-                                            _{{result_index_size}}-1 << endl;
+                                            _{{result_index_size}}-1 << std::endl;
                     exit(1);
                     {% endif %}
                 }
@@ -378,7 +378,7 @@ std::cout << std::endl;
                 continue;
                 {% else %}
                 cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} <<
-                        " outside range 0 to " << _{{result_index_size}}-1 << endl;
+                        " outside range 0 to " << _{{result_index_size}}-1 << std::endl;
                 exit(1);
                 {% endif %}
             }
