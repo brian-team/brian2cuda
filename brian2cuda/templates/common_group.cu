@@ -1,19 +1,23 @@
 {# USES_VARIABLES { N } #}
-
-{### BEFORE RUN ###}
-{% macro before_run_cu_file() %}
-{% block before_run_headers %}
+{% macro co_std_includes() %}
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
 %CURAND_HOST_DEFINE%
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
-#include <chrono>
 #include <cmath>
-#include <stdint.h>
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
 #include <ctime>
-#include <stdio.h>
+{% endmacro %}
+
+{### BEFORE RUN ###}
+{% macro before_run_cu_file() %}
+{% block before_run_headers %}
+{{co_std_includes()}}
+#include <chrono>
 {% endblock before_run_headers %}
 
 {% block before_run_defines %}
@@ -45,17 +49,7 @@ void _before_run_{{codeobj_name}}();
 
 {### RUN ###}
 {% macro cu_file() %}
-#include "code_objects/{{codeobj_name}}.h"
-#include "objects.h"
-#include "brianlib/common_math.h"
-%CURAND_HOST_DEFINE%
-#include "brianlib/cuda_utils.h"
-#include "brianlib/stdint_compat.h"
-#include <cmath>
-#include <stdint.h>
-#include <ctime>
-#include <stdio.h>
-
+{{co_std_includes()}}
 {% block extra_headers %}
 {% endblock %}
 
@@ -361,16 +355,7 @@ void _run_{{codeobj_name}}();
 {### AFTER RUN ###}
 {% macro after_run_cu_file() %}
 {% block after_run_headers %}
-#include "code_objects/{{codeobj_name}}.h"
-#include "objects.h"
-#include "brianlib/common_math.h"
-%CURAND_HOST_DEFINE%
-#include "brianlib/cuda_utils.h"
-#include "brianlib/stdint_compat.h"
-#include <cmath>
-#include <stdint.h>
-#include <ctime>
-#include <stdio.h>
+{{ co_std_includes() }}
 {% endblock after_run_headers %}
 
 {% block after_run_defines %}
