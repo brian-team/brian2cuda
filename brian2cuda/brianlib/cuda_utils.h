@@ -1,9 +1,11 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
-#include <thrust/system_error.h>
-#include "objects.h"
-#include "curand.h"
+#include <cuda_runtime.h>
+
+namespace brian{
+  extern size_t used_device_memory;
+}
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
@@ -23,9 +25,9 @@
 #define THRUST_CHECK_ERROR(code)  { try {code;} \
     catch(...) {_thrustCheckError(__FILE__, __LINE__, #code);} }
 
-
+#ifdef BRIAN2CUDA_CURAND_HOST
+#include <curand.h>
 // adapted from NVIDIA cuda samples, shipped with cuda 10.1 (common/inc/helper_cuda.h)
-#ifdef CURAND_H_
 // cuRAND API errors
 static const char *_curandGetErrorEnum(curandStatus_t error) {
   switch (error) {
@@ -71,7 +73,21 @@ static const char *_curandGetErrorEnum(curandStatus_t error) {
 
   return "<unknown>";
 }
+
+inline void _cudaSafeCall(curandStatus_t err, const char *file, const int line, const char *call = "")
+{
+#ifdef BRIAN2CUDA_ERROR_CHECK
+    if (CURAND_STATUS_SUCCESS != err)
+    {
+        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
+                call, file, line, _curandGetErrorEnum(err));
+        exit(-1);
+    }
 #endif
+
+    return;
+}
+#endif // BRIAN2CUDA_CURAND_HOST
 
 
 inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")
@@ -87,22 +103,6 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
 
     return;
 }
-
-
-inline void _cudaSafeCall(curandStatus_t err, const char *file, const int line, const char *call = "")
-{
-#ifdef BRIAN2CUDA_ERROR_CHECK
-    if (CURAND_STATUS_SUCCESS != err)
-    {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
-                call, file, line, _curandGetErrorEnum(err));
-        exit(-1);
-    }
-#endif
-
-    return;
-}
-
 
 inline void _cudaCheckError(const char *file, const int line, const char *msg)
 {
@@ -176,5 +176,4 @@ inline void _thrustCheckError(const char *file, const int line,
             code, file, line);
     throw;
 }
-
 #endif  // BRIAN2CUDA_ERROR_CHECK_H
