@@ -6,6 +6,7 @@
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
+%CURAND_HOST_DEFINE%
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
 #include <chrono>
@@ -47,6 +48,7 @@ void _before_run_{{codeobj_name}}();
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
+%CURAND_HOST_DEFINE%
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
 #include <cmath>
@@ -362,6 +364,7 @@ void _run_{{codeobj_name}}();
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
+%CURAND_HOST_DEFINE%
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
 #include <cmath>
@@ -386,7 +389,7 @@ void _after_run_{{codeobj_name}}()
 
 {% macro after_run_h_file() %}
 #ifndef _INCLUDED_{{codeobj_name}}_after
-#define _INCLUDED_{{codeobj_name}}_affer
+#define _INCLUDED_{{codeobj_name}}_after
 
 void _after_run_{{codeobj_name}}();
 
