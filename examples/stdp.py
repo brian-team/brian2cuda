@@ -89,6 +89,7 @@ update_from_command_line(params, choices=choices)
 
 # do the imports after parsing command line arguments (quicker --help)
 import os
+import random as py_random
 import matplotlib
 matplotlib.use('Agg')
 
@@ -116,6 +117,8 @@ set_device(params['devicename'], directory=codefolder, compile=True, run=True,
 
 if params['seed'] is not None:
     seed(params['seed'])
+    np.random.seed(params['seed'])
+    py_random.seed(params['seed'])
 
 # On average `K_poisson` Poisson neurons are connected to each LIF neuron
 N_poisson = params['N']
@@ -195,7 +198,7 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
-plt.style.use(['seaborn-paper', style_file])
+#plt.style.use(['seaborn-paper', style_file])
 
 if params['monitors']:
     # We show only the first second of activity, but show the weight development
