@@ -906,10 +906,24 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype = c_data_type(v.dtype)
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
-
-                                    code_object_defs_lines.append(
-                                        f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
-                                    )
+                                    short = array_basename(dyn_array_name)
+                                    if short is not None:
+                                        if prefix == 'dev':
+                                            pimpl_ptr = f'dev_array_{short}'
+                                        else:
+                                            pimpl_ptr = f'host_array_{short}'
+                                        # Avoid `T* const x = x;` when array_name coincides
+                                        # with the global pointer name.
+                                        if array_name != pimpl_ptr:
+                                            code_object_defs_lines.append(
+                                                f'{dtype}* const {array_name} = {pimpl_ptr};'
+                                            )
+                                    else:
+                                        code_object_defs_lines.append(
+                                            f'{dtype}* const {array_name} = '
+                                            f'thrust::raw_pointer_cast('
+                                            f'&{dyn_array_name}[0]);'
+                                        )
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
@@ -928,8 +942,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     # there are two prefixes, base it on host array
                                     # `{array}.size()`
                                     if len(prefixes) == 1 or prefix == '':
+                                        if short is None:
+                                            num_expr = f'{dyn_array_name}.size()'
+                                        elif prefix == '' or len(prefixes) > 1:
+                                            num_expr = f'_num_host_array_{short}'
+                                        else:
+                                            num_expr = f'_num_dev_array_{short}'
                                         code_object_defs_lines.append(
-                                            f'const int _num{k} = {dyn_array_name}.size();'
+                                            f'const int _num{k} = {num_expr};'
                                         )
                                         host_parameters_lines.append(f"_num{k}")
                                         kernel_parameters_lines.append(f"const int _num{k}")
@@ -940,7 +960,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     idx = ''
                                     if k.endswith('space'):
                                         bare_array_name = self.get_array_name(v)
-                                        idx = f'[current_idx{bare_array_name}]'
+                                        idx = f'_view[current_idx{bare_array_name}]'
                                     host_parameters_lines.append(f"{array_name}{idx}")
                                     kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
 
