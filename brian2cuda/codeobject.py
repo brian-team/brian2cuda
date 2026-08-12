@@ -27,6 +27,18 @@ from brian2cuda.cuda_generator import (
 __all__ = ['CUDAStandaloneCodeObject',
            'CUDAStandaloneAtomicsCodeObject']
 
+_DYNAMIC_ARRAY_PREFIX = '_dynamic_array_'
+_DEV_DYNAMIC_ARRAY_PREFIX = 'dev_dynamic_array_'
+
+
+def array_basename(arrayname):
+    """Map '_dynamic_array_foo' / 'dev_dynamic_array_foo' -> 'foo', else None."""
+    if arrayname.startswith(_DYNAMIC_ARRAY_PREFIX):
+        return arrayname[len(_DYNAMIC_ARRAY_PREFIX):]
+    if arrayname.startswith(_DEV_DYNAMIC_ARRAY_PREFIX):
+        return arrayname[len(_DEV_DYNAMIC_ARRAY_PREFIX):]
+    return None
+
 
 class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
     '''
@@ -40,7 +52,8 @@ class CUDAStandaloneCodeObject(CPPStandaloneCodeObject):
                           env_globals={'c_data_type': c_data_type,
                                        'constant_or_scalar': constant_or_scalar,
                                        'prefs': prefs,
-                                       'zip': zip
+                                       'zip': zip,
+                                       'array_basename': array_basename,
                                        })
     generator_class = CUDACodeGenerator
 
