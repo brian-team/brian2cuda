@@ -14,21 +14,28 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
+#define BRIAN2CUDA_CURAND_HOST
+#include "objects_storage.h"
 #include "objects.h"
-#include "synapses_classes.h"
-#include "brianlib/clocks.h"
-#include "brianlib/cuda_utils.h"
+#include "objects_api.h"
 #include "network.h"
+{% if synapses %}
+#include "synapses_classes.h"
+{% endif %}
+#include "brianlib/cuda_utils.h"
 #include "rand.h"
-#include <stdint.h>
 #include <iostream>
 #include <fstream>
 #include <chrono>
 #include <ctime>
-#include <utility>
-
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
+#include <algorithm>
+#include <vector>
+#include <thrust/copy.h>
+#include <thrust/count.h>
+#include <thrust/sequence.h>
+#include <thrust/sort.h>
+#include <thrust/unique.h>
+#include <curand.h>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -221,6 +228,306 @@ thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{va
 thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+{{c_data_type(var.dtype)}}* brian::host_array_{{ N }} = nullptr;
+int brian::_num_host_array_{{ N }} = 0;
+{{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
+int brian::_num_dev_array_{{ N }} = 0;
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+{{c_data_type(var.dtype)}}** brian::dev{{ varname }}_view = nullptr;
+int brian::_num_dev{{ varname }} = 0;
+{% endfor %}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+{{c_data_type(var.dtype)}}** brian::monitor_addresses_{{ varname }} = nullptr;
+int brian::_num_monitor_addresses_{{ varname }} = 0;
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+int32_t* brian::dev_array_subgroup_eventspace_{{varname}} = nullptr;
+int brian::_num_subgroup_eventspace_{{varname}} = 0;
+{% endfor %}
+
+namespace brian {
+
+namespace dyn_array {
+
+template <typename T>
+void sync_host_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host_n = static_cast<int>(host.size());
+    host_ptr = host_n ? &host[0] : nullptr;
+    device_n = static_cast<int>(device.size());
+    device_ptr = device_n
+        ? thrust::raw_pointer_cast(&device[0]) : nullptr;
+}
+
+template <typename T>
+void push_back_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T v,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host.push_back(v);
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void resize_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        size_t n,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host.resize(n);
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void resize_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        size_t n,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    THRUST_CHECK_ERROR(device.resize(n));
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void copy_dev_to_host(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    host = device;
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void copy_host_to_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    device = host;
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void clear_dev(
+        thrust::host_vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& host_ptr, int& host_n,
+        T*& device_ptr, int& device_n)
+{
+    device.clear();
+    device.shrink_to_fit();
+    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+}
+
+template <typename T>
+void sync_device_ptr(
+        thrust::device_vector<T>& device,
+        T*& device_ptr, int& device_n)
+{
+    device_n = static_cast<int>(device.size());
+    device_ptr = device_n
+        ? thrust::raw_pointer_cast(&device[0]) : nullptr;
+}
+
+}  // namespace dyn_array
+
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+void sync_eventspace_{{ varname }}() {
+    _num_dev{{ varname }} = static_cast<int>(dev{{ varname }}.size());
+    dev{{ varname }}_view = dev{{ varname }}.empty() ? nullptr : &dev{{ varname }}[0];
+}
+{% endfor %}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+void sync_monitor_addresses_{{ varname }}() {
+    dyn_array::sync_device_ptr(
+        addresses_monitor_{{ varname }},
+        monitor_addresses_{{ varname }},
+        _num_monitor_addresses_{{ varname }});
+}
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+void sync_subgroup_eventspace_{{varname}}() {
+    dyn_array::sync_device_ptr(
+        _dev_{{varname}}_eventspace,
+        dev_array_subgroup_eventspace_{{varname}},
+        _num_subgroup_eventspace_{{varname}});
+}
+{% endfor %}
+
+void sync_all_dev_ptrs() {
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+    dyn_array::sync_host_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+    sync_eventspace_{{ varname }}();
+{% endfor %}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+    sync_monitor_addresses_{{ varname }}();
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+    sync_subgroup_eventspace_{{varname}}();
+{% endfor %}
+}
+
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v) {
+    dyn_array::push_back_host(
+        {{ varname }}, dev{{ varname }}, v,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void resize_host_array_{{ N }}(size_t n) {
+    dyn_array::resize_host(
+        {{ varname }}, dev{{ varname }}, n,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void resize_dev_array_{{ N }}(size_t n) {
+    dyn_array::resize_dev(
+        {{ varname }}, dev{{ varname }}, n,
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void copy_dev_to_host_array_{{ N }}() {
+    dyn_array::copy_dev_to_host(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void copy_host_to_dev_array_{{ N }}() {
+    dyn_array::copy_host_to_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void clear_dev_array_{{ N }}() {
+    dyn_array::clear_dev(
+        {{ varname }}, dev{{ varname }},
+        host_array_{{ N }}, _num_host_array_{{ N }},
+        dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+{% endfor %}
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+void expand_eventspace{{ varname }}(int num_queues) {
+    int num_eventspaces = static_cast<int>(dev{{ varname }}.size());
+    if (num_queues <= num_eventspaces) return;
+    std::rotate(
+        dev{{ varname }}.begin(),
+        dev{{ varname }}.begin() + current_idx{{ varname }},
+        dev{{ varname }}.end());
+    current_idx{{ varname }} = 0;
+    for (int i = num_eventspaces; i < num_queues; i++) {
+        {{c_data_type(var.dtype)}}* new_eventspace;
+        CUDA_SAFE_CALL(cudaMalloc(
+            (void**)&new_eventspace,
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{ varname }}));
+        CUDA_SAFE_CALL(cudaMemcpy(
+            new_eventspace, {{ varname }},
+            sizeof({{c_data_type(var.dtype)}}) * _num_{{ varname }},
+            cudaMemcpyHostToDevice));
+        dev{{ varname }}.push_back(new_eventspace);
+    }
+    sync_eventspace_{{ varname }}();
+}
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+void resize_subgroup_eventspace_{{varname}}(size_t n) {
+    THRUST_CHECK_ERROR(_dev_{{varname}}_eventspace.resize(n));
+    sync_subgroup_eventspace_{{varname}}();
+}
+{% endfor %}
+// Namespace-scope: nvcc/CUB reject local classes as thrust predicates.
+struct is_in_subgroup
+{
+    int32_t start;
+    int32_t stop;
+
+    __host__ __device__
+    bool operator()(const int32_t& neuron) const
+    {
+        return start <= neuron && neuron < stop;
+    }
+};
+
+int filter_subgroup_eventspace(
+        int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop) {
+    if (n <= 0) return 0;
+
+    thrust::device_ptr<int32_t> src_ptr(src);
+    thrust::device_ptr<int32_t> dst_ptr(dst);
+    is_in_subgroup pred{start, stop};
+
+    // Count the elements in eventspace that are in the subgroup
+    int out_n = 0;
+    THRUST_CHECK_ERROR(
+        out_n = static_cast<int>(
+            thrust::count_if(src_ptr, src_ptr + n, pred)
+        )
+    );
+    // Copy all neuron IDs that are in this subgroup to the new device pointer
+    THRUST_CHECK_ERROR(
+        thrust::copy_if(src_ptr, src_ptr + n, dst_ptr, pred)
+    );
+    return out_n;
+}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+void clear_monitor_addresses_{{ varname }}() {
+    addresses_monitor_{{ varname }}.clear();
+    sync_monitor_addresses_{{ varname }}();
+}
+void resize_monitor_row_{{ varname }}(int row, size_t n) {
+    {{ varname }}[row].resize(n);
+    sync_monitor_addresses_{{ varname }}();
+}
+void push_monitor_address_{{ varname }}(int row) {
+    addresses_monitor_{{ varname }}.push_back(
+        thrust::raw_pointer_cast(&{{ varname }}[row][0]));
+    sync_monitor_addresses_{{ varname }}();
+}
+void set_monitor_address_{{ varname }}(int row) {
+    addresses_monitor_{{ varname }}[row] =
+        thrust::raw_pointer_cast(&{{ varname }}[row][0]);
+    sync_monitor_addresses_{{ varname }}();
+}
+{% endfor %}
+void sort_by_key_int_int32(int* keys, int32_t* values, size_t n) {
+    if (n <= 1) {
+        return;
+    }
+    thrust::sort_by_key(keys, keys + n, values);
+}
+void fill_sequence_int(int* out, size_t n) {
+    thrust::sequence(out, out + n);
+}
+size_t unique_by_key_int_int(int* keys, int* values, size_t n) {
+    if (n == 0) return 0;
+    auto out_pair = thrust::unique_by_key(keys, keys + n, values);
+    return static_cast<size_t>(out_pair.first - keys);
+}
+}  // namespace brian
+
 /////////////// static arrays /////////////
 {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
 {# arrays that are initialized from static data are already declared #}
@@ -269,29 +576,6 @@ int brian::max_threads_per_sm;
 int brian::max_shared_mem_size;
 int brian::num_threads_per_warp;
 
-{% for S in synapses | sort(attribute='name') %}
-{% for path in S._pathways | sort(attribute='name') %}
-__global__ void {{path.name}}_init(
-                int32_t* sources,
-                int32_t* targets,
-                double dt,
-                int32_t source_start,
-                int32_t source_stop
-        )
-{
-    using namespace brian;
-
-    {{path.name}}.init(
-            sources,
-            targets,
-            dt,
-            // TODO: called source here, spikes in SynapticPathway (use same name)
-            source_start,
-            source_stop);
-}
-{% endfor %}
-{% endfor %}
-
 {% if profiled_codeobjects is defined %}
 // Profiling information for each code object
 {% for codeobj in profiled_codeobjects | sort %}
@@ -308,6 +592,33 @@ std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 #}
 {% endfor %}
 {% endif %}
+
+
+//////////////random numbers//////////////////
+curandGenerator_t brian::curand_generator;
+__device__ unsigned long long* brian::d_curand_seed;
+unsigned long long* brian::dev_curand_seed;
+// dev_{co.name}_{rng_type}_allocator
+//      pointer to start of generated random numbers array
+//      at each generation cycle this array is refilled
+// dev_{co.name}_{rng_type}
+//      pointer moving through generated random number array
+//      until it is regenerated at the next generation cycle
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
+__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
+{% endfor %}{# rng_type #}
+{% endfor %}{# co #}
+curandState* brian::dev_curand_states;
+__device__ curandState* brian::d_curand_states;
+RandomNumberBuffer brian::random_number_buffer;
 
 void _init_arrays()
 {
@@ -454,6 +765,7 @@ void _init_arrays()
     const double to_MB = 1.0 / (1024.0 * 1024.0);
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
     double time_passed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_timer).count();
+    sync_all_dev_ptrs();
     std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
         std::cout << " and used " << tot_memory_MB << "MB of device memory.";
@@ -465,8 +777,8 @@ void _load_arrays()
     using namespace brian;
 
     {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
-    ifstream f{{name}};
-    f{{name}}.open("static_arrays/{{name}}", ios::in | ios::binary);
+    std::ifstream f{{name}};
+    f{{name}}.open("static_arrays/{{name}}", std::ios::in | std::ios::binary);
     if(f{{name}}.is_open())
     {
         {% if name in dynamic_array_specs.values() %}
@@ -476,7 +788,7 @@ void _load_arrays()
         {% endif %}
     } else
     {
-        std::cout << "Error opening static array {{name}}." << endl;
+        std::cout << "Error opening static array {{name}}." << std::endl;
     }
     {% if not (name in dynamic_array_specs.values()) %}
     CUDA_SAFE_CALL(
@@ -506,15 +818,15 @@ void _write_arrays()
             cudaMemcpy({{varname}}, dev{{varname}}, sizeof({{c_data_type(var.dtype)}})*_num_{{varname}}, cudaMemcpyDeviceToHost)
             );
     {% endif %}
-    ofstream outfile_{{varname}};
-    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    std::ofstream outfile_{{varname}};
+    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
     if(outfile_{{varname}}.is_open())
     {
         outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}), {{var.size}}*sizeof({{c_data_type(var.dtype)}}));
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        std::cout << "Error writing output file for {{varname}}." << std::endl;
     }
     {% endif %}
     {% endfor %}
@@ -523,15 +835,15 @@ void _write_arrays()
     {% if varname not in variables_on_host_only %}
     {{varname}} = dev{{varname}};
     {% endif %}
-    ofstream outfile_{{varname}};
-    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+    std::ofstream outfile_{{varname}};
+    outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
     if(outfile_{{varname}}.is_open())
     {
         outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << endl;
+        std::cout << "Error writing output file for {{varname}}." << std::endl;
     }
     {% endfor %}
 
@@ -539,11 +851,11 @@ void _write_arrays()
         {% if var in profile_statemonitor_vars %}
         {# Record copying statemonitor variable from device to host for benchmarking #}
         std::chrono::nanoseconds before_copy_statemon;
-        string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
+        std::string profile_statemonitor_copy_to_host_varname = "{{var.owner.name}}_copy_to_host_{{profile_statemonitor_copy_to_host}}";
         std::chrono::nanoseconds copy_time_statemon;
         {% endif %}
-        ofstream outfile_{{varname}};
-        outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
+        std::ofstream outfile_{{varname}};
+        outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
         if(outfile_{{varname}}.is_open())
         {
             {% if var in profile_statemonitor_vars %}
@@ -555,7 +867,7 @@ void _write_arrays()
                 temp_array{{varname}}[n] = {{varname}}[n];
             }
             {% if var in profile_statemonitor_vars %}
-            string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
+            std::string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
             copy_time_statemon += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - before_copy_statemon);
             {% endif %}
             for(int j = 0; j < temp_array{{varname}}[0].size(); j++)
@@ -568,14 +880,14 @@ void _write_arrays()
             outfile_{{varname}}.close();
         } else
         {
-            std::cout << "Error writing output file for {{varname}}." << endl;
+            std::cout << "Error writing output file for {{varname}}." << std::endl;
         }
     {% endfor %}
 
     {% if profiled_codeobjects is defined and profiled_codeobjects %}
     // Write profiling info to disk
-    ofstream outfile_profiling_info;
-    outfile_profiling_info.open(results_dir + "profiling_info.txt", ios::out);
+    std::ofstream outfile_profiling_info;
+    outfile_profiling_info.open(results_dir + "profiling_info.txt", std::ios::out);
     if(outfile_profiling_info.is_open())
     {
     {% for codeobj in profiled_codeobjects | sort %}
@@ -600,8 +912,8 @@ void _write_arrays()
     }
     {% endif %}
     // Write last run info to disk
-    ofstream outfile_last_run_info;
-    outfile_last_run_info.open(results_dir + "last_run_info.txt", ios::out);
+    std::ofstream outfile_last_run_info;
+    outfile_last_run_info.open(results_dir + "last_run_info.txt", std::ios::out);
     if(outfile_last_run_info.is_open())
     {
         outfile_last_run_info << (Network::_last_run_time) << " " << (Network::_last_run_completed_fraction) << std::endl;
@@ -611,17 +923,6 @@ void _write_arrays()
         std::cout << "Error writing last run info to file." << std::endl;
     }
 }
-
-{% for S in synapses | sort(attribute='name') %}
-{% for path in S._pathways | sort(attribute='name') %}
-__global__ void {{path.name}}_destroy()
-{
-    using namespace brian;
-
-    {{path.name}}.destroy();
-}
-{% endfor %}
-{% endfor %}
 
 void _dealloc_arrays()
 {
@@ -702,23 +1003,34 @@ void _dealloc_arrays()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 {% macro h_file() %}
-#include <ctime>
+
 // typedefs need to be outside the include guards to
 // be visible to all files including objects.h
 typedef {{curand_float_type}} randomNumber_t;  // random number type
 
+struct curandGenerator_st;
+typedef struct curandGenerator_st* curandGenerator_t;
+#ifndef CURAND_KERNEL_H_
+struct curandStateXORWOW;
+typedef struct curandStateXORWOW curandState;
+#endif
+
 #ifndef _BRIAN_OBJECTS_H
 #define _BRIAN_OBJECTS_H
 
-#include<vector>
-#include<stdint.h>
-#include "synapses_classes.h"
+#include <vector>
+#include <string>
+#include <stdint.h>
 #include "brianlib/clocks.h"
-#include "network.h"
-
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
+#include "rand.h"
+{% if profiled_codeobjects is defined %}
 #include <chrono>
+{% endif %}
+
+class Network;
+{% if synapses %}
+class SynapticPathway;
+{% endif %}
 
 namespace brian {
 
@@ -741,14 +1053,6 @@ extern Network {{net.name}};
 
 extern void set_variable_by_name(std::string, std::string);
 
-//////////////// dynamic arrays 1d ///////////
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
-extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
-{% endfor %}
-{% for varname in subgroups_with_spikemonitor %}
-extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
-{% endfor %}
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -763,18 +1067,11 @@ extern const int _num_{{varname}};
 //////////////// eventspaces ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}} * {{varname}};
-extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 extern const int _num_{{varname}};
 extern int current_idx{{varname}};
 {% if varname in spikegenerator_eventspaces %}
 extern int previous_idx{{varname}};
 {% endif %}
-{% endfor %}
-
-//////////////// dynamic arrays 2d /////////
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
-extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
 {% endfor %}
 
 /////////////// static arrays /////////////
@@ -786,6 +1083,33 @@ extern {{dtype_spec}} *dev{{name}};
 extern __device__ {{dtype_spec}} *d{{name}};
 extern const int _num_{{name}};
 {% endif %}
+{% endfor %}
+
+//////////////// dynamic arrays 1d ///////////
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+extern {{c_data_type(var.dtype)}}* host_array_{{ N }};
+extern int _num_host_array_{{ N }};
+extern {{c_data_type(var.dtype)}}* dev_array_{{ N }};
+extern int _num_dev_array_{{ N }};
+{% endfor %}
+
+//////////////// eventspaces (synced views) ///////////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+extern {{c_data_type(var.dtype)}}** dev{{ varname }}_view;
+extern int _num_dev{{ varname }};
+{% endfor %}
+
+//////////////// dynamic arrays 2d (synced views) ///////////////
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+extern {{c_data_type(var.dtype)}}** monitor_addresses_{{ varname }};
+extern int _num_monitor_addresses_{{ varname }};
+{% endfor %}
+
+//////////////// subgroup eventspace buffers ///////////////
+{% for varname in subgroups_with_spikemonitor %}
+extern int32_t* dev_array_subgroup_eventspace_{{varname}};
+extern int _num_subgroup_eventspace_{{varname}};
 {% endfor %}
 
 //////////////// synapses /////////////////
@@ -833,6 +1157,32 @@ extern std::chrono::nanoseconds {{codeobj}}_kernel_currents_profiling_info;
 {% endfor %}
 {% endif %}
 
+
+//////////////// random numbers /////////////////
+extern curandGenerator_t curand_generator;
+extern unsigned long long* dev_curand_seed;
+extern __device__ unsigned long long* d_curand_seed;
+
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+// pointer to start of generated random numbers array
+// at each generation cycle this array is refilled
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
+// pointer moving through generated random number array
+// until it is regenerated at the next generation cycle
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
+extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
+{% endfor %}{# rng_type #}
+{% endfor %}{# co #}
+extern curandState* dev_curand_states;
+extern __device__ curandState* d_curand_states;
+extern RandomNumberBuffer random_number_buffer;
+
 //CUDA
 extern int num_parallel_blocks;
 extern int max_threads_per_block;
@@ -850,4 +1200,80 @@ void _dealloc_arrays();
 #endif
 
 
+{% endmacro %}
+
+{% macro h_storage_file() %}
+#include "objects.h"
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+
+#ifndef _BRIAN_OBJECTS_STORAGE_H
+#define _BRIAN_OBJECTS_STORAGE_H
+
+namespace brian {
+
+//////////////// dynamic arrays 1d ///////////
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
+extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
+{% endfor %}
+
+//////////////// eventspaces ///////////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
+{% endfor %}
+
+//////////////// dynamic arrays 2d /////////
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
+extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
+{% endfor %}
+
+}
+#endif // _BRIAN_OBJECTS_STORAGE_H
+{% endmacro %}
+
+{% macro h_api_file() %}
+#ifndef _BRIAN_OBJECTS_API_H
+#define _BRIAN_OBJECTS_API_H
+
+#include <cstddef>
+#include <cstdint>
+
+namespace brian {
+
+void sync_all_dev_ptrs();
+
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+void expand_eventspace{{ varname }}(int num_queues);
+{% endfor %}
+void sort_by_key_int_int32(int* keys, int32_t* values, size_t n);
+void fill_sequence_int(int* out, size_t n);
+size_t unique_by_key_int_int(int* keys, int* values, size_t n);
+int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
+{% for varname in subgroups_with_spikemonitor %}
+void resize_subgroup_eventspace_{{varname}}(size_t n);
+{% endfor %}
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+void resize_host_array_{{ N }}(size_t n);
+void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v);
+void resize_dev_array_{{ N }}(size_t n);
+void clear_dev_array_{{ N }}();
+void copy_dev_to_host_array_{{ N }}();
+void copy_host_to_dev_array_{{ N }}();
+{% endfor %}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+void clear_monitor_addresses_{{ varname }}();
+void resize_monitor_row_{{ varname }}(int row, size_t n);
+void push_monitor_address_{{ varname }}(int row);
+void set_monitor_address_{{ varname }}(int row);
+{% endfor %}
+
+}
+
+#endif
 {% endmacro %}
