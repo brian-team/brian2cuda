@@ -35,14 +35,17 @@ from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
 from brian2cuda.utils.logger import report_issue_message
 
-from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
+from .codeobject import (
+    CUDAStandaloneCodeObject,
+    CUDAStandaloneAtomicsCodeObject,
+    array_basename,
+)
 
 
 __all__ = []
 
 logger = get_logger(__name__)
 
-# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
 
@@ -64,6 +67,10 @@ class CUDAWriter(CPPWriter):
         elif filename.endswith('.*'):
             self.write(filename[:-1]+'cu', contents.cu_file)
             self.write(filename[:-1]+'h', contents.h_file)
+            if hasattr(contents, 'h_storage_file'):
+                self.write(filename[:-2]+'_storage.h', contents.h_storage_file)
+            if hasattr(contents, 'h_api_file'):
+                self.write(filename[:-2]+'_api.h', contents.h_api_file)
             return
         fullfilename = os.path.join(self.project_dir, filename)
         if os.path.exists(fullfilename):
@@ -1217,7 +1224,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
         linker_flags_str = ' '.join(cpp_linker_flags)
-        # Determine the C++ standard for the host compiler
         if cpp_compiler == 'msvc':
             host_cpp_std = CUDA_CPP_STD_MSVC
             std_prefixes = ('/std:',)
@@ -1230,7 +1236,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
 
         std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
         if std_flags:
             overridden = [flag for flag in std_flags if flag != host_cpp_std]
             if overridden:
@@ -1239,7 +1244,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
                     f"preferences with {host_cpp_std!r}."
                 )
-            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
             cpp_compiler_flags = [
                 host_cpp_std if _is_std_flag(arg) else arg
                 for arg in cpp_compiler_flags
