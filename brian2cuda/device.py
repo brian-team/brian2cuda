@@ -2,6 +2,7 @@
 Module implementing the CUDA "standalone" device.
 '''
 import os
+import glob
 import inspect
 from collections import defaultdict, Counter
 import tempfile
@@ -1798,11 +1799,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 gpu_arch = get_hip_gpu_arch()
                 if rocm_path:
                     rocm_parent = os.path.dirname(rocm_path)
-                    # Find libraries package (sibling of devel package)
-                    libs_candidates = [
-                        os.path.join(rocm_path, '..', '_rocm_sdk_libraries'),
-                        os.path.join(rocm_parent, '_rocm_sdk_libraries'),
-                    ]
+                    # Find libraries package (sibling of devel package). The
+                    # directory carries a GPU suffix when the wheel is built for
+                    # a single architecture (_rocm_sdk_libraries_gfx1151), so
+                    # match the prefix rather than an exact name.
+                    libs_candidates = sorted(
+                        glob.glob(os.path.join(rocm_parent, '_rocm_sdk_libraries*'))
+                    )
                     rocm_libs = None
                     for candidate in libs_candidates:
                         candidate = os.path.normpath(candidate)
@@ -1810,13 +1813,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             rocm_libs = candidate
                             break
 
-                    # Copy runtime DLLs to exe dir so they load before System32
+                    # Copy runtime DLLs to exe dir so they load before System32.
+                    # rocrand.dll backs hiprand.dll and ships in the devel
+                    # package as well, so copy it whether or not the separate
+                    # libraries package was found; missing names are skipped.
                     dlls_to_copy = [
                         'amdhip64_7.dll', 'hiprand.dll', 'amd_comgr.dll',
-                        'rocm_kpack.dll',
+                        'rocm_kpack.dll', 'rocrand.dll',
                     ]
-                    if rocm_libs:
-                        dlls_to_copy.append('rocrand.dll')  # has kpack kernels
 
                     import shutil as _shutil
                     exe_dir = os.path.abspath('.')
