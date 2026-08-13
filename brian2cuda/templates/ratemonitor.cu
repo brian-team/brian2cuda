@@ -3,6 +3,10 @@
 {# WRITES_TO_READ_ONLY_VARIABLES { N } #}
 {% extends 'common_group.cu' %}
 
+{% block extra_headers %}
+#include "objects_api.h"
+{% endblock %}
+
 {% block define_N %}
 {% endblock %}
 
@@ -13,14 +17,10 @@ static int start_offset = current_iteration;
 
 {% block prepare_kernel_inner %}
 int num_iterations = {{owner.clock.name}}.i_end;
-int size_till_now = dev{{_dynamic_t}}.size();
+int size_till_now = _num_dev_array_{{ array_basename(_dynamic_t) }};
 int new_size = num_iterations + size_till_now - start_offset;
-THRUST_CHECK_ERROR(
-        dev{{_dynamic_t}}.resize(new_size)
-        );
-THRUST_CHECK_ERROR(
-        dev{{_dynamic_rate}}.resize(new_size)
-        );
+resize_dev_array_{{ array_basename(_dynamic_t) }}(new_size);
+resize_dev_array_{{ array_basename(_dynamic_rate) }}(new_size);
 // Update size variables for Python side indexing to work
 // (Note: Need to update device variable which will be copied to host in write_arrays())
 _array_{{owner.name}}_N[0] = new_size;
@@ -36,8 +36,8 @@ num_blocks = 1;
 {% block kernel_call %}
 _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
-    thrust::raw_pointer_cast(&(dev{{_dynamic_rate}}[0])),
-    thrust::raw_pointer_cast(&(dev{{_dynamic_t}}[0])),
+    dev_array_{{ array_basename(_dynamic_rate) }},
+    dev_array_{{ array_basename(_dynamic_t) }},
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 
