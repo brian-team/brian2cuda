@@ -2,7 +2,7 @@
 {% extends 'common_group.cu' %}
 
 {% block extra_headers %}
-#include "rand.h"
+#include "objects_api.h"
 {% endblock %}
 
 {% block kernel_maincode %}
@@ -28,7 +28,7 @@
     #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
-    {{varname}} = dev{{varname}};
+    copy_dev_to_host_array_{{ array_basename(varname) }}();
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(
