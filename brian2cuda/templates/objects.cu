@@ -133,26 +133,19 @@ void brian::set_variable_by_name(std::string name, std::string s_value) {
     // dynamic arrays (1d)
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
     {% if not var.read_only %}
+    {% set N = array_basename(varname) %}
     if (name == "{{var.owner.name}}.{{var.name}}") {
         var_size = brian::{{get_array_name(var, access_data=False)}}.size();
         data_size = var_size*sizeof({{c_data_type(var.dtype)}});
         if (s_value[0] == '-' || (s_value[0] >= '0' && s_value[0] <= '9')) {
             // set from single value
-            {{ set_from_value(var.dtype, "&brian::" + get_array_name(var, False) + "[0]") }}
+            {{ set_from_value(var.dtype, "brian::" + get_array_name(var, False) + ".data()") }}
         } else {
             // set from file
-            set_variable_from_file(name, &brian::{{get_array_name(var, False)}}[0], data_size, s_value);
+            set_variable_from_file(name, brian::{{get_array_name(var, False)}}.data(), data_size, s_value);
         }
         {% if get_array_name(var) not in variables_on_host_only %}
-        // copy to device
-        CUDA_SAFE_CALL(
-            cudaMemcpy(
-                thrust::raw_pointer_cast(&brian::dev{{get_array_name(var, False)}}[0]),
-                &brian::{{get_array_name(var, False)}}[0],
-                sizeof(brian::{{get_array_name(var, False)}}[0])*brian::{{get_array_name(var, False)}}.size(),
-                cudaMemcpyHostToDevice
-            )
-        );
+        copy_host_to_dev_array_{{ N }}();
         {% endif %}
         return;
     }
@@ -205,7 +198,7 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 {{c_data_type(var.dtype)}} * brian::{{varname}};
 const int brian::_num_{{varname}} = {{var.size}};
-thrust::host_vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
+std::vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
 int brian::current_idx{{varname}} = 0;
 {% if varname in spikegenerator_eventspaces %}
 int brian::previous_idx{{varname}};
@@ -214,8 +207,11 @@ int brian::previous_idx{{varname}};
 
 //////////////// dynamic arrays 1d /////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-thrust::host_vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
+{% set N = array_basename(varname) %}
+std::vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
+{{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
+int brian::_num_dev_array_{{ N }} = 0;
 {% endfor %}
 {# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
 {% for varname in subgroups_with_spikemonitor %}
@@ -228,13 +224,6 @@ thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{va
 thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = array_basename(varname) %}
-{{c_data_type(var.dtype)}}* brian::host_array_{{ N }} = nullptr;
-int brian::_num_host_array_{{ N }} = 0;
-{{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
-int brian::_num_dev_array_{{ N }} = 0;
-{% endfor %}
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 {{c_data_type(var.dtype)}}** brian::dev{{ varname }}_view = nullptr;
 int brian::_num_dev{{ varname }} = 0;
@@ -250,103 +239,93 @@ int brian::_num_subgroup_eventspace_{{varname}} = 0;
 
 namespace brian {
 
-namespace dyn_array {
+namespace {
 
 template <typename T>
-void sync_host_dev(
-        thrust::host_vector<T>& host,
+void refresh_device_ptrs(
         thrust::device_vector<T>& device,
-        T*& host_ptr, int& host_n,
         T*& device_ptr, int& device_n)
 {
-    host_n = static_cast<int>(host.size());
-    host_ptr = host_n ? &host[0] : nullptr;
     device_n = static_cast<int>(device.size());
     device_ptr = device_n
         ? thrust::raw_pointer_cast(&device[0]) : nullptr;
-}
-
-template <typename T>
-void push_back_host(
-        thrust::host_vector<T>& host,
-        thrust::device_vector<T>& device,
-        T v,
-        T*& host_ptr, int& host_n,
-        T*& device_ptr, int& device_n)
-{
-    host.push_back(v);
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
-}
-
-template <typename T>
-void resize_host(
-        thrust::host_vector<T>& host,
-        thrust::device_vector<T>& device,
-        size_t n,
-        T*& host_ptr, int& host_n,
-        T*& device_ptr, int& device_n)
-{
-    host.resize(n);
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
 }
 
 template <typename T>
 void resize_dev(
-        thrust::host_vector<T>& host,
         thrust::device_vector<T>& device,
-        size_t n,
-        T*& host_ptr, int& host_n,
-        T*& device_ptr, int& device_n)
+        T*& device_ptr, int& device_n,
+        size_t n)
 {
     THRUST_CHECK_ERROR(device.resize(n));
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
-}
-
-template <typename T>
-void copy_dev_to_host(
-        thrust::host_vector<T>& host,
-        thrust::device_vector<T>& device,
-        T*& host_ptr, int& host_n,
-        T*& device_ptr, int& device_n)
-{
-    host = device;
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+    refresh_device_ptrs(device, device_ptr, device_n);
 }
 
 template <typename T>
 void copy_host_to_dev(
-        thrust::host_vector<T>& host,
+        std::vector<T>& host,
         thrust::device_vector<T>& device,
-        T*& host_ptr, int& host_n,
         T*& device_ptr, int& device_n)
 {
-    device = host;
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+    THRUST_CHECK_ERROR(device.resize(host.size()));
+    if (!host.empty())
+    {
+        CUDA_SAFE_CALL(cudaMemcpy(
+            thrust::raw_pointer_cast(&device[0]),
+            host.data(),
+            sizeof(T) * host.size(),
+            cudaMemcpyHostToDevice));
+    }
+    refresh_device_ptrs(device, device_ptr, device_n);
+}
+
+template <typename T>
+void copy_dev_to_host(
+        std::vector<T>& host,
+        thrust::device_vector<T>& device,
+        T*& device_ptr, int& device_n)
+{
+    host.resize(device.size());
+    if (!device.empty())
+    {
+        CUDA_SAFE_CALL(cudaMemcpy(
+            host.data(),
+            thrust::raw_pointer_cast(&device[0]),
+            sizeof(T) * device.size(),
+            cudaMemcpyDeviceToHost));
+    }
+    refresh_device_ptrs(device, device_ptr, device_n);
 }
 
 template <typename T>
 void clear_dev(
-        thrust::host_vector<T>& host,
         thrust::device_vector<T>& device,
-        T*& host_ptr, int& host_n,
         T*& device_ptr, int& device_n)
 {
     device.clear();
     device.shrink_to_fit();
-    sync_host_dev(host, device, host_ptr, host_n, device_ptr, device_n);
+    refresh_device_ptrs(device, device_ptr, device_n);
 }
 
-template <typename T>
-void sync_device_ptr(
-        thrust::device_vector<T>& device,
-        T*& device_ptr, int& device_n)
-{
-    device_n = static_cast<int>(device.size());
-    device_ptr = device_n
-        ? thrust::raw_pointer_cast(&device[0]) : nullptr;
-}
+}  // namespace
 
-}  // namespace dyn_array
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+void resize_dev_array_{{ N }}(size_t n) {
+    resize_dev(dev{{ varname }}, dev_array_{{ N }}, _num_dev_array_{{ N }}, n);
+}
+void copy_host_to_dev_array_{{ N }}() {
+    copy_host_to_dev({{ varname }}, dev{{ varname }},
+               dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void copy_dev_to_host_array_{{ N }}() {
+    copy_dev_to_host({{ varname }}, dev{{ varname }},
+                 dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+void clear_dev_array_{{ N }}() {
+    clear_dev(dev{{ varname }}, dev_array_{{ N }}, _num_dev_array_{{ N }});
+}
+{% endfor %}
 
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void sync_eventspace_{{ varname }}() {
@@ -356,7 +335,7 @@ void sync_eventspace_{{ varname }}() {
 {% endfor %}
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void sync_monitor_addresses_{{ varname }}() {
-    dyn_array::sync_device_ptr(
+    refresh_device_ptrs(
         addresses_monitor_{{ varname }},
         monitor_addresses_{{ varname }},
         _num_monitor_addresses_{{ varname }});
@@ -364,7 +343,7 @@ void sync_monitor_addresses_{{ varname }}() {
 {% endfor %}
 {% for varname in subgroups_with_spikemonitor %}
 void sync_subgroup_eventspace_{{varname}}() {
-    dyn_array::sync_device_ptr(
+    refresh_device_ptrs(
         _dev_{{varname}}_eventspace,
         dev_array_subgroup_eventspace_{{varname}},
         _num_subgroup_eventspace_{{varname}});
@@ -374,9 +353,8 @@ void sync_subgroup_eventspace_{{varname}}() {
 void sync_all_dev_ptrs() {
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = array_basename(varname) %}
-    dyn_array::sync_host_dev(
-        {{ varname }}, dev{{ varname }},
-        host_array_{{ N }}, _num_host_array_{{ N }},
+    refresh_device_ptrs(
+        dev{{ varname }},
         dev_array_{{ N }}, _num_dev_array_{{ N }});
 {% endfor %}
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
@@ -390,45 +368,6 @@ void sync_all_dev_ptrs() {
 {% endfor %}
 }
 
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = array_basename(varname) %}
-void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v) {
-    dyn_array::push_back_host(
-        {{ varname }}, dev{{ varname }}, v,
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-void resize_host_array_{{ N }}(size_t n) {
-    dyn_array::resize_host(
-        {{ varname }}, dev{{ varname }}, n,
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-void resize_dev_array_{{ N }}(size_t n) {
-    dyn_array::resize_dev(
-        {{ varname }}, dev{{ varname }}, n,
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-void copy_dev_to_host_array_{{ N }}() {
-    dyn_array::copy_dev_to_host(
-        {{ varname }}, dev{{ varname }},
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-void copy_host_to_dev_array_{{ N }}() {
-    dyn_array::copy_host_to_dev(
-        {{ varname }}, dev{{ varname }},
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-void clear_dev_array_{{ N }}() {
-    dyn_array::clear_dev(
-        {{ varname }}, dev{{ varname }},
-        host_array_{{ N }}, _num_host_array_{{ N }},
-        dev_array_{{ N }}, _num_dev_array_{{ N }});
-}
-{% endfor %}
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues) {
     int num_eventspaces = static_cast<int>(dev{{ varname }}.size());
@@ -672,9 +611,11 @@ void _init_arrays()
 
     {% for S in synapses | sort(attribute='name') %}
     {% for path in S._pathways | sort(attribute='name') %}
+    {% set src_name = dynamic_array_specs[path.synapse_sources] %}
+    {% set tgt_name = dynamic_array_specs[path.synapse_targets] %}
     {{path.name}}_init<<<1,1>>>(
-            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_sources]}}[0]),
-            thrust::raw_pointer_cast(&dev{{dynamic_array_specs[path.synapse_targets]}}[0]),
+            dev_array_{{ array_basename(src_name) }},
+            dev_array_{{ array_basename(tgt_name) }},
             0,  //was dt, maybe irrelevant?
             {{path.source.start}},
             {{path.source.stop}}
@@ -686,13 +627,13 @@ void _init_arrays()
     // Arrays initialized to 0
     {% for var, varname in zero_arrays | sort(attribute='1') %}
         {% if varname in dynamic_array_specs.values() %}
+            {% set N = array_basename(varname) %}
             {{varname}}.resize({{var.size}});
-            THRUST_CHECK_ERROR(dev{{varname}}.resize({{var.size}}));
             for(int i=0; i<{{var.size}}; i++)
             {
                 {{varname}}[i] = 0;
-                dev{{varname}}[i] = 0;
             }
+            copy_host_to_dev_array_{{ N }}();
         {% elif not var in eventspace_arrays %}
             {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
             for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
@@ -721,8 +662,9 @@ void _init_arrays()
     // static arrays
     {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
     {% if (name in dynamic_array_specs.values())  %}
+    {% set Nbase = array_basename(name) %}
     {{name}}.resize({{N}});
-    THRUST_CHECK_ERROR(dev{{name}}.resize({{N}}));
+    resize_dev_array_{{ Nbase }}({{N}});
     {% else %}
     {{name}} = new {{dtype_spec}}[{{N}}];
     CUDA_SAFE_CALL(
@@ -782,7 +724,7 @@ void _load_arrays()
     if(f{{name}}.is_open())
     {
         {% if name in dynamic_array_specs.values() %}
-        f{{name}}.read(reinterpret_cast<char*>(&{{name}}[0]), {{N}}*sizeof({{dtype_spec}}));
+        f{{name}}.read(reinterpret_cast<char*>({{name}}.data()), {{N}}*sizeof({{dtype_spec}}));
         {% else %}
         f{{name}}.read(reinterpret_cast<char*>({{name}}), {{N}}*sizeof({{dtype_spec}}));
         {% endif %}
@@ -795,10 +737,8 @@ void _load_arrays()
             cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice)
             );
     {% else %}
-    for(int i=0; i<{{N}}; i++)
-    {
-        dev{{name}}[i] = {{name}}[i];
-    }
+    {% set Nbase = array_basename(name) %}
+    copy_host_to_dev_array_{{ Nbase }}();
     {% endif %}
     {% endfor %}
 }
@@ -832,14 +772,15 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+    {% set N = array_basename(varname) %}
     {% if varname not in variables_on_host_only %}
-    {{varname}} = dev{{varname}};
+    copy_dev_to_host_array_{{ N }}();
     {% endif %}
     std::ofstream outfile_{{varname}};
     outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
     if(outfile_{{varname}}.is_open())
     {
-        outfile_{{varname}}.write(reinterpret_cast<char*>(thrust::raw_pointer_cast(&{{varname}}[0])), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
+        outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}.data()), {{varname}}.size()*sizeof({{c_data_type(var.dtype)}}));
         outfile_{{varname}}.close();
     } else
     {
@@ -861,10 +802,18 @@ void _write_arrays()
             {% if var in profile_statemonitor_vars %}
             before_copy_statemon = std::chrono::high_resolution_clock::now();
             {% endif %}
-            thrust::host_vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new thrust::host_vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
+            std::vector<{{c_data_type(var.dtype)}}>* temp_array{{varname}} = new std::vector<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
             for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
             {
-                temp_array{{varname}}[n] = {{varname}}[n];
+                temp_array{{varname}}[n].resize({{varname}}[n].size());
+                if (!{{varname}}[n].empty())
+                {
+                    CUDA_SAFE_CALL(cudaMemcpy(
+                        temp_array{{varname}}[n].data(),
+                        thrust::raw_pointer_cast(&{{varname}}[n][0]),
+                        sizeof({{c_data_type(var.dtype)}}) * {{varname}}[n].size(),
+                        cudaMemcpyDeviceToHost));
+                }
             }
             {% if var in profile_statemonitor_vars %}
             std::string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
@@ -948,10 +897,10 @@ void _dealloc_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    dev{{varname}}.clear();
-    thrust::device_vector<{{c_data_type(var.dtype)}}>().swap(dev{{varname}});
+    {% set N = array_basename(varname) %}
+    clear_dev_array_{{ N }}();
     {{varname}}.clear();
-    thrust::host_vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
+    std::vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
     {% endfor %}
 
     {% for var, varname in array_specs | dictsort(by='value') %}
@@ -1088,8 +1037,7 @@ extern const int _num_{{name}};
 //////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = array_basename(varname) %}
-extern {{c_data_type(var.dtype)}}* host_array_{{ N }};
-extern int _num_host_array_{{ N }};
+extern std::vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern {{c_data_type(var.dtype)}}* dev_array_{{ N }};
 extern int _num_dev_array_{{ N }};
 {% endfor %}
@@ -1204,8 +1152,8 @@ void _dealloc_arrays();
 
 {% macro h_storage_file() %}
 #include "objects.h"
+#include <vector>
 #include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
 
 #ifndef _BRIAN_OBJECTS_STORAGE_H
 #define _BRIAN_OBJECTS_STORAGE_H
@@ -1214,7 +1162,6 @@ namespace brian {
 
 //////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-extern thrust::host_vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
 {% endfor %}
 {% for varname in subgroups_with_spikemonitor %}
@@ -1223,7 +1170,7 @@ extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
 
 //////////////// eventspaces ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
-extern thrust::host_vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
+extern std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 {% endfor %}
 
 //////////////// dynamic arrays 2d /////////
@@ -1247,6 +1194,14 @@ namespace brian {
 
 void sync_all_dev_ptrs();
 
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+{% set N = array_basename(varname) %}
+void resize_dev_array_{{ N }}(size_t n);
+void copy_host_to_dev_array_{{ N }}();
+void copy_dev_to_host_array_{{ N }}();
+void clear_dev_array_{{ N }}();
+{% endfor %}
+
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
@@ -1256,15 +1211,6 @@ size_t unique_by_key_int_int(int* keys, int* values, size_t n);
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
 {% for varname in subgroups_with_spikemonitor %}
 void resize_subgroup_eventspace_{{varname}}(size_t n);
-{% endfor %}
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = array_basename(varname) %}
-void resize_host_array_{{ N }}(size_t n);
-void push_back_host_array_{{ N }}({{c_data_type(var.dtype)}} v);
-void resize_dev_array_{{ N }}(size_t n);
-void clear_dev_array_{{ N }}();
-void copy_dev_to_host_array_{{ N }}();
-void copy_host_to_dev_array_{{ N }}();
 {% endfor %}
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void clear_monitor_addresses_{{ varname }}();
