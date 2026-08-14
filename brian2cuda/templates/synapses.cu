@@ -284,7 +284,7 @@ if ({{pathway.name}}_max_size > 0)
         if (defaultclock.timestep[0] >= {{pathway.name}}_delay)
         {
             cudaMemcpy(&num_spiking_neurons,
-                    &dev{{_eventspace}}[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
+                    &dev{{_eventspace}}_view[{{pathway.name}}_eventspace_idx][_num_{{_eventspace}} - 1],
                     sizeof(int32_t), cudaMemcpyDeviceToHost);
             num_blocks = num_parallel_blocks * num_spiking_neurons;
             //TODO collect info abt mean, std of num spiking neurons per time
@@ -303,7 +303,7 @@ if ({{pathway.name}}_max_size > 0)
                 {% if bundle_mode %}
                 num_threads_per_bundle,
                 {% endif %}
-                dev{{_eventspace}}[{{pathway.name}}_eventspace_idx],
+                dev{{_eventspace}}_view[{{pathway.name}}_eventspace_idx],
                 {% if uses_atomics or synaptic_effects == "synapse" %}
                 num_spiking_neurons,
                 {% else %}
@@ -325,7 +325,7 @@ if ({{pathway.name}}_max_size > 0)
 void _debugmsg_{{codeobj_name}}()
 {
     using namespace brian;
-    std::cout << "Number of synapses: " << {{constant_or_scalar('N', variables['N'])}} << endl;
+    printf("Number of synapses: %d\n", {{constant_or_scalar('N', variables['N'])}});
 }
 {% endblock %}
 
