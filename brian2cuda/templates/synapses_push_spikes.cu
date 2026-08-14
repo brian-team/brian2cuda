@@ -247,7 +247,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
      * STRUCTURE: the first array dimensions structure (`by_pre`, `by_bundle` or none)
      *   `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`,
      *             which is the number of (preID, postBlock) pairs.
-     *   `by_bundle`: thrust::host_vector, size of total number of bundles,
+     *   `by_bundle`: std::vector, size of total number of bundles,
      *                which is one for each delay in each (preID, postBlock) pair.
      *                Different (preID, postBlock) pairs can have different sets
      *                of delay values -> each bundle gets a global bundleID
@@ -317,7 +317,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
 
     //fill vectors of connectivity matrix with synapse IDs and delays (in units of simulation time step)
-    int max_delay = (int)(host_array_{{ array_basename(_dynamic_delay) }}[0] / dt + 0.5);
+    int max_delay = (int)({{_dynamic_delay}}[0] / dt + 0.5);
     {% if not no_or_const_delay_mode %}
     int min_delay = max_delay;
     {% endif %}
@@ -370,11 +370,11 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         // be NOT equal to the idx in their NeuronGroup
         {% set source_ids = get_array_name(owner.synapse_sources, access_data=False) %}
         {% set target_ids = get_array_name(owner.synapse_targets, access_data=False) %}
-        int32_t pre_neuron_id = host_array_{{ array_basename(source_ids) }}[syn_id] - {{source_offset}};
-        int32_t post_neuron_id = host_array_{{ array_basename(target_ids) }}[syn_id] - {{target_offset}};
+        int32_t pre_neuron_id = {{source_ids}}[syn_id] - {{source_offset}};
+        int32_t post_neuron_id = {{target_ids}}[syn_id] - {{target_offset}};
 
         {% if not no_or_const_delay_mode %}
-        int delay = (int)(host_array_{{ array_basename(_dynamic_delay) }}[syn_id] / dt + 0.5);
+        int delay = (int)({{_dynamic_delay}}[syn_id] / dt + 0.5);
         if (delay > max_delay)
             max_delay = delay;
         if (delay < min_delay)
