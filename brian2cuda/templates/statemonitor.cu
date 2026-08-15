@@ -32,12 +32,8 @@ for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 // recorded indices).
 const int _N = _num_indices;
 
-// We are using an extra variable because HOST_CONSTANTS uses the device vector, which
-// is not used (TODO: Fix this in HOST_CONSTANTS instead of this hack here...)
-const int _numt_host = _num_host_array_{{ owner.name }}_t;
-
-// We push t only on host and don't make a device->host copy in write_arrays()
-push_back_host_array_{{ owner.name }}_t({{ owner.clock.name }}.t[0]);
+const int _numt_host = _dynamic_array_{{ owner.name }}_t.size();
+_dynamic_array_{{ owner.name }}_t.push_back({{ owner.clock.name }}.t[0]);
 
 // Update size variables for Python side indexing to work
 _array_{{owner.name}}_N[0] += 1;
