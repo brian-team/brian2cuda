@@ -33,7 +33,12 @@ from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
 
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
-from brian2cuda.utils.logger import report_issue_message
+from brian2cuda.utils.logger import (
+    report_issue_message,
+    nvcc_log_flags,
+    update_log_flags_stamp,
+    reemit_cuda_log,
+)
 
 from .codeobject import (
     CUDAStandaloneCodeObject,
@@ -90,6 +95,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # store the ID of the used GPU and it's compute capability
         self.gpu_id = None
         self.compute_capability = None
+        self._b2c_log_flags_changed = False
         # list of pre/post ID and delay arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
@@ -1118,6 +1124,30 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif file.lower().endswith('.h'):
                 writer.header_files.add('brianlib/'+file)
 
+    def run(self, directory=None, results_directory=None, with_output=True,
+            run_args=None):
+        try:
+            super().run(
+                directory=directory,
+                results_directory=results_directory,
+                with_output=with_output,
+                run_args=run_args,
+            )
+        finally:
+            reemit_cuda_log(self.results_dir)
+
+    def delete(self, code=True, data=True, run_args=True, directory=True, force=False):
+        if data and self.results_dir is not None:
+            cuda_log = os.path.join(self.results_dir, 'cuda_log.txt')
+            if os.path.isfile(cuda_log):
+                try:
+                    os.remove(cuda_log)
+                except (IOError, OSError) as ex:
+                    logger.warn(f"Cannot delete '{cuda_log}': {ex}")
+        super().delete(
+            code=code, data=data, run_args=run_args, directory=directory, force=force
+        )
+
     def generate_network_source(self, writer):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
@@ -1235,6 +1265,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         else:
             compiler_debug_flags = ''
             linker_debug_flags = ''
+
+        nvcc_compiler_flags.extend(nvcc_log_flags())
+        self._b2c_log_flags_changed = update_log_flags_stamp(self.project_dir)
 
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
@@ -1577,7 +1610,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
-            self.compile_source(directory, cpp_compiler, debug, clean)
+            force_clean = clean or self._b2c_log_flags_changed
+            if force_clean and not clean:
+                logger.info("CUDA log level flags changed; forcing make clean.")
+            self.compile_source(directory, cpp_compiler, debug, force_clean)
             if run:
                 self.run(
                     directory=directory,
