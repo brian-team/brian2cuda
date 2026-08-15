@@ -3,6 +3,7 @@
 
 #include <curand.h>
 #include "brianlib/cuda_utils.h"
+#include "brianlib/logging.h"
 
 // adapted from NVIDIA cuda samples, shipped with cuda 10.1 (common/inc/helper_cuda.h)
 // cuRAND API errors
@@ -56,7 +57,7 @@ inline void _cudaSafeCall(curandStatus_t err, const char *file, const int line, 
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (CURAND_STATUS_SUCCESS != err)
     {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
+        B2C_LOG_ERROR("%s failed at %s:%i : %s",
                 call, file, line, _curandGetErrorEnum(err));
         exit(-1);
     }
