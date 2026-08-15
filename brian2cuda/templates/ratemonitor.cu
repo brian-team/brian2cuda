@@ -16,11 +16,13 @@ static int start_offset = current_iteration;
 {% endblock %}
 
 {% block prepare_kernel_inner %}
+{% set Nt = array_basename(_dynamic_t) %}
+{% set Nr = array_basename(_dynamic_rate) %}
 int num_iterations = {{owner.clock.name}}.i_end;
-int size_till_now = _num_dev_array_{{ array_basename(_dynamic_t) }};
+int size_till_now = _num_dev_array_{{ Nt }};
 int new_size = num_iterations + size_till_now - start_offset;
-resize_dev_array_{{ array_basename(_dynamic_t) }}(new_size);
-resize_dev_array_{{ array_basename(_dynamic_rate) }}(new_size);
+resize_dev_array_{{ Nt }}(new_size);
+resize_dev_array_{{ Nr }}(new_size);
 // Update size variables for Python side indexing to work
 // (Note: Need to update device variable which will be copied to host in write_arrays())
 _array_{{owner.name}}_N[0] = new_size;
@@ -34,10 +36,12 @@ num_blocks = 1;
 {% endblock %}
 
 {% block kernel_call %}
+{% set Nt = array_basename(_dynamic_t) %}
+{% set Nr = array_basename(_dynamic_rate) %}
 _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
-    dev_array_{{ array_basename(_dynamic_rate) }},
-    dev_array_{{ array_basename(_dynamic_t) }},
+    dev_array_{{ Nr }},
+    dev_array_{{ Nt }},
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 
