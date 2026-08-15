@@ -74,17 +74,16 @@ _N = _num_events;
 {# If we don't record variables, we don't need to resize the monitor vectors #}
 {% if record_variables %}
 {# Get any item to read the size (we need to resize before HOST_CONSTANTS
-   because the pointers underlying the device vectors change when resizing
-   leads to memory reallocation) #}
+   because the pointers change when resizing leads to reallocation) #}
 {% set var = record_variables.values() | first %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
-// Get current size of device vectors
-int _monitor_size = _num_dev_array_{{ array_basename(dyn_name) }};
+{% set N0 = array_basename(dyn_name) %}
+int _monitor_size = _num_dev_array_{{ N0 }};
 
-// Increase device vectors based on number of events
 {% for varname, var in record_variables.items() %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
-resize_dev_array_{{ array_basename(dyn_name) }}(_monitor_size + _N);
+{% set N = array_basename(dyn_name) %}
+resize_dev_array_{{ N }}(_monitor_size + _N);
 {% endfor %}
 {% endif %}{# not record_variables #}
 
@@ -103,7 +102,8 @@ if (_N > 0)
             _eventspace,
             {% for varname, var in record_variables.items() %}
             {% set dyn_name = get_array_name(var, access_data=False) %}
-            dev_array_{{ array_basename(dyn_name) }},
+            {% set N = array_basename(dyn_name) %}
+            dev_array_{{ N }},
             {% endfor %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
