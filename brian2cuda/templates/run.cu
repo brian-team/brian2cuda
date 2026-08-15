@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
+#include "objects_api.h"
 #include "network.h"
 #include "rand.h"
 #include<ctime>
@@ -18,6 +19,7 @@ void brian_start()
 {
     _init_arrays();
     _load_arrays();
+    brian::sync_all_dev_ptrs();
     srand(time(NULL));
 
     // Initialize clocks (link timestep and dt to the respective arrays)
