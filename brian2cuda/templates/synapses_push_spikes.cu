@@ -43,6 +43,7 @@
 #include <climits>
 #include <cmath>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -191,8 +192,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         return;
     }
     else if (syn_N_check > INT_MAX){
-        printf("ERROR: There are more Synapses (%lu) than an int can "
-               "hold on this system (%u).\n", syn_N_check, INT_MAX);
+        B2C_LOG_ERROR("There are more Synapses (%lu) than an int can "
+               "hold on this system (%u).", syn_N_check, INT_MAX);
     }
     // total number of synapses
     int syn_N = (int)syn_N_check;
@@ -567,7 +568,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         sum_num_elements += num_elements;
         updateMeanStd(count_num_elements, mean_num_elements, M2_num_elements, num_elements);
     }  // end for loop through connectivity matrix
-    printf("INFO connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u\n",
+    B2C_LOG_DEBUG("connectivity matrix has size %i, number of (pre neuron ID, post neuron block) pairs is %u",
             size_connectivity_matrix, num_pre_post_blocks);
 
     {# If we have don't have heterogeneous delays, we just need to copy the
@@ -787,8 +788,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     double std_num_unique_elements = getStd(count_num_unique_elements, M2_num_unique_elements);
     {% endif %}{# not no_or_const_delay_mode #}
 
-    // print memory information
-    printf("INFO: synapse statistics and memory usage for {{owner.name}}:\n"
+#if B2C_LOG_LEVEL <= B2C_LOG_LEVEL_DEBUG
+    B2C_LOG_DEBUG("synapse statistics and memory usage for {{owner.name}}:\n"
         "\tnumber of synapses: %d\n"
     {% if not no_or_const_delay_mode and bundle_mode %}
         "\tnumber of bundles: %d\n"
@@ -804,7 +805,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         "\t\tmean: %.1f\tstd: %.1f\n"
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
-        "\n\tmemory usage: TOTAL: %.1f MB (~%.1f byte per synapse)\n",
+        "\n\tmemory usage: TOTAL: %.1f MB (~%.1f byte per synapse)",
         syn_N,
     {% if not no_or_const_delay_mode and bundle_mode %}
         num_bundle_ids,
@@ -827,9 +828,10 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         std::tie(name, bytes, num_elements) = tuple;
         double memory = bytes * to_MB;
         double fraction = memory / total_memory_MB * 100;
-        printf("\t\t%.1f%%\t%.3f MB\t%s [%d]\n",
+        B2C_LOG_DEBUG("\t\t%.1f%%\t%.3f MB\t%s [%d]",
                fraction, memory, name.c_str(), num_elements);
     }
+#endif
 
 
     // Create circular eventspaces in no_or_const_delay_mode
@@ -855,28 +857,27 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     {
         // use the max num_threads before launch failure
         num_threads = funcAttrib.maxThreadsPerBlock;
-        printf("WARNING Not enough ressources available to call "
+        B2C_LOG_WARN("Not enough ressources available to call "
                "_before_run_kernel_{{codeobj_name}}"
                "with maximum possible threads per block (%u). "
                "Reducing num_threads to %u. (Kernel needs %i "
                "registers per block, %i bytes of "
                "statically-allocated shared memory per block, %i "
                "bytes of local memory per thread and a total of %i "
-               "bytes of user-allocated constant memory)\n",
+               "bytes of user-allocated constant memory)",
                max_threads_per_block, num_threads, funcAttrib.numRegs,
                funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                funcAttrib.constSizeBytes);
     }
     else
     {
-        printf("INFO _before_run_kernel_{{codeobj_name}}\n"
+        B2C_LOG_DEBUG("_before_run_kernel_{{codeobj_name}}\n"
                "\t%u blocks\n"
                "\t%u threads\n"
                "\t%i registers per thread\n"
                "\t%i bytes statically-allocated shared memory per block\n"
                "\t%i bytes local memory per thread\n"
-               "\t%i bytes user-allocated constant memory\n"
-               "",
+               "\t%i bytes user-allocated constant memory",
                num_blocks, num_threads, funcAttrib.numRegs,
                funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                funcAttrib.constSizeBytes);
@@ -930,7 +931,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     cudaError_t status = cudaGetLastError();
     if (status != cudaSuccess)
     {
-        printf("ERROR initialising {{owner.name}} in %s:%d %s\n",
+        B2C_LOG_ERROR("initialising {{owner.name}} in %s:%d %s",
                 __FILE__, __LINE__, cudaGetErrorString(status));
         _dealloc_arrays();
         exit(status);
@@ -939,16 +940,21 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     CUDA_CHECK_MEMORY();
     double time_passed = std::chrono::duration<double>(
             std::chrono::high_resolution_clock::now() - start_timer).count();
-    printf("INFO: {{owner.name}} initialisation took %.6fs", time_passed);
-    if (used_device_memory_after_dealloc < used_device_memory_start){
-        size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
-        printf(", freed %.1fMB", freed_bytes * to_MB);
+#if B2C_LOG_LEVEL <= B2C_LOG_LEVEL_DEBUG
+    {
+        std::ostringstream _b2c_msg;
+        _b2c_msg << "{{owner.name}} initialisation took " << time_passed << "s";
+        if (used_device_memory_after_dealloc < used_device_memory_start) {
+            size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
+            _b2c_msg << ", freed " << (freed_bytes * to_MB) << "MB";
+        }
+        if (used_device_memory > used_device_memory_start) {
+            size_t used_bytes = used_device_memory - used_device_memory_start;
+            _b2c_msg << " and used " << (used_bytes * to_MB) << "MB of device memory.";
+        }
+        B2C_LOG_DEBUG("%s", _b2c_msg.str().c_str());
     }
-    if (used_device_memory > used_device_memory_start){
-        size_t used_bytes = used_device_memory - used_device_memory_start;
-        printf(" and used %.1fMB of device memory.", used_bytes * to_MB);
-    }
-    printf("\n");
+#endif
 
     first_run = false;
 {% endblock before_run_host_maincode %}
