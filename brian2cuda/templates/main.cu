@@ -56,11 +56,10 @@ int main(int argc, char **argv)
     if (args.size() >=2 && args[0] == "--results_dir")
     {
         brian::results_dir = args[1];
-        #ifdef DEBUG
-        std::cout << "Setting results dir to '" << brian::results_dir << "'" << std::endl;
-        #endif
+        B2C_LOG_DEBUG("Setting results dir to '%s'", brian::results_dir.c_str());
         args.erase(args.begin(), args.begin()+2);
     }
+    brian::b2c_log_open(brian::results_dir.c_str());
     {{'\n'.join(code_lines['before_start'])|autoindent}}
 
     // seed variable set in Python through brian2.seed() calls can use this
@@ -100,6 +99,8 @@ int main(int argc, char **argv)
     {{'\n'.join(code_lines['before_end'])|autoindent}}
     brian_end();
     {{'\n'.join(code_lines['after_end'])|autoindent}}
+
+    brian::b2c_log_close();
 
     return 0;
 }
