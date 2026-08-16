@@ -81,19 +81,19 @@ namespace {
     // functions works. Hacky, hacky ...
     randomNumber_t _host_rand(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_rand` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
     randomNumber_t _host_randn(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_randn` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
     int32_t _host_poisson(double _lambda, const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_poisson` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_poisson` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
@@ -248,14 +248,14 @@ void _run_{{codeobj_name}}()
         {
             // use the max num_threads before launch failure
             num_threads = funcAttrib.maxThreadsPerBlock;
-            printf("WARNING Not enough ressources available to call "
+            B2C_LOG_WARN("Not enough ressources available to call "
                    "_run_kernel_{{codeobj_name}} "
                    "with maximum possible threads per block (%u). "
                    "Reducing num_threads to %u. (Kernel needs %i "
                    "registers per block, %i bytes of "
                    "statically-allocated shared memory per block, %i "
                    "bytes of local memory per thread and a total of %i "
-                   "bytes of user-allocated constant memory)\n",
+                   "bytes of user-allocated constant memory)",
                    max_threads_per_block, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes);
@@ -278,7 +278,7 @@ void _run_{{codeobj_name}}()
         {% block kernel_info %}
         else
         {
-            printf("INFO _run_kernel_{{codeobj_name}}\n"
+            B2C_LOG_DEBUG("_run_kernel_{{codeobj_name}}\n"
                    {% block kernel_info_num_blocks_str %}
                    "\t%u blocks\n"
                    {% endblock %}
@@ -286,9 +286,9 @@ void _run_{{codeobj_name}}()
                    "\t%i registers per thread\n"
                    "\t%i bytes statically-allocated shared memory per block\n"
                    "\t%i bytes local memory per thread\n"
-                   "\t%i bytes user-allocated constant memory\n"
+                   "\t%i bytes user-allocated constant memory"
                    {% if calc_occupancy %}
-                   "\t%.3f theoretical occupancy\n",
+                   "\n\t%.3f theoretical occupancy",
                    {% else %}
                    "",
                    {% endif %}

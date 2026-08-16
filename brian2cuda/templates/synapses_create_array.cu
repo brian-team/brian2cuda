@@ -39,10 +39,12 @@ CUDA_CHECK_MEMORY();
 const double to_MB = 1.0 / (1024.0 * 1024.0);
 double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
 double time_passed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_timer).count();
-std::cout << "INFO: {{owner.name}} creation took " <<  time_passed << "s";
+
 if (tot_memory_MB > 0)
-    std::cout << " and used " << tot_memory_MB << "MB of device memory.";
-std::cout << std::endl;
+    B2C_LOG_DEBUG("{{owner.name}} creation took %g s and used %g MB of device memory.",
+                  time_passed, tot_memory_MB);
+else
+    B2C_LOG_DEBUG("{{owner.name}} creation took %g s", time_passed);
 {% endblock %}
 
 {% block host_maincode %}
