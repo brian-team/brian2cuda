@@ -8,7 +8,7 @@
 #include "brianlib/cuda_utils.h"
 #include "brianlib/device_buffer.h"
 #include "rand.h"
-#include <iostream>
+#include <sstream>
 #include <fstream>
 #include <chrono>
 #include <ctime>

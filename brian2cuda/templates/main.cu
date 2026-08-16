@@ -40,6 +40,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endfor %}
 
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <string>
 #include "cuda_profiler_api.h"
@@ -49,38 +50,39 @@ static std::string results_dir = "results/";  // can be overwritten by --results
 {{report_func|autoindent}}
 
 void set_variable_from_value(std::string varname, char* var_pointer, size_t size, char value) {
-    #ifdef DEBUG
-    std::cout << "Setting '" << varname << "' to " << (value == 1 ? "True" : "False") << std::endl;
-    #endif
+    B2C_LOG_DEBUG("Setting '%s' to %s", varname.c_str(), (value == 1 ? "True" : "False"));
     std::fill(var_pointer, var_pointer+size, value);
 }
 
 template<class T> void set_variable_from_value(std::string varname, T* var_pointer, size_t size, T value) {
-    #ifdef DEBUG
-    std::cout << "Setting '" << varname << "' to " << value << std::endl;
-    #endif
+#if B2C_LOG_LEVEL <= B2C_LOG_LEVEL_DEBUG
+    {
+        std::ostringstream _b2c_msg;
+        _b2c_msg << "Setting '" << varname << "' to " << value;
+        B2C_LOG_DEBUG("%s", _b2c_msg.str().c_str());
+    }
+#endif
     std::fill(var_pointer, var_pointer+size, value);
 }
 
 template<class T> void set_variable_from_file(std::string varname, T* var_pointer, size_t data_size, std::string filename) {
     std::ifstream f;
     std::streampos size;
-    #ifdef DEBUG
-    std::cout << "Setting '" << varname << "' from file '" << filename << "'" << std::endl;
-    #endif
+    B2C_LOG_DEBUG("Setting '%s' from file '%s'", varname.c_str(), filename.c_str());
     f.open(filename, std::ios::in | std::ios::binary | std::ios::ate);
     size = f.tellg();
     if (size != data_size) {
-        std::cerr << "Error reading '" << filename << "': file size " << size << " does not match expected size " << data_size << std::endl;
+        B2C_LOG_ERROR("Error reading '%s': file size %ld does not match expected size %ld",
+                      filename.c_str(), (long)size, (long)data_size);
         return;
     }
     f.seekg(0, std::ios::beg);
     if (f.is_open())
         f.read(reinterpret_cast<char *>(var_pointer), data_size);
     else
-        std::cerr << "Could not read '" << filename << "'" << std::endl;
+        B2C_LOG_ERROR("Could not read '%s'", filename.c_str());
     if (f.fail())
-        std::cerr << "Error reading '" << filename << "'" << std::endl;
+        B2C_LOG_ERROR("Error reading '%s'", filename.c_str());
 }
 
 //////////////// set arrays by name ///////
@@ -171,7 +173,7 @@ void set_variable_by_name(std::string name, std::string s_value) {
         return;
     }
     {% endfor %}
-    std::cerr << "Cannot set unknown variable '" << name << "'." << std::endl;
+    B2C_LOG_ERROR("Cannot set unknown variable '%s'.", name.c_str());
     exit(1);
 }
 
@@ -345,10 +347,11 @@ void _init_arrays()
     const double to_MB = 1.0 / (1024.0 * 1024.0);
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
     double time_passed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_timer).count();
-    std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
-        std::cout << " and used " << tot_memory_MB << "MB of device memory.";
-    std::cout << std::endl;
+        B2C_LOG_DEBUG("_init_arrays() took %g s and used %g MB of device memory.",
+                      time_passed, tot_memory_MB);
+    else
+        B2C_LOG_DEBUG("_init_arrays() took %g s", time_passed);
 }
 
 void _load_arrays()
@@ -367,7 +370,7 @@ void _load_arrays()
         {% endif %}
     } else
     {
-        std::cout << "Error opening static array {{name}}." << std::endl;
+        B2C_LOG_ERROR("Error opening static array {{name}}.");
     }
     {% if not (name in dynamic_array_specs.values()) %}
     CUDA_SAFE_CALL(
@@ -404,7 +407,7 @@ void _write_arrays()
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << std::endl;
+        B2C_LOG_ERROR("Error writing output file for {{varname}}.");
     }
     {% endif %}
     {% endfor %}
@@ -423,7 +426,7 @@ void _write_arrays()
         outfile_{{varname}}.close();
     } else
     {
-        std::cout << "Error writing output file for {{varname}}." << std::endl;
+        B2C_LOG_ERROR("Error writing output file for {{varname}}.");
     }
     {% endfor %}
 
@@ -461,7 +464,7 @@ void _write_arrays()
             outfile_{{varname}}.close();
         } else
         {
-            std::cout << "Error writing output file for {{varname}}." << std::endl;
+            B2C_LOG_ERROR("Error writing output file for {{varname}}.");
         }
     {% endfor %}
 
@@ -489,7 +492,7 @@ void _write_arrays()
     outfile_profiling_info.close();
     } else
     {
-        std::cout << "Error writing profiling info to file." << std::endl;
+        B2C_LOG_ERROR("Error writing profiling info to file.");
     }
     {% endif %}
     // Write last run info to disk
@@ -501,7 +504,7 @@ void _write_arrays()
         outfile_last_run_info.close();
     } else
     {
-        std::cout << "Error writing last run info to file." << std::endl;
+        B2C_LOG_ERROR("Error writing last run info to file.");
     }
 }
 
@@ -588,11 +591,10 @@ int main(int argc, char **argv)
     if (args.size() >=2 && args[0] == "--results_dir")
     {
         results_dir = args[1];
-        #ifdef DEBUG
-        std::cout << "Setting results dir to '" << results_dir << "'" << std::endl;
-        #endif
+        B2C_LOG_DEBUG("Setting results dir to '%s'", results_dir.c_str());
         args.erase(args.begin(), args.begin()+2);
     }
+    brian::b2c_log_open(results_dir.c_str());
     {{'\n'.join(code_lines['before_start'])|autoindent}}
 
     // seed variable set in Python through brian2.seed() calls can use this
@@ -632,6 +634,8 @@ int main(int argc, char **argv)
     {{'\n'.join(code_lines['before_end'])|autoindent}}
     brian_end();
     {{'\n'.join(code_lines['after_end'])|autoindent}}
+
+    brian::b2c_log_close();
 
     return 0;
 }
