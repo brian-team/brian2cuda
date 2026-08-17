@@ -2,10 +2,6 @@
 {# ALLOWS_SCALAR_WRITE #}
 {% extends 'common_group.cu' %}
 
-{% block extra_headers %}
-#include "objects_api.h"
-{% endblock %}
-
 {% block kernel_maincode %}
     ///// block kernel_maincode /////
 

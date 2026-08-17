@@ -2,10 +2,6 @@
 {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
 {% extends 'common_group.cu' %}
 
-{% block extra_headers %}
-#include "objects_api.h"
-{% endblock %}
-
 {% block define_N %}
 {% endblock %}
 

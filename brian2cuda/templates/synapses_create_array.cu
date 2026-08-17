@@ -2,7 +2,6 @@
 
 {% block extra_headers %}
 {{ super() }}
-#include "objects_api.h"
 #include <iostream>
 #include<map>
 {% endblock %}
