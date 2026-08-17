@@ -36,7 +36,6 @@
  #}
 {% block before_run_headers %}
 {{ super() }}
-#include "objects_api.h"
 #include "synapses_classes.h"
 #include "brianlib/spikequeue.h"
 #include <algorithm>

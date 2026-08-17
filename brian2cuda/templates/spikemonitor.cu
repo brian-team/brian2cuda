@@ -4,7 +4,6 @@
 
 
 {% block extra_headers %}
-#include "objects_api.h"
 #include <cassert>
 {% endblock %}
 
@@ -132,7 +131,7 @@ _array_{{owner.name}}_N[0] += _N;
 
 {% block kernel_maincode %}
 {# We pass as _eventspace the filtered eventspace, such that all neuron IDs are
-   within the subgroup (if this is one). Filtering is done via objects_api. #}
+   within the subgroup (if this is one). Filtering is done by filter_subgroup_eventspace. #}
 
 // Eventspace is filled from left with all neuron IDs that triggered an event, rest -1
 int32_t spiking_neuron = _eventspace[_idx];

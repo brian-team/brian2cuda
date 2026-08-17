@@ -9,7 +9,6 @@
 
 {% block extra_headers %}
 {{ super() }}
-#include "objects_api.h"
 #include<iostream>
 #include<brianlib/curand_buffer.h>
 #include "brianlib/cuda_utils.h"

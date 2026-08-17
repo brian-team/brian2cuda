@@ -2,7 +2,6 @@
 #include<stdlib.h>
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
-#include "objects_api.h"
 #include "network.h"
 #include "rand.h"
 #include<ctime>
