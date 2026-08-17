@@ -3,7 +3,8 @@ Brian2CUDA
 
 Brian2CUDA is an extension of the spiking neural network simulator
 [Brian2](https://github.com/brian-team/brian2), written in Python. It
-generates C++/CUDA code to run simulations on NVIDIA GPUs.
+generates C++/CUDA code to run simulations on NVIDIA GPUs, and on AMD
+GPUs through ROCm/HIP.
 
 For **support**, please use the [Brian forum](https://brian.discourse.group/). If
 you think you found a bug in Brian2CUDA, please report it at the
@@ -24,6 +25,8 @@ python -m pip install brian2cuda
 ```
 
 This will install a compatible version of Brian2 as dependency. For installation requirements and GPU configuration, check out the [Brian2CUDA documentation](https://brian2cuda.readthedocs.io/en/latest/index.html).
+
+On AMD GPUs, Brian2CUDA builds through ROCm/HIP: a ROCm installation is required instead of the CUDA toolkit, and the HIP backend is auto-detected when ROCm is present and CUDA is not (or set the `USE_HIP` environment variable).
 
 ### Usage
 Use your Brian2 code (see [Brian2 documentation](http://brian2.readthedocs.io/en/stable/index.html)) and modify the imports to:

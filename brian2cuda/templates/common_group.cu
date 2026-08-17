@@ -3,6 +3,8 @@
 {### BEFORE RUN ###}
 {% macro before_run_cu_file() %}
 {% block before_run_headers %}
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
@@ -44,6 +46,8 @@ void _before_run_{{codeobj_name}}();
 
 {### RUN ###}
 {% macro cu_file() %}
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"

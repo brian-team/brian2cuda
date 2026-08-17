@@ -14,6 +14,9 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
+
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
@@ -29,8 +32,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include <curand.h>
-#include <curand_kernel.h>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -730,6 +731,8 @@ void _dealloc_arrays()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 {% macro h_file() %}
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include <ctime>
 // typedefs need to be outside the include guards to
 // be visible to all files including objects.h
@@ -748,8 +751,6 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <chrono>
-#include <curand.h>
-#include <curand_kernel.h>
 
 namespace brian {
 

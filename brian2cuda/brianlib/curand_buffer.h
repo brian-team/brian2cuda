@@ -2,8 +2,7 @@
 #define _CURAND_BUFFER_H
 
 #include <stdio.h>
-#include <curand.h>
-#include <cuda.h>
+#include "cuda_to_hip.h"
 
 
 // XXX: for some documentation on random number generation, check out our wiki:

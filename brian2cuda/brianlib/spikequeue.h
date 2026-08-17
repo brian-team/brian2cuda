@@ -22,6 +22,36 @@ private:
     // critical path coding, taken from
     // https://stackoverflow.com/questions/18963293/cuda-atomics-change-flag/18968893#18968893
     volatile int* semaphore;  // controll data access when reallocating
+
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+    // Wave-serialized lock for AMD GPUs (wave64).
+    // CDNA GPUs lack Independent Thread Scheduling, so multiple lanes of the
+    // same wavefront contending for a spin-lock can deadlock. This function
+    // must only be called by a single thread per block (tid==0 in the callers)
+    // to avoid intra-wavefront contention. The serialization below ensures
+    // that even if multiple lanes were to call this, only one proceeds at a
+    // time (defense-in-depth for the wave64 SIMT model).
+    __device__ void acquire_semaphore(volatile int *lock){
+        int lane = __lane_id();
+        unsigned long long active = __ballot(1);
+        while (active) {
+            int leader = __ffsll((long long)active) - 1;
+            if (lane == leader) {
+                while (atomicCAS((int *)lock, 0, 1) != 0) {}
+                __threadfence();
+            }
+            // Remove this lane from the active set; only one lane should be
+            // active (tid==0), so this loop executes once.
+            active &= ~(1ULL << leader);
+        }
+    }
+
+    __device__ void release_semaphore(volatile int *lock){
+        __threadfence();
+        atomicExch((int *)lock, 0);
+        __threadfence();
+    }
+#else
     __device__ void acquire_semaphore(volatile int *lock){
         while (atomicCAS((int *)lock, 0, 1) != 0);
     }
@@ -30,6 +60,7 @@ private:
         *lock = 0;
         __threadfence();
     }
+#endif
 
 public:
     //these vectors should ALWAYS be the same size, since each index refers to a triple of (pre_id, syn_id, post_id)

@@ -1,14 +1,14 @@
 {% macro cu_file() %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "objects.h"
 #include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/cuda_utils.h"
 #include "network.h"
-#include <curand.h>
 #include <ctime>
-#include <curand_kernel.h>
 
 // XXX: for some documentation on random number generation, check out our wiki:
 //      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
@@ -470,7 +470,8 @@ void RandomNumberBuffer::next_time_step()
 #ifndef _BRIAN_RAND_H
 #define _BRIAN_RAND_H
 
-#include <curand.h>
+// CUDA/HIP compat header (provides curand -> hiprand mapping)
+#include "brianlib/cuda_to_hip.h"
 
 void _run_random_number_buffer();
 

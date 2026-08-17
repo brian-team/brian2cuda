@@ -1,3 +1,5 @@
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include <stdlib.h>
 #include "objects.h"
 #include <csignal>
@@ -22,7 +24,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#if !defined(__HIP_PLATFORM_AMD__) && !defined(USE_HIP)
 #include "cuda_profiler_api.h"
+#endif
 
 {{report_func|autoindent}}
 
