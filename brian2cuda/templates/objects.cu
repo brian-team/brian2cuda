@@ -15,9 +15,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {%- endmacro %}
 
 #define BRIAN2CUDA_CURAND_HOST
-#include "objects_storage.h"
 #include "objects.h"
-#include "objects_api.h"
 #include "network.h"
 {% if synapses %}
 #include "synapses_classes.h"
@@ -32,6 +30,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <vector>
 #include <thrust/copy.h>
 #include <thrust/count.h>
+#include <thrust/device_vector.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
 #include <thrust/unique.h>
@@ -198,7 +197,6 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 {{c_data_type(var.dtype)}} * brian::{{varname}};
 const int brian::_num_{{varname}} = {{var.size}};
-std::vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
 int brian::current_idx{{varname}} = 0;
 {% if varname in spikegenerator_eventspaces %}
 int brian::previous_idx{{varname}};
@@ -209,19 +207,8 @@ int brian::previous_idx{{varname}};
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = array_basename(varname) %}
 std::vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
-thrust::device_vector<{{c_data_type(var.dtype)}}> brian::dev{{varname}};
 {{c_data_type(var.dtype)}}* brian::dev_array_{{ N }} = nullptr;
 int brian::_num_dev_array_{{ N }} = 0;
-{% endfor %}
-{# Dynamic vectors for subgroup eventspaces for spikemonitors on subgroups #}
-{% for varname in subgroups_with_spikemonitor %}
-thrust::device_vector<int32_t> brian::_dev_{{varname}}_eventspace;
-{% endfor %}
-
-//////////////// dynamic arrays 2d /////////
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-thrust::device_vector<{{c_data_type(var.dtype)}}*> brian::addresses_monitor_{{varname}};
-thrust::device_vector<{{c_data_type(var.dtype)}}>* brian::{{varname}};
 {% endfor %}
 
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
@@ -238,6 +225,21 @@ int brian::_num_subgroup_eventspace_{{varname}} = 0;
 {% endfor %}
 
 namespace brian {
+
+//////////////// device storage ///////////
+{% for var, varname in eventspace_arrays | dictsort(by='value') %}
+std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}}(1);
+{% endfor %}
+{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
+thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
+{% endfor %}
+{% for varname in subgroups_with_spikemonitor %}
+thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
+{% endfor %}
+{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
+thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
+{% endfor %}
 
 namespace {
 
@@ -1138,60 +1140,7 @@ extern int max_threads_per_sm;
 extern int max_shared_mem_size;
 extern int num_threads_per_warp;
 
-}
-
-void _init_arrays();
-void _load_arrays();
-void _write_arrays();
-void _dealloc_arrays();
-
-#endif
-
-
-{% endmacro %}
-
-{% macro h_storage_file() %}
-#include "objects.h"
-#include <vector>
-#include <thrust/device_vector.h>
-
-#ifndef _BRIAN_OBJECTS_STORAGE_H
-#define _BRIAN_OBJECTS_STORAGE_H
-
-namespace brian {
-
-//////////////// dynamic arrays 1d ///////////
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-extern thrust::device_vector<{{c_data_type(var.dtype)}}> dev{{varname}};
-{% endfor %}
-{% for varname in subgroups_with_spikemonitor %}
-extern thrust::device_vector<int32_t> _dev_{{varname}}_eventspace;
-{% endfor %}
-
-//////////////// eventspaces ///////////////
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-extern std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
-{% endfor %}
-
-//////////////// dynamic arrays 2d /////////
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-extern thrust::device_vector<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
-extern thrust::device_vector<{{c_data_type(var.dtype)}}>* {{varname}};
-{% endfor %}
-
-}
-#endif // _BRIAN_OBJECTS_STORAGE_H
-{% endmacro %}
-
-{% macro h_api_file() %}
-#ifndef _BRIAN_OBJECTS_API_H
-#define _BRIAN_OBJECTS_API_H
-
-#include <cstddef>
-#include <cstdint>
-
-namespace brian {
-
+//////////////// host helpers /////////////////
 void sync_all_dev_ptrs();
 
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
@@ -1221,5 +1170,12 @@ void set_monitor_address_{{ varname }}(int row);
 
 }
 
+void _init_arrays();
+void _load_arrays();
+void _write_arrays();
+void _dealloc_arrays();
+
 #endif
+
+
 {% endmacro %}
