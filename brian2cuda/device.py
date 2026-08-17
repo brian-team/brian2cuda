@@ -67,10 +67,6 @@ class CUDAWriter(CPPWriter):
         elif filename.endswith('.*'):
             self.write(filename[:-1]+'cu', contents.cu_file)
             self.write(filename[:-1]+'h', contents.h_file)
-            if hasattr(contents, 'h_storage_file'):
-                self.write(filename[:-2]+'_storage.h', contents.h_storage_file)
-            if hasattr(contents, 'h_api_file'):
-                self.write(filename[:-2]+'_api.h', contents.h_api_file)
             return
         fullfilename = os.path.join(self.project_dir, filename)
         if os.path.exists(fullfilename):
@@ -916,14 +912,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     bare = self.get_array_name(v, access_data=False)
                                     short = array_basename(bare)
                                     if prefix == 'dev':
-                                        pimpl_ptr = f'dev_array_{short}'
+                                        array_ptr = f'dev_array_{short}'
                                     else:
-                                        pimpl_ptr = f'{bare}.data()'
+                                        array_ptr = f'{bare}.data()'
                                     # Avoid `T* const x = x;` when array_name coincides
                                     # with the global pointer name.
-                                    if array_name != pimpl_ptr:
+                                    if array_name != array_ptr:
                                         code_object_defs_lines.append(
-                                            f'{dtype}* const {array_name} = {pimpl_ptr};'
+                                            f'{dtype}* const {array_name} = {array_ptr};'
                                         )
 
                                     # Add host and kernel parameters only for device pointers
