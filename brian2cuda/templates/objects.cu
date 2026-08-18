@@ -28,8 +28,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <ctime>
 #include <algorithm>
 #include <vector>
-#include <thrust/copy.h>
-#include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
@@ -399,40 +397,6 @@ void resize_subgroup_eventspace_{{varname}}(size_t n) {
     sync_subgroup_eventspace_{{varname}}();
 }
 {% endfor %}
-// Namespace-scope: nvcc/CUB reject local classes as thrust predicates.
-struct is_in_subgroup
-{
-    int32_t start;
-    int32_t stop;
-
-    __host__ __device__
-    bool operator()(const int32_t& neuron) const
-    {
-        return start <= neuron && neuron < stop;
-    }
-};
-
-int filter_subgroup_eventspace(
-        int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop) {
-    if (n <= 0) return 0;
-
-    thrust::device_ptr<int32_t> src_ptr(src);
-    thrust::device_ptr<int32_t> dst_ptr(dst);
-    is_in_subgroup pred{start, stop};
-
-    // Count the elements in eventspace that are in the subgroup
-    int out_n = 0;
-    THRUST_CHECK_ERROR(
-        out_n = static_cast<int>(
-            thrust::count_if(src_ptr, src_ptr + n, pred)
-        )
-    );
-    // Copy all neuron IDs that are in this subgroup to the new device pointer
-    THRUST_CHECK_ERROR(
-        thrust::copy_if(src_ptr, src_ptr + n, dst_ptr, pred)
-    );
-    return out_n;
-}
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void clear_monitor_addresses_{{ varname }}() {
     addresses_monitor_{{ varname }}.clear();
