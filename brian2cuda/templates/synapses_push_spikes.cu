@@ -42,6 +42,7 @@
 #include <chrono>
 #include <climits>
 #include <cmath>
+#include <numeric>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -113,6 +114,47 @@ namespace {
                 cudaMemcpyToSymbol(device_symbol, &device_array, sizeof(T*)),
                 file, line, "cudaMemcpyToSymbol");
         memory_recorder.push_back(std::make_tuple(name, bytes, num_elements));
+    }
+
+    void sort_by_key_int_int32(int* keys, int32_t* values, size_t n)
+    {
+        if (n <= 1)
+            return;
+        std::vector<std::pair<int, int32_t> > zipped(n);
+        for (size_t i = 0; i < n; ++i)
+            zipped[i] = std::pair<int, int32_t>(keys[i], values[i]);
+        std::sort(zipped.begin(), zipped.end(),
+                  [](const std::pair<int, int32_t>& a,
+                     const std::pair<int, int32_t>& b) {
+                      return a.first < b.first;
+                  });
+        for (size_t i = 0; i < n; ++i)
+        {
+            keys[i] = zipped[i].first;
+            values[i] = zipped[i].second;
+        }
+    }
+
+    void fill_sequence_int(int* out, size_t n)
+    {
+        std::iota(out, out + n, 0);
+    }
+
+    size_t unique_by_key_int_int(int* keys, int* values, size_t n)
+    {
+        if (n == 0)
+            return 0;
+        size_t out_n = 1;
+        for (size_t i = 1; i < n; ++i)
+        {
+            if (keys[i] != keys[out_n - 1])
+            {
+                keys[out_n] = keys[i];
+                values[out_n] = values[i];
+                ++out_n;
+            }
+        }
+        return out_n;
     }
 }
 

@@ -29,9 +29,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <algorithm>
 #include <vector>
 #include <thrust/device_vector.h>
-#include <thrust/sequence.h>
-#include <thrust/sort.h>
-#include <thrust/unique.h>
 #include <curand.h>
 
 size_t brian::used_device_memory = 0;
@@ -417,20 +414,6 @@ void set_monitor_address_{{ varname }}(int row) {
     sync_monitor_addresses_{{ varname }}();
 }
 {% endfor %}
-void sort_by_key_int_int32(int* keys, int32_t* values, size_t n) {
-    if (n <= 1) {
-        return;
-    }
-    thrust::sort_by_key(keys, keys + n, values);
-}
-void fill_sequence_int(int* out, size_t n) {
-    thrust::sequence(out, out + n);
-}
-size_t unique_by_key_int_int(int* keys, int* values, size_t n) {
-    if (n == 0) return 0;
-    auto out_pair = thrust::unique_by_key(keys, keys + n, values);
-    return static_cast<size_t>(out_pair.first - keys);
-}
 }  // namespace brian
 
 /////////////// static arrays /////////////
@@ -1118,9 +1101,6 @@ void clear_dev_array_{{ N }}();
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
-void sort_by_key_int_int32(int* keys, int32_t* values, size_t n);
-void fill_sequence_int(int* out, size_t n);
-size_t unique_by_key_int_int(int* keys, int* values, size_t n);
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
 {% for varname in subgroups_with_spikemonitor %}
 void resize_subgroup_eventspace_{{varname}}(size_t n);
