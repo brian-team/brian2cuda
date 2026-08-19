@@ -132,7 +132,6 @@ copy_host_to_dev_array_{{ Npost }}();
 {% set Nms = array_basename(dynamic_multisynaptic_idx) %}
 copy_host_to_dev_array_{{ Nms }}();
 {% endif %}
-sync_all_dev_ptrs();
 CUDA_SAFE_CALL(
         cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
             {{get_array_name(variables['N'], access_data=False)}},

@@ -15,7 +15,7 @@ static int start_offset = current_iteration;
 {% set Nt = array_basename(_dynamic_t) %}
 {% set Nr = array_basename(_dynamic_rate) %}
 int num_iterations = {{owner.clock.name}}.i_end;
-int size_till_now = _num_dev_array_{{ Nt }};
+int size_till_now = static_cast<int>(dev{{_dynamic_t}}.size());
 int new_size = num_iterations + size_till_now - start_offset;
 resize_dev_array_{{ Nt }}(new_size);
 resize_dev_array_{{ Nr }}(new_size);
@@ -32,12 +32,10 @@ num_blocks = 1;
 {% endblock %}
 
 {% block kernel_call %}
-{% set Nt = array_basename(_dynamic_t) %}
-{% set Nr = array_basename(_dynamic_rate) %}
 _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
-    dev_array_{{ Nr }},
-    dev_array_{{ Nt }},
+    dev{{_dynamic_rate}}.data(),
+    dev{{_dynamic_t}}.data(),
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 

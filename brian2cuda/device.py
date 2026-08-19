@@ -560,7 +560,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
-                    pointer_arrayname = f'dev_array_{short}'
+                    pointer_arrayname = f'dev{arrayname}.data()'
                 else:
                     host_arrayname = arrayname
                     host_ptr = arrayname
@@ -593,19 +593,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if short is not None:
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
-                    pointer_arrayname = f'dev_array_{short}'
+                    dest_expr = f'dev{arrayname}.data() + {item}'
                 else:
                     host_arrayname = arrayname
                     host_ptr = arrayname
-                    pointer_arrayname = f"dev{arrayname}"
+                    dest_expr = f"dev{arrayname}"
                     if arrayname.endswith('space'):
-                        pointer_arrayname += f'_view[current_idx{arrayname}]'
+                        dest_expr += f'_view[current_idx{arrayname}]'
+                    dest_expr = f'{dest_expr} + {item}'
                 code = f"{host_arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            {pointer_arrayname} + {item},
+                            {dest_expr},
                             {host_ptr} + {item},
                             sizeof({host_arrayname}[{item}]),
                             cudaMemcpyHostToDevice
@@ -620,7 +621,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
-                    pointer_arrayname = f'dev_array_{short}'
+                    pointer_arrayname = f'dev{arrayname}.data()'
                 else:
                     host_arrayname = arrayname
                     host_ptr = arrayname
@@ -650,7 +651,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if short is not None:
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
-                    dev_ptr = f'dev_array_{short}'
+                    dev_ptr = f'dev{arrayname}.data()'
                     memcpy_size = f'{arrayname}.size()'
                 else:
                     host_arrayname = arrayname
@@ -910,13 +911,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
                                     bare = self.get_array_name(v, access_data=False)
-                                    short = array_basename(bare)
                                     if prefix == 'dev':
-                                        array_ptr = f'dev_array_{short}'
+                                        array_ptr = f'dev{bare}.data()'
                                     else:
                                         array_ptr = f'{bare}.data()'
-                                    # Avoid `T* const x = x;` when array_name coincides
-                                    # with the global pointer name.
+                                    # Host local alias: generated kernel name is
+                                    # `dev_array_*`; DeviceBuffer is `dev{bare}`.
                                     if array_name != array_ptr:
                                         code_object_defs_lines.append(
                                             f'{dtype}* const {array_name} = {array_ptr};'
@@ -924,10 +924,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
-                                        # These lines are used to define the kernel call parameters, that
-                                        # means only for codeobjects running on the device. The array names
-                                        # always have a `_dev` prefix.
-                                        host_parameters_lines.append(f"{array_name}")
+                                        # Pass data() at the launch site so a later
+                                        # resize in this function does not freeze a
+                                        # stale pointer from HOST_CONSTANTS.
+                                        host_parameters_lines.append(array_ptr)
 
                                         # These lines declare kernel parameters as the `_ptr` variables that
                                         # are used in `scalar_code` and `vector_code`.
@@ -942,11 +942,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         if prefix == '' or len(prefixes) > 1:
                                             num_expr = f'static_cast<int>({bare}.size())'
                                         else:
-                                            num_expr = f'_num_dev_array_{short}'
+                                            num_expr = f'static_cast<int>(dev{bare}.size())'
                                         code_object_defs_lines.append(
                                             f'const int _num{k} = {num_expr};'
                                         )
-                                        host_parameters_lines.append(f"_num{k}")
+                                        host_parameters_lines.append(num_expr)
                                         kernel_parameters_lines.append(f"const int _num{k}")
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable

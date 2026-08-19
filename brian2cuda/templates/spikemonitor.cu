@@ -59,12 +59,12 @@ CUDA_SAFE_CALL(
 _N = filter_subgroup_eventspace(
         _eventspace,
         _num_events,
-        dev_array_subgroup_eventspace_{{owner.source.name}},
+        _dev_{{owner.source.name}}_eventspace.data(),
         {{_source_start}},
         {{_source_stop}}
         );
 // Use same kernel as without subgroups on copied subgroup eventspace
-_eventspace = dev_array_subgroup_eventspace_{{owner.source.name}};
+_eventspace = _dev_{{owner.source.name}}_eventspace.data();
 {% else %}{# not is_subgroup #}
 // Get the number of events
 _N = _num_events;
@@ -76,8 +76,7 @@ _N = _num_events;
    because the pointers change when resizing leads to reallocation) #}
 {% set var = record_variables.values() | first %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
-{% set N0 = array_basename(dyn_name) %}
-int _monitor_size = _num_dev_array_{{ N0 }};
+int _monitor_size = static_cast<int>(dev{{ dyn_name }}.size());
 
 {% for varname, var in record_variables.items() %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
@@ -101,8 +100,7 @@ if (_N > 0)
             _eventspace,
             {% for varname, var in record_variables.items() %}
             {% set dyn_name = get_array_name(var, access_data=False) %}
-            {% set N = array_basename(dyn_name) %}
-            dev_array_{{ N }},
+            dev{{ dyn_name }}.data(),
             {% endfor %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%
