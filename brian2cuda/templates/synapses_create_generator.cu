@@ -400,7 +400,7 @@ std::cout << std::endl;
         {% set varname = get_array_name(variable, access_data=False) %}
         {% set N = array_basename(varname) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
-            assert(_num_dev_array_{{ N }} <= 1);
+            assert(dev{{ varname }}.size() <= 1);
             {{varname}}.resize(1);
             resize_dev_array_{{ N }}(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
@@ -458,7 +458,6 @@ std::cout << std::endl;
     {% set Nms = array_basename(dynamic_multisynaptic_idx) %}
     copy_host_to_dev_array_{{ Nms }}();
     {% endif %}
-    sync_all_dev_ptrs();
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
                 {{get_array_name(variables['N'], access_data=False)}},

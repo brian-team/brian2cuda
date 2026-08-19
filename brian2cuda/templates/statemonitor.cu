@@ -92,6 +92,6 @@ if (_num__array_{{owner.name}}__indices > 0)
     current_iteration - start_offset,
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded =  get_array_name(var, access_data=False) %}
-    monitor_addresses_{{ _recorded }},
+    addresses_monitor_{{ _recorded }}.data(),
     {% endfor %}
 {% endblock %}
