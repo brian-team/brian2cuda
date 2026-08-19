@@ -18,7 +18,6 @@ void brian_start()
 {
     _init_arrays();
     _load_arrays();
-    brian::sync_all_dev_ptrs();
     srand(time(NULL));
 
     // Initialize clocks (link timestep and dt to the respective arrays)
