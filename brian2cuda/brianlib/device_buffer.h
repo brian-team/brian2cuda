@@ -2,6 +2,7 @@
 #define BRIAN_DEVICE_BUFFER_H
 
 #include <cstddef>
+#include <memory>
 #include <stdint.h>
 
 namespace brian {
@@ -35,7 +36,7 @@ public:
 
 private:
     struct Impl;
-    Impl* impl_;
+    std::unique_ptr<Impl> impl_;
     T* ptr_;
     size_t n_;
 
