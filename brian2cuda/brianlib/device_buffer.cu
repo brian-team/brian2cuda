@@ -13,21 +13,17 @@ struct DeviceBuffer<T>::Impl
 
 template<typename T>
 DeviceBuffer<T>::DeviceBuffer()
-    : impl_(new Impl()), ptr_(nullptr), n_(0)
+    : impl_(std::make_unique<Impl>()), ptr_(nullptr), n_(0)
 {
 }
 
 template<typename T>
-DeviceBuffer<T>::~DeviceBuffer()
-{
-    delete impl_;
-}
+DeviceBuffer<T>::~DeviceBuffer() = default;
 
 template<typename T>
 DeviceBuffer<T>::DeviceBuffer(DeviceBuffer&& other) noexcept
-    : impl_(other.impl_), ptr_(other.ptr_), n_(other.n_)
+    : impl_(std::move(other.impl_)), ptr_(other.ptr_), n_(other.n_)
 {
-    other.impl_ = nullptr;
     other.ptr_ = nullptr;
     other.n_ = 0;
 }
@@ -37,11 +33,9 @@ DeviceBuffer<T>& DeviceBuffer<T>::operator=(DeviceBuffer&& other) noexcept
 {
     if (this != &other)
     {
-        delete impl_;
-        impl_ = other.impl_;
+        impl_ = std::move(other.impl_);
         ptr_ = other.ptr_;
         n_ = other.n_;
-        other.impl_ = nullptr;
         other.ptr_ = nullptr;
         other.n_ = 0;
     }
@@ -51,7 +45,7 @@ DeviceBuffer<T>& DeviceBuffer<T>::operator=(DeviceBuffer&& other) noexcept
 template<typename T>
 void DeviceBuffer<T>::refresh_ptr()
 {
-    if (impl_ == nullptr || impl_->vec.empty())
+    if (!impl_ || impl_->vec.empty())
         ptr_ = nullptr;
     else
         ptr_ = thrust::raw_pointer_cast(impl_->vec.data());
@@ -60,8 +54,8 @@ void DeviceBuffer<T>::refresh_ptr()
 template<typename T>
 void DeviceBuffer<T>::resize(size_t n)
 {
-    if (impl_ == nullptr)
-        impl_ = new Impl();
+    if (!impl_)
+        impl_ = std::make_unique<Impl>();
     if (n == 0)
     {
         clear();
@@ -111,7 +105,7 @@ void DeviceBuffer<T>::append(const T& elem)
 template<typename T>
 void DeviceBuffer<T>::clear()
 {
-    if (impl_ != nullptr)
+    if (impl_)
     {
         THRUST_CHECK_ERROR(impl_->vec.clear());
         THRUST_CHECK_ERROR(impl_->vec.shrink_to_fit());
