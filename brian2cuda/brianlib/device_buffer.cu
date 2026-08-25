@@ -3,131 +3,134 @@
 
 #include <thrust/device_vector.h>
 
+#include <cstdio>
+#include <cstdlib>
+
 namespace brian {
 
-template<typename T>
-struct DeviceBuffer<T>::Impl
+struct DeviceBuffer::Impl
 {
-    thrust::device_vector<T> vec;
+    thrust::device_vector<char> bytes;
 };
 
-template<typename T>
-DeviceBuffer<T>::DeviceBuffer()
-    : impl_(std::make_unique<Impl>()), ptr_(nullptr), n_(0)
+DeviceBuffer::DeviceBuffer()
+    : impl_(std::make_unique<Impl>()), ptr_(nullptr), elem_size_(0), n_(0)
 {
 }
 
-template<typename T>
-DeviceBuffer<T>::~DeviceBuffer() = default;
+DeviceBuffer::DeviceBuffer(size_t elem_size)
+    : impl_(std::make_unique<Impl>()), ptr_(nullptr), elem_size_(elem_size), n_(0)
+{
+}
 
-template<typename T>
-DeviceBuffer<T>::DeviceBuffer(DeviceBuffer&& other) noexcept
-    : impl_(std::move(other.impl_)), ptr_(other.ptr_), n_(other.n_)
+DeviceBuffer::~DeviceBuffer() = default;
+
+DeviceBuffer::DeviceBuffer(DeviceBuffer&& other) noexcept
+    : impl_(std::move(other.impl_)),
+      ptr_(other.ptr_),
+      elem_size_(other.elem_size_),
+      n_(other.n_)
 {
     other.ptr_ = nullptr;
+    other.elem_size_ = 0;
     other.n_ = 0;
 }
 
-template<typename T>
-DeviceBuffer<T>& DeviceBuffer<T>::operator=(DeviceBuffer&& other) noexcept
+DeviceBuffer& DeviceBuffer::operator=(DeviceBuffer&& other) noexcept
 {
     if (this != &other)
     {
         impl_ = std::move(other.impl_);
         ptr_ = other.ptr_;
+        elem_size_ = other.elem_size_;
         n_ = other.n_;
         other.ptr_ = nullptr;
+        other.elem_size_ = 0;
         other.n_ = 0;
     }
     return *this;
 }
 
-template<typename T>
-void DeviceBuffer<T>::refresh_ptr()
-{
-    if (!impl_ || impl_->vec.empty())
-        ptr_ = nullptr;
-    else
-        ptr_ = thrust::raw_pointer_cast(impl_->vec.data());
-}
-
-template<typename T>
-void DeviceBuffer<T>::resize(size_t n)
+void DeviceBuffer::init(size_t elem_size)
 {
     if (!impl_)
         impl_ = std::make_unique<Impl>();
+    if (elem_size_ != 0 && elem_size_ != elem_size && n_ > 0)
+        clear();
+    elem_size_ = elem_size;
+}
+
+void DeviceBuffer::refresh_ptr()
+{
+    if (!impl_ || impl_->bytes.empty())
+        ptr_ = nullptr;
+    else
+        ptr_ = thrust::raw_pointer_cast(impl_->bytes.data());
+}
+
+void DeviceBuffer::resize(size_t n)
+{
+    if (!impl_)
+        impl_ = std::make_unique<Impl>();
+    if (elem_size_ == 0)
+    {
+        fprintf(stderr, "ERROR: DeviceBuffer used before init()\n");
+        exit(EXIT_FAILURE);
+    }
     if (n == 0)
     {
         clear();
         return;
     }
-    THRUST_CHECK_ERROR(impl_->vec.resize(n));
+    THRUST_CHECK_ERROR(impl_->bytes.resize(n * elem_size_));
     n_ = n;
     refresh_ptr();
 }
 
-template<typename T>
-void DeviceBuffer<T>::copy_from_host(const T* src, size_t n)
+void DeviceBuffer::copy_from_host(const void* src, size_t n)
 {
     resize(n);
     if (n == 0 || src == nullptr)
         return;
     CUDA_SAFE_CALL(cudaMemcpy(
-        ptr_, src, n * sizeof(T), cudaMemcpyHostToDevice));
+        ptr_, src, n * elem_size_, cudaMemcpyHostToDevice));
 }
 
-template<typename T>
-void DeviceBuffer<T>::copy_to_host(T* dst) const
+void DeviceBuffer::copy_to_host(void* dst) const
 {
     if (n_ == 0 || dst == nullptr || ptr_ == nullptr)
         return;
     CUDA_SAFE_CALL(cudaMemcpy(
-        dst, ptr_, n_ * sizeof(T), cudaMemcpyDeviceToHost));
+        dst, ptr_, n_ * elem_size_, cudaMemcpyDeviceToHost));
 }
 
-template<typename T>
-void DeviceBuffer<T>::store(size_t i, const T& elem)
+void DeviceBuffer::store(size_t i, const void* elem)
 {
-    if (i >= n_ || ptr_ == nullptr)
+    if (elem == nullptr || i >= n_ || ptr_ == nullptr)
         return;
     CUDA_SAFE_CALL(cudaMemcpy(
-        ptr_ + i, &elem, sizeof(T), cudaMemcpyHostToDevice));
+        static_cast<char*>(ptr_) + i * elem_size_,
+        elem,
+        elem_size_,
+        cudaMemcpyHostToDevice));
 }
 
-template<typename T>
-void DeviceBuffer<T>::append(const T& elem)
+void DeviceBuffer::append(const void* elem)
 {
     const size_t i = n_;
     resize(n_ + 1);
     store(i, elem);
 }
 
-template<typename T>
-void DeviceBuffer<T>::clear()
+void DeviceBuffer::clear()
 {
     if (impl_)
     {
-        THRUST_CHECK_ERROR(impl_->vec.clear());
-        THRUST_CHECK_ERROR(impl_->vec.shrink_to_fit());
+        THRUST_CHECK_ERROR(impl_->bytes.clear());
+        THRUST_CHECK_ERROR(impl_->bytes.shrink_to_fit());
     }
     ptr_ = nullptr;
     n_ = 0;
 }
-
-// Explicit instantiations for types used by generated brian2cuda code.
-template class DeviceBuffer<char>;
-template class DeviceBuffer<int32_t>;
-template class DeviceBuffer<int64_t>;
-template class DeviceBuffer<uint32_t>;
-template class DeviceBuffer<uint64_t>;
-template class DeviceBuffer<float>;
-template class DeviceBuffer<double>;
-template class DeviceBuffer<char*>;
-template class DeviceBuffer<int32_t*>;
-template class DeviceBuffer<int64_t*>;
-template class DeviceBuffer<uint32_t*>;
-template class DeviceBuffer<uint64_t*>;
-template class DeviceBuffer<float*>;
-template class DeviceBuffer<double*>;
 
 }  // namespace brian

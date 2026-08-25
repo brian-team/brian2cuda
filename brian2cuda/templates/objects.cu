@@ -216,14 +216,14 @@ namespace brian {
 std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}}(1);
 {% endfor %}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-DeviceBuffer<{{c_data_type(var.dtype)}}> dev{{varname}};
+DeviceBuffer dev{{varname}}(sizeof({{c_data_type(var.dtype)}}));
 {% endfor %}
 {% for varname in subgroups_with_spikemonitor %}
-DeviceBuffer<int32_t> _dev_{{varname}}_eventspace;
+DeviceBuffer _dev_{{varname}}_eventspace(sizeof(int32_t));
 {% endfor %}
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-DeviceBuffer<{{c_data_type(var.dtype)}}*> addresses_monitor_{{varname}};
-DeviceBuffer<{{c_data_type(var.dtype)}}>* {{varname}} = nullptr;
+DeviceBuffer addresses_monitor_{{varname}}(sizeof({{c_data_type(var.dtype)}}*));
+DeviceBuffer* {{varname}} = nullptr;
 {% endfor %}
 
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
@@ -289,10 +289,14 @@ void resize_monitor_row_{{ varname }}(int row, size_t n) {
     {{ varname }}[row].resize(n);
 }
 void push_monitor_address_{{ varname }}(int row) {
-    addresses_monitor_{{ varname }}.append({{ varname }}[row].data());
+    {{c_data_type(var.dtype)}}* row_ptr =
+        {{ varname }}[row].data_as<{{c_data_type(var.dtype)}}>();
+    addresses_monitor_{{ varname }}.append(&row_ptr);
 }
 void set_monitor_address_{{ varname }}(int row) {
-    addresses_monitor_{{ varname }}.store(static_cast<size_t>(row), {{ varname }}[row].data());
+    {{c_data_type(var.dtype)}}* row_ptr =
+        {{ varname }}[row].data_as<{{c_data_type(var.dtype)}}>();
+    addresses_monitor_{{ varname }}.store(static_cast<size_t>(row), &row_ptr);
 }
 {% endfor %}
 }  // namespace brian
@@ -444,8 +448,8 @@ void _init_arrays()
     {% set src_name = dynamic_array_specs[path.synapse_sources] %}
     {% set tgt_name = dynamic_array_specs[path.synapse_targets] %}
     {{path.name}}_init<<<1,1>>>(
-            dev{{ src_name }}.data(),
-            dev{{ tgt_name }}.data(),
+            dev{{ src_name }}.data_as<{{c_data_type(path.synapse_sources.dtype)}}>(),
+            dev{{ tgt_name }}.data_as<{{c_data_type(path.synapse_targets.dtype)}}>(),
             0,  //was dt, maybe irrelevant?
             {{path.source.start}},
             {{path.source.stop}}
@@ -507,7 +511,9 @@ void _init_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-    {{varname}} = new DeviceBuffer<{{c_data_type(var.dtype)}}>[_num__array_{{var.owner.name}}__indices];
+    {{varname}} = new DeviceBuffer[_num__array_{{var.owner.name}}__indices];
+    for (int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
+        {{varname}}[i].init(sizeof({{c_data_type(var.dtype)}}));
     {% endfor %}
 
     // eventspace_arrays
@@ -867,7 +873,7 @@ extern const int _num_{{name}};
 //////////////// dynamic arrays 1d ///////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 extern std::vector<{{c_data_type(var.dtype)}}> {{varname}};
-extern DeviceBuffer<{{c_data_type(var.dtype)}}> dev{{varname}};
+extern DeviceBuffer dev{{varname}};
 {% endfor %}
 
 //////////////// eventspaces (synced views) ///////////////
@@ -878,12 +884,12 @@ extern int _num_dev{{ varname }};
 
 //////////////// dynamic arrays 2d ///////////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-extern DeviceBuffer<{{c_data_type(var.dtype)}}*> addresses_monitor_{{ varname }};
+extern DeviceBuffer addresses_monitor_{{ varname }};
 {% endfor %}
 
 //////////////// subgroup eventspace buffers ///////////////
 {% for varname in subgroups_with_spikemonitor %}
-extern DeviceBuffer<int32_t> _dev_{{varname}}_eventspace;
+extern DeviceBuffer _dev_{{varname}}_eventspace;
 {% endfor %}
 
 //////////////// synapses /////////////////

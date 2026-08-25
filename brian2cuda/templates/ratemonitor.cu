@@ -34,8 +34,8 @@ num_blocks = 1;
 {% block kernel_call %}
 _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
-    dev{{_dynamic_rate}}.data(),
-    dev{{_dynamic_t}}.data(),
+    dev{{_dynamic_rate}}.data_as<{{c_data_type(rate.dtype)}}>(),
+    dev{{_dynamic_t}}.data_as<{{c_data_type(t.dtype)}}>(),
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 
