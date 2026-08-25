@@ -3,17 +3,17 @@
 
 #include <cstddef>
 #include <memory>
-#include <stdint.h>
 
 namespace brian {
 
-// Typed resizable device storage. Header is Thrust-free; thrust::device_vector<T>
-// lives only in device_buffer.cu behind Impl (PImpl).
-template<typename T>
+// Type-erased resizable device storage. Header is Thrust-free;
+// thrust::device_vector<char> lives only in device_buffer.cu behind Impl (PImpl).
+// One TU instantiates a single device_vector type instead of one per dtype.
 class DeviceBuffer
 {
 public:
     DeviceBuffer();
+    explicit DeviceBuffer(size_t elem_size);
     ~DeviceBuffer();
 
     DeviceBuffer(const DeviceBuffer&) = delete;
@@ -21,23 +21,31 @@ public:
     DeviceBuffer(DeviceBuffer&& other) noexcept;
     DeviceBuffer& operator=(DeviceBuffer&& other) noexcept;
 
+    void init(size_t elem_size);
+
     size_t size() const { return n_; }
     bool empty() const { return n_ == 0; }
 
-    T* data() { return ptr_; }
-    const T* data() const { return ptr_; }
+    void* data() { return ptr_; }
+    const void* data() const { return ptr_; }
+
+    template<typename T>
+    T* data_as() { return static_cast<T*>(data()); }
+    template<typename T>
+    const T* data_as() const { return static_cast<const T*>(data()); }
 
     void resize(size_t n);
-    void copy_from_host(const T* src, size_t n);
-    void copy_to_host(T* dst) const;
-    void append(const T& elem);
-    void store(size_t i, const T& elem);
+    void copy_from_host(const void* src, size_t n);
+    void copy_to_host(void* dst) const;
+    void append(const void* elem);
+    void store(size_t i, const void* elem);
     void clear();
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
-    T* ptr_;
+    void* ptr_;
+    size_t elem_size_;
     size_t n_;
 
     void refresh_ptr();

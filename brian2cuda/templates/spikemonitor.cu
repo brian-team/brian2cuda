@@ -59,12 +59,12 @@ CUDA_SAFE_CALL(
 _N = filter_subgroup_eventspace(
         _eventspace,
         _num_events,
-        _dev_{{owner.source.name}}_eventspace.data(),
+        _dev_{{owner.source.name}}_eventspace.data_as<int32_t>(),
         {{_source_start}},
         {{_source_stop}}
         );
 // Use same kernel as without subgroups on copied subgroup eventspace
-_eventspace = _dev_{{owner.source.name}}_eventspace.data();
+_eventspace = _dev_{{owner.source.name}}_eventspace.data_as<int32_t>();
 {% else %}{# not is_subgroup #}
 // Get the number of events
 _N = _num_events;
@@ -100,7 +100,7 @@ if (_N > 0)
             _eventspace,
             {% for varname, var in record_variables.items() %}
             {% set dyn_name = get_array_name(var, access_data=False) %}
-            dev{{ dyn_name }}.data(),
+            dev{{ dyn_name }}.data_as<{{c_data_type(var.dtype)}}>(),
             {% endfor %}
             ///// HOST_PARAMETERS /////
             %HOST_PARAMETERS%

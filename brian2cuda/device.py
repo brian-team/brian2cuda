@@ -560,6 +560,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
+                    # data() is void*; cudaMemcpy accepts it without a typed cast.
                     pointer_arrayname = f'dev{arrayname}.data()'
                 else:
                     host_arrayname = arrayname
@@ -593,7 +594,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if short is not None:
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
-                    dest_expr = f'dev{arrayname}.data() + {item}'
+                    # void* + offset is illegal; advance by element size in bytes.
+                    dest_expr = (
+                        f'static_cast<char*>(dev{arrayname}.data()) + '
+                        f'({item}) * sizeof({host_arrayname}[0])'
+                    )
                 else:
                     host_arrayname = arrayname
                     host_ptr = arrayname
@@ -621,6 +626,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
+                    # data() is void*; cudaMemcpy accepts it without a typed cast.
                     pointer_arrayname = f'dev{arrayname}.data()'
                 else:
                     host_arrayname = arrayname
@@ -912,7 +918,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                 if v.ndim == 1:
                                     bare = self.get_array_name(v, access_data=False)
                                     if prefix == 'dev':
-                                        array_ptr = f'dev{bare}.data()'
+                                        array_ptr = f'dev{bare}.data_as<{dtype}>()'
                                     else:
                                         array_ptr = f'{bare}.data()'
                                     # Host local alias: generated kernel name is
