@@ -1,9 +1,7 @@
-#define BRIAN2CUDA_CURAND_HOST
 #include "brianlib/curand_buffer.h"
-#include "brianlib/cuda_utils.h"
+#include "brianlib/curand_utils.h"
 #include <cstdio>
 #include <cstdlib>
-#include <curand.h>
 
 namespace {
 
