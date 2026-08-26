@@ -1005,11 +1005,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 code = code.replace('%HOST_CONSTANTS%', '\n\t\t'.join(code_object_defs[codeobj.name]))
                 # ADDITIONAL_HOST_CODE is extra code, which needs `_N`
                 code = code.replace('%ADDITIONAL_HOST_CODE%', '\n\t\t'.join(additional_host_code[codeobj.name]))
-                curand_host_define = (
-                    '#define BRIAN2CUDA_CURAND_HOST\n'
-                    if additional_host_code[codeobj.name] else ''
-                )
-                code = code.replace('%CURAND_HOST_DEFINE%', curand_host_define)
                 # KERNEL_CONSTANTS are the same for inside device kernels
                 code = code.replace('%KERNEL_CONSTANTS%', '\n\t'.join(kernel_constants[codeobj.name]))
                 # HOST_PARAMETERS are parameters that device kernels are called with from host code

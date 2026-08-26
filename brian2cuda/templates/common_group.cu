@@ -3,7 +3,6 @@
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
-%CURAND_HOST_DEFINE%
 #include "brianlib/cuda_utils.h"
 #include "brianlib/stdint_compat.h"
 #include <cmath>
@@ -18,6 +17,9 @@
 {% block before_run_headers %}
 {{co_std_includes()}}
 #include <chrono>
+{% for name in user_headers %}
+#include {{name}}
+{% endfor %}
 {% endblock before_run_headers %}
 
 {% block before_run_defines %}
