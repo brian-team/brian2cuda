@@ -42,7 +42,7 @@ resize_subgroup_eventspace_{{owner.source.name}}(_num_source_idx);
 
 // Number of events in eventspace
 int _num_events;
-int32_t* _eventspace = dev{{ _eventspace }}_view[current_idx{{ _eventspace }}];
+int32_t* _eventspace = dev{{ _eventspace }}[current_idx{{ _eventspace }}];
 CUDA_SAFE_CALL(
         cudaMemcpy(
             &_num_events,
