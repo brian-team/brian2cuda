@@ -568,7 +568,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     size_str = f'_num_{arrayname}'
                     pointer_arrayname = f"dev{arrayname}"
                     if arrayname.endswith('space'):
-                        pointer_arrayname += f'_view[current_idx{arrayname}]'
+                        pointer_arrayname += f'[current_idx{arrayname}]'
                 rendered_value = CPPNodeRenderer().render_expr(repr(value))
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
@@ -604,7 +604,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     host_ptr = arrayname
                     dest_expr = f"dev{arrayname}"
                     if arrayname.endswith('space'):
-                        dest_expr += f'_view[current_idx{arrayname}]'
+                        dest_expr += f'[current_idx{arrayname}]'
                     dest_expr = f'{dest_expr} + {item}'
                 code = f"{host_arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
@@ -961,7 +961,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                     idx = ''
                                     if k.endswith('space'):
                                         bare_array_name = self.get_array_name(v)
-                                        idx = f'_view[current_idx{bare_array_name}]'
+                                        idx = f'[current_idx{bare_array_name}]'
                                     host_parameters_lines.append(f"{array_name}{idx}")
                                     kernel_parameters_lines.append(f'{dtype}* {ptr_array_name}')
 

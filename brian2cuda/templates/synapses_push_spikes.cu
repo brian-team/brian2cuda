@@ -1018,7 +1018,7 @@ _run_kernel_{{codeobj_name}}(
 {% block host_maincode %}
     if ({{owner.name}}_scalar_delay)
     {
-        int num_eventspaces = _num_dev{{ _eventspace }};
+        int num_eventspaces = static_cast<int>(dev{{ _eventspace }}.size());
         {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
 
         //////////////////////////////////////////////
@@ -1032,7 +1032,7 @@ _run_kernel_{{codeobj_name}}(
         int32_t num_spiking_neurons;
         CUDA_SAFE_CALL(
                 cudaMemcpy(&num_spiking_neurons,
-                    dev{{ _eventspace }}_view[current_idx{{ _eventspace }}] + _num_{{ owner.event }}space - 1,
+                    dev{{ _eventspace }}[current_idx{{ _eventspace }}] + _num_{{ owner.event }}space - 1,
                     sizeof(int32_t), cudaMemcpyDeviceToHost)
                 );
 
@@ -1085,7 +1085,7 @@ _run_kernel_{{codeobj_name}}(
                     num_parallel_blocks,
                     num_blocks,
                     num_threads,
-                    dev{{ _eventspace }}_view[current_idx{{ _eventspace }}]);
+                    dev{{ _eventspace }}[current_idx{{ _eventspace }}]);
 
             CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
         }

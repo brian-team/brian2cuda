@@ -21,7 +21,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include "synapses_classes.h"
 {% endif %}
 #include "brianlib/cuda_utils.h"
-#include "brianlib/device_buffer.h"
 #include "rand.h"
 #include <iostream>
 #include <fstream>
@@ -193,6 +192,7 @@ const int brian::_num_{{varname}} = {{var.size}};
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 {{c_data_type(var.dtype)}} * brian::{{varname}};
 const int brian::_num_{{varname}} = {{var.size}};
+std::vector<{{c_data_type(var.dtype)}}*> brian::dev{{varname}}(1);
 int brian::current_idx{{varname}} = 0;
 {% if varname in spikegenerator_eventspaces %}
 int brian::previous_idx{{varname}};
@@ -204,17 +204,9 @@ int brian::previous_idx{{varname}};
 std::vector<{{c_data_type(var.dtype)}}> brian::{{varname}};
 {% endfor %}
 
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-{{c_data_type(var.dtype)}}** brian::dev{{ varname }}_view = nullptr;
-int brian::_num_dev{{ varname }} = 0;
-{% endfor %}
-
 namespace brian {
 
 //////////////// device storage ///////////
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}}(1);
-{% endfor %}
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 DeviceBuffer dev{{varname}}(sizeof({{c_data_type(var.dtype)}}));
 {% endfor %}
@@ -247,13 +239,6 @@ void clear_dev_array_{{ N }}() {
 {% endfor %}
 
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
-void sync_eventspace_{{ varname }}() {
-    _num_dev{{ varname }} = static_cast<int>(dev{{ varname }}.size());
-    dev{{ varname }}_view = dev{{ varname }}.empty() ? nullptr : &dev{{ varname }}[0];
-}
-{% endfor %}
-
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues) {
     int num_eventspaces = static_cast<int>(dev{{ varname }}.size());
     if (num_queues <= num_eventspaces) return;
@@ -273,7 +258,6 @@ void expand_eventspace{{ varname }}(int num_queues) {
             cudaMemcpyHostToDevice));
         dev{{ varname }}.push_back(new_eventspace);
     }
-    sync_eventspace_{{ varname }}();
 }
 {% endfor %}
 {% for varname in subgroups_with_spikemonitor %}
@@ -544,7 +528,6 @@ void _init_arrays()
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
     double time_passed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_timer).count();
     {% for var, varname in eventspace_arrays | dictsort(by='value') %}
-    sync_eventspace_{{ varname }}();
     {% endfor %}
     std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
@@ -852,6 +835,7 @@ extern const int _num_{{varname}};
 //////////////// eventspaces ///////////////
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 extern {{c_data_type(var.dtype)}} * {{varname}};
+extern std::vector<{{c_data_type(var.dtype)}}*> dev{{varname}};
 extern const int _num_{{varname}};
 extern int current_idx{{varname}};
 {% if varname in spikegenerator_eventspaces %}
@@ -874,12 +858,6 @@ extern const int _num_{{name}};
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 extern std::vector<{{c_data_type(var.dtype)}}> {{varname}};
 extern DeviceBuffer dev{{varname}};
-{% endfor %}
-
-//////////////// eventspaces (synced views) ///////////////
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-extern {{c_data_type(var.dtype)}}** dev{{ varname }}_view;
-extern int _num_dev{{ varname }};
 {% endfor %}
 
 //////////////// dynamic arrays 2d ///////////////
