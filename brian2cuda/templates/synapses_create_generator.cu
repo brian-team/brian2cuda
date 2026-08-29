@@ -398,11 +398,10 @@ std::cout << std::endl;
     const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
     {% for variable in owner._registered_variables | sort(attribute='name') %}
         {% set varname = get_array_name(variable, access_data=False) %}
-        {% set N = array_basename(varname) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
             assert(dev{{ varname }}.size() <= 1);
             {{varname}}.resize(1);
-            resize_dev_array_{{ N }}(1);
+            dev{{ varname }}.resize(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
         // prefs['devices.cuda_standalone.no_pre_references'] was set,
         // skipping synaptic_pre resize
@@ -412,7 +411,7 @@ std::cout << std::endl;
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
             {{varname}}.resize(newsize);
-            resize_dev_array_{{ N }}(newsize);
+            dev{{varname}}.resize(newsize);
             {% else %}
             {{varname}}.resize(newsize);
             {% endif %}

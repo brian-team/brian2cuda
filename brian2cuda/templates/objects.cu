@@ -220,9 +220,6 @@ DeviceBuffer* {{varname}} = nullptr;
 
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = array_basename(varname) %}
-void resize_dev_array_{{ N }}(size_t n) {
-    dev{{ varname }}.resize(n);
-}
 void copy_host_to_dev_array_{{ N }}() {
     dev{{ varname }}.copy_from_host(
         {{ varname }}.empty() ? nullptr : {{ varname }}.data(),
@@ -232,9 +229,6 @@ void copy_dev_to_host_array_{{ N }}() {
     {{ varname }}.resize(dev{{ varname }}.size());
     dev{{ varname }}.copy_to_host(
         {{ varname }}.empty() ? nullptr : {{ varname }}.data());
-}
-void clear_dev_array_{{ N }}() {
-    dev{{ varname }}.clear();
 }
 {% endfor %}
 
@@ -260,11 +254,7 @@ void expand_eventspace{{ varname }}(int num_queues) {
     }
 }
 {% endfor %}
-{% for varname in subgroups_with_spikemonitor %}
-void resize_subgroup_eventspace_{{varname}}(size_t n) {
-    _dev_{{varname}}_eventspace.resize(n);
-}
-{% endfor %}
+
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void clear_monitor_addresses_{{ varname }}() {
     addresses_monitor_{{ varname }}.clear();
@@ -480,9 +470,8 @@ void _init_arrays()
     // static arrays
     {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
     {% if (name in dynamic_array_specs.values())  %}
-    {% set Nbase = array_basename(name) %}
     {{name}}.resize({{N}});
-    resize_dev_array_{{ Nbase }}({{N}});
+    dev{{name}}.resize({{N}});
     {% else %}
     {{name}} = new {{dtype_spec}}[{{N}}];
     CUDA_SAFE_CALL(
@@ -714,8 +703,7 @@ void _dealloc_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {% set N = array_basename(varname) %}
-    clear_dev_array_{{ N }}();
+    dev{{varname}}.clear();
     {{varname}}.clear();
     std::vector<{{c_data_type(var.dtype)}}>().swap({{varname}});
     {% endfor %}
@@ -951,19 +939,15 @@ extern int num_threads_per_warp;
 //////////////// host helpers /////////////////
 {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 {% set N = array_basename(varname) %}
-void resize_dev_array_{{ N }}(size_t n);
 void copy_host_to_dev_array_{{ N }}();
 void copy_dev_to_host_array_{{ N }}();
-void clear_dev_array_{{ N }}();
 {% endfor %}
 
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
-{% for varname in subgroups_with_spikemonitor %}
-void resize_subgroup_eventspace_{{varname}}(size_t n);
-{% endfor %}
+
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 void clear_monitor_addresses_{{ varname }}();
 void resize_monitor_row_{{ varname }}(int row, size_t n);

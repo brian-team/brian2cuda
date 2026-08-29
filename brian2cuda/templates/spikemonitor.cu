@@ -24,7 +24,7 @@ int num_events, num_blocks;
 
 {% block modify_kernel_dimensions %}
 {% if owner.source.__class__.__name__ == 'Subgroup' %}
-resize_subgroup_eventspace_{{owner.source.name}}(_num_source_idx);
+_dev_{{owner.source.name}}_eventspace.resize(_num_source_idx);
 {% endif %}{# Subgroup #}
 {% endblock %}
 
@@ -80,8 +80,7 @@ int _monitor_size = static_cast<int>(dev{{ dyn_name }}.size());
 
 {% for varname, var in record_variables.items() %}
 {% set dyn_name = get_array_name(var, access_data=False) %}
-{% set N = array_basename(dyn_name) %}
-resize_dev_array_{{ N }}(_monitor_size + _N);
+dev{{ dyn_name }}.resize(_monitor_size + _N);
 {% endfor %}
 {% endif %}{# not record_variables #}
 
