@@ -255,24 +255,13 @@ void expand_eventspace{{ varname }}(int num_queues) {
 }
 {% endfor %}
 
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-void clear_monitor_addresses_{{ varname }}() {
-    addresses_monitor_{{ varname }}.clear();
+void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows)
+{
+    std::vector<void*> host_ptrs(n_rows);
+    for (int i = 0; i < n_rows; i++)
+        host_ptrs[i] = rows[i].data();
+    addresses.copy_from_host(host_ptrs.data(), host_ptrs.size());
 }
-void resize_monitor_row_{{ varname }}(int row, size_t n) {
-    {{ varname }}[row].resize(n);
-}
-void push_monitor_address_{{ varname }}(int row) {
-    {{c_data_type(var.dtype)}}* row_ptr =
-        {{ varname }}[row].data_as<{{c_data_type(var.dtype)}}>();
-    addresses_monitor_{{ varname }}.append(&row_ptr);
-}
-void set_monitor_address_{{ varname }}(int row) {
-    {{c_data_type(var.dtype)}}* row_ptr =
-        {{ varname }}[row].data_as<{{c_data_type(var.dtype)}}>();
-    addresses_monitor_{{ varname }}.store(static_cast<size_t>(row), &row_ptr);
-}
-{% endfor %}
 }  // namespace brian
 
 /////////////// static arrays /////////////
@@ -486,7 +475,7 @@ void _init_arrays()
     {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
     {{varname}} = new DeviceBuffer[_num__array_{{var.owner.name}}__indices];
     for (int i = 0; i < _num__array_{{var.owner.name}}__indices; i++)
-        {{varname}}[i].init(sizeof({{c_data_type(var.dtype)}}));
+        {{varname}}[i].set_elem_size(sizeof({{c_data_type(var.dtype)}}));
     {% endfor %}
 
     // eventspace_arrays
@@ -850,6 +839,7 @@ extern DeviceBuffer dev{{varname}};
 
 //////////////// dynamic arrays 2d ///////////////
 {% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
+extern DeviceBuffer* {{ varname }};
 extern DeviceBuffer addresses_monitor_{{ varname }};
 {% endfor %}
 
@@ -948,12 +938,8 @@ void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
 
-{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
-void clear_monitor_addresses_{{ varname }}();
-void resize_monitor_row_{{ varname }}(int row, size_t n);
-void push_monitor_address_{{ varname }}(int row);
-void set_monitor_address_{{ varname }}(int row);
-{% endfor %}
+void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows);
+
 
 }
 

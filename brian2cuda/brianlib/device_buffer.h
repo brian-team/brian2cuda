@@ -18,10 +18,6 @@ public:
 
     DeviceBuffer(const DeviceBuffer&) = delete;
     DeviceBuffer& operator=(const DeviceBuffer&) = delete;
-    DeviceBuffer(DeviceBuffer&& other) noexcept;
-    DeviceBuffer& operator=(DeviceBuffer&& other) noexcept;
-
-    void init(size_t elem_size);
 
     size_t size() const { return n_; }
     bool empty() const { return n_ == 0; }
@@ -34,16 +30,17 @@ public:
     template<typename T>
     const T* data_as() const { return static_cast<const T*>(data()); }
 
+    void set_elem_size(size_t elem_size) { elem_size_ = elem_size; }
+
     void resize(size_t n);
     void copy_from_host(const void* src, size_t n);
     void copy_to_host(void* dst) const;
-    void append(const void* elem);
-    void store(size_t i, const void* elem);
     void clear();
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+    // Cached from impl_->bytes; must stay in sync via refresh_ptr().
     void* ptr_;
     size_t elem_size_;
     size_t n_;

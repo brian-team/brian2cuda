@@ -7,18 +7,20 @@
 
 {# We are using block modify_kernel_dimensions for additional kernel preparation #}
 {% block modify_kernel_dimensions %}
-{% for varname, var in _recorded_variables | dictsort %}
-{% set _recorded = get_array_name(var, access_data=False) %}
-clear_monitor_addresses_{{ _recorded }}();
-{% endfor %}
 for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 {
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded = get_array_name(var, access_data=False) %}
-    resize_monitor_row_{{ _recorded }}(i, _numt_host + num_iterations - current_iteration);
-    push_monitor_address_{{ _recorded }}(i);
+    {{ _recorded }}[i].resize(_numt_host + num_iterations - current_iteration);
     {% endfor %}
 }
+{% for varname, var in _recorded_variables | dictsort %}
+{% set _recorded = get_array_name(var, access_data=False) %}
+upload_monitor_row_addresses(
+    addresses_monitor_{{ _recorded }},
+    {{ _recorded }},
+    _num__array_{{ owner.name }}__indices);
+{% endfor %}
 {% endblock modify_kernel_dimensions %}
 
 {% block host_maincode %}
@@ -48,11 +50,17 @@ if(current_iteration >= num_iterations)
     for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
     {
         {% for varname, var in _recorded_variables | dictsort %}
-        {% set _recorded =  get_array_name(var, access_data=False) %}
-        resize_monitor_row_{{ _recorded }}(i, _numt_host + 1);
-        set_monitor_address_{{ _recorded }}(i);
+        {% set _recorded = get_array_name(var, access_data=False) %}
+        {{ _recorded }}[i].resize(_numt_host + 1);
         {% endfor %}
     }
+    {% for varname, var in _recorded_variables | dictsort %}
+    {% set _recorded = get_array_name(var, access_data=False) %}
+    upload_monitor_row_addresses(
+        addresses_monitor_{{ _recorded }},
+        {{ _recorded }},
+        _num__array_{{ owner.name }}__indices);
+    {% endfor %}
 }
 
 // TODO we get invalid launch configuration if this is 0, which happens e.g. for StateMonitor(..., variables=[])
