@@ -539,16 +539,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # TODO: Move this into before_run_synapses_push_spikes
                     for synaptic_pre, delete in self.delete_synaptic_pre.items():
                         if delete:
-                            short = array_basename(synaptic_pre)
-                            main_lines.append(f'clear_dev_array_{short}();')
+                            main_lines.append(f'dev{synaptic_pre}.clear();')
                     for synaptic_post, delete in self.delete_synaptic_post.items():
                         if delete:
-                            short = array_basename(synaptic_post)
-                            main_lines.append(f'clear_dev_array_{short}();')
+                            main_lines.append(f'dev{synaptic_post}.clear();')
                     for synaptic_delay, delete in self.delete_synaptic_delay.items():
                         if delete:
-                            short = array_basename(synaptic_delay)
-                            main_lines.append(f'clear_dev_array_{short}();')
+                            main_lines.append(f'dev{synaptic_delay}.clear();')
                 # The actual network code
                 main_lines.extend(netcode)
                 # Increment run counter
@@ -684,10 +681,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                short = array_basename(array_name)
                 code = (
                     f'{array_name}.resize({new_size});\n'
-                    f'resize_dev_array_{short}({new_size});'
+                    f'dev{array_name}.resize({new_size});'
                 )
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='insert_code':
