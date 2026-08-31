@@ -554,13 +554,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 arrayname, value, is_dynamic = args
                 short = array_basename(arrayname)
                 if is_dynamic and short is not None:
-                    host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
                     # data() is void*; cudaMemcpy accepts it without a typed cast.
                     pointer_arrayname = f'dev{arrayname}.data()'
                 else:
-                    host_arrayname = arrayname
                     host_ptr = arrayname
                     size_str = f'_num_{arrayname}'
                     pointer_arrayname = f"dev{arrayname}"
@@ -570,7 +568,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
                     {{
-                        {host_arrayname}[i] = {rendered_value};
+                        {arrayname}[i] = {rendered_value};
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -579,7 +577,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         cudaMemcpy(
                             {pointer_arrayname},
                             {host_ptr},
-                            sizeof({host_arrayname}[0])*{size_str},
+                            sizeof({arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -589,28 +587,26 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 arrayname, item, value = args
                 short = array_basename(arrayname)
                 if short is not None:
-                    host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     # void* + offset is illegal; advance by element size in bytes.
                     dest_expr = (
                         f'static_cast<char*>(dev{arrayname}.data()) + '
-                        f'({item}) * sizeof({host_arrayname}[0])'
+                        f'({item}) * sizeof({arrayname}[0])'
                     )
                 else:
-                    host_arrayname = arrayname
                     host_ptr = arrayname
                     dest_expr = f"dev{arrayname}"
                     if arrayname.endswith('space'):
                         dest_expr += f'[current_idx{arrayname}]'
                     dest_expr = f'{dest_expr} + {item}'
-                code = f"{host_arrayname}[{item}] = {value};"
+                code = f"{arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {dest_expr},
                             {host_ptr} + {item},
-                            sizeof({host_arrayname}[{item}]),
+                            sizeof({arrayname}[{item}]),
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -620,20 +616,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 arrayname, staticarrayname, is_dynamic = args
                 short = array_basename(arrayname)
                 if is_dynamic and short is not None:
-                    host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
                     # data() is void*; cudaMemcpy accepts it without a typed cast.
                     pointer_arrayname = f'dev{arrayname}.data()'
                 else:
-                    host_arrayname = arrayname
                     host_ptr = arrayname
                     size_str = f'_num_{arrayname}'
                     pointer_arrayname = f"dev{arrayname}"
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname}; i++)
                     {{
-                        {host_arrayname}[i] = {staticarrayname}[i];
+                        {arrayname}[i] = {staticarrayname}[i];
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -642,7 +636,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         cudaMemcpy(
                             {pointer_arrayname},
                             {host_ptr},
-                            sizeof({host_arrayname}[0])*{size_str},
+                            sizeof({arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -652,19 +646,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 arrayname, staticarrayname_index, staticarrayname_value = args
                 short = array_basename(arrayname)
                 if short is not None:
-                    host_arrayname = arrayname
                     host_ptr = f'{arrayname}.data()'
                     dev_ptr = f'dev{arrayname}.data()'
                     memcpy_size = f'{arrayname}.size()'
                 else:
-                    host_arrayname = arrayname
                     host_ptr = arrayname
                     dev_ptr = f'dev{arrayname}'
                     memcpy_size = f'_num_{arrayname}'
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname_index}; i++)
                     {{
-                        {host_arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
+                        {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
@@ -673,7 +665,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         cudaMemcpy(
                             {dev_ptr},
                             {host_ptr},
-                            sizeof({host_arrayname}[0])*{memcpy_size},
+                            sizeof({arrayname}[0])*{memcpy_size},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -919,10 +911,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         array_ptr = f'{bare}.data()'
                                     # Host local alias: generated kernel name is
                                     # `dev_array_*`; DeviceBuffer is `dev{bare}`.
-                                    if array_name != array_ptr:
-                                        code_object_defs_lines.append(
-                                            f'{dtype}* const {array_name} = {array_ptr};'
-                                        )
+                                    code_object_defs_lines.append(
+                                        f'{dtype}* const {array_name} = {array_ptr};'
+                                    )
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
