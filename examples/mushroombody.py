@@ -276,7 +276,7 @@ if params['profiling']:
 
 if params['monitors']:
     style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
-    #plt.style.use(['seaborn-paper', style_file])
+    plt.style.use(style_file)
     fig = plt.figure(constrained_layout=True, figsize=(7.08, 7.08))
     axs = fig.subplot_mosaic(
     """
