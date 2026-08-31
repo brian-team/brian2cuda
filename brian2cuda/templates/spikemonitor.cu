@@ -3,11 +3,6 @@
 {% extends 'common_group.cu' %}
 
 
-{% block extra_headers %}
-#include <cassert>
-{% endblock %}
-
-
 {# We change _N depending on number of events and subgroups #}
 {% block define_N %}
 // The _N of this kernel (total number of threads) is defined by the number of events
