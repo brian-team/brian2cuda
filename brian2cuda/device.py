@@ -1076,6 +1076,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         rand_tmp = self.code_object_class().templater.rand(None, None,
                                                            codeobjects_with_rng_per_run=self.codeobjects_with_rng["host_api"]["per_run"],
+                                                           all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
                                                            all_poisson_lamdas=self.all_poisson_lamdas,
                                                            needed_number_curand_states=needed_number_curand_states,
                                                            number_run_calls=len(self.codeobjects_with_rng["host_api"]["per_run"]),

@@ -4,9 +4,8 @@
 #include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
-#include "brianlib/cuda_utils.h"
+#include "brianlib/curand_utils.h"
 #include "network.h"
-#include <curand.h>
 #include <ctime>
 #include <curand_kernel.h>
 
@@ -14,6 +13,26 @@
 //      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
 
 using namespace brian;
+
+//////////////random numbers//////////////////
+curandGenerator_t brian::curand_generator;
+__device__ unsigned long long* brian::d_curand_seed;
+unsigned long long* brian::dev_curand_seed;
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
+__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
+{% endfor %}{# co #}
+{% endfor %}{# rng_type #}
+curandState* brian::dev_curand_states;
+__device__ curandState* brian::d_curand_states;
+RandomNumberBuffer brian::random_number_buffer;
 
 // TODO make this a class member function
 // TODO don't call one kernel per codeobject but instead on kernel which takes
@@ -47,7 +66,7 @@ namespace {
 // method, which is of different type
 void _run_random_number_buffer()
 {
-    // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
+    // random_number_buffer is a RandomNumberBuffer instance, defined in rand.cu
     random_number_buffer.next_time_step();
 }
 
@@ -470,7 +489,13 @@ void RandomNumberBuffer::next_time_step()
 #ifndef _BRIAN_RAND_H
 #define _BRIAN_RAND_H
 
-#include <curand.h>
+#include "objects.h"
+#include "brianlib/curand_utils.h"
+
+#ifndef CURAND_KERNEL_H_
+struct curandStateXORWOW;
+typedef struct curandStateXORWOW curandState;
+#endif
 
 void _run_random_number_buffer();
 
@@ -559,6 +584,31 @@ public:
     void run_finished();
     void ensure_enough_curand_states();
 };
+
+namespace brian {
+
+//////////////// random numbers /////////////////
+extern curandGenerator_t curand_generator;
+extern unsigned long long* dev_curand_seed;
+extern __device__ unsigned long long* d_curand_seed;
+
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
+extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
+{% endfor %}{# co #}
+{% endfor %}{# rng_type #}
+extern curandState* dev_curand_states;
+extern __device__ curandState* d_curand_states;
+extern RandomNumberBuffer random_number_buffer;
+
+}
 
 #endif
 
