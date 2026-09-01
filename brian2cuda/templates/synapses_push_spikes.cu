@@ -116,7 +116,6 @@ namespace {
                 file, line, "cudaMemcpyToSymbol");
         memory_recorder.push_back(std::make_tuple(name, bytes, num_elements));
     }
-
 }
 
 
