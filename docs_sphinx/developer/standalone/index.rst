@@ -48,11 +48,15 @@ generation lives in generated ``rand.h`` and ``rand.cu``. Because ``objects.h``
 does not include ``rand.h``, code objects without ``rand()`` or ``randn()``
 never parse cuRAND. Code objects that do use random numbers register
 ``"rand.h"`` through ``compiler_kwds["headers"]`` in ``codeobject.py`` or
-``cuda_generator.py``. Resizable device arrays follow the same pattern.
-``DeviceBuffer`` keeps Thrust out of ``objects.cu`` via a PImpl in a separate
-translation unit. That layout is described in :doc:`dynamic_array/index`.
+``cuda_generator.py``. How host-API buffers and device-API ``curandState``
+pools are chosen and filled is described in :doc:`random_numbers`.
+
+Resizable device arrays follow the same isolation pattern. ``DeviceBuffer``
+keeps Thrust out of ``objects.cu`` via a PImpl in a separate translation unit.
+That layout is described in :doc:`dynamic_array/index`.
 
 .. toctree::
    :maxdepth: 2
 
+   random_numbers
    dynamic_array/index
