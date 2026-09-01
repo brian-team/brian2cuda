@@ -14,7 +14,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
-#define BRIAN2CUDA_CURAND_HOST
 #include "objects.h"
 #include "network.h"
 {% if synapses %}
@@ -29,7 +28,6 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <algorithm>
 #include <cctype>
 #include <vector>
-#include <curand.h>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -254,7 +252,6 @@ void expand_eventspace{{ varname }}(int num_queues) {
     }
 }
 {% endfor %}
-
 void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows)
 {
     std::vector<void*> host_ptrs(n_rows);
@@ -329,32 +326,6 @@ std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 {% endfor %}
 {% endif %}
 
-
-//////////////random numbers//////////////////
-curandGenerator_t brian::curand_generator;
-__device__ unsigned long long* brian::d_curand_seed;
-unsigned long long* brian::dev_curand_seed;
-// dev_{co.name}_{rng_type}_allocator
-//      pointer to start of generated random numbers array
-//      at each generation cycle this array is refilled
-// dev_{co.name}_{rng_type}
-//      pointer moving through generated random number array
-//      until it is regenerated at the next generation cycle
-{% for rng_type in all_codeobj_with_host_rng.keys() %}
-{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
-{% if rng_type in ['rand', 'randn'] %}
-{% set dtype = 'randomNumber_t' %}
-{% else %}  {# rng_type = 'poisson_<idx>' #}
-{% set dtype = 'unsigned int' %}
-{% endif %}
-{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
-{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
-__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
-{% endfor %}{# rng_type #}
-{% endfor %}{# co #}
-curandState* brian::dev_curand_states;
-__device__ curandState* brian::d_curand_states;
-RandomNumberBuffer brian::random_number_buffer;
 
 void _init_arrays()
 {
@@ -505,8 +476,6 @@ void _init_arrays()
     const double to_MB = 1.0 / (1024.0 * 1024.0);
     double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
     double time_passed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_timer).count();
-    {% for var, varname in eventspace_arrays | dictsort(by='value') %}
-    {% endfor %}
     std::cout << "INFO: _init_arrays() took " <<  time_passed << "s";
     if (tot_memory_MB > 0)
         std::cout << " and used " << tot_memory_MB << "MB of device memory.";
@@ -752,13 +721,6 @@ void _dealloc_arrays()
 // be visible to all files including objects.h
 typedef {{curand_float_type}} randomNumber_t;  // random number type
 
-struct curandGenerator_st;
-typedef struct curandGenerator_st* curandGenerator_t;
-#ifndef CURAND_KERNEL_H_
-struct curandStateXORWOW;
-typedef struct curandStateXORWOW curandState;
-#endif
-
 #ifndef _BRIAN_OBJECTS_H
 #define _BRIAN_OBJECTS_H
 
@@ -767,7 +729,6 @@ typedef struct curandStateXORWOW curandState;
 #include <stdint.h>
 #include "brianlib/clocks.h"
 #include "brianlib/device_buffer.h"
-#include "rand.h"
 {% if profiled_codeobjects is defined %}
 #include <chrono>
 {% endif %}
@@ -894,31 +855,6 @@ extern std::chrono::nanoseconds {{codeobj}}_kernel_currents_profiling_info;
 {% endif %}
 
 
-//////////////// random numbers /////////////////
-extern curandGenerator_t curand_generator;
-extern unsigned long long* dev_curand_seed;
-extern __device__ unsigned long long* d_curand_seed;
-
-{% for rng_type in all_codeobj_with_host_rng.keys() %}
-{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
-{% if rng_type in ['rand', 'randn'] %}
-{% set dtype = 'randomNumber_t' %}
-{% else %}  {# rng_type = 'poisson_<idx>' #}
-{% set dtype = 'unsigned int' %}
-{% endif %}
-// pointer to start of generated random numbers array
-// at each generation cycle this array is refilled
-extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
-// pointer moving through generated random number array
-// until it is regenerated at the next generation cycle
-extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
-extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
-{% endfor %}{# rng_type #}
-{% endfor %}{# co #}
-extern curandState* dev_curand_states;
-extern __device__ curandState* d_curand_states;
-extern RandomNumberBuffer random_number_buffer;
-
 //CUDA
 extern int num_parallel_blocks;
 extern int max_threads_per_block;
@@ -937,9 +873,7 @@ void copy_dev_to_host_array_{{ N }}();
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
-
 void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows);
-
 
 }
 
