@@ -42,12 +42,13 @@ Public headers
 ``curand_buffer.h``
     Host-side cuRAND buffer used during synapse creation. Declares
     ``CurandBuffer`` and forward-declares ``curandGenerator_t`` so including
-    the header does not parse ``<curand.h>``.
+    the header does not parse ``<curand.h>``. See
+    :doc:`../standalone/random_numbers`.
 
 ``curand_utils.h``
     cuRAND status strings and ``CUDA_SAFE_CALL`` overloads for ``curandStatus_t``.
     Include this from translation units that call host cuRAND APIs, for example
-    ``curand_buffer.cu`` or ``objects.cu``.
+    ``curand_buffer.cu``, ``rand.cu``, or ``objects.cu``.
 
 ``clocks.h``
     Host clock types (``Clock``, ``EventClock``) shared between ``objects.h``
