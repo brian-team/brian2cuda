@@ -75,3 +75,31 @@ Public headers
     these on ``std::vector`` data during ``before_run`` instead of pulling Thrust
     into ``objects.cu``.
 
+Translation units
+-----------------
+
+The ``.cu`` files exist so that heavy third-party code or non-inline host logic
+is compiled once per standalone project, not once per generated code object.
+
+``logging.cu``
+    Host implementation of ``b2c_log_open``, ``b2c_log_close``, and
+    ``b2c_log_message``. Writes WARNING/ERROR lines to ``results/cuda_log.txt``
+    for re-emission in Python after ``device.run()``. See
+    :doc:`../guidelines/logging`.
+
+``device_buffer.cu``
+    Defines ``DeviceBuffer::Impl`` and holds ``thrust::device_vector<char>``.
+    Without a separate file, every translation unit that includes
+    ``device_buffer.h`` would parse Thrust and instantiate device vectors. See
+    :doc:`../standalone/dynamic_array/index`.
+
+``curand_buffer.cu``
+    Implements ``CurandBuffer`` and explicitly instantiates ``float`` and
+    ``double``. Keeping template code here avoids repeating cuRAND includes and
+    instantiations in headers that many files include.
+
+``thrust_algorithms.cu``
+    Defines ``filter_subgroup_eventspace`` using ``thrust::copy_if`` on device
+    eventspace pointers. Subgroup spike monitors need a GPU filter. STL cannot
+    operate on that memory. The algorithm is isolated in this file so
+    ``objects.cu`` and the code objects do not include ``<thrust/copy.h>``.
