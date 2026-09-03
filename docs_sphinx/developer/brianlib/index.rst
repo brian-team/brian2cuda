@@ -97,7 +97,9 @@ is compiled once per standalone project, not once per generated code object.
 ``curand_buffer.cu``
     Implements ``CurandBuffer`` and explicitly instantiates ``float`` and
     ``double``. Keeping template code here avoids repeating cuRAND includes and
-    instantiations in headers that many files include.
+    instantiations in headers that many files include. Every-tick RNG buffers
+    live in generated ``rand.cu`` instead. See
+    :doc:`../standalone/random_numbers`.
 
 ``thrust_algorithms.cu``
     Defines ``filter_subgroup_eventspace`` using ``thrust::copy_if`` on device
