@@ -25,7 +25,7 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
-from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
+from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor, PopulationRateMonitor
 from brian2.groups import Subgroup
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
@@ -928,9 +928,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         #       for variables that are e.g. only read in the kernel
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                                    # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array
-                                    # `{array}.size()`
+                                    # Add size variables `_num{k}`. Pass the host
+                                    # local by name (not the size expression) so
+                                    # aliases that share a DynamicArray are not
+                                    # collapsed by HOST_PARAMETERS string dedup.
                                     if len(prefixes) == 1 or prefix == '':
                                         if prefix == '' or len(prefixes) > 1:
                                             num_expr = f'static_cast<int>({bare}.size())'
@@ -939,8 +940,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         code_object_defs_lines.append(
                                             f'const int _num{k} = {num_expr};'
                                         )
-                                        host_parameters_lines.append(num_expr)
-                                        kernel_parameters_lines.append(f"const int _num{k}")
+                                        host_parameters_lines.append(f'_num{k}')
+                                        kernel_parameters_lines.append(f'const int _num{k}')
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 # Add host and kernel parameters only for device pointers
@@ -1491,7 +1492,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.variables_on_host_only = []
         for var, varname in self.arrays.items():
             try:
-                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+                is_mon = isinstance(
+                    var.owner,
+                    (StateMonitor, SpikeMonitor, EventMonitor, PopulationRateMonitor),
+                )
             except ReferenceError:
                 # some variable ownders are weakreference that don't exist anymore
                 # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
