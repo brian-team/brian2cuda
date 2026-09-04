@@ -11,7 +11,7 @@ for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 {
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded = get_array_name(var, access_data=False) %}
-    {{ _recorded }}[i].resize(_numt_host + num_iterations - current_iteration);
+    {{_recorded}}[i].resize(_numt_host + num_iterations - current_iteration);
     {% endfor %}
 }
 {% for varname, var in _recorded_variables | dictsort %}
@@ -30,8 +30,8 @@ upload_monitor_row_addresses(
 // recorded indices).
 const int _N = _num_indices;
 
-const int _numt_host = _dynamic_array_{{ owner.name }}_t.size();
-_dynamic_array_{{ owner.name }}_t.push_back({{ owner.clock.name }}.t[0]);
+const int _numt_host = _dynamic_array_{{owner.name}}_t.size();
+_dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
 
 // Update size variables for Python side indexing to work
 _array_{{owner.name}}_N[0] += 1;
@@ -51,7 +51,7 @@ if(current_iteration >= num_iterations)
     {
         {% for varname, var in _recorded_variables | dictsort %}
         {% set _recorded = get_array_name(var, access_data=False) %}
-        {{ _recorded }}[i].resize(_numt_host + 1);
+        {{_recorded}}[i].resize(_numt_host + 1);
         {% endfor %}
     }
     {% for varname, var in _recorded_variables | dictsort %}
