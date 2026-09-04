@@ -1138,13 +1138,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             reemit_cuda_log(self.results_dir)
 
     def delete(self, code=True, data=True, run_args=True, directory=True, force=False):
+        # Remove our extra files before Brian's delete, which treats unknown
+        # project files as foreign and may skip directory deletion.
+        extra = []
         if data and self.results_dir is not None:
-            cuda_log = os.path.join(self.results_dir, 'cuda_log.txt')
-            if os.path.isfile(cuda_log):
+            extra.append(os.path.join(self.results_dir, 'cuda_log.txt'))
+        if self.project_dir is not None:
+            extra.append(os.path.join(self.project_dir, 'b2c_log_flags.stamp'))
+        for path in extra:
+            if os.path.isfile(path):
                 try:
-                    os.remove(cuda_log)
+                    os.remove(path)
                 except (IOError, OSError) as ex:
-                    logger.warn(f"Cannot delete '{cuda_log}': {ex}")
+                    logger.warn(f"Cannot delete '{path}': {ex}")
         super().delete(
             code=code, data=data, run_args=run_args, directory=directory, force=force
         )
