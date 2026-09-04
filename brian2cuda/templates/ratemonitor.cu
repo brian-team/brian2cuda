@@ -18,12 +18,7 @@ int new_size = num_iterations + size_till_now - start_offset;
 dev{{_dynamic_t}}.resize(new_size);
 dev{{_dynamic_rate}}.resize(new_size);
 // Update size variables for Python side indexing to work
-// (Note: Need to update device variable which will be copied to host in write_arrays())
 _array_{{owner.name}}_N[0] = new_size;
-CUDA_SAFE_CALL(
-        cudaMemcpy(dev_array_{{owner.name}}_N, _array_{{owner.name}}_N, sizeof(int32_t),
-                   cudaMemcpyHostToDevice)
-        );
 
 num_threads = 1;
 num_blocks = 1;
@@ -32,8 +27,8 @@ num_blocks = 1;
 {% block kernel_call %}
 _run_kernel_{{codeobj_name}}<<<num_blocks, num_threads>>>(
     current_iteration - start_offset,
-    dev{{_dynamic_rate}}.data_as<{{c_data_type(rate.dtype)}}>(),
-    dev{{_dynamic_t}}.data_as<{{c_data_type(t.dtype)}}>(),
+    dev{{_dynamic_rate}}.data_as<{{c_data_type(variables['rate'].dtype)}}>(),
+    dev{{_dynamic_t}}.data_as<{{c_data_type(variables['t'].dtype)}}>(),
     ///// HOST_PARAMETERS /////
     %HOST_PARAMETERS%);
 

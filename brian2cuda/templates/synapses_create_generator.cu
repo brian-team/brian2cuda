@@ -13,6 +13,7 @@
 #include<brianlib/curand_buffer.h>
 #include "rand.h"
 #include<map>
+#include<set>
 {% endblock extra_headers %}
 
 {% block random_functions %}
