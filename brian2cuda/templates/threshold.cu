@@ -78,7 +78,7 @@ _reset_{{codeobj_name}}(
 {% block extra_kernel_call %}
     {% if extra_threshold_kernel %}
         _reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-                dev{{ _eventspace_name }}[current_idx{{ _eventspace_name }}]
+                dev{{_eventspace_name}}[current_idx{{_eventspace_name}}]
             );
 
         CUDA_CHECK_ERROR("_reset_{{codeobj_name}}");
@@ -90,7 +90,7 @@ _reset_{{codeobj_name}}(
 {% if not extra_threshold_kernel %}
     // reset eventspace counter to 0
     CUDA_SAFE_CALL(
-            cudaMemset(&(dev{{ _eventspace_name }}[current_idx{{ _eventspace_name }}][_N]), 0, sizeof(int32_t))
+            cudaMemset(&(dev{{_eventspace_name}}[current_idx{{_eventspace_name}}][_N]), 0, sizeof(int32_t))
             );
 {% endif %}
 {% endblock host_maincode %}
@@ -136,7 +136,7 @@ num_threads = min(max_threads_per_block, (int)ceil(_N/(double)num_blocks));
 {% endif %}
 
 _reset_{{codeobj_name}}<<<num_blocks, num_threads>>>(
-        dev{{ _eventspace_name }}[current_idx{{ _eventspace_name }}]
+        dev{{_eventspace_name}}[current_idx{{_eventspace_name}}]
     );
 
 CUDA_CHECK_ERROR("_reset_{{codeobj_name}}");

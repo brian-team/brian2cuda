@@ -399,7 +399,7 @@ std::cout << std::endl;
     {% for variable in owner._registered_variables | sort(attribute='name') %}
         {% set varname = get_array_name(variable, access_data=False) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
-            assert(dev{{ varname }}.size() <= 1);
+            assert(dev{{varname}}.size() <= 1);
             {{varname}}.resize(1);
             dev{{ varname }}.resize(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
