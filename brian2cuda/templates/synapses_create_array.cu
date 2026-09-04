@@ -2,6 +2,7 @@
 
 {% block extra_headers %}
 {{ super() }}
+#include <iostream>
 #include<map>
 {% endblock %}
 
@@ -74,24 +75,19 @@ for (int _idx=0; _idx<_numsources; _idx++) {
     {{_dynamic_N_incoming}}[_real_targets]++;
 }
 
-// now we need to resize all registered variables
 const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
 {% for variable in owner._registered_variables | sort(attribute='name') %}
     {% set varname = get_array_name(variable, access_data=False) %}
     {% if variable.name == 'delay' and no_or_const_delay_mode %}
-        THRUST_CHECK_ERROR(
-                dev{{varname}}.resize(1)
-                );
-        {# //TODO: do we actually need to resize varname? #}
         {{varname}}.resize(1);
+        dev{{varname}}.resize(1);
     {% else %}
         {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
-        THRUST_CHECK_ERROR(
-                dev{{varname}}.resize(newsize)
-                );
-        {% endif %}
-        {# //TODO: do we actually need to resize varname? #}
         {{varname}}.resize(newsize);
+        dev{{varname}}.resize(newsize);
+        {% else %}
+        {{varname}}.resize(newsize);
+        {% endif %}
     {% endif %}
 {% endfor %}
 CUDA_CHECK_MEMORY();
@@ -105,7 +101,9 @@ for (int _i=0; _i<newsize; _i++)
 {
     // Note that source_target_count will create a new entry initialized
     // with 0 when the key does not exist yet
-    const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
+    const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>(
+            {{_dynamic__synaptic_pre}}[_i],
+            {{_dynamic__synaptic_post}}[_i]);
     {% if multisynaptic_index %}
     // Save the "synapse number"
     {% set dynamic_multisynaptic_idx = get_array_name(multisynaptic_idx_var, access_data=False) %}
@@ -121,14 +119,17 @@ for (int _i=0; _i<newsize; _i++)
         {% endif %}
     }
 }
-// Check
-// copy changed host data to device
-dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
-dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
-dev{{_dynamic__synaptic_pre}} = {{_dynamic__synaptic_pre}};
-dev{{_dynamic__synaptic_post}} = {{_dynamic__synaptic_post}};
+{% set Nin = array_basename(_dynamic_N_incoming) %}
+{% set Nout = array_basename(_dynamic_N_outgoing) %}
+{% set Npre = array_basename(_dynamic__synaptic_pre) %}
+{% set Npost = array_basename(_dynamic__synaptic_post) %}
+copy_host_to_dev_array_{{ Nin }}();
+copy_host_to_dev_array_{{ Nout }}();
+copy_host_to_dev_array_{{ Npre }}();
+copy_host_to_dev_array_{{ Npost }}();
 {% if multisynaptic_index %}
-dev{{dynamic_multisynaptic_idx}} = {{dynamic_multisynaptic_idx}};
+{% set Nms = array_basename(dynamic_multisynaptic_idx) %}
+copy_host_to_dev_array_{{ Nms }}();
 {% endif %}
 CUDA_SAFE_CALL(
         cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},

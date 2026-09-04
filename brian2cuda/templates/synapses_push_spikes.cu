@@ -35,20 +35,24 @@
  # sorted by their delay (if they have any).
  #}
 {% block before_run_headers %}
-#include <thrust/sort.h>
-#include <thrust/reduce.h>
-#include <thrust/unique.h>
-#include <iostream>
-#include <ctime>
-#include <limits.h>
-#include <tuple>
+{{ super() }}
+#include "synapses_classes.h"
+#include "brianlib/spikequeue.h"
+#include <algorithm>
+#include <chrono>
+#include <climits>
+#include <cmath>
+#include <numeric>
 #include <string>
-#include <iomanip>
+#include <tuple>
 #include <vector>
-#include "objects.h"
-#include "code_objects/{{codeobj_name}}.h"
-#include "brianlib/cuda_utils.h"
+#include "brianlib/host_algorithms.h"
 {% endblock before_run_headers %}
+
+{% block extra_headers %}
+#include "synapses_classes.h"
+#include "brianlib/spikequeue.h"
+{% endblock %}
 
 
 {% block before_run_defines %}
@@ -57,8 +61,7 @@
     _copyHostArrayToDeviceSymbol(a, b, c, d, e, __FILE__, __LINE__)
 
 namespace {
-    // vector_t<T> is an alias for thrust:host_vector<T>
-    template <typename T> using vector_t = thrust::host_vector<T>;
+    template <typename T> using vector_t = std::vector<T>;
     // tuple type typedef
     typedef std::tuple<std::string, size_t, int> tuple_t;
 
@@ -245,7 +248,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
      * STRUCTURE: the first array dimensions structure (`by_pre`, `by_bundle` or none)
      *   `by_pre`: Array (host pointer type) of size `num_pre_post_blocks`,
      *             which is the number of (preID, postBlock) pairs.
-     *   `by_bundle`: thrust::host_vector, size of total number of bundles,
+     *   `by_bundle`: std::vector, size of total number of bundles,
      *                which is one for each delay in each (preID, postBlock) pair.
      *                Different (preID, postBlock) pairs can have different sets
      *                of delay values -> each bundle gets a global bundleID
@@ -454,44 +457,35 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
             // reduce the delay arrays to unique delays and store the
             // start indices in the synapses array for each unique delay
 
-            typedef vector_t<int>::iterator itr;
-
             // sort synapses (values) and delays (keys) by delay
-            thrust::sort_by_key(
-                    h_vec_delays_by_pre[i].begin(),     // keys start
-                    h_vec_delays_by_pre[i].end(),       // keys end
-                    h_vec_synapse_ids_by_pre[i].begin() // values start
-                    );
+            brian::sort_by_key(
+                    h_vec_delays_by_pre[i].data(),     // keys start
+                    h_vec_synapse_ids_by_pre[i].data(), // values start
+                    num_elements);
 
             // worst case: number of unique delays is num_elements
             h_vec_unique_delay_start_idcs_by_pre[i].resize(num_elements);
 
             // Initialise the unique delay start idcs array as a sequence
-            thrust::sequence(h_vec_unique_delay_start_idcs_by_pre[i].begin(),
-                    h_vec_unique_delay_start_idcs_by_pre[i].end());
+            std::iota(
+                    h_vec_unique_delay_start_idcs_by_pre[i].data(),
+                    h_vec_unique_delay_start_idcs_by_pre[i].data() + num_elements,
+                    0);
 
             // get delays (keys) and values (indices) for first occurence of each delay value
-            thrust::pair<itr, itr> end_pair = thrust::unique_by_key(
-                    h_vec_delays_by_pre[i].begin(),                 // keys start
-                    h_vec_delays_by_pre[i].end(),                   // keys end
-                    h_vec_unique_delay_start_idcs_by_pre[i].begin() // values start (position in original delay array)
-                    );
-
-            itr unique_delay_end = end_pair.first;
-            itr idx_end = end_pair.second;
+            int num_unique_elements = static_cast<int>(brian::unique_by_key(
+                    h_vec_delays_by_pre[i].data(),                 // keys start
+                    h_vec_unique_delay_start_idcs_by_pre[i].data(), // values start (position in original delay array)
+                    num_elements));
 
             // erase unneded vector entries
-            h_vec_unique_delay_start_idcs_by_pre[i].erase(
-                    idx_end, h_vec_unique_delay_start_idcs_by_pre[i].end());
+            h_vec_unique_delay_start_idcs_by_pre[i].resize(num_unique_elements);
             // free not used but allocated host memory
             h_vec_unique_delay_start_idcs_by_pre[i].shrink_to_fit();
-            h_vec_delays_by_pre[i].erase(unique_delay_end,
-                    h_vec_delays_by_pre[i].end());
+            h_vec_delays_by_pre[i].resize(num_unique_elements);
             // delay_by_pre holds the set of unique delays now
             // we don't need shrink_to_fit, swap takes care of that
             h_vec_unique_delays_by_pre[i].swap(h_vec_delays_by_pre[i]);
-
-            int num_unique_elements = h_vec_unique_delays_by_pre[i].size();
             sum_num_unique_elements += num_unique_elements;
 
             if (num_unique_elements > {{owner.name}}_max_num_unique_delays)
@@ -532,7 +526,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
                 // copy this bundle to device and store the device pointer
                 int32_t* d_this_bundle = d_ptr_synapse_ids + sum_bundle_sizes;
-                int32_t* h_this_bundle = thrust::raw_pointer_cast(&h_vec_synapse_ids_by_pre[i][synapses_start_idx]);
+                int32_t* h_this_bundle = &h_vec_synapse_ids_by_pre[i][synapses_start_idx];
                 size_t memory_size = sizeof(int32_t) * num_synapses;
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_this_bundle, h_this_bundle, memory_size, cudaMemcpyHostToDevice)
@@ -564,7 +558,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
             h_ptr_d_ptr_synapse_ids_by_pre[i] = d_ptr_synapse_ids + sum_num_elements;
             CUDA_SAFE_CALL(
                     cudaMemcpy(h_ptr_d_ptr_synapse_ids_by_pre[i],
-                        thrust::raw_pointer_cast(&(h_vec_synapse_ids_by_pre[i][0])),
+                        h_vec_synapse_ids_by_pre[i].data(),
                         sizeof(int32_t) * num_elements,
                         cudaMemcpyHostToDevice)
                     );
@@ -665,8 +659,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_ptr_unique_delays
                                        + sum_num_unique_elements,
-                                   thrust::raw_pointer_cast(
-                                       &(h_vec_unique_delays_by_pre[i][0])),
+                                   h_vec_unique_delays_by_pre[i].data(),
                                    sizeof(int)*num_unique_elements,
                                    cudaMemcpyHostToDevice)
                         );
@@ -677,7 +670,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
                 // copy the unique delays start indices to the device
                 CUDA_SAFE_CALL(
                         cudaMemcpy(d_ptr_unique_delay_start_idcs + sum_num_unique_elements,
-                                   thrust::raw_pointer_cast(&(h_vec_unique_delay_start_idcs_by_pre[i][0])),
+                                   h_vec_unique_delay_start_idcs_by_pre[i].data(),
                                    sizeof(int)*num_unique_elements,
                                    cudaMemcpyHostToDevice)
                         );
@@ -719,13 +712,13 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         }
         // size by bundle
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_num_synapses_by_bundle,
-                thrust::raw_pointer_cast(&h_num_synapses_by_bundle[0]),
+                h_num_synapses_by_bundle.data(),
                 {{owner.name}}_num_synapses_by_bundle, num_bundle_ids,
                 "number of synapses per bundle");
 
         // synapses offset by bundle
         COPY_HOST_ARRAY_TO_DEVICE_SYMBOL(d_ptr_synapses_offset_by_bundle,
-                thrust::raw_pointer_cast(&h_synapses_offset_by_bundle[0]),
+                h_synapses_offset_by_bundle.data(),
                 {{owner.name}}_synapses_offset_by_bundle, num_bundle_ids,
                 "synapses bundle offset");
 
@@ -774,20 +767,15 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
 
     // sum all allocated memory
     size_t total_memory = 0;
-    int max_string_length = 0;
     for(auto const& tuple: memory_recorder){
         total_memory += std::get<1>(tuple);
-        int str_len = std::get<0>(tuple).length();
-        if (str_len > max_string_length)
-            max_string_length = str_len;
     }
     double total_memory_MB = total_memory * to_MB;
-    max_string_length += 5;
 
     // sort tuples by used memory
-    std::sort(begin(memory_recorder), end(memory_recorder),
+    std::sort(memory_recorder.begin(), memory_recorder.end(),
             [](tuple_t const &t1, tuple_t const &t2) {
-            return std::get<1>(t1) > std::get<1>(t2); // or use a custom compare function
+            return std::get<1>(t1) > std::get<1>(t2);
             }
             );
 
@@ -800,30 +788,37 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     {% endif %}{# not no_or_const_delay_mode #}
 
     // print memory information
-    std::cout.precision(1);
-    std::cout.setf(std::ios::fixed, std::ios::floatfield);
-    std::cout << "INFO: synapse statistics and memory usage for {{owner.name}}:\n"
-        << "\tnumber of synapses: " << syn_N << "\n"
+    printf("INFO: synapse statistics and memory usage for {{owner.name}}:\n"
+        "\tnumber of synapses: %d\n"
     {% if not no_or_const_delay_mode and bundle_mode %}
-        << "\tnumber of bundles: " << num_bundle_ids << "\n"
+        "\tnumber of bundles: %d\n"
     {% endif %}
-        << "\tnumber of pre/post blocks: " << num_pre_post_blocks << "\n"
-        << "\tnumber of synapses over all pre/post blocks:\n"
-        << "\t\tmean: " << mean_num_elements << "\tstd: "
-            << std_num_elements << "\n"
+        "\tnumber of pre/post blocks: %d\n"
+        "\tnumber of synapses over all pre/post blocks:\n"
+        "\t\tmean: %.1f\tstd: %.1f\n"
     {% if not no_or_const_delay_mode %}
-        << "\tnumber of unique delays over all pre/post blocks:\n"
-        << "\t\tmean: " << mean_num_unique_elements << "\tstd: "
-            << std_num_unique_elements << "\n"
+        "\tnumber of unique delays over all pre/post blocks:\n"
+        "\t\tmean: %.1f\tstd: %.1f\n"
     {% if bundle_mode %}
-    << "\tbundle size over all bundles:\n"
-        << "\t\tmean: " << mean_bundle_sizes << "\tstd: "
-        << std_bundle_sizes << "\n"
+        "\tbundle size over all bundles:\n"
+        "\t\tmean: %.1f\tstd: %.1f\n"
     {% endif %}{# bundle_mode #}
     {% endif %}{# not no_or_const_delay_mode #}
-    << "\n\tmemory usage: TOTAL: " << total_memory_MB << " MB (~"
-        << total_memory_MB / syn_N * 1024.0 * 1024.0  << " byte per synapse)"
-        << std::endl;
+        "\n\tmemory usage: TOTAL: %.1f MB (~%.1f byte per synapse)\n",
+        syn_N,
+    {% if not no_or_const_delay_mode and bundle_mode %}
+        num_bundle_ids,
+    {% endif %}
+        num_pre_post_blocks,
+        mean_num_elements, std_num_elements,
+    {% if not no_or_const_delay_mode %}
+        mean_num_unique_elements, std_num_unique_elements,
+    {% if bundle_mode %}
+        mean_bundle_sizes, std_bundle_sizes,
+    {% endif %}{# bundle_mode #}
+    {% endif %}{# not no_or_const_delay_mode #}
+        total_memory_MB,
+        total_memory_MB / syn_N * 1024.0 * 1024.0);
 
     for(auto const& tuple: memory_recorder){
         std::string name;
@@ -832,9 +827,8 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
         std::tie(name, bytes, num_elements) = tuple;
         double memory = bytes * to_MB;
         double fraction = memory / total_memory_MB * 100;
-        std::cout << "\t\t" << std::setprecision(1) << std::fixed << fraction
-            << "%\t" << std::setprecision(3) << std::fixed << memory << " MB\t"
-            << name << " [" << num_elements << "]" << std::endl;
+        printf("\t\t%.1f%%\t%.3f MB\t%s [%d]\n",
+               fraction, memory, name.c_str(), num_elements);
     }
 
 
@@ -843,41 +837,7 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     if (scalar_delay)
     {% endif %}
     {
-        int num_eventspaces = dev{{_eventspace}}.size();
-        bool require_new_eventspaces = (num_queues > num_eventspaces);
-
-        if (require_new_eventspaces)
-        {
-            // rotate circular eventspace such that the current idx is at the start
-            // (logic copied from CSpikeQueue.expand() in Brian's cspikequeue.cpp)
-            std::rotate(
-                dev{{_eventspace}}.begin(),
-                dev{{_eventspace}}.begin() + current_idx{{_eventspace}},
-                dev{{_eventspace}}.end()
-            );
-            current_idx{{_eventspace}} = 0;
-            // add new eventspaces
-            for (int i = num_eventspaces; i < num_queues; i++)
-            {
-                {{c_data_type(eventspace_variable.dtype)}}* new_eventspace;
-                CUDA_SAFE_CALL(
-                    cudaMalloc(
-                        (void**)&new_eventspace,
-                        sizeof({{c_data_type(eventspace_variable.dtype)}}) * _num_{{_eventspace}}
-                    )
-                );
-                // initialize device eventspace with -1 and counter with 0
-                CUDA_SAFE_CALL(
-                    cudaMemcpy(
-                        new_eventspace,
-                        {{_eventspace}},  // defined in objects.cu
-                        sizeof({{c_data_type(eventspace_variable.dtype)}}) * _num_{{_eventspace}},
-                        cudaMemcpyHostToDevice
-                    )
-                );
-                dev{{_eventspace}}.push_back(new_eventspace);
-            }
-        }
+        expand_eventspace{{ _eventspace }}(num_queues);
     }
 
     int num_threads = num_queues;
@@ -977,17 +937,18 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     }
 
     CUDA_CHECK_MEMORY();
-    double time_passed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_timer).count();
-    std::cout << "INFO: {{owner.name}} initialisation took " <<  time_passed << "s";
+    double time_passed = std::chrono::duration<double>(
+            std::chrono::high_resolution_clock::now() - start_timer).count();
+    printf("INFO: {{owner.name}} initialisation took %.6fs", time_passed);
     if (used_device_memory_after_dealloc < used_device_memory_start){
         size_t freed_bytes = used_device_memory_start - used_device_memory_after_dealloc;
-        std::cout << ", freed " << freed_bytes * to_MB << "MB";
+        printf(", freed %.1fMB", freed_bytes * to_MB);
     }
     if (used_device_memory > used_device_memory_start){
         size_t used_bytes = used_device_memory - used_device_memory_start;
-        std::cout << " and used " << used_bytes * to_MB << "MB of device memory.";
+        printf(" and used %.1fMB of device memory.", used_bytes * to_MB);
     }
-    std::cout << std::endl;
+    printf("\n");
 
     first_run = false;
 {% endblock before_run_host_maincode %}
@@ -1056,7 +1017,7 @@ _run_kernel_{{codeobj_name}}(
 {% block host_maincode %}
     if ({{owner.name}}_scalar_delay)
     {
-        int num_eventspaces = dev{{_eventspace}}.size();
+        int num_eventspaces = static_cast<int>(dev{{ _eventspace }}.size());
         {{owner.name}}_eventspace_idx = (current_idx{{_eventspace}} - {{owner.name}}_delay + num_eventspaces) % num_eventspaces;
 
         //////////////////////////////////////////////

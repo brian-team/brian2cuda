@@ -25,7 +25,7 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
-from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
+from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor, PopulationRateMonitor
 from brian2.groups import Subgroup
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
@@ -35,14 +35,17 @@ from brian2cuda.utils.stringtools import replace_floating_point_literals
 from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
 from brian2cuda.utils.logger import report_issue_message
 
-from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
+from .codeobject import (
+    CUDAStandaloneCodeObject,
+    CUDAStandaloneAtomicsCodeObject,
+    array_basename,
+)
 
 
 __all__ = []
 
 logger = get_logger(__name__)
 
-# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
 
@@ -536,39 +539,32 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # TODO: Move this into before_run_synapses_push_spikes
                     for synaptic_pre, delete in self.delete_synaptic_pre.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_pre}.clear();
-                                dev{synaptic_pre}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_pre}.clear();')
                     for synaptic_post, delete in self.delete_synaptic_post.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_post}.clear();
-                                dev{synaptic_post}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_post}.clear();')
                     for synaptic_delay, delete in self.delete_synaptic_delay.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_delay}.clear();
-                                dev{synaptic_delay}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_delay}.clear();')
                 # The actual network code
                 main_lines.extend(netcode)
                 # Increment run counter
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                size_str = f"{arrayname}.size()" if is_dynamic else f"_num_{arrayname}"
+                short = array_basename(arrayname)
+                if is_dynamic and short is not None:
+                    host_ptr = f'{arrayname}.data()'
+                    size_str = f'{arrayname}.size()'
+                    # data() is void*; cudaMemcpy accepts it without a typed cast.
+                    pointer_arrayname = f'dev{arrayname}.data()'
+                else:
+                    host_ptr = arrayname
+                    size_str = f'_num_{arrayname}'
+                    pointer_arrayname = f"dev{arrayname}"
+                    if arrayname.endswith('space'):
+                        pointer_arrayname += f'[current_idx{arrayname}]'
                 rendered_value = CPPNodeRenderer().render_expr(repr(value))
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
-                if is_dynamic:
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
                     {{
@@ -576,12 +572,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname},
-                            &{arrayname}[0],
+                            {host_ptr},
                             sizeof({arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
@@ -590,20 +585,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
-                if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
+                short = array_basename(arrayname)
+                if short is not None:
+                    host_ptr = f'{arrayname}.data()'
+                    # void* + offset is illegal; advance by element size in bytes.
+                    dest_expr = (
+                        f'static_cast<char*>(dev{arrayname}.data()) + '
+                        f'({item}) * sizeof({arrayname}[0])'
+                    )
+                else:
+                    host_ptr = arrayname
+                    dest_expr = f"dev{arrayname}"
+                    if arrayname.endswith('space'):
+                        dest_expr += f'[current_idx{arrayname}]'
+                    dest_expr = f'{dest_expr} + {item}'
                 code = f"{arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            {pointer_arrayname} + {item},
-                            &{arrayname}[{item}],
+                            {dest_expr},
+                            {host_ptr} + {item},
                             sizeof({arrayname}[{item}]),
                             cudaMemcpyHostToDevice
                         )
@@ -612,13 +614,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                size_str = "_num_" + arrayname
-                if is_dynamic:
-                    size_str = arrayname + ".size()"
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
+                short = array_basename(arrayname)
+                if is_dynamic and short is not None:
+                    host_ptr = f'{arrayname}.data()'
+                    size_str = f'{arrayname}.size()'
+                    # data() is void*; cudaMemcpy accepts it without a typed cast.
+                    pointer_arrayname = f'dev{arrayname}.data()'
+                else:
+                    host_ptr = arrayname
+                    size_str = f'_num_{arrayname}'
+                    pointer_arrayname = f"dev{arrayname}"
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname}; i++)
                     {{
@@ -626,12 +631,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname},
-                            &{arrayname}[0],
+                            {host_ptr},
                             sizeof({arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
@@ -640,7 +644,15 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
-                # Set on host
+                short = array_basename(arrayname)
+                if short is not None:
+                    host_ptr = f'{arrayname}.data()'
+                    dev_ptr = f'dev{arrayname}.data()'
+                    memcpy_size = f'{arrayname}.size()'
+                else:
+                    host_ptr = arrayname
+                    dev_ptr = f'dev{arrayname}'
+                    memcpy_size = f'_num_{arrayname}'
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname_index}; i++)
                     {{
@@ -648,13 +660,12 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            dev{arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*_num_{arrayname},
+                            {dev_ptr},
+                            {host_ptr},
+                            sizeof({arrayname}[0])*{memcpy_size},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -662,10 +673,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                code = f'''
-                    {array_name}.resize({new_size});
-                    THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
-                '''
+                code = (
+                    f'{array_name}.resize({new_size});\n'
+                    f'dev{array_name}.resize({new_size});'
+                )
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='insert_code':
                 main_lines.append(args)
@@ -893,17 +904,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype = c_data_type(v.dtype)
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
-
+                                    bare = self.get_array_name(v, access_data=False)
+                                    if prefix == 'dev':
+                                        array_ptr = f'dev{bare}.data_as<{dtype}>()'
+                                    else:
+                                        array_ptr = f'{bare}.data()'
+                                    # Host local alias: generated kernel name is
+                                    # `dev_array_*`; DeviceBuffer is `dev{bare}`.
                                     code_object_defs_lines.append(
-                                        f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
+                                        f'{dtype}* const {array_name} = {array_ptr};'
                                     )
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
-                                        # These lines are used to define the kernel call parameters, that
-                                        # means only for codeobjects running on the device. The array names
-                                        # always have a `_dev` prefix.
-                                        host_parameters_lines.append(f"{array_name}")
+                                        # Pass data() at the launch site so a later
+                                        # resize in this function does not freeze a
+                                        # stale pointer from HOST_CONSTANTS.
+                                        host_parameters_lines.append(array_ptr)
 
                                         # These lines declare kernel parameters as the `_ptr` variables that
                                         # are used in `scalar_code` and `vector_code`.
@@ -911,15 +928,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         #       for variables that are e.g. only read in the kernel
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                                    # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array
-                                    # `{array}.size()`
+                                    # Add size variables `_num{k}`. Pass the host
+                                    # local by name (not the size expression) so
+                                    # aliases that share a DynamicArray are not
+                                    # collapsed by HOST_PARAMETERS string dedup.
                                     if len(prefixes) == 1 or prefix == '':
+                                        if prefix == '' or len(prefixes) > 1:
+                                            num_expr = f'static_cast<int>({bare}.size())'
+                                        else:
+                                            num_expr = f'static_cast<int>(dev{bare}.size())'
                                         code_object_defs_lines.append(
-                                            f'const int _num{k} = {dyn_array_name}.size();'
+                                            f'const int _num{k} = {num_expr};'
                                         )
-                                        host_parameters_lines.append(f"_num{k}")
-                                        kernel_parameters_lines.append(f"const int _num{k}")
+                                        host_parameters_lines.append(f'_num{k}')
+                                        kernel_parameters_lines.append(f'const int _num{k}')
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 # Add host and kernel parameters only for device pointers
@@ -1108,7 +1130,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
-        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(None, None)
+        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(
+            None, None, synapses=self.synapses)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
     def generate_run_source(self, writer):
@@ -1217,7 +1240,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
         linker_flags_str = ' '.join(cpp_linker_flags)
-        # Determine the C++ standard for the host compiler
         if cpp_compiler == 'msvc':
             host_cpp_std = CUDA_CPP_STD_MSVC
             std_prefixes = ('/std:',)
@@ -1230,7 +1252,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
 
         std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
         if std_flags:
             overridden = [flag for flag in std_flags if flag != host_cpp_std]
             if overridden:
@@ -1239,7 +1260,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
                     f"preferences with {host_cpp_std!r}."
                 )
-            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
             cpp_compiler_flags = [
                 host_cpp_std if _is_std_flag(arg) else arg
                 for arg in cpp_compiler_flags
@@ -1472,7 +1492,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.variables_on_host_only = []
         for var, varname in self.arrays.items():
             try:
-                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+                is_mon = isinstance(
+                    var.owner,
+                    (StateMonitor, SpikeMonitor, EventMonitor, PopulationRateMonitor),
+                )
             except ReferenceError:
                 # some variable ownders are weakreference that don't exist anymore
                 # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524

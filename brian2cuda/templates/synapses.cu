@@ -325,7 +325,7 @@ if ({{pathway.name}}_max_size > 0)
 void _debugmsg_{{codeobj_name}}()
 {
     using namespace brian;
-    std::cout << "Number of synapses: " << {{constant_or_scalar('N', variables['N'])}} << endl;
+    printf("Number of synapses: %d\n", {{constant_or_scalar('N', variables['N'])}});
 }
 {% endblock %}
 

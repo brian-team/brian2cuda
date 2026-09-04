@@ -7,18 +7,20 @@
 
 {# We are using block modify_kernel_dimensions for additional kernel preparation #}
 {% block modify_kernel_dimensions %}
-{% for varname, var in _recorded_variables | dictsort %}
-{% set _recorded = get_array_name(var, access_data=False) %}
-addresses_monitor_{{_recorded}}.clear();
-{% endfor %}
 for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 {
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded = get_array_name(var, access_data=False) %}
     {{_recorded}}[i].resize(_numt_host + num_iterations - current_iteration);
-    addresses_monitor_{{_recorded}}.push_back(thrust::raw_pointer_cast(&{{_recorded}}[i][0]));
     {% endfor %}
 }
+{% for varname, var in _recorded_variables | dictsort %}
+{% set _recorded = get_array_name(var, access_data=False) %}
+upload_monitor_row_addresses(
+    addresses_monitor_{{ _recorded }},
+    {{ _recorded }},
+    _num__array_{{ owner.name }}__indices);
+{% endfor %}
 {% endblock modify_kernel_dimensions %}
 
 {% block host_maincode %}
@@ -28,11 +30,7 @@ for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 // recorded indices).
 const int _N = _num_indices;
 
-// We are using an extra variable because HOST_CONSTANTS uses the device vector, which
-// is not used (TODO: Fix this in HOST_CONSTANTS instead of this hack here...)
 const int _numt_host = _dynamic_array_{{owner.name}}_t.size();
-
-// We push t only on host and don't make a device->host copy in write_arrays()
 _dynamic_array_{{owner.name}}_t.push_back({{owner.clock.name}}.t[0]);
 
 // Update size variables for Python side indexing to work
@@ -52,11 +50,17 @@ if(current_iteration >= num_iterations)
     for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
     {
         {% for varname, var in _recorded_variables | dictsort %}
-        {% set _recorded =  get_array_name(var, access_data=False) %}
+        {% set _recorded = get_array_name(var, access_data=False) %}
         {{_recorded}}[i].resize(_numt_host + 1);
-        addresses_monitor_{{_recorded}}[i] = thrust::raw_pointer_cast(&{{_recorded}}[i][0]);
         {% endfor %}
     }
+    {% for varname, var in _recorded_variables | dictsort %}
+    {% set _recorded = get_array_name(var, access_data=False) %}
+    upload_monitor_row_addresses(
+        addresses_monitor_{{ _recorded }},
+        {{ _recorded }},
+        _num__array_{{ owner.name }}__indices);
+    {% endfor %}
 }
 
 // TODO we get invalid launch configuration if this is 0, which happens e.g. for StateMonitor(..., variables=[])
@@ -96,6 +100,6 @@ if (_num__array_{{owner.name}}__indices > 0)
     current_iteration - start_offset,
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded =  get_array_name(var, access_data=False) %}
-    thrust::raw_pointer_cast(&addresses_monitor_{{_recorded}}[0]),
+    addresses_monitor_{{ _recorded }}.data_as<{{c_data_type(var.dtype)}}*>(),
     {% endfor %}
 {% endblock %}

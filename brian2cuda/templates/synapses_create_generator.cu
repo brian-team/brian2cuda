@@ -13,6 +13,7 @@
 #include<brianlib/curand_buffer.h>
 #include "rand.h"
 #include<map>
+#include<set>
 {% endblock extra_headers %}
 
 {% block random_functions %}
@@ -259,7 +260,7 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             _uiter_size = _n_total;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is bigger than the " <<
+            std::cout << "Error: Requested sample size " << _uiter_size << " is bigger than the " <<
                     "population size " << _n_total << "." << std::endl;
             exit(1);
             {% endif %}
@@ -268,7 +269,7 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             continue;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is negative." << std::endl;
+            std::cout << "Error: Requested sample size " << _uiter_size << " is negative." << std::endl;
             exit(1);
             {% endif %}
         } else if (_uiter_size == 0)
@@ -351,7 +352,7 @@ std::cout << std::endl;
                     {% if skip_if_invalid %}
                     continue;
                     {% else %}
-                    cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} << " outside range 0 to " <<
+                    std::cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} << " outside range 0 to " <<
                                             _{{result_index_size}}-1 << std::endl;
                     exit(1);
                     {% endif %}
@@ -375,7 +376,7 @@ std::cout << std::endl;
                 {% if skip_if_invalid %}
                 continue;
                 {% else %}
-                cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} <<
+                std::cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} <<
                         " outside range 0 to " << _{{result_index_size}}-1 << std::endl;
                 exit(1);
                 {% endif %}
@@ -394,17 +395,13 @@ std::cout << std::endl;
         }
     }
 
-    // now we need to resize all registered variables
     const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
     {% for variable in owner._registered_variables | sort(attribute='name') %}
         {% set varname = get_array_name(variable, access_data=False) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
             assert(dev{{varname}}.size() <= 1);
-            THRUST_CHECK_ERROR(
-                    dev{{varname}}.resize(1)
-                    );
-            {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(1);
+            dev{{ varname }}.resize(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
         // prefs['devices.cuda_standalone.no_pre_references'] was set,
         // skipping synaptic_pre resize
@@ -413,12 +410,11 @@ std::cout << std::endl;
         // skipping synaptic_post resize
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
-            THRUST_CHECK_ERROR(
-                    dev{{varname}}.resize(newsize)
-                    );
-            {% endif %}
-            {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(newsize);
+            dev{{varname}}.resize(newsize);
+            {% else %}
+            {{varname}}.resize(newsize);
+            {% endif %}
         {% endif %}
     {% endfor %}
     // Also update the total number of synapses
@@ -430,7 +426,9 @@ std::cout << std::endl;
     {
         // Note that source_target_count will create a new entry initialized
         // with 0 when the key does not exist yet
-        const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
+        const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>(
+                {{_dynamic__synaptic_pre}}[_i],
+                {{_dynamic__synaptic_post}}[_i]);
         {% if multisynaptic_index %}
         // Save the "synapse number"
         {% set dynamic_multisynaptic_idx = get_array_name(multisynaptic_idx_var, access_data=False) %}
@@ -447,13 +445,17 @@ std::cout << std::endl;
         }
     }
 
-    // copy changed host data to device
-    dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
-    dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
-    dev{{_dynamic__synaptic_pre}} = {{_dynamic__synaptic_pre}};
-    dev{{_dynamic__synaptic_post}} = {{_dynamic__synaptic_post}};
+    {% set Nin = array_basename(_dynamic_N_incoming) %}
+    {% set Nout = array_basename(_dynamic_N_outgoing) %}
+    {% set Npre = array_basename(_dynamic__synaptic_pre) %}
+    {% set Npost = array_basename(_dynamic__synaptic_post) %}
+    copy_host_to_dev_array_{{ Nin }}();
+    copy_host_to_dev_array_{{ Nout }}();
+    copy_host_to_dev_array_{{ Npre }}();
+    copy_host_to_dev_array_{{ Npost }}();
     {% if multisynaptic_index %}
-    dev{{dynamic_multisynaptic_idx}} = {{dynamic_multisynaptic_idx}};
+    {% set Nms = array_basename(dynamic_multisynaptic_idx) %}
+    copy_host_to_dev_array_{{ Nms }}();
     {% endif %}
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
