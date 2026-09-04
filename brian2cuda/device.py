@@ -25,7 +25,7 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.utils.logger import get_logger
 from brian2.units import second
-from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
+from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor, PopulationRateMonitor
 from brian2.groups import Subgroup
 
 from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
@@ -934,9 +934,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         #       for variables that are e.g. only read in the kernel
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                                    # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array
-                                    # `{array}.size()`
+                                    # Add size variables `_num{k}`. Pass the host
+                                    # local by name (not the size expression) so
+                                    # aliases that share a DynamicArray are not
+                                    # collapsed by HOST_PARAMETERS string dedup.
                                     if len(prefixes) == 1 or prefix == '':
                                         if prefix == '' or len(prefixes) > 1:
                                             num_expr = f'static_cast<int>({bare}.size())'
@@ -945,8 +946,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         code_object_defs_lines.append(
                                             f'const int _num{k} = {num_expr};'
                                         )
-                                        host_parameters_lines.append(num_expr)
-                                        kernel_parameters_lines.append(f"const int _num{k}")
+                                        host_parameters_lines.append(f'_num{k}')
+                                        kernel_parameters_lines.append(f'const int _num{k}')
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 # Add host and kernel parameters only for device pointers
@@ -1137,13 +1138,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             reemit_cuda_log(self.results_dir)
 
     def delete(self, code=True, data=True, run_args=True, directory=True, force=False):
+        # Remove our extra files before Brian's delete, which treats unknown
+        # project files as foreign and may skip directory deletion.
+        extra = []
         if data and self.results_dir is not None:
-            cuda_log = os.path.join(self.results_dir, 'cuda_log.txt')
-            if os.path.isfile(cuda_log):
+            extra.append(os.path.join(self.results_dir, 'cuda_log.txt'))
+        if self.project_dir is not None:
+            extra.append(os.path.join(self.project_dir, 'b2c_log_flags.stamp'))
+        for path in extra:
+            if os.path.isfile(path):
                 try:
-                    os.remove(cuda_log)
+                    os.remove(path)
                 except (IOError, OSError) as ex:
-                    logger.warn(f"Cannot delete '{cuda_log}': {ex}")
+                    logger.warn(f"Cannot delete '{path}': {ex}")
         super().delete(
             code=code, data=data, run_args=run_args, directory=directory, force=force
         )
@@ -1524,7 +1531,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.variables_on_host_only = []
         for var, varname in self.arrays.items():
             try:
-                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+                is_mon = isinstance(
+                    var.owner,
+                    (StateMonitor, SpikeMonitor, EventMonitor, PopulationRateMonitor),
+                )
             except ReferenceError:
                 # some variable ownders are weakreference that don't exist anymore
                 # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
