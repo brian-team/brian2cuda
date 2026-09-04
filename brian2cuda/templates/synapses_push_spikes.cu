@@ -1037,7 +1037,7 @@ _run_kernel_{{codeobj_name}}(
         int32_t num_spiking_neurons;
         CUDA_SAFE_CALL(
                 cudaMemcpy(&num_spiking_neurons,
-                    dev{{ _eventspace }}[current_idx{{ _eventspace }}] + _num_{{ owner.event }}space - 1,
+                    dev{{_eventspace}}[current_idx{{_eventspace}}] + _num_{{owner.event}}space - 1,
                     sizeof(int32_t), cudaMemcpyDeviceToHost)
                 );
 
@@ -1090,7 +1090,7 @@ _run_kernel_{{codeobj_name}}(
                     num_parallel_blocks,
                     num_blocks,
                     num_threads,
-                    dev{{ _eventspace }}[current_idx{{ _eventspace }}]);
+                    dev{{_eventspace}}[current_idx{{_eventspace}}]);
 
             CUDA_CHECK_ERROR("_run_kernel_{{codeobj_name}}");
         }

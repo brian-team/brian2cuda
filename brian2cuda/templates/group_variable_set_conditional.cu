@@ -2,6 +2,7 @@
 {# ALLOWS_SCALAR_WRITE #}
 {% extends 'common_group.cu' %}
 
+
 {% block kernel_maincode %}
     ///// block kernel_maincode /////
 

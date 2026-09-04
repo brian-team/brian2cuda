@@ -327,7 +327,6 @@ std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 {% endfor %}
 {% endif %}
 
-
 void _init_arrays()
 {
     using namespace brian;
@@ -855,7 +854,6 @@ extern std::chrono::nanoseconds {{codeobj}}_kernel_currents_profiling_info;
 #}
 {% endfor %}
 {% endif %}
-
 
 //CUDA
 extern int num_parallel_blocks;
