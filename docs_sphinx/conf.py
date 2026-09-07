@@ -15,6 +15,7 @@
 
 # -- Path setup --------------------------------------------------------------
 
+import setuptools  # noqa: F401 -- distutils shim for Python 3.12+
 import sys, os, shutil
 import brian2cuda.sphinxext.generate_reference as generate_reference
 
@@ -327,11 +328,10 @@ texinfo_documents = [
 # -- Options for intersphinx extension ---------------------------------------
 
 intersphinx_mapping = {
-    'http://docs.python.org/': None,
-    'http://docs.scipy.org/doc/numpy': None,
-    'http://docs.scipy.org/doc/scipy/reference': None,
-    'http://docs.sympy.org/dev/': None,
-    'https://nose.readthedocs.org/en/latest/': None
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'sympy': ('https://docs.sympy.org/latest/', None),
 }
 
 autodoc_default_flags = ['show-inheritance']

@@ -14,6 +14,13 @@ Brian2CUDA documentation
 
 
 .. toctree::
+   :maxdepth: 2
+   :titlesonly:
+
+   developer/index
+
+
+.. toctree::
    :maxdepth: 1
    :titlesonly:
 
