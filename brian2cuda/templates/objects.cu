@@ -125,7 +125,6 @@ void brian::set_variable_by_name(std::string name, std::string s_value) {
     // dynamic arrays (1d)
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
     {% if not var.read_only %}
-    {% set N = array_basename(varname) %}
     if (name == "{{var.owner.name}}.{{var.name}}") {
         var_size = brian::{{get_array_name(var, access_data=False)}}.size();
         data_size = var_size*sizeof({{c_data_type(var.dtype)}});
@@ -137,7 +136,9 @@ void brian::set_variable_by_name(std::string name, std::string s_value) {
             set_variable_from_file(name, brian::{{get_array_name(var, False)}}.data(), data_size, s_value);
         }
         {% if get_array_name(var) not in variables_on_host_only %}
-        copy_host_to_dev_array_{{ N }}();
+        brian::dev{{ varname }}.copy_from_host(
+            brian::{{ varname }}.empty() ? nullptr : brian::{{ varname }}.data(),
+            brian::{{ varname }}.size());
         {% endif %}
         return;
     }
@@ -394,13 +395,14 @@ void _init_arrays()
     // Arrays initialized to 0
     {% for var, varname in zero_arrays | sort(attribute='1') %}
         {% if varname in dynamic_array_specs.values() %}
-            {% set N = array_basename(varname) %}
             {{varname}}.resize({{var.size}});
             for(int i=0; i<{{var.size}}; i++)
             {
                 {{varname}}[i] = 0;
             }
-            copy_host_to_dev_array_{{ N }}();
+            dev{{ varname }}.copy_from_host(
+                {{ varname }}.empty() ? nullptr : {{ varname }}.data(),
+                {{ varname }}.size());
         {% elif not var in eventspace_arrays %}
             {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
             for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
@@ -504,8 +506,9 @@ void _load_arrays()
             cudaMemcpy(dev{{name}}, {{name}}, sizeof({{dtype_spec}})*{{N}}, cudaMemcpyHostToDevice)
             );
     {% else %}
-    {% set Nbase = array_basename(name) %}
-    copy_host_to_dev_array_{{ Nbase }}();
+    dev{{ name }}.copy_from_host(
+        {{ name }}.empty() ? nullptr : {{ name }}.data(),
+        {{ name }}.size());
     {% endif %}
     {% endfor %}
 }
@@ -539,9 +542,10 @@ void _write_arrays()
     {% endfor %}
 
     {% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-    {% set N = array_basename(varname) %}
     {% if varname not in variables_on_host_only %}
-    copy_dev_to_host_array_{{ N }}();
+    {{ varname }}.resize(dev{{ varname }}.size());
+    dev{{ varname }}.copy_to_host(
+        {{ varname }}.empty() ? nullptr : {{ varname }}.data());
     {% endif %}
     std::ofstream outfile_{{varname}};
     outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);
