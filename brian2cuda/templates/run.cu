@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
+#include "rand.h"
 #include<ctime>
 
 {% for codeobj in code_objects | sort(attribute='name') %}

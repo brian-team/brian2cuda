@@ -98,7 +98,8 @@ rand_code = '''
 rand_impls = DEFAULT_FUNCTIONS['rand'].implementations
 rand_impls.add_implementation(CUDAStandaloneCodeObject,
                               code=rand_code,
-                              name='_rand')
+                              name='_rand',
+                              compiler_kwds={"headers": ['"rand.h"']})
 
 randn_code = '''
     #define _randn(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_randn[vectorisation_idx])
@@ -106,4 +107,5 @@ randn_code = '''
 randn_impls = DEFAULT_FUNCTIONS['randn'].implementations
 randn_impls.add_implementation(CUDAStandaloneCodeObject,
                                code=randn_code,
-                               name='_randn')
+                               name='_randn',
+                               compiler_kwds={"headers": ['"rand.h"']})

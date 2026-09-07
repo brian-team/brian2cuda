@@ -933,14 +933,16 @@ randn_code = '''
         '''
 DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(CUDACodeGenerator,
                                                               code=randn_code,
-                                                              name='_randn')
+                                                              name='_randn',
+                                                              compiler_kwds={"headers": ['"rand.h"']})
 
 rand_code = '''
     #define _rand(vectorisation_idx) (_ptr_array_%CODEOBJ_NAME%_rand[vectorisation_idx])
     '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(CUDACodeGenerator,
                                                              code=rand_code,
-                                                             name='_rand')
+                                                             name='_rand',
+                                                             compiler_kwds={"headers": ['"rand.h"']})
 
 poisson_code = '''
     // Notes on the poisson function implementation:
@@ -989,7 +991,13 @@ DEFAULT_FUNCTIONS['poisson'].implementations.add_implementation(
     CUDACodeGenerator,
     code=poisson_code,
     name='_poisson',
-    compiler_kwds={"headers": ["<curand.h>"]}
+    compiler_kwds={
+        "headers": [
+            "<curand.h>",
+            "<curand_kernel.h>",
+            '"rand.h"',
+        ],
+    }
 )
 
 

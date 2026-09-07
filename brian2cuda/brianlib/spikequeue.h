@@ -1,11 +1,9 @@
-#include<iostream>
-#include<vector>
-#include<algorithm>
-#include<inttypes.h>
+#ifndef _BRIAN_SPIKEQUEUE_H
+#define _BRIAN_SPIKEQUEUE_H
 
+#include <inttypes.h>
 #include "cudaVector.h"
 #include <assert.h>
-
 #include <cstdio>
 
 using namespace std;
@@ -515,3 +513,5 @@ public:
         *(_synapses_queue) =  &(synapses_queue[current_offset][0]);
     }
 };
+
+#endif  // _BRIAN_SPIKEQUEUE_H
