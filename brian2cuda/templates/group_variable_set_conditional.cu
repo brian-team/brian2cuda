@@ -33,8 +33,9 @@
     #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
-    {% set N = array_basename(varname) %}
-    copy_dev_to_host_array_{{ N }}();
+    {{ varname }}.resize(dev{{ varname }}.size());
+    dev{{ varname }}.copy_to_host(
+        {{ varname }}.empty() ? nullptr : {{ varname }}.data());
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(

@@ -445,17 +445,22 @@ std::cout << std::endl;
         }
     }
 
-    {% set Nin = array_basename(_dynamic_N_incoming) %}
-    {% set Nout = array_basename(_dynamic_N_outgoing) %}
-    {% set Npre = array_basename(_dynamic__synaptic_pre) %}
-    {% set Npost = array_basename(_dynamic__synaptic_post) %}
-    copy_host_to_dev_array_{{ Nin }}();
-    copy_host_to_dev_array_{{ Nout }}();
-    copy_host_to_dev_array_{{ Npre }}();
-    copy_host_to_dev_array_{{ Npost }}();
+    dev{{_dynamic_N_incoming}}.copy_from_host(
+        {{_dynamic_N_incoming}}.empty() ? nullptr : {{_dynamic_N_incoming}}.data(),
+        {{_dynamic_N_incoming}}.size());
+    dev{{_dynamic_N_outgoing}}.copy_from_host(
+        {{_dynamic_N_outgoing}}.empty() ? nullptr : {{_dynamic_N_outgoing}}.data(),
+        {{_dynamic_N_outgoing}}.size());
+    dev{{_dynamic__synaptic_pre}}.copy_from_host(
+        {{_dynamic__synaptic_pre}}.empty() ? nullptr : {{_dynamic__synaptic_pre}}.data(),
+        {{_dynamic__synaptic_pre}}.size());
+    dev{{_dynamic__synaptic_post}}.copy_from_host(
+        {{_dynamic__synaptic_post}}.empty() ? nullptr : {{_dynamic__synaptic_post}}.data(),
+        {{_dynamic__synaptic_post}}.size());
     {% if multisynaptic_index %}
-    {% set Nms = array_basename(dynamic_multisynaptic_idx) %}
-    copy_host_to_dev_array_{{ Nms }}();
+    dev{{dynamic_multisynaptic_idx}}.copy_from_host(
+        {{dynamic_multisynaptic_idx}}.empty() ? nullptr : {{dynamic_multisynaptic_idx}}.data(),
+        {{dynamic_multisynaptic_idx}}.size());
     {% endif %}
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},
