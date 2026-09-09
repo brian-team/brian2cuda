@@ -2,8 +2,8 @@
 Brian2CUDA logging helpers.
 
 Map the Brian2 console level to nvcc ``-DB2C_LOG_LEVEL`` for ``B2C_LOG_*``
-macros, and re-emit host WARNING/ERROR from ``results/cuda_log.txt`` after the
-standalone process exits.
+macros, and re-emit host WARNING/ERROR from ``results/cuda_log.txt`` to
+Brian's file handler only after the standalone process exits.
 '''
 import logging
 import os
@@ -26,6 +26,10 @@ logger = get_logger(__name__)
 _CUDA_LOG_LINE = re.compile(
     r'^\[brian2cuda\]\[(ERROR|WARNING)\]\s?(.*)$'
 )
+_CUDA_LOG_LEVELS = {
+    'ERROR': logging.ERROR,
+    'WARNING': logging.WARNING,
+}
 
 
 def get_codegen_log_level():
@@ -59,35 +63,31 @@ def update_log_flags_stamp(project_dir):
 
 
 def reemit_cuda_log(results_dir):
-    '''Re-emit persisted host WARNING/ERROR via the Brian2 logger.'''
-    if not results_dir:
+    '''Re-emit persisted host WARNING/ERROR to Brian's file handler only.'''
+    handler = BrianLogger.file_handler
+    if not results_dir or handler is None:
         return
     path = os.path.join(results_dir, 'cuda_log.txt')
     if not os.path.isfile(path):
         return
 
-    emit = {'ERROR': logger.error, 'WARNING': logger.warn}
-    level = None
-    parts = []
-
-    def flush():
-        nonlocal level, parts
-        if level is not None and parts:
-            emit[level]('\n'.join(parts), name_suffix='cuda_log')
-        level, parts = None, []
-
     try:
         with open(path, encoding='utf-8', errors='replace') as f:
             for raw in f:
-                line = raw.rstrip('\n')
-                match = _CUDA_LOG_LINE.match(line)
-                if match:
-                    flush()
-                    level = match.group(1)
-                    parts = [match.group(2)]
-                elif level is not None:
-                    parts.append(line)
-            flush()
+                match = _CUDA_LOG_LINE.match(raw.rstrip('\n'))
+                if not match:
+                    continue
+                record = logging.LogRecord(
+                    name='brian2cuda.utils.logger.cuda_log',
+                    level=_CUDA_LOG_LEVELS[match.group(1)],
+                    pathname=__file__,
+                    lineno=0,
+                    msg=match.group(2),
+                    args=(),
+                    exc_info=None,
+                )
+                if record.levelno >= handler.level:
+                    handler.handle(record)
     except (IOError, OSError) as ex:
         logger.warn(f"Could not read CUDA log '{path}': {ex}",
                     name_suffix='cuda_log')
