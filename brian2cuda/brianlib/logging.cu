@@ -44,7 +44,7 @@ void b2c_log_message(const char* level, const char* fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    b2c_vlog(stdout, level, fmt, ap);
+    b2c_vlog(stderr, level, fmt, ap);
     va_end(ap);
 
     if (!b2c_should_persist(level) || b2c_log_path.empty())
