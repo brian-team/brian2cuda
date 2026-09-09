@@ -8,9 +8,9 @@ and the user documentation on `Brian2 logging
 
 Standalone CUDA code runs in a separate process from Python. Brian2CUDA therefore
 adds compile-time logging macros for generated C++/CUDA code. They follow
-Brian2's console log level, strip messages below
-that level at build time, and copy host WARNING/ERROR back to the Python logger
-after ``device.run()`` via files.
+Brian2's console log level, strip messages below that level at build time, and
+persist host WARNING/ERROR to ``results/cuda_log.txt``. After ``device.run()``,
+``reemit_cuda_log`` writes those lines to Brian's file handler only.
 
 Python logging
 --------------
@@ -65,8 +65,9 @@ CUDA logging macros are defined in ``brianlib/logging.h``. In templates and
     B2C_LOG_DEBUG("A debug message: %s", name.c_str());
 
 Arguments follow ``printf`` conventions. Each line is prefixed with
-``[brian2cuda][LEVEL]``. On the device the macros call ``printf``, on the host
-they call ``brian::b2c_log_message``.
+``[brian2cuda][LEVEL]``. On the device the macros call ``printf``. On the host
+they call ``brian::b2c_log_message``, which writes to ``stderr`` and appends
+WARNING/ERROR lines to ``results/cuda_log.txt``.
 
 Use the level-specific macros rather than ``B2C_LOG_EMIT``. For code that
 exists only for logging (extra variables, loops, ``ostringstream``), wrap it in::

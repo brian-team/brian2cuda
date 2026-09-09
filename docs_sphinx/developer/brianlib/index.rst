@@ -84,9 +84,9 @@ is compiled once per standalone project, not once per generated code object.
 
 ``logging.cu``
     Host implementation of ``b2c_log_open``, ``b2c_log_close``, and
-    ``b2c_log_message``. Writes WARNING/ERROR lines to ``results/cuda_log.txt``
-    for re-emission in Python after ``device.run()``. See
-    :doc:`../guidelines/logging`.
+    ``b2c_log_message``. Host messages go to ``stderr``. WARNING/ERROR lines are
+    also written to ``results/cuda_log.txt`` and re-emitted to Brian's file
+    handler after ``device.run()``. See :doc:`../guidelines/logging`.
 
 ``device_buffer.cu``
     Defines ``DeviceBuffer::Impl`` and holds ``thrust::device_vector<char>``.
