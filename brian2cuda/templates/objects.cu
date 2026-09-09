@@ -217,20 +217,6 @@ DeviceBuffer addresses_monitor_{{varname}}(sizeof({{c_data_type(var.dtype)}}*));
 DeviceBuffer* {{varname}} = nullptr;
 {% endfor %}
 
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = array_basename(varname) %}
-void copy_host_to_dev_array_{{ N }}() {
-    dev{{ varname }}.copy_from_host(
-        {{ varname }}.empty() ? nullptr : {{ varname }}.data(),
-        {{ varname }}.size());
-}
-void copy_dev_to_host_array_{{ N }}() {
-    {{ varname }}.resize(dev{{ varname }}.size());
-    dev{{ varname }}.copy_to_host(
-        {{ varname }}.empty() ? nullptr : {{ varname }}.data());
-}
-{% endfor %}
-
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues) {
     int num_eventspaces = static_cast<int>(dev{{ varname }}.size());
@@ -865,12 +851,6 @@ extern int max_shared_mem_size;
 extern int num_threads_per_warp;
 
 //////////////// host helpers /////////////////
-{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
-{% set N = array_basename(varname) %}
-void copy_host_to_dev_array_{{ N }}();
-void copy_dev_to_host_array_{{ N }}();
-{% endfor %}
-
 {% for var, varname in eventspace_arrays | dictsort(by='value') %}
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
