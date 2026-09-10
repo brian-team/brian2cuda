@@ -446,20 +446,20 @@ std::cout << std::endl;
     }
 
     dev{{_dynamic_N_incoming}}.copy_from_host(
-        {{_dynamic_N_incoming}}.empty() ? nullptr : {{_dynamic_N_incoming}}.data(),
+        {{_dynamic_N_incoming}}.data(),
         {{_dynamic_N_incoming}}.size());
     dev{{_dynamic_N_outgoing}}.copy_from_host(
-        {{_dynamic_N_outgoing}}.empty() ? nullptr : {{_dynamic_N_outgoing}}.data(),
+        {{_dynamic_N_outgoing}}.data(),
         {{_dynamic_N_outgoing}}.size());
     dev{{_dynamic__synaptic_pre}}.copy_from_host(
-        {{_dynamic__synaptic_pre}}.empty() ? nullptr : {{_dynamic__synaptic_pre}}.data(),
+        {{_dynamic__synaptic_pre}}.data(),
         {{_dynamic__synaptic_pre}}.size());
     dev{{_dynamic__synaptic_post}}.copy_from_host(
-        {{_dynamic__synaptic_post}}.empty() ? nullptr : {{_dynamic__synaptic_post}}.data(),
+        {{_dynamic__synaptic_post}}.data(),
         {{_dynamic__synaptic_post}}.size());
     {% if multisynaptic_index %}
     dev{{dynamic_multisynaptic_idx}}.copy_from_host(
-        {{dynamic_multisynaptic_idx}}.empty() ? nullptr : {{dynamic_multisynaptic_idx}}.data(),
+        {{dynamic_multisynaptic_idx}}.data(),
         {{dynamic_multisynaptic_idx}}.size());
     {% endif %}
     CUDA_SAFE_CALL(

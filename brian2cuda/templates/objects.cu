@@ -137,7 +137,7 @@ void brian::set_variable_by_name(std::string name, std::string s_value) {
         }
         {% if get_array_name(var) not in variables_on_host_only %}
         brian::dev{{ varname }}.copy_from_host(
-            brian::{{ varname }}.empty() ? nullptr : brian::{{ varname }}.data(),
+            brian::{{ varname }}.data(),
             brian::{{ varname }}.size());
         {% endif %}
         return;
@@ -380,7 +380,7 @@ void _init_arrays()
                 {{varname}}[i] = 0;
             }
             dev{{ varname }}.copy_from_host(
-                {{ varname }}.empty() ? nullptr : {{ varname }}.data(),
+                {{ varname }}.data(),
                 {{ varname }}.size());
         {% elif not var in eventspace_arrays %}
             {{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
@@ -486,7 +486,7 @@ void _load_arrays()
             );
     {% else %}
     dev{{ name }}.copy_from_host(
-        {{ name }}.empty() ? nullptr : {{ name }}.data(),
+        {{ name }}.data(),
         {{ name }}.size());
     {% endif %}
     {% endfor %}
@@ -524,7 +524,7 @@ void _write_arrays()
     {% if varname not in variables_on_host_only %}
     {{ varname }}.resize(dev{{ varname }}.size());
     dev{{ varname }}.copy_to_host(
-        {{ varname }}.empty() ? nullptr : {{ varname }}.data());
+        {{ varname }}.data());
     {% endif %}
     std::ofstream outfile_{{varname}};
     outfile_{{varname}}.open(results_dir + "{{get_array_filename(var) | replace('\\', '\\\\')}}", std::ios::binary | std::ios::out);

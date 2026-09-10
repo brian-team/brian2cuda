@@ -35,7 +35,7 @@
     {% if var.dynamic %}
     {{ varname }}.resize(dev{{ varname }}.size());
     dev{{ varname }}.copy_to_host(
-        {{ varname }}.empty() ? nullptr : {{ varname }}.data());
+        {{ varname }}.data());
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(
