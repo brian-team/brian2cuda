@@ -837,7 +837,37 @@ __global__ void _before_run_kernel_{{codeobj_name}}(
     if (scalar_delay)
     {% endif %}
     {
-        expand_eventspace{{ _eventspace }}(num_queues);
+        int num_eventspaces = static_cast<int>(dev{{_eventspace}}.size());
+        if (num_queues > num_eventspaces)
+        {
+            // rotate circular eventspace such that the current idx is at the start
+            // (logic copied from CSpikeQueue.expand() in Brian's cspikequeue.cpp)
+            std::rotate(
+                dev{{_eventspace}}.begin(),
+                dev{{_eventspace}}.begin() + current_idx{{_eventspace}},
+                dev{{_eventspace}}.end());
+            current_idx{{_eventspace}} = 0;
+            for (int i = num_eventspaces; i < num_queues; i++)
+            {
+                {{c_data_type(eventspace_variable.dtype)}}* new_eventspace;
+                CUDA_SAFE_CALL(
+                    cudaMalloc(
+                        (void**)&new_eventspace,
+                        sizeof({{c_data_type(eventspace_variable.dtype)}}) * _num_{{_eventspace}}
+                    )
+                );
+                // initialize device eventspace with -1 and counter with 0
+                CUDA_SAFE_CALL(
+                    cudaMemcpy(
+                        new_eventspace,
+                        {{_eventspace}},  // defined in objects.cu
+                        sizeof({{c_data_type(eventspace_variable.dtype)}}) * _num_{{_eventspace}},
+                        cudaMemcpyHostToDevice
+                    )
+                );
+                dev{{_eventspace}}.push_back(new_eventspace);
+            }
+        }
     }
 
     int num_threads = num_queues;

@@ -217,28 +217,6 @@ DeviceBuffer addresses_monitor_{{varname}}(sizeof({{c_data_type(var.dtype)}}*));
 DeviceBuffer* {{varname}} = nullptr;
 {% endfor %}
 
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-void expand_eventspace{{ varname }}(int num_queues) {
-    int num_eventspaces = static_cast<int>(dev{{ varname }}.size());
-    if (num_queues <= num_eventspaces) return;
-    std::rotate(
-        dev{{ varname }}.begin(),
-        dev{{ varname }}.begin() + current_idx{{ varname }},
-        dev{{ varname }}.end());
-    current_idx{{ varname }} = 0;
-    for (int i = num_eventspaces; i < num_queues; i++) {
-        {{c_data_type(var.dtype)}}* new_eventspace;
-        CUDA_SAFE_CALL(cudaMalloc(
-            (void**)&new_eventspace,
-            sizeof({{c_data_type(var.dtype)}}) * _num_{{ varname }}));
-        CUDA_SAFE_CALL(cudaMemcpy(
-            new_eventspace, {{ varname }},
-            sizeof({{c_data_type(var.dtype)}}) * _num_{{ varname }},
-            cudaMemcpyHostToDevice));
-        dev{{ varname }}.push_back(new_eventspace);
-    }
-}
-{% endfor %}
 }  // namespace brian
 
 /////////////// static arrays /////////////
@@ -844,9 +822,6 @@ extern int max_shared_mem_size;
 extern int num_threads_per_warp;
 
 //////////////// host helpers /////////////////
-{% for var, varname in eventspace_arrays | dictsort(by='value') %}
-void expand_eventspace{{ varname }}(int num_queues);
-{% endfor %}
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
 
 }
