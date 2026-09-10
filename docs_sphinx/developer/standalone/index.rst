@@ -17,6 +17,9 @@ unchanged. The CUDA-specific additions are code generation into ``.cu`` files,
 the ``brianlib`` support library copied into each project, and compilation
 with ``nvcc``.
 
+For a small example of the files written into a build directory and the role
+of each, see :doc:`generated_project`.
+
 Compilation
 -----------
 
@@ -58,5 +61,6 @@ That layout is described in :doc:`dynamic_array/index`.
 .. toctree::
    :maxdepth: 2
 
+   generated_project
    random_numbers
    dynamic_array/index
