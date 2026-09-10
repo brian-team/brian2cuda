@@ -239,13 +239,6 @@ void expand_eventspace{{ varname }}(int num_queues) {
     }
 }
 {% endfor %}
-void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows)
-{
-    std::vector<void*> host_ptrs(n_rows);
-    for (int i = 0; i < n_rows; i++)
-        host_ptrs[i] = rows[i].data();
-    addresses.copy_from_host(host_ptrs.data(), host_ptrs.size());
-}
 }  // namespace brian
 
 /////////////// static arrays /////////////
@@ -855,7 +848,6 @@ extern int num_threads_per_warp;
 void expand_eventspace{{ varname }}(int num_queues);
 {% endfor %}
 int filter_subgroup_eventspace(int32_t* src, int n, int32_t* dst, int32_t start, int32_t stop);
-void upload_monitor_row_addresses(DeviceBuffer& addresses, DeviceBuffer* rows, int n_rows);
 
 }
 

@@ -2,6 +2,10 @@
 {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
 {% extends 'common_group.cu' %}
 
+{% block extra_headers %}
+#include <vector>
+{% endblock %}
+
 {% block define_N %}
 {% endblock %}
 
@@ -16,10 +20,13 @@ for(int i = 0; i < _num__array_{{owner.name}}__indices; i++)
 }
 {% for varname, var in _recorded_variables | dictsort %}
 {% set _recorded = get_array_name(var, access_data=False) %}
-upload_monitor_row_addresses(
-    addresses_monitor_{{ _recorded }},
-    {{ _recorded }},
-    _num__array_{{ owner.name }}__indices);
+{
+    std::vector<void*> host_ptrs(_num__array_{{owner.name}}__indices);
+    for (int i = 0; i < _num__array_{{owner.name}}__indices; i++)
+        host_ptrs[i] = {{_recorded}}[i].data();
+    addresses_monitor_{{_recorded}}.copy_from_host(
+        host_ptrs.data(), host_ptrs.size());
+}
 {% endfor %}
 {% endblock modify_kernel_dimensions %}
 
@@ -56,10 +63,13 @@ if(current_iteration >= num_iterations)
     }
     {% for varname, var in _recorded_variables | dictsort %}
     {% set _recorded = get_array_name(var, access_data=False) %}
-    upload_monitor_row_addresses(
-        addresses_monitor_{{ _recorded }},
-        {{ _recorded }},
-        _num__array_{{ owner.name }}__indices);
+    {
+        std::vector<void*> host_ptrs(_num__array_{{owner.name}}__indices);
+        for (int i = 0; i < _num__array_{{owner.name}}__indices; i++)
+            host_ptrs[i] = {{_recorded}}[i].data();
+        addresses_monitor_{{_recorded}}.copy_from_host(
+            host_ptrs.data(), host_ptrs.size());
+    }
     {% endfor %}
 }
 
