@@ -34,8 +34,8 @@ Include design
 --------------
 
 The headers seen by most generated code form a thin public surface.
-``objects.h`` declares host ``std::vector`` arrays, ``DeviceBuffer`` for device
-storage, and helper functions. It does not include Thrust or cuRAND.
+``objects.h`` declares host ``std::vector`` arrays and ``DeviceBuffer``
+objects for device storage. It does not include Thrust or cuRAND.
 ``cuda_utils.h`` provides CUDA error checking and depends only on
 ``cuda_runtime.h``. See :doc:`../brianlib/index` for the full ``brianlib`` layout.
 

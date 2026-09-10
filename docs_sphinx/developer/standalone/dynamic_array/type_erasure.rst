@@ -18,22 +18,30 @@ many ``double``, ``int32_t``, or pointer arrays exist.
 Principle and effect
 --------------------
 
-The buffer owns ``n`` logical elements as ``n * elem_size`` bytes. Construction
-records ``sizeof(T)``. ``data_as<T>()`` casts the cached raw pointer at the use
-site. Host-side data stays in ``std::vector<T>``. ``copy_from_host`` and
-``copy_to_host`` move bytes with ``cudaMemcpy``.
+The buffer owns ``n`` logical elements as ``n * elem_size`` bytes.
+``elem_size`` is set at construction or later with ``set_elem_size``.
+``data_as<T>()`` casts the cached raw pointer at the use site. Host-side data
+stays in ``std::vector<T>``. ``copy_from_host`` and ``copy_to_host`` move bytes
+with ``cudaMemcpy``. Calling ``resize`` before ``elem_size`` is set will cause an
+error.
 
-For generated code this means: construct with the dtype size, read through
-``data_as`` in kernels, and do not rely on separate global ``dev_array_*``
-pointers that can go stale after ``resize``. The buffer refreshes its pointer
-after every reallocation.
+For generated code this means: set the dtype size, call ``DeviceBuffer``
+methods directly, and do not rely on separate global ``dev_array_*`` pointers
+that can go stale after ``resize``. The buffer refreshes its pointer after
+every reallocation.
 
 Usage
 -----
 
-Construction in ``objects.cu``::
+Construction with a known dtype in ``objects.cu``::
 
     DeviceBuffer dev_dynamic_array_foo(sizeof(double));
+
+Deferred sizing for state-monitor rows (default-constructed, then sized)::
+
+    recorded = new DeviceBuffer[n_rows];
+    for (int i = 0; i < n_rows; i++)
+        recorded[i].set_elem_size(sizeof(double));
 
 Kernel or device template code::
 
