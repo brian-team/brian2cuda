@@ -216,7 +216,6 @@ DeviceBuffer _dev_{{varname}}_eventspace(sizeof(int32_t));
 DeviceBuffer addresses_monitor_{{varname}}(sizeof({{c_data_type(var.dtype)}}*));
 DeviceBuffer* {{varname}} = nullptr;
 {% endfor %}
-
 }  // namespace brian
 
 /////////////// static arrays /////////////
@@ -534,10 +533,7 @@ void _write_arrays()
             for (int n=0; n<_num__array_{{var.owner.name}}__indices; n++)
             {
                 temp_array{{varname}}[n].resize({{varname}}[n].size());
-                if (!{{varname}}[n].empty())
-                {
-                    {{varname}}[n].copy_to_host(temp_array{{varname}}[n].data());
-                }
+                {{varname}}[n].copy_to_host(temp_array{{varname}}[n].data());
             }
             {% if var in profile_statemonitor_vars %}
             std::string profile_statemonitor_copy_to_host_varname = "{{varname}}_copy_to_host";
