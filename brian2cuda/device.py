@@ -551,7 +551,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                if is_dynamic and arrayname.startswith('_dynamic_array_'):
+                if is_dynamic:
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
                     # data() is void*; cudaMemcpy accepts it without a typed cast.
@@ -583,7 +583,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
-                if arrayname.startswith('_dynamic_array_'):
+                if arrayname in self.dynamic_arrays.values():
                     host_ptr = f'{arrayname}.data()'
                     # void* + offset is illegal; advance by element size in bytes.
                     dest_expr = (
@@ -611,7 +611,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                if is_dynamic and arrayname.startswith('_dynamic_array_'):
+                if is_dynamic:
                     host_ptr = f'{arrayname}.data()'
                     size_str = f'{arrayname}.size()'
                     # data() is void*; cudaMemcpy accepts it without a typed cast.
@@ -640,7 +640,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
-                if arrayname.startswith('_dynamic_array_'):
+                if arrayname in self.dynamic_arrays.values():
                     host_ptr = f'{arrayname}.data()'
                     dev_ptr = f'dev{arrayname}.data()'
                     memcpy_size = f'{arrayname}.size()'
