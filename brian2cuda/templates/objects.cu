@@ -28,6 +28,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <algorithm>
 #include <cctype>
 #include <vector>
+#include <string>
 
 size_t brian::used_device_memory = 0;
 std::string brian::results_dir = "results/";  // can be overwritten by --results_dir command line arg
@@ -681,7 +682,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #define _BRIAN_OBJECTS_H
 
 #include <vector>
-#include <string>
+#include <iosfwd>
 #include <stdint.h>
 #include "brianlib/clocks.h"
 #include "brianlib/device_buffer.h"
