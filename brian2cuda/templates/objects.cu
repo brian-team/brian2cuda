@@ -686,7 +686,7 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include <stdint.h>
 #include "brianlib/clocks.h"
 #include "brianlib/device_buffer.h"
-{% if profiled_codeobjects is defined %}
+{% if profiled_codeobjects %}
 #include <chrono>
 {% endif %}
 

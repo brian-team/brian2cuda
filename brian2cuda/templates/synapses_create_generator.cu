@@ -14,6 +14,7 @@
 #include "rand.h"
 #include<map>
 #include<set>
+#include<chrono>
 {% endblock extra_headers %}
 
 {% block random_functions %}
