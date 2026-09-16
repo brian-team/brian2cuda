@@ -2,6 +2,7 @@
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
 #include <cuda_runtime.h>
+#include "brianlib/logging.h"
 
 namespace brian{
   extern size_t used_device_memory;
@@ -30,7 +31,7 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
+        B2C_LOG_ERROR("%s failed at %s:%i : %s",
                 call, file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -46,7 +47,7 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaDeviceSynchronize();
     if(cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
+        B2C_LOG_ERROR("CUDA_CHECK_ERROR() failed after %s at %s:%i : %s",
                 msg, file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -55,7 +56,7 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed at %s:%i : %s\n",
+        B2C_LOG_ERROR("CUDA_CHECK_ERROR() failed at %s:%i : %s",
                 file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -88,11 +89,11 @@ inline void _cudaCheckMemory(const char *file, const int line)
     // newly requested allocation.
     if (diff > 0)
     {
-        fprintf(stdout, "INFO: cuda device memory usage in %s:%i\n"
+        B2C_LOG_INFO("cuda device memory usage in %s:%i\n"
                "\t used:  \t %f MB\n"
                "\t avail: \t %f MB\n"
                "\t total: \t %f MB\n"
-               "\t diff:  \t %f MB \t (%zu bytes)\n",
+               "\t diff:  \t %f MB \t (%zu bytes)",
                file, line,
                double(used) * to_MB,
                double(avail) * to_MB,
@@ -107,7 +108,7 @@ inline void _cudaCheckMemory(const char *file, const int line)
 inline void _thrustCheckError(const char *file, const int line,
         const char *code)
 {
-    fprintf(stderr, "ERROR: THRUST_CHECK_ERROR() caught an exception from %s at %s:%i\n",
+    B2C_LOG_ERROR("THRUST_CHECK_ERROR() caught an exception from %s at %s:%i",
             code, file, line);
     throw;
 }
