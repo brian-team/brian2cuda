@@ -7,6 +7,7 @@
 #include "brianlib/curand_utils.h"
 #include "network.h"
 #include <ctime>
+#include <cassert>
 #include <curand_kernel.h>
 
 // XXX: for some documentation on random number generation, check out our wiki:

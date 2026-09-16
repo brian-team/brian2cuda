@@ -4,6 +4,7 @@
 #include "objects.h"
 #include "brianlib/common_math.h"
 #include "brianlib/cuda_utils.h"
+#include "brianlib/device_buffer.h"
 #include "brianlib/stdint_compat.h"
 #include <cmath>
 #include <cstdint>

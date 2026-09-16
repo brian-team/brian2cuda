@@ -1,11 +1,13 @@
 #include <stdlib.h>
 #include "objects.h"
+#include "network.h"
 #include <csignal>
 #include <ctime>
 #include <time.h>
 #include "run.h"
 #include "brianlib/common_math.h"
 #include "brianlib/cuda_utils.h"
+#include "brianlib/device_buffer.h"
 #include "rand.h"
 
 {% for codeobj in code_objects %}
