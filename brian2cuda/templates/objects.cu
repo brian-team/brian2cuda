@@ -20,6 +20,7 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include "synapses_classes.h"
 {% endif %}
 #include "brianlib/cuda_utils.h"
+#include "brianlib/device_buffer.h"
 #include "rand.h"
 #include <iostream>
 #include <fstream>
@@ -685,7 +686,6 @@ typedef {{curand_float_type}} randomNumber_t;  // random number type
 #include <iosfwd>
 #include <stdint.h>
 #include "brianlib/clocks.h"
-#include "brianlib/device_buffer.h"
 {% if profiled_codeobjects %}
 #include <chrono>
 {% endif %}
@@ -697,6 +697,7 @@ class SynapticPathway;
 
 namespace brian {
 
+class DeviceBuffer;  // forward declaration to avoid including device_buffer.h    
 extern size_t used_device_memory;
 extern std::string results_dir;
 
