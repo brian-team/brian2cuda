@@ -448,7 +448,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         
         arr_tmp = self.code_object_class().templater.objects(
                         None, None,
-                        array_specs=self.arrays,
+                        array_specs=self.array_specs,
                         dynamic_array_specs=self.dynamic_arrays,
                         dynamic_array_2d_specs=self.dynamic_arrays_2d,
                         zero_arrays=self.zero_arrays,
@@ -698,7 +698,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             code_objects=self.code_objects.values(),
             get_array_filename=self.get_array_filename,
             get_array_name=self.get_array_name,
-            array_specs=self.arrays,
+            array_specs=self.array_specs,
             dynamic_array_specs=self.dynamic_arrays,
             dynamic_array_2d_specs=self.dynamic_arrays_2d,
             static_array_specs=self.static_array_specs,
@@ -1539,6 +1539,14 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 if isinstance(var.owner, SpikeGeneratorGroup):
                     self.spikegenerator_eventspaces.append(varname)
 
+        # Templates that declare/init normal arrays need a view without eventspaces;
+        # keep self.arrays complete for get_array_name / codeobjects.
+        self.array_specs = {
+            var: name
+            for var, name in self.arrays.items()
+            if var not in self.eventspace_arrays
+        }
+
         self.subgroups_with_spikemonitor = set()
         for codeobj in self.code_objects.values():
             if isinstance(codeobj.owner, SpikeMonitor):
@@ -1556,23 +1564,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # keys: 'rand', 'randn', 'poisson-<idx>'
                 self.codeobjects_with_rng["host_api"]["all_runs"][key].extend(run_codeobj[key])
 
-        # FIXME: Moving the eventspace_arrays in and out of arrays is confusing, but
-        # we cannot easily change the order of the generate_... functions, since some
-        # of them change global state (e.g. generate_main_source has to run before
-        # generate_codeobj_source)
-
-        for var in self.eventspace_arrays:
-            del self.arrays[var]
-
         self.generate_main_source(self.writer)
-
-        self.arrays.update(self.eventspace_arrays)
-
         self.generate_codeobj_source(self.writer)
-        
-        for var in self.eventspace_arrays:
-            del self.arrays[var]
-
         self.generate_objects_source(
             self.writer,
             self.arange_arrays,
@@ -1581,8 +1574,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.networks,
             self.timed_arrays,
         )
-
-        self.arrays.update(self.eventspace_arrays)
 
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
