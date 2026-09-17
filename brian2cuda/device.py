@@ -679,6 +679,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
 
         user_headers = self.headers + prefs['codegen.cpp.headers']
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
+        sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
         curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
         profile_statemonitor_copy_to_host = prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host
@@ -712,6 +713,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             user_headers=user_headers,
             gpu_heap_size=prefs["devices.cuda_standalone.cuda_backend.gpu_heap_size"],
             num_parallel_blocks=num_parallel_blocks,
+            sm_multiplier=sm_multiplier,
             curand_generator_type=curand_generator_type,
             curand_generator_ordering=curand_generator_ordering,
             curand_float_type=c_data_type(prefs["core.default_float_dtype"]),
