@@ -1,48 +1,52 @@
 '''
 Module implementing the CUDA "standalone" device.
 '''
-import os
 import inspect
-from collections import defaultdict, Counter
-import tempfile
-from distutils import ccompiler
+import os
 import re
+import tempfile
+from collections import Counter, defaultdict
+from distutils import ccompiler
 from itertools import chain
 
 import numpy as np
-
 from brian2.codegen.cpp_prefs import get_compiler_and_args
-from brian2.codegen.translation import make_statements
-from brian2.core.clocks import Clock, defaultclock, EventClock
-from brian2.core.namespace import get_local_namespace
-from brian2.core.preferences import prefs, PreferenceError
-from brian2.core.variables import ArrayVariable, DynamicArrayVariable, Constant
-from brian2.parsing.rendering import CPPNodeRenderer
-from brian2.devices.device import all_devices
-from brian2.synapses.synapses import Synapses, SynapticPathway
-from brian2.utils.filetools import copy_directory, ensure_directory
-from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 from brian2.codegen.generators.cpp_generator import c_data_type
-from brian2.utils.logger import get_logger
-from brian2.units import second
-from brian2.monitors import SpikeMonitor, StateMonitor, EventMonitor
+from brian2.codegen.translation import make_statements
+from brian2.core.clocks import Clock, EventClock, defaultclock
+from brian2.core.namespace import get_local_namespace
+from brian2.core.preferences import PreferenceError, prefs
+from brian2.core.variables import ArrayVariable, Constant, DynamicArrayVariable
+from brian2.devices.cpp_standalone.device import CPPStandaloneDevice, CPPWriter
+from brian2.devices.device import all_devices
 from brian2.groups import Subgroup
-
-from brian2.devices.cpp_standalone.device import CPPWriter, CPPStandaloneDevice
 from brian2.input.spikegeneratorgroup import SpikeGeneratorGroup
+from brian2.monitors import (
+    EventMonitor,
+    PopulationRateMonitor,
+    SpikeMonitor,
+    StateMonitor,
+)
+from brian2.parsing.rendering import CPPNodeRenderer
+from brian2.synapses.synapses import Synapses, SynapticPathway
+from brian2.units import second
+from brian2.utils.filetools import copy_directory, ensure_directory
+from brian2.utils.logger import get_logger
+from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 
-from brian2cuda.utils.stringtools import replace_floating_point_literals
-from brian2cuda.utils.gputools import select_gpu, get_nvcc_path, get_cuda_path
+from brian2cuda.utils.gputools import get_cuda_path, get_nvcc_path, select_gpu
 from brian2cuda.utils.logger import report_issue_message
+from brian2cuda.utils.stringtools import replace_floating_point_literals
 
-from .codeobject import CUDAStandaloneCodeObject, CUDAStandaloneAtomicsCodeObject
-
+from .codeobject import (
+    CUDAStandaloneAtomicsCodeObject,
+    CUDAStandaloneCodeObject,
+)
 
 __all__ = []
 
 logger = get_logger(__name__)
 
-# Required C++ standard for nvcc; passed to generate_makefile and makefile templates.
 CUDA_CPP_STD = '-std=c++17'
 CUDA_CPP_STD_MSVC = '/std:c++17'
 
@@ -440,33 +444,11 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
         num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
         curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
-        curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
-        self.eventspace_arrays = {}
-        self.spikegenerator_eventspaces = []
-        for var, varname in self.arrays.items():
-            if var.name.endswith('space'):  # get all eventspace variables
-                self.eventspace_arrays[var] = varname
-                # if hasattr(var, 'owner') and isinstance(v.owner, Clock):
-                if isinstance(var.owner, SpikeGeneratorGroup):
-                    self.spikegenerator_eventspaces.append(varname)
-        for var in self.eventspace_arrays.keys():
-            del self.arrays[var]
-        subgroups_with_spikemonitor = set()
-        for codeobj in self.code_objects.values():
-            if isinstance(codeobj.owner, SpikeMonitor):
-                if isinstance(codeobj.owner.source, Subgroup):
-                    subgroups_with_spikemonitor.add(codeobj.owner.source.name)
-        profile_statemonitor_copy_to_host = prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host
-        profile_statemonitor_vars = []
-        for var in self.dynamic_arrays_2d.keys():
-            is_statemon = isinstance(var.owner, StateMonitor)
-            if (profile_statemonitor_copy_to_host
-                    and isinstance(var.owner, StateMonitor)
-                    and var.name == profile_statemonitor_copy_to_host):
-                profile_statemonitor_vars.append(var)
+        curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering        
+        
         arr_tmp = self.code_object_class().templater.objects(
                         None, None,
-                        array_specs=self.arrays,
+                        array_specs=self.array_specs,
                         dynamic_array_specs=self.dynamic_arrays,
                         dynamic_array_2d_specs=self.dynamic_arrays_2d,
                         zero_arrays=self.zero_arrays,
@@ -476,7 +458,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         static_array_specs=static_array_specs,
                         networks=networks,
                         code_objects=self.code_objects.values(),
-                        get_array_filename=self.get_array_filename,
                         get_array_name=self.get_array_name,
                         all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
                         sm_multiplier=sm_multiplier,
@@ -488,13 +469,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                         spikegenerator_eventspaces=self.spikegenerator_eventspaces,
                         multisynaptic_idx_vars=self.multisyn_vars,
                         profiled_codeobjects=self.profiled_codeobjects,
-                        profile_statemonitor_copy_to_host=profile_statemonitor_copy_to_host,
-                        profile_statemonitor_vars=profile_statemonitor_vars,
-                        subgroups_with_spikemonitor=sorted(subgroups_with_spikemonitor),
+                        subgroups_with_spikemonitor=sorted(self.subgroups_with_spikemonitor),
                         timed_arrays=timed_arrays,
                         variables_on_host_only=self.variables_on_host_only)
-        # Reinsert deleted entries, in case we use self.arrays later? maybe unnecassary...
-        self.arrays.update(self.eventspace_arrays)
+        
         writer.write('objects.*', arr_tmp)
 
     def generate_main_source(self, writer):
@@ -536,39 +514,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # TODO: Move this into before_run_synapses_push_spikes
                     for synaptic_pre, delete in self.delete_synaptic_pre.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_pre}.clear();
-                                dev{synaptic_pre}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_pre}.clear();')
                     for synaptic_post, delete in self.delete_synaptic_post.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_post}.clear();
-                                dev{synaptic_post}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_post}.clear();')
                     for synaptic_delay, delete in self.delete_synaptic_delay.items():
                         if delete:
-                            code = f'''
-                                dev{synaptic_delay}.clear();
-                                dev{synaptic_delay}.shrink_to_fit();
-                            '''
-                            main_lines.extend(stripped_deindented_lines(code))
+                            main_lines.append(f'dev{synaptic_delay}.clear();')
                 # The actual network code
                 main_lines.extend(netcode)
                 # Increment run counter
                 run_counter += 1
             elif func=='set_by_constant':
                 arrayname, value, is_dynamic = args
-                size_str = f"{arrayname}.size()" if is_dynamic else f"_num_{arrayname}"
+                size_str = (
+                    f'{arrayname}.size()' if is_dynamic else f'_num_{arrayname}'
+                )
                 rendered_value = CPPNodeRenderer().render_expr(repr(value))
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
-                if is_dynamic:
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
                 code = f'''
                     for(int i=0; i<{size_str}; i++)
                     {{
@@ -576,12 +538,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
-                    code += f'''
+                    if is_dynamic:
+                        code += f'''
+                    dev{arrayname}.copy_from_host(
+                        {arrayname}.data(), {arrayname}.size());
+                '''
+                    else:
+                        pointer_arrayname = f"dev{arrayname}"
+                        if arrayname.endswith('space'):
+                            pointer_arrayname += f'[current_idx{arrayname}]'
+                        code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             {pointer_arrayname},
-                            &{arrayname}[0],
+                            {arrayname},
                             sizeof({arrayname}[0])*{size_str},
                             cudaMemcpyHostToDevice
                         )
@@ -590,20 +560,27 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname.endswith('space'):  # eventspace
-                    pointer_arrayname += f'[current_idx{arrayname}]'
                 if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
+                    dtype = next(
+                        c_data_type(var.dtype)
+                        for var, name in self.dynamic_arrays.items()
+                        if name == arrayname
+                    )
+                    host_ptr = f'{arrayname}.data()'
+                    dest_expr = f'dev{arrayname}.data_as<{dtype}>() + {item}'
+                else:
+                    host_ptr = arrayname
+                    dest_expr = f"dev{arrayname}"
+                    if arrayname.endswith('space'):
+                        dest_expr += f'[current_idx{arrayname}]'
+                    dest_expr = f'{dest_expr} + {item}'
                 code = f"{arrayname}[{item}] = {value};"
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
                     code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            {pointer_arrayname} + {item},
-                            &{arrayname}[{item}],
+                            {dest_expr},
+                            {host_ptr} + {item},
                             sizeof({arrayname}[{item}]),
                             cudaMemcpyHostToDevice
                         )
@@ -612,13 +589,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_by_array':
                 arrayname, staticarrayname, is_dynamic = args
-                size_str = "_num_" + arrayname
-                if is_dynamic:
-                    size_str = arrayname + ".size()"
-                pointer_arrayname = f"dev{arrayname}"
-                if arrayname in self.dynamic_arrays.values():
-                    pointer_arrayname = f"thrust::raw_pointer_cast(&dev{arrayname}[0])"
-                # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname}; i++)
                     {{
@@ -626,13 +596,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
-                    code += f'''
+                    if is_dynamic:
+                        code += f'''
+                    dev{arrayname}.copy_from_host(
+                        {arrayname}.data(), {arrayname}.size());
+                '''
+                    else:
+                        code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
-                            {pointer_arrayname},
-                            &{arrayname}[0],
-                            sizeof({arrayname}[0])*{size_str},
+                            dev{arrayname},
+                            {arrayname},
+                            sizeof({arrayname}[0])*_num_{arrayname},
                             cudaMemcpyHostToDevice
                         )
                     );
@@ -640,7 +615,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
-                # Set on host
                 code = f'''
                     for(int i=0; i<_num_{staticarrayname_index}; i++)
                     {{
@@ -648,12 +622,17 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     }}
                 '''
                 if arrayname not in self.variables_on_host_only:
-                    # Copy to device
-                    code += f'''
+                    if arrayname in self.dynamic_arrays.values():
+                        code += f'''
+                    dev{arrayname}.copy_from_host(
+                        {arrayname}.data(), {arrayname}.size());
+                '''
+                    else:
+                        code += f'''
                     CUDA_SAFE_CALL(
                         cudaMemcpy(
                             dev{arrayname},
-                            &{arrayname}[0],
+                            {arrayname},
                             sizeof({arrayname}[0])*_num_{arrayname},
                             cudaMemcpyHostToDevice
                         )
@@ -662,10 +641,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='resize_array':
                 array_name, new_size = args
-                code = f'''
-                    {array_name}.resize({new_size});
-                    THRUST_CHECK_ERROR(dev{array_name}.resize({new_size}));
-                '''
+                code = (
+                    f'{array_name}.resize({new_size});\n'
+                    f'dev{array_name}.resize({new_size});'
+                )
                 main_lines.extend(stripped_deindented_lines(code))
             elif func=='insert_code':
                 main_lines.append(args)
@@ -699,17 +678,54 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 main_lines.append(codeobj.code.main_finalise)
 
         user_headers = self.headers + prefs['codegen.cpp.headers']
-        main_tmp = self.code_object_class().templater.main(None, None,
-                                                           gpu_id=self.gpu_id,
-                                                           main_lines=main_lines,
-                                                           code_lines=self.code_lines,
-                                                           code_objects=self.code_objects.values(),
-                                                           report_func=self.report_func,
-                                                           dt=float(defaultclock.dt),
-                                                           user_headers=user_headers,
-                                                           gpu_heap_size=prefs['devices.cuda_standalone.cuda_backend.gpu_heap_size']
-                                                          )
-        writer.write('main.cu', main_tmp)
+        num_parallel_blocks = prefs.devices.cuda_standalone.parallel_blocks
+        sm_multiplier = prefs.devices.cuda_standalone.SM_multiplier
+        curand_generator_type = prefs.devices.cuda_standalone.random_number_generator_type
+        curand_generator_ordering = prefs.devices.cuda_standalone.random_number_generator_ordering
+        profile_statemonitor_copy_to_host = prefs.devices.cuda_standalone.profile_statemonitor_copy_to_host
+        profile_statemonitor_vars = []
+        for var in self.dynamic_arrays_2d.keys():
+            if (profile_statemonitor_copy_to_host
+                    and isinstance(var.owner, StateMonitor)
+                    and var.name == profile_statemonitor_copy_to_host):
+                profile_statemonitor_vars.append(var)
+        
+        main_tmp = self.code_object_class().templater.main(
+            None,
+            None,
+            gpu_id=self.gpu_id,
+            main_lines=main_lines,
+            code_lines=self.code_lines,
+            code_objects=self.code_objects.values(),
+            get_array_filename=self.get_array_filename,
+            get_array_name=self.get_array_name,
+            array_specs=self.array_specs,
+            dynamic_array_specs=self.dynamic_arrays,
+            dynamic_array_2d_specs=self.dynamic_arrays_2d,
+            static_array_specs=self.static_array_specs,
+            zero_arrays=self.zero_arrays,
+            arange_arrays=self.arange_arrays,
+            eventspace_arrays=self.eventspace_arrays,
+            spikegenerator_eventspaces=self.spikegenerator_eventspaces,
+            synapses=self.synapses,
+            report_func=self.report_func,
+            dt=float(defaultclock.dt),
+            user_headers=user_headers,
+            gpu_heap_size=prefs["devices.cuda_standalone.cuda_backend.gpu_heap_size"],
+            num_parallel_blocks=num_parallel_blocks,
+            sm_multiplier=sm_multiplier,
+            curand_generator_type=curand_generator_type,
+            curand_generator_ordering=curand_generator_ordering,
+            curand_float_type=c_data_type(prefs["core.default_float_dtype"]),
+            profiled_codeobjects=self.profiled_codeobjects,
+            profile_statemonitor_copy_to_host=profile_statemonitor_copy_to_host,
+            profile_statemonitor_vars=profile_statemonitor_vars,
+            timed_arrays=self.timed_arrays,
+            variables_on_host_only=self.variables_on_host_only,
+            all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
+            subgroups_with_spikemonitor=self.subgroups_with_spikemonitor,
+        )
+        writer.write('main.cu', main_tmp.cu_file)
 
     def generate_codeobj_source(self, writer):
         code_object_defs = defaultdict(list)
@@ -893,17 +909,23 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                             dtype = c_data_type(v.dtype)
                             if isinstance(v, DynamicArrayVariable):
                                 if v.ndim == 1:
-
+                                    bare = self.get_array_name(v, access_data=False)
+                                    if prefix == 'dev':
+                                        array_ptr = f'dev{bare}.data_as<{dtype}>()'
+                                    else:
+                                        array_ptr = f'{bare}.data()'
+                                    # Host local alias: generated kernel name is
+                                    # `dev_array_*`; DeviceBuffer is `dev{bare}`.
                                     code_object_defs_lines.append(
-                                        f'{dtype}* const {array_name} = thrust::raw_pointer_cast(&{dyn_array_name}[0]);'
+                                        f'{dtype}* const {array_name} = {array_ptr};'
                                     )
 
                                     # Add host and kernel parameters only for device pointers
                                     if prefix == 'dev':
-                                        # These lines are used to define the kernel call parameters, that
-                                        # means only for codeobjects running on the device. The array names
-                                        # always have a `_dev` prefix.
-                                        host_parameters_lines.append(f"{array_name}")
+                                        # Pass data() at the launch site so a later
+                                        # resize in this function does not freeze a
+                                        # stale pointer from HOST_CONSTANTS.
+                                        host_parameters_lines.append(array_ptr)
 
                                         # These lines declare kernel parameters as the `_ptr` variables that
                                         # are used in `scalar_code` and `vector_code`.
@@ -911,15 +933,20 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                         #       for variables that are e.g. only read in the kernel
                                         kernel_parameters_lines.append(f"{dtype}* {ptr_array_name}")
 
-                                    # Add size variables `_num{array}` only once and if
-                                    # there are two prefixes, base it on host array
-                                    # `{array}.size()`
+                                    # Add size variables `_num{k}`. Pass the host
+                                    # local by name (not the size expression) so
+                                    # aliases that share a DynamicArray are not
+                                    # collapsed by HOST_PARAMETERS string dedup.
                                     if len(prefixes) == 1 or prefix == '':
+                                        if prefix == '' or len(prefixes) > 1:
+                                            num_expr = f'static_cast<int>({bare}.size())'
+                                        else:
+                                            num_expr = f'static_cast<int>(dev{bare}.size())'
                                         code_object_defs_lines.append(
-                                            f'const int _num{k} = {dyn_array_name}.size();'
+                                            f'const int _num{k} = {num_expr};'
                                         )
-                                        host_parameters_lines.append(f"_num{k}")
-                                        kernel_parameters_lines.append(f"const int _num{k}")
+                                        host_parameters_lines.append(f'_num{k}')
+                                        kernel_parameters_lines.append(f'const int _num{k}')
 
                             else:  # v is ArrayVariable but not DynamicArrayVariable
                                 # Add host and kernel parameters only for device pointers
@@ -1108,7 +1135,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         writer.write('network.*', network_tmp)
 
     def generate_synapses_classes_source(self, writer):
-        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(None, None)
+        synapses_classes_tmp = self.code_object_class().templater.synapses_classes(
+            None, None, synapses=self.synapses)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
     def generate_run_source(self, writer):
@@ -1217,7 +1245,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
         linker_flags_str = ' '.join(cpp_linker_flags)
-        # Determine the C++ standard for the host compiler
         if cpp_compiler == 'msvc':
             host_cpp_std = CUDA_CPP_STD_MSVC
             std_prefixes = ('/std:',)
@@ -1230,7 +1257,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
 
         std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        # If the host compiler flag for the C++ standard is set, override it with the CUDA C++ standard
         if std_flags:
             overridden = [flag for flag in std_flags if flag != host_cpp_std]
             if overridden:
@@ -1239,7 +1265,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
                     f"preferences with {host_cpp_std!r}."
                 )
-            # Override the host compiler flag for the C++ standard with the CUDA C++ standard
             cpp_compiler_flags = [
                 host_cpp_std if _is_std_flag(arg) else arg
                 for arg in cpp_compiler_flags
@@ -1472,7 +1497,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         self.variables_on_host_only = []
         for var, varname in self.arrays.items():
             try:
-                is_mon = isinstance(var.owner, (StateMonitor, SpikeMonitor, EventMonitor))
+                is_mon = isinstance(
+                    var.owner,
+                    (StateMonitor, SpikeMonitor, EventMonitor, PopulationRateMonitor),
+                )
             except ReferenceError:
                 # some variable ownders are weakreference that don't exist anymore
                 # https://github.com/brian-team/brian2cuda/issues/296#issuecomment-1145085524
@@ -1503,7 +1531,29 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     # This avoids copying the delted delay array from device to host
                     # at the end of the simulation
                     self.variables_on_host_only.append(varname)
-        self.generate_main_source(self.writer)
+
+        self.eventspace_arrays = {}
+        self.spikegenerator_eventspaces = []
+        for var, varname in self.arrays.items():
+            if var.name.endswith('space'):  # get all eventspace variables
+                self.eventspace_arrays[var] = varname
+                # if hasattr(var, 'owner') and isinstance(v.owner, Clock):
+                if isinstance(var.owner, SpikeGeneratorGroup):
+                    self.spikegenerator_eventspaces.append(varname)
+
+        # Templates that declare/init normal arrays need a view without eventspaces;
+        # keep self.arrays complete for get_array_name / codeobjects.
+        self.array_specs = {
+            var: name
+            for var, name in self.arrays.items()
+            if var not in self.eventspace_arrays
+        }
+
+        self.subgroups_with_spikemonitor = set()
+        for codeobj in self.code_objects.values():
+            if isinstance(codeobj.owner, SpikeMonitor):
+                if isinstance(codeobj.owner.source, Subgroup):
+                    self.subgroups_with_spikemonitor.add(codeobj.owner.source.name)
 
         # Create lists of codobjects using rand, randn, poisson or binomial across all
         # runs (needed for variable declarations).
@@ -1516,8 +1566,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 # keys: 'rand', 'randn', 'poisson-<idx>'
                 self.codeobjects_with_rng["host_api"]["all_runs"][key].extend(run_codeobj[key])
 
+        self.generate_main_source(self.writer)
         self.generate_codeobj_source(self.writer)
-
         self.generate_objects_source(
             self.writer,
             self.arange_arrays,
@@ -1526,6 +1576,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             self.networks,
             self.timed_arrays,
         )
+
         self.generate_network_source(self.writer)
         self.generate_synapses_classes_source(self.writer)
         self.generate_run_source(self.writer)
