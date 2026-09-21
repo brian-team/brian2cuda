@@ -1142,23 +1142,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         finally:
             reemit_cuda_log(self.results_dir)
 
-    def delete(self, code=True, data=True, run_args=True, directory=True, force=False):
-        # Remove our extra files before Brian's delete, which treats unknown
-        # project files as foreign and may skip directory deletion.
-        extra = []
-        if data and self.results_dir is not None:
-            extra.append(os.path.join(self.results_dir, 'cuda_log.txt'))
-        if self.project_dir is not None:
-            extra.append(os.path.join(self.project_dir, 'b2c_log_flags.stamp'))
-        for path in extra:
-            if os.path.isfile(path):
-                try:
-                    os.remove(path)
-                except (IOError, OSError) as ex:
-                    logger.warn(f"Cannot delete '{path}': {ex}")
-        super().delete(
-            code=code, data=data, run_args=run_args, directory=directory, force=force
-        )
+    def data_files_to_delete(self):
+        # random_generator_state: CUDA does not write it; cuda_log.txt: logging output
+        skip = {os.path.join(self.results_dir, 'random_generator_state')}
+        fnames = [f for f in super().data_files_to_delete() if f not in skip]
+        fnames.append(os.path.join(self.results_dir, 'cuda_log.txt'))
+        return fnames
+
+    def code_files_to_delete(self):
+        # make.deps: not generated; stdint_compat.h: already in writer.header_files
+        skip = {'make.deps', os.path.join('brianlib', 'stdint_compat.h')}
+        fnames = [f for f in super().code_files_to_delete() if f not in skip]
+        fnames.append('b2c_log_flags.stamp')
+        return fnames
 
     def generate_network_source(self, writer):
         maximum_run_time = self._maximum_run_time
