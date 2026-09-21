@@ -35,7 +35,12 @@ from brian2.utils.logger import get_logger
 from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 
 from brian2cuda.utils.gputools import get_cuda_path, get_nvcc_path, select_gpu
-from brian2cuda.utils.logger import report_issue_message
+from brian2cuda.utils.logger import (
+    nvcc_log_flags,
+    reemit_cuda_log,
+    report_issue_message,
+    update_log_flags_stamp,
+)
 from brian2cuda.utils.stringtools import replace_floating_point_literals
 
 from .codeobject import (
@@ -91,6 +96,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         # store the ID of the used GPU and it's compute capability
         self.gpu_id = None
         self.compute_capability = None
+        self._b2c_log_flags_changed = False
         # list of pre/post ID and delay arrays that are not needed in device memory
         self.delete_synaptic_pre = {}
         self.delete_synaptic_post = {}
@@ -1124,6 +1130,32 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif file.lower().endswith('.h'):
                 writer.header_files.add('brianlib/'+file)
 
+    def run(self, directory=None, results_directory=None, with_output=True,
+            run_args=None):
+        try:
+            super().run(
+                directory=directory,
+                results_directory=results_directory,
+                with_output=with_output,
+                run_args=run_args,
+            )
+        finally:
+            reemit_cuda_log(self.results_dir)
+
+    def data_files_to_delete(self):
+        # random_generator_state: CUDA does not write it; cuda_log.txt: logging output
+        skip = {os.path.join(self.results_dir, 'random_generator_state')}
+        fnames = [f for f in super().data_files_to_delete() if f not in skip]
+        fnames.append(os.path.join(self.results_dir, 'cuda_log.txt'))
+        return fnames
+
+    def code_files_to_delete(self):
+        # make.deps: not generated; stdint_compat.h: already in writer.header_files
+        skip = {'make.deps', os.path.join('brianlib', 'stdint_compat.h')}
+        fnames = [f for f in super().code_files_to_delete() if f not in skip]
+        fnames.append('b2c_log_flags.stamp')
+        return fnames
+
     def generate_network_source(self, writer):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
@@ -1241,6 +1273,9 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
         else:
             compiler_debug_flags = ''
             linker_debug_flags = ''
+
+        nvcc_compiler_flags.extend(nvcc_log_flags())
+        self._b2c_log_flags_changed = update_log_flags_stamp(self.project_dir)
 
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
@@ -1609,7 +1644,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 logger.debug(f"\t{pref_name} = {prefs[pref_name]}")
 
         if compile:
-            self.compile_source(directory, cpp_compiler, debug, clean)
+            force_clean = clean or self._b2c_log_flags_changed
+            if force_clean and not clean:
+                logger.info("CUDA log level flags changed; forcing make clean.")
+            self.compile_source(directory, cpp_compiler, debug, force_clean)
             if run:
                 self.run(
                     directory=directory,
