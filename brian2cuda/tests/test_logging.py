@@ -46,7 +46,7 @@ def test_log_level_gating(capfd, tmp_path):
             BrianLogger.console_handler.setLevel(level)
             set_device('cuda_standalone', build_on_run=False,
                       directory=str(directory))
-            NeuronGroup(1, 'v : 1')
+            G = NeuronGroup(1, 'v : 1')
             run(0 * ms)
             capfd.readouterr()  # drop compile noise
             device.build(directory=str(directory), with_output=False,
