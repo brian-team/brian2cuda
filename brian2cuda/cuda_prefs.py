@@ -205,6 +205,15 @@ prefs.register_preferences(
         validator=lambda v: v is None or isinstance(v, int)
     ),
 
+    gpu_selection_strategy=BrianPreference(
+        docs='''Strategy used to select a GPU automatically when ``gpu_id`` is not set.
+        ``performance`` uses an ``nvidia-smi``-based estimate derived from
+        ``free_memory_mb * compute_capability * (1 - utilization_gpu / 100)``.
+        ``legacy`` selects the GPU with the highest compute capability.''',
+        default='performance',
+        validator=lambda v: v in ['legacy', 'performance']
+    ),
+
     extra_compile_args_nvcc=BrianPreference(
         docs='Extra compile arguments (a list of strings) to pass to the nvcc compiler.',
         default=['-w', '-use_fast_math', '-Xcudafe "--diag_suppress=declared_but_not_referenced"']
