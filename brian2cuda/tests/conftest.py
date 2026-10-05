@@ -17,8 +17,17 @@ fake_randn.implementations.add_implementation(
 )
 
 
-# Register `cuda_standalone` marker
+# Markers, plus device defaults when PreferencePlugin is not loaded.
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "cuda_standalone: to be used with standalone_only marker"
     )
+    config.addinivalue_line(
+        "markers",
+        "compilation_only: codegen and compile only; does not execute GPU code",
+    )
+    if not hasattr(config, "device"):
+        config.device = "cuda_standalone"
+        config.device_options = {"build_on_run": False, "directory": None}
+        config.brian_prefs = {}
+        config.fail_for_not_implemented = False
