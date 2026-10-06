@@ -1,5 +1,7 @@
 
 import os
+import shutil
+import tempfile
 
 import pytest
 from numpy.testing import assert_equal
@@ -12,6 +14,41 @@ from brian2.utils.logger import catch_logs
 import brian2cuda
 
 ### These tests are CUDA versions of the tests in brian2.tests.test_cpp_standalone
+
+@pytest.mark.compilation_only
+@pytest.mark.cuda_standalone
+def test_codegen_and_compile():
+    # Smaller N than test_cuda_standalone for faster CI compile; no GPU run.
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+
+    out = tempfile.mkdtemp(prefix='brian2cuda_ci_')
+    try:
+        set_device('cuda_standalone', build_on_run=False, directory=out)
+        tau = 1*ms
+        eqs = '''
+        dV/dt = (-40*mV-V)/tau : volt (unless refractory)
+        '''
+        G = NeuronGroup(100, eqs,
+                        reset='V=-60*mV',
+                        threshold='V>-50*mV',
+                        refractory=5*ms,
+                        name='gp')
+        G.V = '-i*mV'
+        M = SpikeMonitor(G)
+        S = Synapses(G, G, 'w : volt', on_pre='V += w')
+        S.connect('abs(i-j)<5 and i!=j')
+        S.w = 0.5*mV
+        S.delay = '0*ms'
+        Network(G, M, S).run(100*ms)
+        device.build(directory=out, compile=True, run=False)
+        binary = os.path.join(out, 'main.exe' if os.name == 'nt' else 'main')
+        assert os.path.isfile(binary), f'missing compiled binary: {binary}'
+    finally:
+        shutil.rmtree(out, ignore_errors=True)
+        reset_device()
+
 
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
@@ -419,6 +456,7 @@ def test_constant_replacement():
 
 if __name__=='__main__':
     tests = [
+        test_codegen_and_compile,
         test_cuda_standalone,
         test_multiple_connects,
         test_storing_loading,
