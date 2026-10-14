@@ -2,7 +2,6 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <string>
 
 namespace brian {
@@ -10,16 +9,16 @@ namespace brian {
 static FILE* b2c_log_fp = nullptr;
 static std::string b2c_log_path;
 
-static void b2c_vlog(FILE* fp, const char* level, const char* fmt, va_list ap)
+static void b2c_vlog(FILE* fp, LogLevel level, const char* fmt, va_list ap)
 {
-    fprintf(fp, "[brian2cuda][%s] ", level);
+    fprintf(fp, "[brian2cuda][%s] ", b2c_log_level_name(level));
     vfprintf(fp, fmt, ap);
     fprintf(fp, "\n");
 }
 
-static bool b2c_should_persist(const char* level)
+static bool b2c_should_persist(LogLevel level)
 {
-    return strcmp(level, "ERROR") == 0 || strcmp(level, "WARNING") == 0;
+    return level >= LogLevel::Warning;
 }
 
 void b2c_log_open(const char* results_dir)
@@ -39,7 +38,7 @@ void b2c_log_close()
     b2c_log_path.clear();
 }
 
-void b2c_log_message(const char* level, const char* fmt, ...)
+void b2c_log_message(LogLevel level, const char* fmt, ...)
 {
     va_list ap;
 
