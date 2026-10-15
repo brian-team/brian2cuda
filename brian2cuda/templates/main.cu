@@ -594,7 +594,7 @@ int main(int argc, char **argv)
         B2C_LOG_DEBUG("Setting results dir to '%s'", results_dir.c_str());
         args.erase(args.begin(), args.begin()+2);
     }
-    brian::b2c_log_open(results_dir.c_str());
+    brian::b2c_log_open(results_dir.c_str(), {{file_log_level}});
     {{'\n'.join(code_lines['before_start'])|autoindent}}
 
     // seed variable set in Python through brian2.seed() calls can use this

@@ -8,6 +8,7 @@ namespace brian {
 
 static FILE* b2c_log_fp = nullptr;
 static std::string b2c_log_path;
+static int b2c_file_log_level = B2C_LOG_LEVEL_WARNING;
 
 static void b2c_vlog(FILE* fp, LogLevel level, const char* fmt, va_list ap)
 {
@@ -18,12 +19,13 @@ static void b2c_vlog(FILE* fp, LogLevel level, const char* fmt, va_list ap)
 
 static bool b2c_should_persist(LogLevel level)
 {
-    return level >= LogLevel::Warning;
+    return static_cast<int>(level) >= b2c_file_log_level;
 }
 
-void b2c_log_open(const char* results_dir)
+void b2c_log_open(const char* results_dir, int file_log_level)
 {
     b2c_log_close();
+    b2c_file_log_level = file_log_level;
     b2c_log_path = std::string(results_dir) + "cuda_log.txt";
     remove(b2c_log_path.c_str());
 }

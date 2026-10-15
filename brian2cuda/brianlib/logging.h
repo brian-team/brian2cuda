@@ -44,7 +44,7 @@ B2C_HOST_DEVICE inline const char* b2c_log_level_name(LogLevel level)
     return "UNKNOWN";
 }
 
-void b2c_log_open(const char* results_dir);
+void b2c_log_open(const char* results_dir, int file_log_level);
 void b2c_log_close();
 void b2c_log_message(LogLevel level, const char* fmt, ...);
 

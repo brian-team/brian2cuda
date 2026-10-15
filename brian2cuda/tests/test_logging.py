@@ -8,7 +8,11 @@ from brian2.devices.device import reinit_and_delete, set_device
 from brian2.utils.logger import BrianLogger, LOG_LEVELS
 
 import brian2cuda
-from brian2cuda.utils.logger import get_codegen_log_level, nvcc_log_flags
+from brian2cuda.utils.logger import (
+    get_codegen_log_level,
+    get_file_log_level,
+    nvcc_log_flags,
+)
 
 _CUDA_TAG = re.compile(r'\[brian2cuda\]\[(DEBUG|INFO|WARNING|ERROR)\]')
 _BELOW_ERROR = frozenset({'DEBUG', 'INFO', 'WARNING'})
@@ -31,6 +35,21 @@ def test_codegen_log_level_flags():
         assert get_codegen_log_level() == logging.ERROR
     finally:
         BrianLogger.console_handler.setLevel(previous)
+
+
+@pytest.mark.codegen_independent
+def test_file_log_level():
+    # File level -> cuda_log.txt persistence threshold
+    if BrianLogger.file_handler is None:
+        pytest.skip('Brian file handler not configured')
+    previous = BrianLogger.file_handler.level
+    try:
+        BrianLogger.file_handler.setLevel(LOG_LEVELS['DEBUG'])
+        assert get_file_log_level() == logging.DEBUG
+        BrianLogger.file_handler.setLevel(LOG_LEVELS['ERROR'])
+        assert get_file_log_level() == logging.ERROR
+    finally:
+        BrianLogger.file_handler.setLevel(previous)
 
 
 @pytest.mark.cuda_standalone

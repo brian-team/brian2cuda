@@ -2,8 +2,8 @@
 Brian2CUDA logging helpers.
 
 Map the Brian2 console level to nvcc ``-DB2C_LOG_LEVEL`` for ``B2C_LOG_*``
-macros, and re-emit host WARNING/ERROR from ``results/cuda_log.txt`` to
-Brian's file handler only after the standalone process exits.
+macros, and re-emit host logs from ``results/cuda_log.txt`` to Brian's file
+handler only after the standalone process exits.
 '''
 import logging
 import os
@@ -15,6 +15,7 @@ from brian2.utils.logger import BrianLogger, get_logger
 __all__ = [
     'suppress_brian2_logs',
     'get_codegen_log_level',
+    'get_file_log_level',
     'nvcc_log_flags',
     'update_log_flags_stamp',
     'reemit_cuda_log',
@@ -24,12 +25,19 @@ __all__ = [
 logger = get_logger(__name__)
 
 _CUDA_LOG_LINE = re.compile(
-    r'^\[brian2cuda\]\[(ERROR|WARNING)\]\s?(.*)$'
+    r'^\[brian2cuda\]\[(DEBUG|INFO|WARNING|ERROR)\]\s?(.*)$'
 )
 _CUDA_LOG_LEVELS = {
-    'ERROR': logging.ERROR,
+    'DEBUG': logging.DEBUG,
+    'INFO': logging.INFO,
     'WARNING': logging.WARNING,
+    'ERROR': logging.ERROR,
 }
+
+
+def _clamp_log_level(level):
+    # DIAGNOSTIC to DEBUG; CRITICAL to ERROR
+    return min(max(level, logging.DEBUG), logging.ERROR)
 
 
 def get_codegen_log_level():
@@ -40,8 +48,18 @@ def get_codegen_log_level():
         level = getattr(
             logging, prefs['logging.console_log_level'].upper(), logging.INFO
         )
-    # DIAGNOSTIC to DEBUG; CRITICAL to ERROR
-    return min(max(level, logging.DEBUG), logging.ERROR)
+    return _clamp_log_level(level)
+
+
+def get_file_log_level():
+    '''Brian2 file log level clamped to DEBUG..ERROR for cuda_log.txt.'''
+    if BrianLogger.file_handler is not None:
+        level = BrianLogger.file_handler.level
+    else:
+        level = getattr(
+            logging, prefs['logging.file_log_level'].upper(), logging.DEBUG
+        )
+    return _clamp_log_level(level)
 
 
 def nvcc_log_flags():
@@ -63,7 +81,7 @@ def update_log_flags_stamp(project_dir):
 
 
 def reemit_cuda_log(results_dir):
-    '''Re-emit persisted host WARNING/ERROR to Brian's file handler only.'''
+    '''Re-emit persisted host log lines to Brian's file handler only.'''
     handler = BrianLogger.file_handler
     if not results_dir or handler is None:
         return

@@ -36,6 +36,7 @@ from brian2.utils.stringtools import get_identifiers, stripped_deindented_lines
 
 from brian2cuda.utils.gputools import get_cuda_path, get_nvcc_path, select_gpu
 from brian2cuda.utils.logger import (
+    get_file_log_level,
     nvcc_log_flags,
     reemit_cuda_log,
     report_issue_message,
@@ -730,6 +731,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             variables_on_host_only=self.variables_on_host_only,
             all_codeobj_with_host_rng=self.codeobjects_with_rng["host_api"]["all_runs"],
             subgroups_with_spikemonitor=self.subgroups_with_spikemonitor,
+            file_log_level=get_file_log_level(),
         )
         writer.write('main.cu', main_tmp.cu_file)
 
