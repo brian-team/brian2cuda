@@ -60,8 +60,9 @@ void b2c_log_message(LogLevel level, const char* fmt, ...)
 
     va_start(ap, fmt);
     b2c_vlog(b2c_log_fp, level, fmt, ap);
-    fflush(b2c_log_fp);
     va_end(ap);
+    if (level == LogLevel::Error)
+        fflush(b2c_log_fp);
 }
 
 }  // namespace brian
