@@ -22,7 +22,7 @@ static bool b2c_should_persist(LogLevel level)
     return static_cast<int>(level) >= b2c_file_log_level;
 }
 
-void b2c_log_open(const char* results_dir, int file_log_level)
+void b2c_log_reset(const char* results_dir, int file_log_level)
 {
     b2c_log_close();
     b2c_file_log_level = file_log_level;
