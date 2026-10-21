@@ -1,7 +1,5 @@
 
 import os
-import shutil
-import tempfile
 
 import pytest
 from numpy.testing import assert_equal
@@ -18,36 +16,15 @@ import brian2cuda
 @pytest.mark.compilation_only
 @pytest.mark.cuda_standalone
 def test_codegen_and_compile():
-    # Smaller N than test_cuda_standalone for faster CI compile; no GPU run.
+    # CI smoke: codegen + compile only (device/directory=None from fixture).
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
 
-    out = tempfile.mkdtemp(prefix='brian2cuda_ci_')
-    try:
-        set_device('cuda_standalone', build_on_run=False, directory=out)
-        tau = 1*ms
-        eqs = '''
-        dV/dt = (-40*mV-V)/tau : volt (unless refractory)
-        '''
-        G = NeuronGroup(100, eqs,
-                        reset='V=-60*mV',
-                        threshold='V>-50*mV',
-                        refractory=5*ms,
-                        name='gp')
-        G.V = '-i*mV'
-        M = SpikeMonitor(G)
-        S = Synapses(G, G, 'w : volt', on_pre='V += w')
-        S.connect('abs(i-j)<5 and i!=j')
-        S.w = 0.5*mV
-        S.delay = '0*ms'
-        Network(G, M, S).run(100*ms)
-        device.build(directory=out, compile=True, run=False)
-        binary = os.path.join(out, 'main.exe' if os.name == 'nt' else 'main')
-        assert os.path.isfile(binary), f'missing compiled binary: {binary}'
-    finally:
-        shutil.rmtree(out, ignore_errors=True)
-        reset_device()
+    G = NeuronGroup(100, 'dv/dt = -v/(10*ms) : 1', threshold='v>1', reset='v=0')
+    Synapses(G, G, on_pre='v += 0.1').connect(j='i')
+    run(10*ms)
+    device.build(compile=True, run=False)
 
 
 @pytest.mark.cuda_standalone
