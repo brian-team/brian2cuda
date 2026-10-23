@@ -21,7 +21,8 @@ def test_codegen_and_compile():
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
 
     G = NeuronGroup(100, 'dv/dt = -v/(10*ms) : 1', threshold='v>1', reset='v=0')
-    Synapses(G, G, on_pre='v += 0.1').connect(j='i')
+    S = Synapses(G, G, on_pre='v += 0.1')
+    S.connect(j='i')
     run(10*ms)
     device.build(compile=True, run=False)
 
