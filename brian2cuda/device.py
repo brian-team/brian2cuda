@@ -1239,38 +1239,18 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             compiler_debug_flags = ''
             linker_debug_flags = ''
 
+        cpp_compiler_flags = [f for f in cpp_compiler_flags if f]
+
         if cpp_compiler == 'msvc':
+            # MSVC+nvcc policy flags (not prefs). Add /std:c++17 only if missing
+            # so a newer /std:* from Brian 2 is kept (see #329).
             nvcc_compiler_flags.append('-allow-unsupported-compiler')
-            host_cpp_std = '/std:c++17'
-            cpp_compiler_flags = [
-                '/permissive', '/EHsc', '/Zc:preprocessor', host_cpp_std,
-                '/DWIN32_LEAN_AND_MEAN',
-            ] + [
-                f for f in cpp_compiler_flags
-                if f and not f.lower().startswith('/std:')
+            msvc_policy_flags = [
+                '/permissive', '/EHsc', '/Zc:preprocessor', '/DWIN32_LEAN_AND_MEAN',
             ]
-            std_prefixes = ('/std:',)
-        else:
-            host_cpp_std = '-std=c++17'
-            std_prefixes = ('-std=',)
-
-        def _is_std_flag(flag):
-            flag_lower = flag.lower()
-            return any(flag_lower.startswith(prefix) for prefix in std_prefixes)
-
-        std_flags = [flag for flag in cpp_compiler_flags if _is_std_flag(flag)]
-        if std_flags:
-            overridden = [flag for flag in std_flags if flag != host_cpp_std]
-            if overridden:
-                logger.warn(
-                    f"brian2cuda requires {host_cpp_std} for CUDA compilation. "
-                    f"Overriding host compiler flag(s) {overridden!r} from Brian 2 "
-                    f"preferences with {host_cpp_std!r}."
-                )
-            cpp_compiler_flags = [
-                host_cpp_std if _is_std_flag(arg) else arg
-                for arg in cpp_compiler_flags
-            ]
+            if not any(f.lower().startswith('/std:') for f in cpp_compiler_flags):
+                msvc_policy_flags.insert(3, '/std:c++17')
+            cpp_compiler_flags = msvc_policy_flags + cpp_compiler_flags
 
         nvcc_flags_str = ' '.join(nvcc_compiler_flags)
         gpu_arch_str = ' '.join(gpu_arch_flags)
