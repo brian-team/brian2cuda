@@ -16,7 +16,6 @@ import brian2cuda
 @pytest.mark.compilation_only
 @pytest.mark.cuda_standalone
 def test_codegen_and_compile():
-    # CI smoke: codegen + compile only (device/directory=None from fixture).
     prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
     prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
     prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
