@@ -3,7 +3,6 @@
 
 #include <thrust/device_vector.h>
 
-#include <cstdio>
 #include <cstdlib>
 
 namespace brian {
@@ -37,7 +36,7 @@ void DeviceBuffer::resize(size_t n)
 {
     if (elem_size_ == 0)
     {
-        fprintf(stderr, "ERROR: DeviceBuffer used before elem_size was set\n");
+        B2C_LOG_ERROR("DeviceBuffer used before elem_size was set");
         exit(EXIT_FAILURE);
     }
     if (n == 0)

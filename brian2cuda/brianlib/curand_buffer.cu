@@ -1,5 +1,6 @@
 #include "brianlib/curand_buffer.h"
 #include "brianlib/curand_utils.h"
+#include "brianlib/logging.h"
 #include <cstdio>
 #include <cstdlib>
 
@@ -38,7 +39,7 @@ void CurandBuffer<randomNumber_t>::generate_numbers()
 {
     if (current_idx != buffer_size && memory_allocated)
     {
-        printf("WARNING: CurandBuffer::generate_numbers() called before "
+        B2C_LOG_WARN("CurandBuffer::generate_numbers() called before "
                "buffer was empty (current_idx = %u, buffer_size = %u)",
                current_idx, buffer_size);
     }
@@ -47,7 +48,7 @@ void CurandBuffer<randomNumber_t>::generate_numbers()
         host_data = new randomNumber_t[buffer_size];
         if (!host_data)
         {
-            printf("ERROR allocating host_data for CurandBuffer (size %ld)\n",
+            B2C_LOG_ERROR("allocating host_data for CurandBuffer (size %ld)",
                    sizeof(randomNumber_t) * buffer_size);
             exit(EXIT_FAILURE);
         }
