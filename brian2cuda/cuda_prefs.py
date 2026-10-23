@@ -207,7 +207,8 @@ prefs.register_preferences(
 
     extra_compile_args_nvcc=BrianPreference(
         docs='Extra compile arguments (a list of strings) to pass to the nvcc compiler.',
-        default=['-w', '-use_fast_math', '-Xcudafe "--diag_suppress=declared_but_not_referenced"']
+        default=['-w', '-use_fast_math', '-std=c++17', '--threads=0',
+                 '-Xcudafe "--diag_suppress=declared_but_not_referenced"']
     ),
 
     compute_capability=BrianPreference(

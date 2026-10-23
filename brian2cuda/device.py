@@ -47,9 +47,6 @@ __all__ = []
 
 logger = get_logger(__name__)
 
-CUDA_CPP_STD = '-std=c++17'
-CUDA_CPP_STD_MSVC = '/std:c++17'
-
 
 class CUDAWriter(CPPWriter):
     def __init__(self, project_dir):
@@ -1147,7 +1144,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                                         clocks=self.clocks)
         writer.write('run.*', run_tmp)
 
-    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts, cuda_cpp_std):
+    def generate_makefile(self, writer, cpp_compiler, cpp_compiler_flags, cpp_linker_flags, debug, disable_asserts):
         available_gpu_arch_flags = (
             '--gpu-architecture', '-arch', '--gpu-code', '-code', '--generate-code',
             '-gencode'
@@ -1242,14 +1239,19 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             compiler_debug_flags = ''
             linker_debug_flags = ''
 
-        nvcc_flags_str = ' '.join(nvcc_compiler_flags)
-        gpu_arch_str = ' '.join(gpu_arch_flags)
-        linker_flags_str = ' '.join(cpp_linker_flags)
         if cpp_compiler == 'msvc':
-            host_cpp_std = CUDA_CPP_STD_MSVC
+            nvcc_compiler_flags.append('-allow-unsupported-compiler')
+            host_cpp_std = '/std:c++17'
+            cpp_compiler_flags = [
+                '/permissive', '/EHsc', '/Zc:preprocessor', host_cpp_std,
+                '/DWIN32_LEAN_AND_MEAN',
+            ] + [
+                f for f in cpp_compiler_flags
+                if f and not f.lower().startswith('/std:')
+            ]
             std_prefixes = ('/std:',)
         else:
-            host_cpp_std = cuda_cpp_std
+            host_cpp_std = '-std=c++17'
             std_prefixes = ('-std=',)
 
         def _is_std_flag(flag):
@@ -1269,6 +1271,10 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 host_cpp_std if _is_std_flag(arg) else arg
                 for arg in cpp_compiler_flags
             ]
+
+        nvcc_flags_str = ' '.join(nvcc_compiler_flags)
+        gpu_arch_str = ' '.join(gpu_arch_flags)
+        linker_flags_str = ' '.join(cpp_linker_flags)
 
         if cpp_compiler == 'msvc':
             source_files = sorted(writer.source_files)
@@ -1589,8 +1595,7 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                                cpp_compiler_flags,
                                cpp_linker_flags,
                                debug,
-                               disable_asserts,
-                               CUDA_CPP_STD)
+                               disable_asserts)
         # Not sure what the best place is to call Network.after_run -- at the
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
