@@ -89,10 +89,10 @@ def _generate_cuda_code(n, p, use_normal, name):
         }
         '''
         cuda_code = replace(cuda_code, {'%N%': '%d' % n,
-                                        '%P%': f'{P:.15f}',
-                                        '%Q%': f'{q:.15f}',
-                                        '%QN%': f'{qn:.15f}',
-                                        '%BOUND%': f'{bound:.15f}',
+                                        '%P%': repr(float(P)),
+                                        '%Q%': repr(float(q)),
+                                        '%QN%': repr(float(qn)),
+                                        '%BOUND%': repr(float(bound)),
                                         '%RETURN_VALUE%': '%d-X' % n if reverse else 'X',
                                         '%NAME%': name,
                                         '%DTYPE%': float_dtype,
