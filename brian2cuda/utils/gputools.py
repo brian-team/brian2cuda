@@ -38,6 +38,57 @@ _gpu_selection = {
 }
 
 
+def _parse_nvidia_smi_gpu_metrics(csv_output):
+    metrics = []
+    for line in csv_output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        index_str, memory_total_str, memory_free_str, utilization_str = [
+            part.strip() for part in line.split(",")
+        ]
+        metrics.append(
+            {
+                "gpu_id": int(index_str),
+                "memory_total_mb": float(memory_total_str),
+                "memory_free_mb": float(memory_free_str),
+                "utilization_percent": float(utilization_str),
+            }
+        )
+    return metrics
+
+
+def _parse_device_query_device_blocks(device_query_output):
+    blocks = {}
+    current_gpu_id = None
+    current_lines = []
+
+    for line in device_query_output.splitlines():
+        if line.startswith("Device "):
+            if current_gpu_id is not None:
+                blocks[current_gpu_id] = current_lines
+            current_gpu_id = int(line.split(":")[0].split()[1])
+            current_lines = [line]
+        elif current_gpu_id is not None:
+            current_lines.append(line)
+
+    if current_gpu_id is not None:
+        blocks[current_gpu_id] = current_lines
+
+    return blocks
+
+
+def _parse_device_query_compute_capability(block_lines):
+    for line in block_lines:
+        stripped = line.strip()
+        if stripped.startswith("CUDA Capability Major/Minor version number"):
+            major = int(stripped[-3])
+            minor = int(stripped[-1])
+            return major + 0.1 * minor
+
+    raise RuntimeError("Could not parse compute capability from `deviceQuery` output.")
+
+
 def get_cuda_path():
     """
     Detect the path to the CUDA installation (e.g. '/usr/local/cuda'). This takes into
@@ -496,37 +547,87 @@ def _get_compute_capability_with_device_query(gpu_id):
                 "`prefs.devices.cuda_standalone.cuda_backend.device_query_path`"
             )
     device_query_output = _run_command_with_output(device_query_path)
-    lines = device_query_output.split("\n")
-    compute_capability = None
-    for i, line in enumerate(lines):
-        if line.startswith("Device "):
-            # example line:
-            # `Device 0: "GeForce MX150"`
-            this_gpu_id = int(line[7])  # "Device i ..."  <- i in position 7
-            if this_gpu_id == gpu_id:
-                # Get GPU name: word in quotation
-                gpu_name = re.findall(r'\"(.+?)\"', line)[0]
-                # Make sure we got the right GPU here
-                assert gpu_list[gpu_id] == gpu_name
-                # The compute capability is shown 2 lines after the "Device ..." line
-                # Example line:
-                # `  CUDA Capability Major/Minor version number:    6.1`
-                compute_capability_line = lines[i + 2]
-                assert compute_capability_line.strip().startswith(
-                    "CUDA Capability Major/Minor version number"
-                ), f"Unexpected line parsed: {compute_capability_line}"
-                # Last 3 chars are the compute capability
-                major = int(compute_capability_line[-3])
-                minor = int(compute_capability_line[-1])
-                # Turn into float
-                compute_capability = major + 0.1 * minor
-    return compute_capability
+    blocks = _parse_device_query_device_blocks(device_query_output)
+    try:
+        block_lines = blocks[gpu_id]
+    except KeyError as error:
+        raise RuntimeError(
+            f"Could not find GPU {gpu_id} in `deviceQuery` output."
+        ) from error
+
+    gpu_name = re.findall(r'\"(.+?)\"', block_lines[0])[0]
+    assert gpu_list[gpu_id] == gpu_name
+    return _parse_device_query_compute_capability(block_lines)
+
+
+def _get_nvidia_smi_gpu_metrics():
+    command = (
+        "nvidia-smi --query-gpu=index,memory.total,memory.free,utilization.gpu "
+        "--format=csv,noheader,nounits"
+    )
+    try:
+        return _parse_nvidia_smi_gpu_metrics(
+            _run_command_with_output(command)
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        raise RuntimeError(
+            "Failed to query GPU memory/utilization metrics with `nvidia-smi`."
+        ) from error
+
+
+def get_gpu_performance(gpu_id):
+    """
+    Estimate GPU suitability from free memory, GPU utilization, and compute capability.
+    """
+    gpu_metrics = _get_nvidia_smi_gpu_metrics()
+    try:
+        gpu_metric = next(
+            metric
+            for metric in gpu_metrics
+            if metric["gpu_id"] == gpu_id
+        )
+    except StopIteration as error:
+        raise RuntimeError(
+            f"Could not find GPU {gpu_id} in `nvidia-smi` metrics output."
+        ) from error
+
+    compute_capability = get_compute_capability(gpu_id)
+    memory_free_mb = gpu_metric["memory_free_mb"]
+    utilization_percent = gpu_metric["utilization_percent"]
+    performance = (
+        memory_free_mb
+        * compute_capability
+        * (1.0 - utilization_percent / 100.0)
+    )
+    return {
+        "compute_capability": compute_capability,
+        "memory_free_mb": memory_free_mb,
+        "utilization_percent": utilization_percent,
+        "performance": performance,
+    }
 
 
 def get_best_gpu():
     """
-    Get the "best" GPU available. This currently chooses the GPU with highest compute
-    capability and lowest GPU ID (as reported by `nvidia-smi`)
+    Get the "best" GPU available according to the configured selection strategy.
+    """
+    strategy = prefs.devices.cuda_standalone.cuda_backend.gpu_selection_strategy
+    if strategy == "legacy":
+        return get_best_gpu_legacy()
+
+    try:
+        return get_best_gpu_by_performance()
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        logger.warn(
+            "Performance-based GPU selection failed, falling back to legacy "
+            f"selection: {error}"
+        )
+        return get_best_gpu_legacy()
+
+
+def get_best_gpu_legacy():
+    """
+    Get the GPU with highest compute capability and lowest GPU ID.
     """
     gpu_list = get_available_gpus()
     best_gpu_id = 0
@@ -540,8 +641,34 @@ def get_best_gpu():
     return best_gpu_id, best_compute_capability
 
 
+def get_best_gpu_by_performance():
+    """
+    Select the GPU with the highest nvidia-smi-based performance estimate.
+    """
+    gpu_list = get_available_gpus()
+    best_gpu_id = 0
+    best_compute_capability = 0
+    best_performance = -1
+
+    for gpu_id, _ in enumerate(gpu_list):
+        metrics = get_gpu_performance(gpu_id)
+        performance = metrics["performance"]
+        compute_capability = metrics["compute_capability"]
+        if (
+            performance > best_performance
+            or (
+                performance == best_performance
+                and compute_capability > best_compute_capability
+            )
+        ):
+            best_gpu_id = gpu_id
+            best_compute_capability = compute_capability
+            best_performance = performance
+
+    return best_gpu_id, best_compute_capability
+
+
 if __name__ == "__main__":
     print(get_best_gpu())
     #a = nvidia_smi()
     #print(a)
-

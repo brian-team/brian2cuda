@@ -54,8 +54,9 @@ import traceback
 from io import StringIO
 
 import brian2
-from brian2 import test, prefs
+from brian2 import prefs
 import brian2cuda
+from brian2cuda.tests import run as run_brian2cuda_tests
 
 bot = None
 if args.notify_slack:
@@ -180,17 +181,19 @@ for target in args.targets:
             buffer.add(print_lines)
             buffer.print_all()
 
-        success = test(codegen_targets=[],
-                       long_tests=args.no_long_tests,
-                       test_codegen_independent=False,
-                       test_standalone=target,
-                       reset_preferences=False,
-                       fail_for_not_implemented=args.fail_not_implemented,
-                       test_in_parallel=test_in_parallel,
-                       extra_test_dirs=extra_test_dirs,
-                       float_dtype=None,
-                       additional_args=additional_args,
-                       build_options=build_options)
+        success = run_brian2cuda_tests(
+            test_standalone=[target],
+            long_tests=args.no_long_tests,
+            reset_preferences=False,
+            fail_for_not_implemented=args.fail_not_implemented,
+            test_in_parallel=bool(test_in_parallel),
+            build_options=build_options,
+            extra_test_dirs=extra_test_dirs,
+            float_dtype=None,
+            quiet=args.quiet,
+            debug=args.debug,
+            additional_args=additional_args,
+        )
 
         successes.append(success)
 
