@@ -1284,9 +1284,13 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
             elif flag.startswith(('-w', '--disable-warnings')):
                 # add the flage to linker flags, else linking will give warnings
                 cpp_linker_flags.append(flag)
+        # Check if using HIP backend
+        use_hip = is_hip_backend()
+
         # Make the linker options (meant to be passed to `gcc`) compatible with `nvcc`
+        # (hipcc is clang-based and takes `-Wl,<option>` as is)
         for i, flag in enumerate(cpp_linker_flags):
-            if flag.startswith('-Wl,'):
+            if flag.startswith('-Wl,') and not use_hip:
                 # -Wl,<option> passes <option> directly to linker
                 # for gcc `-Wl,<option>`, for nvcc `-Xlinker "<option>"`
                 cpp_linker_flags[i] = flag.replace('-Wl,', '-Xlinker ')
@@ -1346,9 +1350,6 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 f"Compiling device code for compute capability "
                 f"{self.compute_capability} (compiler flags: {gpu_arch_flags})"
             )
-
-        # Check if using HIP backend
-        use_hip = is_hip_backend()
 
         if use_hip:
             # HIP/ROCm backend
