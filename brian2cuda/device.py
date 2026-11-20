@@ -1222,12 +1222,16 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
     def run(self, directory=None, results_directory=None, with_output=True,
             run_args=None):
         try:
-            super().run(
-                directory=directory,
-                results_directory=results_directory,
-                with_output=with_output,
-                run_args=run_args,
-            )
+            if is_hip_backend() and os.name == 'nt':
+                self._run_hip_windows(directory, results_directory, with_output,
+                                      run_args)
+            else:
+                super().run(
+                    directory=directory,
+                    results_directory=results_directory,
+                    with_output=with_output,
+                    run_args=run_args,
+                )
         finally:
             reemit_cuda_log(self.results_dir)
 
@@ -1825,175 +1829,165 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                     run_args=run_args,
                 )
 
-    def run(self, directory=None, results_directory=None, with_output=True, run_args=None):
-        """Override to fix executable path on Windows for the HIP backend.
+    def _run_hip_windows(self, directory=None, results_directory=None, with_output=True, run_args=None):
+        """Run the executable on Windows for the HIP backend (called from run()).
 
         The parent class calls ["main"] on Windows, which subprocess cannot
         resolve from the current directory without an explicit path. When using
         the HIP backend on Windows, inject an absolute path to the executable.
         """
-        if is_hip_backend() and os.name == 'nt':
-            # On Windows the parent calls subprocess.call(["main"]) which fails
-            # because the CWD is not searched automatically. Temporarily replace
-            # os.name to force the parent to use the Unix run_cmd_unix path, and
-            # set run_cmd_unix to './main' (forward slash works on Windows too).
-            old_run_cmd = prefs.devices.cpp_standalone.run_cmd_unix
-            prefs.devices.cpp_standalone.run_cmd_unix = './main'
-            try:
-                import builtins
-                _real_name = os.name
+        # On Windows the parent calls subprocess.call(["main"]) which fails
+        # because the CWD is not searched automatically. Temporarily replace
+        # os.name to force the parent to use the Unix run_cmd_unix path, and
+        # set run_cmd_unix to './main' (forward slash works on Windows too).
+        old_run_cmd = prefs.devices.cpp_standalone.run_cmd_unix
+        prefs.devices.cpp_standalone.run_cmd_unix = './main'
+        try:
+            import builtins
+            _real_name = os.name
 
-                class _FakeOS:
-                    def __getattr__(self, name):
-                        if name == 'name':
-                            return 'posix'  # fake Linux to use the Unix branch
-                        return getattr(os, name)
+            class _FakeOS:
+                def __getattr__(self, name):
+                    if name == 'name':
+                        return 'posix'  # fake Linux to use the Unix branch
+                    return getattr(os, name)
 
-                import sys as _sys
-                # Patch os.name temporarily via the module-level attribute
-                # Since os.name is a property-like read-only attr, we patch
-                # it by swapping the module temporarily -- but that's very invasive.
-                # Simpler: just call super with a fake directory that invokes ./main.
-                pass
-            finally:
-                prefs.devices.cpp_standalone.run_cmd_unix = old_run_cmd
+            import sys as _sys
+            # Patch os.name temporarily via the module-level attribute
+            # Since os.name is a property-like read-only attr, we patch
+            # it by swapping the module temporarily -- but that's very invasive.
+            # Simpler: just call super with a fake directory that invokes ./main.
+            pass
+        finally:
+            prefs.devices.cpp_standalone.run_cmd_unix = old_run_cmd
 
-            # Instead of the fragile approach above, replicate the parent logic
-            # with a fixed executable path.
-            if directory is None:
-                directory = self.project_dir
-            if results_directory is not None and not os.path.isabs(results_directory):
-                self.results_dir = os.path.join(
-                    os.path.abspath(os.path.join(directory, results_directory)), ""
+        # Instead of the fragile approach above, replicate the parent logic
+        # with a fixed executable path.
+        if directory is None:
+            directory = self.project_dir
+        if results_directory is not None and not os.path.isabs(results_directory):
+            self.results_dir = os.path.join(
+                os.path.abspath(os.path.join(directory, results_directory)), ""
+            )
+
+        import subprocess
+        import time
+        import itertools
+        from brian2.utils.filetools import in_directory, ensure_directory
+        from brian2.core.magic import Network
+
+        if run_args is None:
+            run_args = []
+        ensure_directory(self.results_dir)
+        run_args = ['--results_dir', self.results_dir] + run_args
+
+        with in_directory(directory):
+            for key, value in itertools.chain(
+                prefs['devices.cpp_standalone.run_environment_variables'].items(),
+                self.run_environment_variables.items(),
+            ):
+                os.environ[key] = value
+            # On Windows, rocrand.dll uses kpack files for GPU kernels.
+            # Set ROCM_KPACK_PATH to the gfx-specific kpack file so that
+            # hiprandGenerateUniform can find and launch the GPU kernels.
+            # Also, copy TheRock runtime DLLs beside the executable so
+            # Windows loads them instead of the System32 DLLs (loader
+            # searches exe dir before System32, which beats PATH).
+            rocm_path = get_rocm_path()
+            gpu_arch = get_hip_gpu_arch()
+            if rocm_path:
+                rocm_parent = os.path.dirname(rocm_path)
+                # Find libraries package (sibling of devel package). The
+                # directory carries a GPU suffix when the wheel is built for
+                # a single architecture (_rocm_sdk_libraries_gfx1151), so
+                # match the prefix rather than an exact name.
+                libs_candidates = sorted(
+                    glob.glob(os.path.join(rocm_parent, '_rocm_sdk_libraries*'))
                 )
+                rocm_libs = None
+                for candidate in libs_candidates:
+                    candidate = os.path.normpath(candidate)
+                    if os.path.isdir(os.path.join(candidate, 'bin')):
+                        rocm_libs = candidate
+                        break
 
-            import subprocess
-            import time
-            import itertools
-            from brian2.utils.filetools import in_directory, ensure_directory
-            from brian2.core.magic import Network
+                # Copy runtime DLLs to exe dir so they load before System32.
+                # rocrand.dll backs hiprand.dll and ships in the devel
+                # package as well, so copy it whether or not the separate
+                # libraries package was found; missing names are skipped.
+                dlls_to_copy = [
+                    'amdhip64_7.dll', 'hiprand.dll', 'amd_comgr.dll',
+                    'rocm_kpack.dll', 'rocrand.dll',
+                ]
 
-            if run_args is None:
-                run_args = []
-            ensure_directory(self.results_dir)
-            run_args = ['--results_dir', self.results_dir] + run_args
-
-            with in_directory(directory):
-                for key, value in itertools.chain(
-                    prefs['devices.cpp_standalone.run_environment_variables'].items(),
-                    self.run_environment_variables.items(),
-                ):
-                    os.environ[key] = value
-                # On Windows, rocrand.dll uses kpack files for GPU kernels.
-                # Set ROCM_KPACK_PATH to the gfx-specific kpack file so that
-                # hiprandGenerateUniform can find and launch the GPU kernels.
-                # Also, copy TheRock runtime DLLs beside the executable so
-                # Windows loads them instead of the System32 DLLs (loader
-                # searches exe dir before System32, which beats PATH).
-                rocm_path = get_rocm_path()
-                gpu_arch = get_hip_gpu_arch()
-                if rocm_path:
-                    rocm_parent = os.path.dirname(rocm_path)
-                    # Find libraries package (sibling of devel package). The
-                    # directory carries a GPU suffix when the wheel is built for
-                    # a single architecture (_rocm_sdk_libraries_gfx1151), so
-                    # match the prefix rather than an exact name.
-                    libs_candidates = sorted(
-                        glob.glob(os.path.join(rocm_parent, '_rocm_sdk_libraries*'))
-                    )
-                    rocm_libs = None
-                    for candidate in libs_candidates:
-                        candidate = os.path.normpath(candidate)
-                        if os.path.isdir(os.path.join(candidate, 'bin')):
-                            rocm_libs = candidate
+                import shutil as _shutil
+                exe_dir = os.path.abspath('.')
+                for dll in dlls_to_copy:
+                    for src_dir in [os.path.join(rocm_path, 'bin'),
+                                    os.path.join(rocm_libs, 'bin') if rocm_libs else '']:
+                        src = os.path.join(src_dir, dll)
+                        if os.path.exists(src):
+                            dst = os.path.join(exe_dir, dll)
+                            if not os.path.exists(dst):
+                                _shutil.copy2(src, dst)
+                                logger.info(f"Copied {dll} to exe dir for DLL resolution")
                             break
 
-                    # Copy runtime DLLs to exe dir so they load before System32.
-                    # rocrand.dll backs hiprand.dll and ships in the devel
-                    # package as well, so copy it whether or not the separate
-                    # libraries package was found; missing names are skipped.
-                    dlls_to_copy = [
-                        'amdhip64_7.dll', 'hiprand.dll', 'amd_comgr.dll',
-                        'rocm_kpack.dll', 'rocrand.dll',
+                # Set kpack path for rocrand GPU kernels
+                if rocm_libs and gpu_arch:
+                    kpack_candidates = [
+                        os.path.join(rocm_libs, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
+                        os.path.join(rocm_path, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
                     ]
+                    for kpack_path in kpack_candidates:
+                        if os.path.exists(kpack_path):
+                            os.environ['ROCM_KPACK_PATH'] = kpack_path.replace('\\', '/')
+                            logger.info(f"Set ROCM_KPACK_PATH={os.environ['ROCM_KPACK_PATH']}")
+                            break
+            stdout = None
+            if not with_output:
+                stdout = open(os.path.join(self.results_dir, 'stdout.txt'), 'w')
+            # Use absolute path to avoid CWD-search failure on Windows
+            main_path = os.path.abspath('main')
+            if not os.path.exists(main_path) and os.path.exists(main_path + '.exe'):
+                main_path = main_path + '.exe'
+            start_time = time.time()
+            Network._globally_running = True
+            x = subprocess.call([main_path] + run_args, stdout=stdout)
+            self.timers['run_binary'] = time.time() - start_time
+            Network._globally_running = False
+            if stdout is not None:
+                stdout.close()
+            if x:
+                stdout_fname = os.path.join(self.results_dir, 'stdout.txt')
+                if os.path.exists(stdout_fname):
+                    with open(stdout_fname) as f:
+                        print(f.read())
+                raise RuntimeError(
+                    f'Project run failed (project directory: {os.path.abspath(directory)})'
+                )
+            self.has_been_run = True
+            run_info_fname = os.path.join(self.results_dir, 'last_run_info.txt')
+            if os.path.isfile(run_info_fname):
+                with open(run_info_fname) as f:
+                    last_run_info = f.read()
+                run_time, completed_fraction = last_run_info.split()
+                self._last_run_time = float(run_time)
+                self._last_run_completed_fraction = float(completed_fraction)
 
-                    import shutil as _shutil
-                    exe_dir = os.path.abspath('.')
-                    for dll in dlls_to_copy:
-                        for src_dir in [os.path.join(rocm_path, 'bin'),
-                                        os.path.join(rocm_libs, 'bin') if rocm_libs else '']:
-                            src = os.path.join(src_dir, dll)
-                            if os.path.exists(src):
-                                dst = os.path.join(exe_dir, dll)
-                                if not os.path.exists(dst):
-                                    _shutil.copy2(src, dst)
-                                    logger.info(f"Copied {dll} to exe dir for DLL resolution")
-                                break
-
-                    # Set kpack path for rocrand GPU kernels
-                    if rocm_libs and gpu_arch:
-                        kpack_candidates = [
-                            os.path.join(rocm_libs, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
-                            os.path.join(rocm_path, '.kpack', f'rand_lib_{gpu_arch}.kpack'),
-                        ]
-                        for kpack_path in kpack_candidates:
-                            if os.path.exists(kpack_path):
-                                os.environ['ROCM_KPACK_PATH'] = kpack_path.replace('\\', '/')
-                                logger.info(f"Set ROCM_KPACK_PATH={os.environ['ROCM_KPACK_PATH']}")
-                                break
-                stdout = None
-                if not with_output:
-                    stdout = open(os.path.join(self.results_dir, 'stdout.txt'), 'w')
-                # Use absolute path to avoid CWD-search failure on Windows
-                main_path = os.path.abspath('main')
-                if not os.path.exists(main_path) and os.path.exists(main_path + '.exe'):
-                    main_path = main_path + '.exe'
-                start_time = time.time()
-                Network._globally_running = True
-                x = subprocess.call([main_path] + run_args, stdout=stdout)
-                self.timers['run_binary'] = time.time() - start_time
-                Network._globally_running = False
-                if stdout is not None:
-                    stdout.close()
-                if x:
-                    stdout_fname = os.path.join(self.results_dir, 'stdout.txt')
-                    if os.path.exists(stdout_fname):
-                        with open(stdout_fname) as f:
-                            print(f.read())
-                    raise RuntimeError(
-                        f'Project run failed (project directory: {os.path.abspath(directory)})'
-                    )
-                self.has_been_run = True
-                run_info_fname = os.path.join(self.results_dir, 'last_run_info.txt')
-                if os.path.isfile(run_info_fname):
-                    with open(run_info_fname) as f:
-                        last_run_info = f.read()
-                    run_time, completed_fraction = last_run_info.split()
-                    self._last_run_time = float(run_time)
-                    self._last_run_completed_fraction = float(completed_fraction)
-
-            # Check for invalid states (NaN, inf) -- same as parent
-            from brian2.groups import Group
-            owners = [var.owner for var in self.arrays]
-            already_checked = set()
-            for owner in owners:
-                try:
-                    if not hasattr(owner, 'name') or owner.name in already_checked:
-                        continue
-                    if isinstance(owner, Group):
-                        owner._check_for_invalid_states()
-                        already_checked.add(owner.name)
-                except ReferenceError:
-                    pass
-            return
-
-        # Non-Windows or non-HIP: use parent implementation
-        super().run(
-            directory=directory,
-            results_directory=results_directory,
-            with_output=with_output,
-            run_args=run_args,
-        )
+        # Check for invalid states (NaN, inf) -- same as parent
+        from brian2.groups import Group
+        owners = [var.owner for var in self.arrays]
+        already_checked = set()
+        for owner in owners:
+            try:
+                if not hasattr(owner, 'name') or owner.name in already_checked:
+                    continue
+                if isinstance(owner, Group):
+                    owner._check_for_invalid_states()
+                    already_checked.add(owner.name)
+            except ReferenceError:
+                pass
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
