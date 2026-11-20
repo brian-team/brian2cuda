@@ -1363,6 +1363,8 @@ class CUDAStandaloneDevice(CPPStandaloneDevice):
                 prefs.devices.hip_standalone.hip_backend.extra_compile_args_hipcc
             )
             hipcc_compiler_flags += ['-D__HIP_PLATFORM_AMD__', '-DUSE_HIP']
+            hipcc_compiler_flags.extend(nvcc_log_flags())
+            self._b2c_log_flags_changed = update_log_flags_stamp(self.project_dir)
 
             # On Windows, clang cannot find the ROCm device library or HIP headers
             # automatically. Pass the paths explicitly.

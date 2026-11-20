@@ -12,7 +12,7 @@
 #define B2C_LOG_LEVEL B2C_LOG_LEVEL_WARNING
 #endif
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 #define B2C_HOST_DEVICE __host__ __device__
 #else
 #define B2C_HOST_DEVICE
@@ -50,7 +50,7 @@ void b2c_log_message(LogLevel level, const char* fmt, ...);
 
 }
 
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #define B2C_LOG_EMIT(level, ...)                                               \
     do {                                                                       \
         printf("[brian2cuda][%s] ",                                            \
