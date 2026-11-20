@@ -13,6 +13,20 @@ import brian2cuda
 
 ### These tests are CUDA versions of the tests in brian2.tests.test_cpp_standalone
 
+@pytest.mark.compilation_only
+@pytest.mark.cuda_standalone
+def test_codegen_and_compile():
+    prefs.devices.cuda_standalone.cuda_backend.detect_gpus = False
+    prefs.devices.cuda_standalone.cuda_backend.gpu_id = 0
+    prefs.devices.cuda_standalone.cuda_backend.compute_capability = 7.5
+
+    G = NeuronGroup(100, 'dv/dt = -v/(10*ms) : 1', threshold='v>1', reset='v=0')
+    S = Synapses(G, G, on_pre='v += 0.1')
+    S.connect(j='i')
+    run(10*ms)
+    device.build(compile=True, run=False)
+
+
 @pytest.mark.cuda_standalone
 @pytest.mark.standalone_only
 def test_cuda_standalone():
@@ -419,6 +433,7 @@ def test_constant_replacement():
 
 if __name__=='__main__':
     tests = [
+        test_codegen_and_compile,
         test_cuda_standalone,
         test_multiple_connects,
         test_storing_loading,

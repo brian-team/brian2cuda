@@ -99,7 +99,11 @@ def _generate_cuda_code(n, p, use_normal, name):
                                         '%SUFFIX%': float_suffix})
         dependencies = {'_rand': DEFAULT_FUNCTIONS['rand']}
 
-    return {'support_code': cuda_code}, dependencies
+    return (
+        {'support_code': cuda_code},
+        dependencies,
+        {"headers": ["<curand_kernel.h>", '"rand.h"']},
+    )
 
 
 BinomialFunction.implementations['cuda'] = _generate_cuda_code

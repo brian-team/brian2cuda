@@ -1,9 +1,16 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
-#include <thrust/system_error.h>
-#include "objects.h"
+#if defined(__HIP_PLATFORM_AMD__) || defined(USE_HIP)
 #include "cuda_to_hip.h"
+#else
+#include <cuda_runtime.h>
+#endif
+#include "brianlib/logging.h"
+
+namespace brian{
+  extern size_t used_device_memory;
+}
 
 // Define this to turn on error checking
 #define BRIAN2CUDA_ERROR_CHECK
@@ -23,61 +30,12 @@
 #define THRUST_CHECK_ERROR(code)  { try {code;} \
     catch(...) {_thrustCheckError(__FILE__, __LINE__, #code);} }
 
-
-// cuRAND/hipRAND API errors (cuda_to_hip.h maps curand types to hiprand)
-static const char *_curandGetErrorEnum(curandStatus_t error) {
-  switch (error) {
-    case CURAND_STATUS_SUCCESS:
-      return "CURAND_STATUS_SUCCESS";
-
-    case CURAND_STATUS_VERSION_MISMATCH:
-      return "CURAND_STATUS_VERSION_MISMATCH";
-
-    case CURAND_STATUS_NOT_INITIALIZED:
-      return "CURAND_STATUS_NOT_INITIALIZED";
-
-    case CURAND_STATUS_ALLOCATION_FAILED:
-      return "CURAND_STATUS_ALLOCATION_FAILED";
-
-    case CURAND_STATUS_TYPE_ERROR:
-      return "CURAND_STATUS_TYPE_ERROR";
-
-    case CURAND_STATUS_OUT_OF_RANGE:
-      return "CURAND_STATUS_OUT_OF_RANGE";
-
-    case CURAND_STATUS_LENGTH_NOT_MULTIPLE:
-      return "CURAND_STATUS_LENGTH_NOT_MULTIPLE";
-
-    case CURAND_STATUS_DOUBLE_PRECISION_REQUIRED:
-      return "CURAND_STATUS_DOUBLE_PRECISION_REQUIRED";
-
-    case CURAND_STATUS_LAUNCH_FAILURE:
-      return "CURAND_STATUS_LAUNCH_FAILURE";
-
-    case CURAND_STATUS_PREEXISTING_FAILURE:
-      return "CURAND_STATUS_PREEXISTING_FAILURE";
-
-    case CURAND_STATUS_INITIALIZATION_FAILED:
-      return "CURAND_STATUS_INITIALIZATION_FAILED";
-
-    case CURAND_STATUS_ARCH_MISMATCH:
-      return "CURAND_STATUS_ARCH_MISMATCH";
-
-    case CURAND_STATUS_INTERNAL_ERROR:
-      return "CURAND_STATUS_INTERNAL_ERROR";
-
-    default:
-      return "<unknown>";
-  }
-}
-
-
 inline void _cudaSafeCall(cudaError err, const char *file, const int line, const char *call = "")
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
+        B2C_LOG_ERROR("%s failed at %s:%i : %s",
                 call, file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -86,22 +44,6 @@ inline void _cudaSafeCall(cudaError err, const char *file, const int line, const
     return;
 }
 
-
-inline void _cudaSafeCall(curandStatus_t err, const char *file, const int line, const char *call = "")
-{
-#ifdef BRIAN2CUDA_ERROR_CHECK
-    if (CURAND_STATUS_SUCCESS != err)
-    {
-        fprintf(stderr, "ERROR: %s failed at %s:%i : %s\n",
-                call, file, line, _curandGetErrorEnum(err));
-        exit(-1);
-    }
-#endif
-
-    return;
-}
-
-
 inline void _cudaCheckError(const char *file, const int line, const char *msg)
 {
 #ifdef BRIAN2CUDA_ERROR_CHECK_BLOCKING
@@ -109,7 +51,7 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaDeviceSynchronize();
     if(cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed after %s at %s:%i : %s\n",
+        B2C_LOG_ERROR("CUDA_CHECK_ERROR() failed after %s at %s:%i : %s",
                 msg, file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -118,7 +60,7 @@ inline void _cudaCheckError(const char *file, const int line, const char *msg)
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err)
     {
-        fprintf(stderr, "ERROR: CUDA_CHECK_ERROR() failed at %s:%i : %s\n",
+        B2C_LOG_ERROR("CUDA_CHECK_ERROR() failed at %s:%i : %s",
                 file, line, cudaGetErrorString(err));
         exit(-1);
     }
@@ -151,11 +93,11 @@ inline void _cudaCheckMemory(const char *file, const int line)
     // newly requested allocation.
     if (diff > 0)
     {
-        fprintf(stdout, "INFO: cuda device memory usage in %s:%i\n"
+        B2C_LOG_INFO("cuda device memory usage in %s:%i\n"
                "\t used:  \t %f MB\n"
                "\t avail: \t %f MB\n"
                "\t total: \t %f MB\n"
-               "\t diff:  \t %f MB \t (%zu bytes)\n",
+               "\t diff:  \t %f MB \t (%zu bytes)",
                file, line,
                double(used) * to_MB,
                double(avail) * to_MB,
@@ -170,9 +112,8 @@ inline void _cudaCheckMemory(const char *file, const int line)
 inline void _thrustCheckError(const char *file, const int line,
         const char *code)
 {
-    fprintf(stderr, "ERROR: THRUST_CHECK_ERROR() caught an exception from %s at %s:%i\n",
+    B2C_LOG_ERROR("THRUST_CHECK_ERROR() caught an exception from %s at %s:%i",
             code, file, line);
     throw;
 }
-
 #endif  // BRIAN2CUDA_ERROR_CHECK_H

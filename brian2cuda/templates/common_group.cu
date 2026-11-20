@@ -1,20 +1,28 @@
 {# USES_VARIABLES { N } #}
-
-{### BEFORE RUN ###}
-{% macro before_run_cu_file() %}
-{% block before_run_headers %}
+{% macro co_std_includes() %}
 // CUDA/HIP compat header must be included first
 #include "brianlib/cuda_to_hip.h"
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"
 #include "brianlib/cuda_utils.h"
+#include "brianlib/device_buffer.h"
 #include "brianlib/stdint_compat.h"
-#include <chrono>
 #include <cmath>
-#include <stdint.h>
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
 #include <ctime>
-#include <stdio.h>
+{% endmacro %}
+
+{### BEFORE RUN ###}
+{% macro before_run_cu_file() %}
+{% block before_run_headers %}
+{{co_std_includes()}}
+#include <chrono>
+{% for name in user_headers %}
+#include {{name}}
+{% endfor %}
 {% endblock before_run_headers %}
 
 {% block before_run_defines %}
@@ -46,18 +54,7 @@ void _before_run_{{codeobj_name}}();
 
 {### RUN ###}
 {% macro cu_file() %}
-// CUDA/HIP compat header must be included first
-#include "brianlib/cuda_to_hip.h"
-#include "code_objects/{{codeobj_name}}.h"
-#include "objects.h"
-#include "brianlib/common_math.h"
-#include "brianlib/cuda_utils.h"
-#include "brianlib/stdint_compat.h"
-#include <cmath>
-#include <stdint.h>
-#include <ctime>
-#include <stdio.h>
-
+{{co_std_includes()}}
 {% block extra_headers %}
 {% endblock %}
 
@@ -87,19 +84,19 @@ namespace {
     // functions works. Hacky, hacky ...
     randomNumber_t _host_rand(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_rand` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
     randomNumber_t _host_randn(const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_rand` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_randn` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
     int32_t _host_poisson(double _lambda, const int _vectorisation_idx)
     {
-        printf("ERROR: Called dummy function `_host_poisson` in %s:%d\n", __FILE__,
+        B2C_LOG_ERROR("Called dummy function `_host_poisson` in %s:%d", __FILE__,
                 __LINE__);
         exit(EXIT_FAILURE);
     }
@@ -254,14 +251,14 @@ void _run_{{codeobj_name}}()
         {
             // use the max num_threads before launch failure
             num_threads = funcAttrib.maxThreadsPerBlock;
-            printf("WARNING Not enough ressources available to call "
+            B2C_LOG_WARN("Not enough ressources available to call "
                    "_run_kernel_{{codeobj_name}} "
                    "with maximum possible threads per block (%u). "
                    "Reducing num_threads to %u. (Kernel needs %i "
                    "registers per block, %i bytes of "
                    "statically-allocated shared memory per block, %i "
                    "bytes of local memory per thread and a total of %i "
-                   "bytes of user-allocated constant memory)\n",
+                   "bytes of user-allocated constant memory)",
                    max_threads_per_block, num_threads, funcAttrib.numRegs,
                    funcAttrib.sharedSizeBytes, funcAttrib.localSizeBytes,
                    funcAttrib.constSizeBytes);
@@ -284,7 +281,7 @@ void _run_{{codeobj_name}}()
         {% block kernel_info %}
         else
         {
-            printf("INFO _run_kernel_{{codeobj_name}}\n"
+            B2C_LOG_DEBUG("_run_kernel_{{codeobj_name}}\n"
                    {% block kernel_info_num_blocks_str %}
                    "\t%u blocks\n"
                    {% endblock %}
@@ -292,9 +289,9 @@ void _run_{{codeobj_name}}()
                    "\t%i registers per thread\n"
                    "\t%i bytes statically-allocated shared memory per block\n"
                    "\t%i bytes local memory per thread\n"
-                   "\t%i bytes user-allocated constant memory\n"
+                   "\t%i bytes user-allocated constant memory"
                    {% if calc_occupancy %}
-                   "\t%.3f theoretical occupancy\n",
+                   "\n\t%.3f theoretical occupancy",
                    {% else %}
                    "",
                    {% endif %}
@@ -363,15 +360,7 @@ void _run_{{codeobj_name}}();
 {### AFTER RUN ###}
 {% macro after_run_cu_file() %}
 {% block after_run_headers %}
-#include "code_objects/{{codeobj_name}}.h"
-#include "objects.h"
-#include "brianlib/common_math.h"
-#include "brianlib/cuda_utils.h"
-#include "brianlib/stdint_compat.h"
-#include <cmath>
-#include <stdint.h>
-#include <ctime>
-#include <stdio.h>
+{{ co_std_includes() }}
 {% endblock after_run_headers %}
 
 {% block after_run_defines %}
@@ -390,7 +379,7 @@ void _after_run_{{codeobj_name}}()
 
 {% macro after_run_h_file() %}
 #ifndef _INCLUDED_{{codeobj_name}}_after
-#define _INCLUDED_{{codeobj_name}}_affer
+#define _INCLUDED_{{codeobj_name}}_after
 
 void _after_run_{{codeobj_name}}();
 

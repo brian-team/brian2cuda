@@ -1,11 +1,10 @@
-#include<iostream>
-#include<vector>
-#include<algorithm>
-#include<inttypes.h>
+#ifndef _BRIAN_SPIKEQUEUE_H
+#define _BRIAN_SPIKEQUEUE_H
 
+#include <inttypes.h>
+#include "brianlib/logging.h"
 #include "cudaVector.h"
 #include <assert.h>
-
 #include <cstdio>
 
 using namespace std;
@@ -149,8 +148,8 @@ public:
                 synapses_queue = new cuda_vector*[required_num_queues];
                 if (!synapses_queue)
                 {
-                    printf("ERROR while allocating memory with size %ld in"
-                           " spikequeue.h/prepare()\n",
+                    B2C_LOG_ERROR("while allocating memory with size %ld in"
+                           " spikequeue.h/prepare()",
                            sizeof(cuda_vector*) * required_num_queues);
                 }
                 // only reset queue offset if we require new queues, in which
@@ -222,8 +221,8 @@ public:
                     synapses_queue[i] = new cuda_vector[num_blocks];
                     if (!synapses_queue[i])
                     {
-                        printf("ERROR while allocating memory with size %ld in"
-                                " spikequeue.h/prepare()\n",
+                        B2C_LOG_ERROR("while allocating memory with size %ld in"
+                                " spikequeue.h/prepare()",
                                 sizeof(cuda_vector)*num_blocks);
                     }
                 }
@@ -546,3 +545,5 @@ public:
         *(_synapses_queue) =  &(synapses_queue[current_offset][0]);
     }
 };
+
+#endif  // _BRIAN_SPIKEQUEUE_H

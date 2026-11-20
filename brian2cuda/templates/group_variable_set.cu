@@ -1,10 +1,6 @@
 {# USES_VARIABLES { _group_idx } #}
 {% extends 'common_group.cu' %}
 
-{% block extra_headers %}
-#include "rand.h"
-{% endblock %}
-
 {% block kernel_maincode %}
     ///// block kernel_maincode /////
 
@@ -28,7 +24,9 @@
     #}
     {% for var, varname in written_variables.items() %}
     {% if var.dynamic %}
-    {{varname}} = dev{{varname}};
+    {{ varname }}.resize(dev{{ varname }}.size());
+    dev{{ varname }}.copy_to_host(
+        {{ varname }}.data());
     {% else %}
     CUDA_SAFE_CALL(
         cudaMemcpy(

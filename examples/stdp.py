@@ -195,7 +195,7 @@ if params['profiling']:
         print('profiling information saved in {}'.format(profilingpath))
 
 style_file = os.path.join(os.path.dirname(__file__), 'figures.mplstyle')
-plt.style.use(['seaborn-paper', style_file])
+plt.style.use(style_file)
 
 if params['monitors']:
     # We show only the first second of activity, but show the weight development

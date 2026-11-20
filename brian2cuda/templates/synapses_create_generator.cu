@@ -10,10 +10,11 @@
 {% block extra_headers %}
 {{ super() }}
 #include<iostream>
-#include "brianlib/cuda_to_hip.h"
 #include<brianlib/curand_buffer.h>
-#include "brianlib/cuda_utils.h"
+#include "rand.h"
 #include<map>
+#include<set>
+#include<chrono>
 {% endblock extra_headers %}
 
 {% block random_functions %}
@@ -124,7 +125,6 @@ int32_t _host_poisson(double lam, int32_t _idx) {
 }
 {% endblock random_functions %}
 
-
 {% block kernel %}
 {% endblock %}
 
@@ -155,10 +155,12 @@ CUDA_CHECK_MEMORY();
 const double to_MB = 1.0 / (1024.0 * 1024.0);
 double tot_memory_MB = (used_device_memory - used_device_memory_start) * to_MB;
 double time_passed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_timer).count();
-std::cout << "INFO: {{owner.name}} creation took " <<  time_passed << "s";
+
 if (tot_memory_MB > 0)
-    std::cout << " and used " << tot_memory_MB << "MB of memory.";
-std::cout << std::endl;
+    B2C_LOG_DEBUG("{{owner.name}} creation took %g s and used %g MB of memory.",
+                  time_passed, tot_memory_MB);
+else
+    B2C_LOG_DEBUG("{{owner.name}} creation took %g s", time_passed);
 {% endblock %}
 
 {% block host_maincode %}
@@ -260,8 +262,8 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             _uiter_size = _n_total;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is bigger than the " <<
-                    "population size " << _n_total << "." << endl;
+            B2C_LOG_ERROR("Requested sample size %lu is bigger than the population size %lu.",
+                          (unsigned long)_uiter_size, (unsigned long)_n_total);
             exit(1);
             {% endif %}
         } else if (_uiter_size < 0)
@@ -269,7 +271,7 @@ std::cout << std::endl;
             {% if skip_if_invalid %}
             continue;
             {% else %}
-            cout << "Error: Requested sample size " << _uiter_size << " is negative." << endl;
+            B2C_LOG_ERROR("Requested sample size %ld is negative.", (long)_uiter_size);
             exit(1);
             {% endif %}
         } else if (_uiter_size == 0)
@@ -352,8 +354,8 @@ std::cout << std::endl;
                     {% if skip_if_invalid %}
                     continue;
                     {% else %}
-                    cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} << " outside range 0 to " <<
-                                            _{{result_index_size}}-1 << endl;
+                    B2C_LOG_ERROR("tried to create synapse to neuron {{result_index}}=%ld outside range 0 to %ld",
+                                  (long)_{{result_index}}, (long)(_{{result_index_size}}-1));
                     exit(1);
                     {% endif %}
                 }
@@ -376,8 +378,8 @@ std::cout << std::endl;
                 {% if skip_if_invalid %}
                 continue;
                 {% else %}
-                cout << "Error: tried to create synapse to neuron {{result_index}}=" << _{{result_index}} <<
-                        " outside range 0 to " << _{{result_index_size}}-1 << endl;
+                B2C_LOG_ERROR("tried to create synapse to neuron {{result_index}}=%ld outside range 0 to %ld",
+                              (long)_{{result_index}}, (long)(_{{result_index_size}}-1));
                 exit(1);
                 {% endif %}
             }
@@ -395,17 +397,13 @@ std::cout << std::endl;
         }
     }
 
-    // now we need to resize all registered variables
     const int32_t newsize = {{_dynamic__synaptic_pre}}.size();
     {% for variable in owner._registered_variables | sort(attribute='name') %}
         {% set varname = get_array_name(variable, access_data=False) %}
         {% if variable.name == 'delay' and no_or_const_delay_mode %}
             assert(dev{{varname}}.size() <= 1);
-            THRUST_CHECK_ERROR(
-                    dev{{varname}}.resize(1)
-                    );
-            {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(1);
+            dev{{ varname }}.resize(1);
         {% elif variable.name == '_synaptic_pre' and no_pre_references %}
         // prefs['devices.cuda_standalone.no_pre_references'] was set,
         // skipping synaptic_pre resize
@@ -414,12 +412,11 @@ std::cout << std::endl;
         // skipping synaptic_post resize
         {% else %}
             {% if not multisynaptic_index or not variable == multisynaptic_idx_var %}
-            THRUST_CHECK_ERROR(
-                    dev{{varname}}.resize(newsize)
-                    );
-            {% endif %}
-            {# //TODO: do we actually need to resize varname? #}
             {{varname}}.resize(newsize);
+            dev{{varname}}.resize(newsize);
+            {% else %}
+            {{varname}}.resize(newsize);
+            {% endif %}
         {% endif %}
     {% endfor %}
     // Also update the total number of synapses
@@ -431,7 +428,9 @@ std::cout << std::endl;
     {
         // Note that source_target_count will create a new entry initialized
         // with 0 when the key does not exist yet
-        const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>({{_dynamic__synaptic_pre}}[_i], {{_dynamic__synaptic_post}}[_i]);
+        const std::pair<int32_t, int32_t> source_target = std::pair<int32_t, int32_t>(
+                {{_dynamic__synaptic_pre}}[_i],
+                {{_dynamic__synaptic_post}}[_i]);
         {% if multisynaptic_index %}
         // Save the "synapse number"
         {% set dynamic_multisynaptic_idx = get_array_name(multisynaptic_idx_var, access_data=False) %}
@@ -448,13 +447,22 @@ std::cout << std::endl;
         }
     }
 
-    // copy changed host data to device
-    dev{{_dynamic_N_incoming}} = {{_dynamic_N_incoming}};
-    dev{{_dynamic_N_outgoing}} = {{_dynamic_N_outgoing}};
-    dev{{_dynamic__synaptic_pre}} = {{_dynamic__synaptic_pre}};
-    dev{{_dynamic__synaptic_post}} = {{_dynamic__synaptic_post}};
+    dev{{_dynamic_N_incoming}}.copy_from_host(
+        {{_dynamic_N_incoming}}.data(),
+        {{_dynamic_N_incoming}}.size());
+    dev{{_dynamic_N_outgoing}}.copy_from_host(
+        {{_dynamic_N_outgoing}}.data(),
+        {{_dynamic_N_outgoing}}.size());
+    dev{{_dynamic__synaptic_pre}}.copy_from_host(
+        {{_dynamic__synaptic_pre}}.data(),
+        {{_dynamic__synaptic_pre}}.size());
+    dev{{_dynamic__synaptic_post}}.copy_from_host(
+        {{_dynamic__synaptic_post}}.data(),
+        {{_dynamic__synaptic_post}}.size());
     {% if multisynaptic_index %}
-    dev{{dynamic_multisynaptic_idx}} = {{dynamic_multisynaptic_idx}};
+    dev{{dynamic_multisynaptic_idx}}.copy_from_host(
+        {{dynamic_multisynaptic_idx}}.data(),
+        {{dynamic_multisynaptic_idx}}.size());
     {% endif %}
     CUDA_SAFE_CALL(
             cudaMemcpy(dev{{get_array_name(variables['N'], access_data=False)}},

@@ -6,14 +6,36 @@
 #include "rand.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
-#include "brianlib/cuda_utils.h"
+#include "brianlib/curand_utils.h"
 #include "network.h"
 #include <ctime>
+#include <cassert>
+#include <curand_kernel.h>
 
 // XXX: for some documentation on random number generation, check out our wiki:
 //      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation
 
 using namespace brian;
+
+//////////////random numbers//////////////////
+curandGenerator_t brian::curand_generator;
+__device__ unsigned long long* brian::d_curand_seed;
+unsigned long long* brian::dev_curand_seed;
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}}_allocator;
+{{dtype}}* brian::dev_{{co.name}}_{{rng_type}};
+__device__ {{dtype}}* brian::_array_{{co.name}}_{{rng_type}};
+{% endfor %}{# co #}
+{% endfor %}{# rng_type #}
+curandState* brian::dev_curand_states;
+__device__ curandState* brian::d_curand_states;
+RandomNumberBuffer brian::random_number_buffer;
 
 // TODO make this a class member function
 // TODO don't call one kernel per codeobject but instead on kernel which takes
@@ -47,7 +69,7 @@ namespace {
 // method, which is of different type
 void _run_random_number_buffer()
 {
-    // random_number_buffer is a RandomNumberBuffer instance, declared in objects.cu
+    // random_number_buffer is a RandomNumberBuffer instance, defined in rand.cu
     random_number_buffer.next_time_step();
 }
 
@@ -120,12 +142,12 @@ void RandomNumberBuffer::init()
         // this checks per codeobject the number of generated floats against total available floats
         while (num_free_floats < num_per_gen_{{type}}_{{co.name}})
         {
-            printf("INFO not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size\n", num_free_floats);
+            B2C_LOG_DEBUG("not enough memory available to generate %i random numbers for {{co.name}}, reducing the buffer size", num_free_floats);
             if (num_per_gen_{{type}}_{{co.name}} < num_per_cycle_{{type}}_{{co.name}})
             {
                 if (num_free_floats < num_per_cycle_{{type}}_{{co.name}})
                 {
-                    printf("ERROR not enough memory to generate random numbers for {{co.name}} %s:%d\n", __FILE__, __LINE__);
+                    B2C_LOG_ERROR("not enough memory to generate random numbers for {{co.name}} %s:%d", __FILE__, __LINE__);
                     _dealloc_arrays();
                     exit(1);
                 }
@@ -137,7 +159,7 @@ void RandomNumberBuffer::init()
             }
             num_per_gen_{{type}}_{{co.name}} /= 2;
         }
-        printf("INFO generating %i {{type}} every %i clock cycles for {{co.name}}\n", num_per_gen_{{type}}_{{co.name}}, {{type}}_interval_{{co.name}});
+        B2C_LOG_DEBUG("generating %i {{type}} every %i clock cycles for {{co.name}}", num_per_gen_{{type}}_{{co.name}}, {{type}}_interval_{{co.name}});
 
         {% if type in ['rand', 'randn'] %}
         {% set dtype = "randomNumber_t" %}
@@ -162,7 +184,7 @@ void RandomNumberBuffer::init()
         {
             // TODO: find a way to deal with this? E.g. looping over buffers sorted
             // by buffer size and reducing them until it fits.
-            printf("MEMORY ERROR: Trying to generate more random numbers than fit "
+            B2C_LOG_ERROR("Trying to generate more random numbers than fit "
                    "into available memory. Please report this as an issue on "
                    "GitHub: https://github.com/brian-team/brian2cuda/issues/new");
             _dealloc_arrays();
@@ -383,8 +405,7 @@ void RandomNumberBuffer::refill_poisson_numbers(
         int &idx_poisson)
 {
     // generate poisson distributed random numbers and reset buffer index
-
-    printf("num_per_gen_poisson %d, lambda %f\n", num_per_gen_poisson, lambda);
+    B2C_LOG_DEBUG("num_per_gen_poisson %d, lambda %f", num_per_gen_poisson, lambda);
     CUDA_SAFE_CALL(
             curandGeneratePoisson(curand_generator, dev_poisson_allocator, num_per_gen_poisson, lambda)
             );
@@ -470,8 +491,16 @@ void RandomNumberBuffer::next_time_step()
 #ifndef _BRIAN_RAND_H
 #define _BRIAN_RAND_H
 
+#include "objects.h"
+#include "brianlib/curand_utils.h"
+
+#if defined(__HIP_PLATFORM_AMD__) || defined(USE_HIP)
 // CUDA/HIP compat header (provides curand -> hiprand mapping)
 #include "brianlib/cuda_to_hip.h"
+#elif !defined(CURAND_KERNEL_H_)
+struct curandStateXORWOW;
+typedef struct curandStateXORWOW curandState;
+#endif
 
 void _run_random_number_buffer();
 
@@ -560,6 +589,31 @@ public:
     void run_finished();
     void ensure_enough_curand_states();
 };
+
+namespace brian {
+
+//////////////// random numbers /////////////////
+extern curandGenerator_t curand_generator;
+extern unsigned long long* dev_curand_seed;
+extern __device__ unsigned long long* d_curand_seed;
+
+{% for rng_type in all_codeobj_with_host_rng.keys() %}
+{% for co in all_codeobj_with_host_rng[rng_type] | sort(attribute='name') %}
+{% if rng_type in ['rand', 'randn'] %}
+{% set dtype = 'randomNumber_t' %}
+{% else %}  {# rng_type = 'poisson_<idx>' #}
+{% set dtype = 'unsigned int' %}
+{% endif %}
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}}_allocator;
+extern {{dtype}}* dev_{{co.name}}_{{rng_type}};
+extern __device__ {{dtype}}* _array_{{co.name}}_{{rng_type}};
+{% endfor %}{# co #}
+{% endfor %}{# rng_type #}
+extern curandState* dev_curand_states;
+extern __device__ curandState* d_curand_states;
+extern RandomNumberBuffer random_number_buffer;
+
+}
 
 #endif
 
