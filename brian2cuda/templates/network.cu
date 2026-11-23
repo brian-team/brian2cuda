@@ -1,5 +1,7 @@
 {% macro cu_file() %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "brianlib/cuda_utils.h"
 #include "objects.h"
 #include "network.h"

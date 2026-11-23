@@ -53,6 +53,8 @@ __global__ void {{path.name}}_destroy()
 #ifndef _BRIAN_SYNAPSES_H
 #define _BRIAN_SYNAPSES_H
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include <stdint.h>
 
 class CudaSpikeQueue;

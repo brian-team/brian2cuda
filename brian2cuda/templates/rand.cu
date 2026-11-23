@@ -1,5 +1,7 @@
 {% macro cu_file() %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "objects.h"
 #include "rand.h"
 #include "synapses_classes.h"
@@ -492,7 +494,10 @@ void RandomNumberBuffer::next_time_step()
 #include "objects.h"
 #include "brianlib/curand_utils.h"
 
-#ifndef CURAND_KERNEL_H_
+#if defined(__HIP_PLATFORM_AMD__) || defined(USE_HIP)
+// CUDA/HIP compat header (provides curand -> hiprand mapping)
+#include "brianlib/cuda_to_hip.h"
+#elif !defined(CURAND_KERNEL_H_)
 struct curandStateXORWOW;
 typedef struct curandStateXORWOW curandState;
 #endif

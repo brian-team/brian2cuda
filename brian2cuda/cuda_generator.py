@@ -15,10 +15,21 @@ from brian2.core.variables import ArrayVariable
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.generators.base import CodeGenerator
 from brian2.devices import get_device
-from brian2cuda.utils.gputools import get_cuda_runtime_version
+
+from brian2cuda.utils.hip_backend import is_hip_backend
 
 
 __all__ = ['CUDACodeGenerator', 'CUDAAtomicsCodeGenerator', 'c_data_type']
+
+
+def _get_runtime_version():
+    """Get CUDA or HIP runtime version."""
+    if is_hip_backend():
+        # For HIP, return a high version number that enables all features
+        return 12.0  # Equivalent to recent CUDA
+    else:
+        from brian2cuda.utils.gputools import get_cuda_runtime_version
+        return get_cuda_runtime_version()
 
 
 logger = get_logger(__name__)
@@ -36,7 +47,7 @@ def _generate_atomic_support_code():
                  ('float', 'int', 'int'),
                  ('double', 'unsigned long long int', 'longlong')]
 
-    cuda_runtime_version = get_cuda_runtime_version()
+    cuda_runtime_version = _get_runtime_version()
 
     # Note: There are atomic functions that are supported only for compute capability >=
     # 3.5. We don't check for those as we require at least 3.5. If we ever support

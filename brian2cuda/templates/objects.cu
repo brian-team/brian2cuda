@@ -1,5 +1,8 @@
 {% macro cu_file() %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
+
 #include "objects.h"
 #include "network.h"
 {% if synapses %}
@@ -149,6 +152,8 @@ std::chrono::nanoseconds brian::{{codeobj}}_kernel_currents_profiling_info(0);
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 {% macro h_file() %}
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 
 // typedefs need to be outside the include guards to
 // be visible to all files including objects.h

@@ -1,5 +1,7 @@
 {# USES_VARIABLES { N } #}
 {% macro co_std_includes() %}
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include "code_objects/{{codeobj_name}}.h"
 #include "objects.h"
 #include "brianlib/common_math.h"

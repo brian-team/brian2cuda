@@ -3,8 +3,12 @@
 
 #include <cstddef>
 
+#if defined(__HIP_PLATFORM_AMD__) || defined(USE_HIP)
+#include "cuda_to_hip.h"
+#else
 struct curandGenerator_st;
 typedef struct curandGenerator_st* curandGenerator_t;
+#endif
 
 // XXX: for some documentation on random number generation, check out our wiki:
 //      https://github.com/brian-team/brian2cuda/wiki/Random-number-generation

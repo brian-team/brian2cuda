@@ -13,6 +13,8 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 {% endif %}
 {%- endmacro %}
 
+// CUDA/HIP compat header must be included first
+#include "brianlib/cuda_to_hip.h"
 #include <stdlib.h>
 #include "objects.h"
 #include "network.h"
@@ -43,7 +45,9 @@ set_variable_from_value(name, {{array_name}}, var_size, (char)atoi(s_value.c_str
 #include <sstream>
 #include <fstream>
 #include <string>
+#if !defined(__HIP_PLATFORM_AMD__) && !defined(USE_HIP)
 #include "cuda_profiler_api.h"
+#endif
 
 static std::string results_dir = "results/";  // can be overwritten by --results_dir command line arg
 

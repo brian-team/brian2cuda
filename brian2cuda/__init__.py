@@ -4,6 +4,7 @@ Package implementing the CUDA "standalone" `Device` and `CodeObject`.
 import logging
 
 from . import cuda_prefs
+from . import hip_prefs
 from .codeobject import CUDAStandaloneCodeObject
 from .device import cuda_standalone_device
 from . import binomial

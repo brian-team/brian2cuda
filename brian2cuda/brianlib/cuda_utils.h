@@ -1,7 +1,11 @@
 #ifndef BRIAN2CUDA_ERROR_CHECK_H
 #define BRIAN2CUDA_ERROR_CHECK_H
 #include <stdio.h>
+#if defined(__HIP_PLATFORM_AMD__) || defined(USE_HIP)
+#include "cuda_to_hip.h"
+#else
 #include <cuda_runtime.h>
+#endif
 #include "brianlib/logging.h"
 
 namespace brian{
