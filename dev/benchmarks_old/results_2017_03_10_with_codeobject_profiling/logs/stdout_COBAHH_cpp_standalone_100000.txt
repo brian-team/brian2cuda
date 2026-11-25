@@ -1,2 +1,0 @@
-Number of synapses: 40007768
-Number of synapses: 160016273
